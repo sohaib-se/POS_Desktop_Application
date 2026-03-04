@@ -71,3 +71,24 @@ export default defineConfig([
   },
 ])
 ```
+
+## SQLite Database Setup
+
+This project now includes a SQLite setup for local `.db` storage in:
+
+- `data/pos.db`
+
+### Database files
+
+- `database/sqlite/schema.sql` - table and index schema
+- `database/sqlite/seed-data.mjs` - initial seed data (mirrors app mock data)
+- `database/sqlite/init.mjs` - creates DB and schema
+- `database/sqlite/seed.mjs` - inserts seed data
+- `database/sqlite/setup.mjs` - runs both init + seed
+- `database/sqlite/repository.mjs` - reusable read/write helpers for core entities
+
+### Commands
+
+- `npm run db:init` - create database and schema only
+- `npm run db:seed` - seed data into existing schema
+- `npm run db:setup` - initialize and seed in one command

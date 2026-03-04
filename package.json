@@ -7,7 +7,10 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "db:init": "node database/sqlite/init.mjs",
+    "db:seed": "node database/sqlite/seed.mjs",
+    "db:setup": "node database/sqlite/setup.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
@@ -38,6 +41,7 @@
     "@radix-ui/react-toggle": "^1.1.10",
     "@radix-ui/react-toggle-group": "^1.1.11",
     "@radix-ui/react-tooltip": "^1.2.8",
+    "better-sqlite3": "^12.6.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",

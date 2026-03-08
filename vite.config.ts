@@ -37,9 +37,13 @@ function sqliteApiPlugin() {
                 }
 
                 const normalizedBalance = Number(payload.balance ?? 0);
+                const providedId = Number(payload.id);
+                const normalizedId = Number.isFinite(providedId)
+                  ? providedId
+                  : repository.getNextPartyId();
 
                 const party = {
-                  id: payload.id ?? crypto.randomUUID(),
+                  id: normalizedId,
                   name: String(payload.name).trim(),
                   phone: String(payload.phone ?? ''),
                   email: payload.email ? String(payload.email) : null,
@@ -105,6 +109,91 @@ function sqliteApiPlugin() {
                 res.end(JSON.stringify({ message: 'Invalid JSON payload.' }));
               }
             });
+            return;
+          }
+
+          res.statusCode = 405;
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify({ message: 'Method not allowed.' }));
+        } catch {
+          res.statusCode = 500;
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify({ message: 'Failed to process request.' }));
+        }
+      });
+
+      server.middlewares.use('/api/categories', async (req, res) => {
+        try {
+          // @ts-expect-error Runtime-only Node module used in Vite middleware.
+          const repository = await import('./database/sqlite/repository.mjs');
+          const requestUrl = new URL(req.url ?? '/', 'http://localhost');
+
+          if (req.method === 'GET') {
+            const categories = repository.getCategories();
+            res.statusCode = 200;
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify(categories));
+            return;
+          }
+
+          if (req.method === 'POST') {
+            const chunks: Buffer[] = [];
+            req.on('data', (chunk) => chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk)));
+            req.on('end', () => {
+              try {
+                const raw = Buffer.concat(chunks).toString('utf8');
+                const payload = raw ? JSON.parse(raw) : {};
+
+                if (!payload.name || !String(payload.name).trim()) {
+                  res.statusCode = 400;
+                  res.setHeader('Content-Type', 'application/json');
+                  res.end(JSON.stringify({ message: 'Category name is required.' }));
+                  return;
+                }
+
+                const category = {
+                  id: payload.id ? String(payload.id) : Date.now().toString(),
+                  name: String(payload.name).trim(),
+                  itemCount: Number.isFinite(Number(payload.itemCount))
+                    ? Number(payload.itemCount)
+                    : 0,
+                };
+
+                repository.upsertCategory(category);
+                res.statusCode = 201;
+                res.setHeader('Content-Type', 'application/json');
+                res.end(JSON.stringify(category));
+              } catch {
+                res.statusCode = 400;
+                res.setHeader('Content-Type', 'application/json');
+                res.end(JSON.stringify({ message: 'Invalid JSON payload.' }));
+              }
+            });
+            return;
+          }
+
+          if (req.method === 'DELETE') {
+            const pathId = requestUrl.pathname.split('/').filter(Boolean)[0];
+            const queryId = requestUrl.searchParams.get('id');
+            const id = (pathId || queryId || '').trim();
+
+            if (!id) {
+              res.statusCode = 400;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify({ message: 'Category id is required.' }));
+              return;
+            }
+
+            const deleted = repository.deleteCategory(id);
+            if (!deleted) {
+              res.statusCode = 404;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify({ message: 'Category not found.' }));
+              return;
+            }
+
+            res.statusCode = 204;
+            res.end();
             return;
           }
 

@@ -28,11 +28,25 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import type { Transaction } from "@/types";
 
 type PartyContextMenuState = {
   party: Party;
   x: number;
   y: number;
+};
+
+type PartyTransactionRow = {
+  id: string;
+  type: Transaction["type"];
+  invoiceNo?: string;
+  date: string;
+  partyName: string;
+  amount: number;
+  balance: number;
+  paymentType?: string;
+  status?: Transaction["status"];
+  partyId?: number;
 };
 
 export function Parties() {
@@ -46,9 +60,10 @@ export function Parties() {
   const [partyContextMenu, setPartyContextMenu] =
     useState<PartyContextMenuState | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
-  const [activeTab, setActiveTab] = useState<
-    "address" | "credit" | "additional"
-  >("address");
+  const [activeTab, setActiveTab] = useState<"address" | "credit">("address");
+  const [openingBalanceTransactions, setOpeningBalanceTransactions] = useState<
+    PartyTransactionRow[]
+  >([]);
   const [partyForm, setPartyForm] = useState({
     name: "",
     phoneNumber: "",
@@ -108,7 +123,7 @@ export function Parties() {
         }
 
         const dbParties = (await response.json()) as Array<{
-          id: string;
+          id: number;
           name: string;
           phone: string;
           email?: string | null;
@@ -172,8 +187,35 @@ export function Parties() {
     p.name.toLowerCase().includes(searchTerm.toLowerCase()),
   );
 
-  const partyTransactions = transactions.filter(
-    (t) => t.partyName.toLowerCase() === selectedParty?.name.toLowerCase(),
+  const baseTransactions: PartyTransactionRow[] = transactions.map((transaction) => {
+    const numericPartyId = Number(transaction.partyId);
+
+    return {
+      id: transaction.id,
+      type: transaction.type,
+      invoiceNo: transaction.invoiceNo,
+      date: transaction.date,
+      partyName: transaction.partyName,
+      amount: transaction.amount,
+      balance: transaction.balance,
+      paymentType: transaction.paymentType,
+      status: transaction.status,
+      partyId: Number.isFinite(numericPartyId) ? numericPartyId : undefined,
+    };
+  });
+
+  const partyTransactions = [...baseTransactions, ...openingBalanceTransactions].filter(
+    (transaction) => {
+      if (!selectedParty) {
+        return false;
+      }
+
+      if (transaction.partyId) {
+        return transaction.partyId === selectedParty.id;
+      }
+
+      return transaction.partyName.toLowerCase() === selectedParty.name.toLowerCase();
+    },
   );
 
   const handleSaveParty = async (
@@ -220,7 +262,7 @@ export function Parties() {
       }
 
       const createdParty = (await response.json()) as {
-        id: string;
+        id: number;
         name: string;
         phone: string;
         email?: string | null;
@@ -238,6 +280,39 @@ export function Parties() {
         balance: Number(createdParty.balance ?? 0),
         type: createdParty.type,
       };
+
+      const openingBalanceTransactionId = `opening-balance-${normalizedParty.id}`;
+
+      setOpeningBalanceTransactions((previousTransactions) => {
+        const nextTransactions = previousTransactions.map((transaction) =>
+          transaction.id === openingBalanceTransactionId
+            ? {
+                ...transaction,
+                partyName: normalizedParty.name,
+              }
+            : transaction,
+        );
+
+        if (partyBeingEdited || Math.abs(balance) === 0) {
+          return nextTransactions;
+        }
+
+        return [
+          ...nextTransactions,
+          {
+            id: openingBalanceTransactionId,
+            type: balance < 0 ? 'Payment-Out' : 'Payment-In',
+            invoiceNo: 'OB',
+            date: partyForm.asOfDate,
+            partyName: normalizedParty.name,
+            partyId: normalizedParty.id,
+            amount: Math.abs(balance),
+            balance,
+            paymentType: 'Opening Balance',
+            status: 'Paid',
+          },
+        ];
+      });
 
       setParties((previousParties) => {
         const hasExistingParty = previousParties.some(
@@ -306,6 +381,12 @@ export function Parties() {
 
         return nextParties;
       });
+
+      setOpeningBalanceTransactions((previousTransactions) =>
+        previousTransactions.filter(
+          (transaction) => transaction.partyId !== partyToDelete.id,
+        ),
+      );
     } catch (error) {
       console.error(error);
     } finally {
@@ -629,11 +710,6 @@ export function Parties() {
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader className="flex items-center justify-between">
             <DialogTitle>{partyBeingEdited ? "Edit Party" : "Add Party"}</DialogTitle>
-            <div className="flex gap-2 ml-auto">
-              <button className="p-1.5 hover:bg-gray-100 rounded">
-                <Settings className="w-5 h-5 text-gray-600" />
-              </button>
-            </div>
           </DialogHeader>
 
           {/* Top Fields */}
@@ -690,16 +766,6 @@ export function Parties() {
             >
               Credit & Balance
             </button>
-            <button
-              onClick={() => setActiveTab("additional")}
-              className={`px-4 py-2 text-sm font-medium border-b-2 ${
-                activeTab === "additional"
-                  ? "border-blue-500 text-gray-900"
-                  : "border-transparent text-gray-500 hover:text-gray-700"
-              }`}
-            >
-              Additional Fields
-            </button>
           </div>
 
           {/* Tab Content */}
@@ -739,11 +805,6 @@ export function Parties() {
               <div>
                 <button className="text-blue-500 text-sm font-medium hover:text-blue-600">
                   + Enable Shipping Address
-                </button>
-              </div>
-              <div className="text-center">
-                <button className="text-blue-500 text-sm font-medium hover:text-blue-600">
-                  👁 Show Detailed Address
                 </button>
               </div>
             </div>
@@ -843,15 +904,6 @@ export function Parties() {
               </div>
             </div>
           )}
-
-          {activeTab === "additional" && (
-            <div className="space-y-4 mb-6">
-              <p className="text-sm text-gray-500">
-                Additional fields will appear here
-              </p>
-            </div>
-          )}
-
           {/* Action Buttons */}
           <div className="flex gap-3 pt-6 border-t border-gray-200 justify-end">
             <button

@@ -1,11 +1,11 @@
 import type { Party, Item, Transaction, ExpenseCategory, BankAccount, Category, Unit, Estimate, PaymentIn, PurchaseBill } from '@/types';
 
 export const parties: Party[] = [
-  { id: '1', name: 'Khan', phone: '91312314', email: 'msohaibkhan34@gmail.com', balance: 100, type: 'customer' },
-  { id: '2', name: 'sfe', phone: '031928123', balance: 0, type: 'customer' },
-  { id: '3', name: 'Sohaib', phone: '031928123', balance: 0, type: 'customer' },
-  { id: '4', name: 'Cash Sale', phone: '', balance: 200, type: 'customer' },
-  { id: '5', name: 'Walking Customer', phone: '3129953944', balance: 0, type: 'customer' },
+  { id: 1, name: 'Khan', phone: '91312314', email: 'msohaibkhan34@gmail.com', balance: 100, type: 'customer' },
+  { id: 2, name: 'sfe', phone: '031928123', balance: 0, type: 'customer' },
+  { id: 3, name: 'Sohaib', phone: '031928123', balance: 0, type: 'customer' },
+  { id: 4, name: 'Cash Sale', phone: '', balance: 200, type: 'customer' },
+  { id: 5, name: 'Walking Customer', phone: '3129953944', balance: 0, type: 'customer' },
 ];
 
 export const items: Item[] = [

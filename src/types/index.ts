@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 
 export interface Party {
-  id: string;
+  id: number;
   name: string;
   phone: string;
   email?: string;
@@ -25,6 +25,7 @@ export interface Item {
 }
 
 export interface Transaction {
+  partyId: string;
   quantity: ReactNode;
   id: string;
   type: 'Sale' | 'Purchase' | 'Payment-In' | 'Payment-Out' | 'Estimate' | 'Credit Note' | 'Debit Note' | 'PoS Sale';

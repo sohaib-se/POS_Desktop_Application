@@ -7,6 +7,13 @@ export function getParties() {
   return rows;
 }
 
+export function getNextPartyId() {
+  const db = openDatabase();
+  const row = db.prepare('SELECT COALESCE(MAX(id), 0) + 1 AS nextId FROM parties').get();
+  db.close();
+  return Number(row?.nextId ?? 1);
+}
+
 export function upsertParty(party) {
   const db = openDatabase();
   db.prepare(`
@@ -74,4 +81,38 @@ export function upsertItem(item) {
     location: item.location ?? null
   });
   db.close();
+}
+
+export function getCategories() {
+  const db = openDatabase();
+  const rows = db
+    .prepare('SELECT id, name, item_count AS itemCount FROM categories ORDER BY name ASC')
+    .all();
+  db.close();
+  return rows;
+}
+
+export function upsertCategory(category) {
+  const db = openDatabase();
+  db.prepare(`
+    INSERT INTO categories (id, name, item_count, updated_at)
+    VALUES (@id, @name, @itemCount, datetime('now'))
+    ON CONFLICT(id) DO UPDATE SET
+      name = excluded.name,
+      item_count = excluded.item_count,
+      updated_at = datetime('now')
+  `).run({
+    ...category,
+    itemCount: Number.isFinite(Number(category.itemCount)) ? Number(category.itemCount) : 0,
+  });
+  db.close();
+}
+
+export function deleteCategory(id) {
+  const db = openDatabase();
+  const result = db
+    .prepare('DELETE FROM categories WHERE id = ?')
+    .run(String(id));
+  db.close();
+  return result.changes > 0;
 }

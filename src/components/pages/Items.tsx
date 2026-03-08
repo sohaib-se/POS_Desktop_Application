@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Search, Plus, ChevronDown, SlidersHorizontal } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Search, Plus, ChevronDown, SlidersHorizontal, X } from "lucide-react";
 
 // --- INLINE TYPES & MOCK DATA ---
 type Item = {
@@ -9,6 +9,18 @@ type Item = {
   salePrice: number;
   purchasePrice: number;
   stockValue: number;
+};
+
+type CategoryRecord = {
+  id: string;
+  name: string;
+  itemCount: number;
+};
+
+type CategoryContextMenuState = {
+  category: CategoryRecord;
+  x: number;
+  y: number;
 };
 
 const items: Item[] = [
@@ -29,8 +41,6 @@ const items: Item[] = [
     stockValue: 5760,
   },
 ];
-
-const categories = [{ id: "1", name: "grocery", itemCount: 2 }];
 
 const units = [
   { id: "1", fullName: "BAGS", shortName: "Bag" },
@@ -130,6 +140,191 @@ export function Items() {
   const [showAddItem, setShowAddItem] = useState(false);
   const [showAddCategory, setShowAddCategory] = useState(false);
   const [showUnitSelector, setShowUnitSelector] = useState(false);
+  const [categoryList, setCategoryList] = useState<CategoryRecord[]>([]);
+  const [newCategoryName, setNewCategoryName] = useState("");
+  const [categoryBeingEdited, setCategoryBeingEdited] =
+    useState<CategoryRecord | null>(null);
+  const [isDeletingCategory, setIsDeletingCategory] = useState(false);
+  const [categoryPendingDelete, setCategoryPendingDelete] =
+    useState<CategoryRecord | null>(null);
+  const [categoryContextMenu, setCategoryContextMenu] =
+    useState<CategoryContextMenuState | null>(null);
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(
+    null,
+  );
+  const [addItemTab, setAddItemTab] = useState<"pricing" | "stock">("pricing");
+  const [selectedUnitId, setSelectedUnitId] = useState<string>("");
+  const [baseUnitId, setBaseUnitId] = useState<string>("");
+  const [secondaryUnitId, setSecondaryUnitId] = useState<string>("");
+  const [conversionRate, setConversionRate] = useState<number>(0);
+
+  const selectedUnit = units.find((unit) => unit.id === selectedUnitId);
+  const baseUnit = units.find((unit) => unit.id === baseUnitId);
+  const secondaryUnit = units.find((unit) => unit.id === secondaryUnitId);
+  const selectedCategory = categoryList.find(
+    (category) => category.id === selectedCategoryId,
+  );
+
+  useEffect(() => {
+    const loadCategories = async () => {
+      try {
+        const response = await fetch('/api/categories');
+        if (!response.ok) {
+          throw new Error('Failed to load categories');
+        }
+
+        const categories = (await response.json()) as CategoryRecord[];
+        setCategoryList(categories);
+
+        setSelectedCategoryId((previousSelectedCategoryId) => {
+          if (!categories.length) {
+            return null;
+          }
+
+          if (
+            previousSelectedCategoryId &&
+            categories.some((category) => category.id === previousSelectedCategoryId)
+          ) {
+            return previousSelectedCategoryId;
+          }
+
+          return categories[0].id;
+        });
+      } catch (error) {
+        console.error(error);
+      }
+    };
+
+    void loadCategories();
+  }, []);
+
+  useEffect(() => {
+    if (!categoryContextMenu) {
+      return;
+    }
+
+    const closeMenu = () => setCategoryContextMenu(null);
+
+    window.addEventListener('click', closeMenu);
+    window.addEventListener('resize', closeMenu);
+    window.addEventListener('scroll', closeMenu, true);
+
+    return () => {
+      window.removeEventListener('click', closeMenu);
+      window.removeEventListener('resize', closeMenu);
+      window.removeEventListener('scroll', closeMenu, true);
+    };
+  }, [categoryContextMenu]);
+
+  const handleUnitSave = () => {
+    if (baseUnitId) {
+      setSelectedUnitId(baseUnitId);
+    }
+
+    setShowUnitSelector(false);
+  };
+
+  const handleCreateCategory = async () => {
+    const normalizedName = newCategoryName.trim();
+    if (!normalizedName) {
+      return;
+    }
+
+    const alreadyExists = categoryList.some(
+      (category) =>
+        category.name.toLowerCase() === normalizedName.toLowerCase() &&
+        category.id !== categoryBeingEdited?.id,
+    );
+
+    if (alreadyExists) {
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/categories', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          id: categoryBeingEdited?.id,
+          name: normalizedName,
+          itemCount: 0,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to create category');
+      }
+
+      const createdCategory = (await response.json()) as CategoryRecord;
+
+      setCategoryList((previousCategories) => {
+        const hasExistingCategory = previousCategories.some(
+          (category) => category.id === createdCategory.id,
+        );
+
+        const nextCategories = hasExistingCategory
+          ? previousCategories.map((category) =>
+              category.id === createdCategory.id ? createdCategory : category,
+            )
+          : [...previousCategories, createdCategory];
+
+        return nextCategories.sort((a, b) => a.name.localeCompare(b.name));
+      });
+      setSelectedCategoryId(createdCategory.id);
+      setNewCategoryName('');
+      setCategoryBeingEdited(null);
+      setShowAddCategory(false);
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const openEditCategoryDialog = (category: CategoryRecord) => {
+    setCategoryBeingEdited(category);
+    setNewCategoryName(category.name);
+    setShowAddCategory(true);
+  };
+
+  const handleDeleteCategory = async (category: CategoryRecord) => {
+    if (isDeletingCategory) {
+      return;
+    }
+
+    setIsDeletingCategory(true);
+
+    try {
+      const response = await fetch(`/api/categories/${category.id}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete category');
+      }
+
+      setCategoryList((previousCategories) => {
+        const nextCategories = previousCategories.filter(
+          (entry) => entry.id !== category.id,
+        );
+
+        setSelectedCategoryId((previousCategoryId) => {
+          if (previousCategoryId !== category.id) {
+            return previousCategoryId;
+          }
+
+          return nextCategories[0]?.id ?? null;
+        });
+
+        return nextCategories;
+      });
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setIsDeletingCategory(false);
+      setCategoryPendingDelete(null);
+    }
+  };
 
   return (
     <div className="h-full flex flex-col bg-[#D0DCE7] p-0 gap-1">
@@ -562,7 +757,11 @@ export function Items() {
                     <Search className="w-5 h-5" />
                   </button>
                   <button
-                    onClick={() => setShowAddCategory(true)}
+                    onClick={() => {
+                      setCategoryBeingEdited(null);
+                      setNewCategoryName('');
+                      setShowAddCategory(true);
+                    }}
                     className="flex items-center gap-2 bg-[#FFA726] hover:bg-[#FB8C00] text-white font-semibold rounded-lg px-5 py-2 shadow transition-all text-base relative"
                   >
                     <Plus className="w-5 h-5" />
@@ -591,13 +790,20 @@ export function Items() {
                         0
                       </td>
                     </tr>
-                    {categories.map((cat) => (
+                    {categoryList.map((cat) => (
                       <tr
                         key={cat.id}
-                        className={`border-b border-[#E3EAF2] hover:bg-[#F5F8FA] cursor-pointer ${cat.name === "grocery" ? "bg-[#E3F0FF]" : ""}`}
+                        onClick={() => setSelectedCategoryId(cat.id)}
+                        onContextMenu={(event) => {
+                          event.preventDefault();
+                          setCategoryContextMenu({
+                            category: cat,
+                            x: event.clientX,
+                            y: event.clientY,
+                          });
+                        }}
+                        className={`border-b border-[#E3EAF2] hover:bg-[#F5F8FA] cursor-pointer ${selectedCategoryId === cat.id ? "bg-[#E3F0FF]" : ""}`}
                       >
-                        {" "}
-                        {/* Highlight selected category as example */}
                         <td className="px-4 py-3 text-[#222B45] font-medium">
                           {cat.name}
                         </td>
@@ -610,6 +816,39 @@ export function Items() {
                 </table>
               </div>
             </div>
+
+            {categoryContextMenu && (
+              <div
+                className="fixed z-50 min-w-40 rounded-md border bg-white p-1 shadow-md"
+                style={{
+                  top: categoryContextMenu.y,
+                  left: categoryContextMenu.x,
+                }}
+                onClick={(event) => event.stopPropagation()}
+              >
+                <button
+                  onClick={() => {
+                    setSelectedCategoryId(categoryContextMenu.category.id);
+                    openEditCategoryDialog(categoryContextMenu.category);
+                    setCategoryContextMenu(null);
+                  }}
+                  className="w-full rounded-sm px-2 py-1.5 text-left text-sm hover:bg-gray-100"
+                >
+                  View/Edit
+                </button>
+                <button
+                  onClick={() => {
+                    const category = categoryContextMenu.category;
+                    setCategoryContextMenu(null);
+                    setCategoryPendingDelete(category);
+                  }}
+                  className="w-full rounded-sm px-2 py-1.5 text-left text-sm text-red-600 hover:bg-red-50"
+                >
+                  Delete
+                </button>
+              </div>
+            )}
+
             {/* Right Panel - Category Details and Items */}
             <div
               className="flex-1 flex flex-col"
@@ -627,11 +866,11 @@ export function Items() {
                   <div className="flex flex-col justify-start pl-6 pt-5 pb-2 min-w-[220px]">
                     <div className="flex items-center gap-2 mb-2">
                       <h2 className="text-base font-bold text-[#151B26] tracking-wide uppercase">
-                        GROCERY
+                        {selectedCategory?.name ?? "NO CATEGORY SELECTED"}
                       </h2>
                     </div>
                     <span className="text-sm font-medium text-[#151B26]">
-                      2
+                      {selectedCategory?.itemCount ?? 0}
                     </span>
                   </div>
                   <div className="flex flex-col items-end justify-between flex-1 pr-6 pt-5 pb-2">
@@ -908,17 +1147,14 @@ export function Items() {
           <DialogHeader>
             <DialogTitle className="flex items-center justify-between">
               <span>Add Item</span>
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-normal text-gray-500">
-                  Product
-                </span>
-                <div className="w-10 h-5 bg-blue-500 rounded-full relative cursor-pointer">
-                  <div className="absolute right-0.5 top-0.5 w-4 h-4 bg-white rounded-full"></div>
-                </div>
-                <span className="text-sm font-normal text-gray-500">
-                  Service
-                </span>
-              </div>
+              <button
+                type="button"
+                onClick={() => setShowAddItem(false)}
+                className="rounded p-1 text-gray-500 hover:bg-gray-100 hover:text-gray-700"
+                aria-label="Close add item popup"
+              >
+                <X className="h-4 w-4" />
+              </button>
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
@@ -929,6 +1165,7 @@ export function Items() {
                 </label>
                 <input
                   type="text"
+                  placeholder="Enter item name"
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
                 />
               </div>
@@ -938,7 +1175,7 @@ export function Items() {
                 </label>
                 <select className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
                   <option>Select Category</option>
-                  {categories.map((c) => (
+                  {categoryList.map((c) => (
                     <option key={c.id}>{c.name}</option>
                   ))}
                 </select>
@@ -949,81 +1186,149 @@ export function Items() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Item Code
                 </label>
-                <div className="flex gap-2">
+                <div className="relative">
                   <input
                     type="text"
-                    className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                    placeholder="Enter item code"
+                    className="w-full border border-gray-300 rounded-lg pl-3 pr-10 py-2 text-sm"
                   />
-                  <button className="text-blue-600 text-sm">Assign Code</button>
+                  <button
+                    type="button"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-blue-600 hover:text-blue-700"
+                    aria-label="Assign code"
+                    title="Assign code"
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                      <path
+                        d="M7 7h10M7 12h10M7 17h6"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                      />
+                    </svg>
+                  </button>
                 </div>
               </div>
               <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Unit
+                </label>
                 <button
                   onClick={() => setShowUnitSelector(true)}
-                  className="w-full border border-blue-300 text-blue-600 rounded-lg px-3 py-2 text-sm hover:bg-blue-50"
+                  className="w-full border border-blue-300 text-blue-600 rounded-lg px-3 py-2 text-sm hover:bg-blue-50 text-left"
                 >
-                  Select Unit
+                  {selectedUnit
+                    ? `${selectedUnit.fullName} (${selectedUnit.shortName})`
+                    : "Select Unit"}
                 </button>
               </div>
             </div>
 
             {/* Tabs */}
             <div className="flex gap-4 border-b border-gray-200">
-              {["Pricing", "Stock", "Online Store"].map((tab, i) => (
+              {[
+                { key: "pricing", label: "Pricing" },
+                { key: "stock", label: "Stock" },
+              ].map((tab) => (
                 <button
-                  key={tab}
-                  className={`pb-2 text-sm font-medium ${i === 0 ? "text-[#E53935] border-b-2 border-[#E53935]" : "text-gray-500"}`}
+                  key={tab.key}
+                  onClick={() => setAddItemTab(tab.key as "pricing" | "stock")}
+                  className={`pb-2 text-sm font-medium ${
+                    addItemTab === tab.key
+                      ? "text-[#E53935] border-b-2 border-[#E53935]"
+                      : "text-gray-500"
+                  }`}
                 >
-                  {tab}
+                  {tab.label}
                 </button>
               ))}
             </div>
 
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Sale Price
-                  </label>
-                  <input
-                    type="number"
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
-                    placeholder="Sale Price"
-                  />
+            {addItemTab === "pricing" && (
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Sale Price
+                    </label>
+                    <input
+                      type="number"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                      placeholder="Sale Price"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Wholesale Price
+                    </label>
+                    <input
+                      type="number"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                      placeholder="Wholesale Price"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Purchase Price
+                    </label>
+                    <input
+                      type="number"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                      placeholder="Purchase Price"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Minimum Wholesale Qty
+                    </label>
+                    <input
+                      type="number"
+                      placeholder="0"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {addItemTab === "stock" && (
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Opening Stock
+                    </label>
+                    <input
+                      type="number"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                      placeholder="0"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      At Price
+                    </label>
+                    <input
+                      type="number"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                      placeholder="0"
+                    />
+                  </div>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Wholesale Price
+                    As Of Date
                   </label>
                   <input
-                    type="number"
+                    type="date"
+                    placeholder="YYYY-MM-DD"
                     className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
-                    placeholder="Wholesale Price"
                   />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Purchase Price
-                  </label>
-                  <input
-                    type="number"
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
-                    placeholder="Purchase Price"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Minimum Wholesale Qty
-                  </label>
-                  <input
-                    type="number"
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
-                  />
-                </div>
-              </div>
-            </div>
+            )}
 
             <div className="flex justify-end gap-3 pt-4">
               <button
@@ -1044,10 +1349,33 @@ export function Items() {
       </Dialog>
 
       {/* Add Category Modal */}
-      <Dialog open={showAddCategory} onOpenChange={setShowAddCategory}>
+      <Dialog
+        open={showAddCategory}
+        onOpenChange={(isOpen: boolean) => {
+          setShowAddCategory(isOpen);
+          if (!isOpen) {
+            setNewCategoryName("");
+            setCategoryBeingEdited(null);
+          }
+        }}
+      >
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle>Add Category</DialogTitle>
+            <DialogTitle className="flex items-center justify-between">
+              <span>{categoryBeingEdited ? "Edit Category" : "Add Category"}</span>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowAddCategory(false);
+                  setNewCategoryName("");
+                  setCategoryBeingEdited(null);
+                }}
+                className="rounded p-1 text-gray-500 hover:bg-gray-100 hover:text-gray-700"
+                aria-label="Close add category popup"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div>
@@ -1056,16 +1384,65 @@ export function Items() {
               </label>
               <input
                 type="text"
+                value={newCategoryName}
+                onChange={(event) => setNewCategoryName(event.target.value)}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
                 placeholder="e.g. Grocery"
               />
             </div>
             <button
-              onClick={() => setShowAddCategory(false)}
+              onClick={handleCreateCategory}
+              disabled={!newCategoryName.trim()}
               className="w-full bg-[#E53935] text-white py-2 rounded-lg text-sm font-medium"
             >
-              Create
+              {categoryBeingEdited ? "Update" : "Create"}
             </button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={Boolean(categoryPendingDelete)}
+        onOpenChange={(isOpen: boolean) => {
+          if (!isOpen && !isDeletingCategory) {
+            setCategoryPendingDelete(null);
+          }
+        }}
+      >
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Delete Category</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-gray-600">
+              {categoryPendingDelete
+                ? `Are you sure you want to delete ${categoryPendingDelete.name}? This action cannot be undone.`
+                : "Are you sure you want to delete this category?"}
+            </p>
+            <div className="flex justify-end gap-2">
+              <button
+                type="button"
+                disabled={isDeletingCategory}
+                onClick={() => setCategoryPendingDelete(null)}
+                className="px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={isDeletingCategory || !categoryPendingDelete}
+                onClick={() => {
+                  if (!categoryPendingDelete) {
+                    return;
+                  }
+
+                  void handleDeleteCategory(categoryPendingDelete);
+                }}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 disabled:opacity-60"
+              >
+                {isDeletingCategory ? "Deleting..." : "Delete"}
+              </button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
@@ -1082,10 +1459,14 @@ export function Items() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Base Unit
                 </label>
-                <select className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
-                  <option>None</option>
+                <select
+                  value={baseUnitId}
+                  onChange={(event) => setBaseUnitId(event.target.value)}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                >
+                  <option value="">None</option>
                   {units.map((u) => (
-                    <option key={u.id}>
+                    <option key={u.id} value={u.id}>
                       {u.fullName} ({u.shortName})
                     </option>
                   ))}
@@ -1095,10 +1476,14 @@ export function Items() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Secondary Unit
                 </label>
-                <select className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
-                  <option>None</option>
+                <select
+                  value={secondaryUnitId}
+                  onChange={(event) => setSecondaryUnitId(event.target.value)}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                >
+                  <option value="">None</option>
                   {units.map((u) => (
-                    <option key={u.id}>
+                    <option key={u.id} value={u.id}>
                       {u.fullName} ({u.shortName})
                     </option>
                   ))}
@@ -1106,16 +1491,24 @@ export function Items() {
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-600">1 BOX =</span>
+              <span className="text-sm text-gray-600">
+                1 {baseUnit?.fullName ?? "BASE UNIT"} =
+              </span>
               <input
                 type="number"
                 className="w-20 border border-gray-300 rounded-lg px-3 py-2 text-sm"
-                defaultValue={0}
+                placeholder="0"
+                value={conversionRate}
+                onChange={(event) => setConversionRate(Number(event.target.value) || 0)}
               />
-              <span className="text-sm text-gray-600">GRAMMES (Gm)</span>
+              <span className="text-sm text-gray-600">
+                {secondaryUnit
+                  ? `${secondaryUnit.fullName} (${secondaryUnit.shortName})`
+                  : "SECONDARY UNIT"}
+              </span>
             </div>
             <button
-              onClick={() => setShowUnitSelector(false)}
+              onClick={handleUnitSave}
               className="w-full bg-[#1976D2] text-white py-2 rounded-lg text-sm font-medium"
             >
               SAVE

@@ -28,6 +28,15 @@ export function upsertParty(party) {
   db.close();
 }
 
+export function deleteParty(id) {
+  const db = openDatabase();
+  const result = db
+    .prepare('DELETE FROM parties WHERE id = ?')
+    .run(String(id));
+  db.close();
+  return result.changes > 0;
+}
+
 export function getItems() {
   const db = openDatabase();
   const rows = db.prepare('SELECT * FROM items ORDER BY name ASC').all();

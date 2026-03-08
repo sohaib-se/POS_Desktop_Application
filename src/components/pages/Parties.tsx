@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Search,
   Plus,
@@ -10,7 +10,7 @@ import {
   Settings,
   MoreVertical,
 } from "lucide-react";
-import { parties, transactions } from "@/data/mockData";
+import { transactions } from "@/data/mockData";
 import type { Party } from "@/types";
 import {
   Dialog,
@@ -18,10 +18,33 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+
+type PartyContextMenuState = {
+  party: Party;
+  x: number;
+  y: number;
+};
 
 export function Parties() {
-  const [selectedParty, setSelectedParty] = useState<Party | null>(parties[0]);
+  const [parties, setParties] = useState<Party[]>([]);
+  const [selectedParty, setSelectedParty] = useState<Party | null>(null);
   const [showAddParty, setShowAddParty] = useState(false);
+  const [partyBeingEdited, setPartyBeingEdited] = useState<Party | null>(null);
+  const [isSavingParty, setIsSavingParty] = useState(false);
+  const [isDeletingParty, setIsDeletingParty] = useState(false);
+  const [partyPendingDelete, setPartyPendingDelete] = useState<Party | null>(null);
+  const [partyContextMenu, setPartyContextMenu] =
+    useState<PartyContextMenuState | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [activeTab, setActiveTab] = useState<
     "address" | "credit" | "additional"
@@ -38,6 +61,113 @@ export function Parties() {
     creditLimit: "no-limit" as "no-limit" | "custom",
   });
 
+  const resetPartyForm = () => {
+    setPartyForm({
+      name: "",
+      phoneNumber: "",
+      email: "",
+      billingAddress: "",
+      shippingAddress: "",
+      openingBalance: "",
+      asOfDate: new Date().toLocaleDateString("en-IN"),
+      balanceType: "to-receive",
+      creditLimit: "no-limit",
+    });
+    setActiveTab("address");
+  };
+
+  const openAddPartyDialog = () => {
+    setPartyBeingEdited(null);
+    resetPartyForm();
+    setShowAddParty(true);
+  };
+
+  const openEditPartyDialog = (party: Party) => {
+    setPartyBeingEdited(party);
+    setPartyForm({
+      name: party.name,
+      phoneNumber: party.phone,
+      email: party.email ?? "",
+      billingAddress: party.address ?? "",
+      shippingAddress: "",
+      openingBalance: Math.abs(party.balance).toString(),
+      asOfDate: new Date().toLocaleDateString("en-IN"),
+      balanceType: party.balance < 0 ? "to-pay" : "to-receive",
+      creditLimit: "no-limit",
+    });
+    setActiveTab("address");
+    setShowAddParty(true);
+  };
+
+  useEffect(() => {
+    const loadParties = async () => {
+      try {
+        const response = await fetch('/api/parties');
+        if (!response.ok) {
+          throw new Error('Failed to load parties');
+        }
+
+        const dbParties = (await response.json()) as Array<{
+          id: string;
+          name: string;
+          phone: string;
+          email?: string | null;
+          address?: string | null;
+          balance: number;
+          type: 'customer' | 'supplier' | 'both';
+        }>;
+
+        const normalizedParties: Party[] = dbParties.map((party) => ({
+          id: party.id,
+          name: party.name,
+          phone: party.phone,
+          email: party.email ?? undefined,
+          address: party.address ?? undefined,
+          balance: Number(party.balance ?? 0),
+          type: party.type,
+        }));
+
+        setParties(normalizedParties);
+        setSelectedParty((previousSelectedParty) => {
+          if (!normalizedParties.length) {
+            return null;
+          }
+
+          if (!previousSelectedParty) {
+            return normalizedParties[0];
+          }
+
+          return (
+            normalizedParties.find((party) => party.id === previousSelectedParty.id) ??
+            normalizedParties[0]
+          );
+        });
+      } catch (error) {
+        console.error(error);
+      }
+    };
+
+    loadParties();
+  }, []);
+
+  useEffect(() => {
+    if (!partyContextMenu) {
+      return;
+    }
+
+    const closeMenu = () => setPartyContextMenu(null);
+
+    window.addEventListener('click', closeMenu);
+    window.addEventListener('resize', closeMenu);
+    window.addEventListener('scroll', closeMenu, true);
+
+    return () => {
+      window.removeEventListener('click', closeMenu);
+      window.removeEventListener('resize', closeMenu);
+      window.removeEventListener('scroll', closeMenu, true);
+    };
+  }, [partyContextMenu]);
+
   const filteredParties = parties.filter((p) =>
     p.name.toLowerCase().includes(searchTerm.toLowerCase()),
   );
@@ -46,9 +176,142 @@ export function Parties() {
     (t) => t.partyName.toLowerCase() === selectedParty?.name.toLowerCase(),
   );
 
-  const handleSaveParty = () => {
-    console.log("Saving party:", partyForm);
-    setShowAddParty(false);
+  const handleSaveParty = async (
+    options?: {
+      closeDialog?: boolean;
+      resetForm?: boolean;
+    },
+  ) => {
+    if (!partyForm.name.trim() || isSavingParty) {
+      return;
+    }
+
+    const shouldCloseDialog = options?.closeDialog ?? true;
+    const shouldResetForm = options?.resetForm ?? true;
+
+    setIsSavingParty(true);
+
+    try {
+      const openingBalance = Number(partyForm.openingBalance || 0);
+      const balance = Number.isFinite(openingBalance)
+        ? partyForm.balanceType === 'to-pay'
+          ? -Math.abs(openingBalance)
+          : Math.abs(openingBalance)
+        : 0;
+
+      const response = await fetch('/api/parties', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          id: partyBeingEdited?.id,
+          name: partyForm.name,
+          phone: partyForm.phoneNumber,
+          email: partyForm.email,
+          address: partyForm.billingAddress,
+          balance,
+          type: partyBeingEdited?.type ?? 'customer',
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to save party');
+      }
+
+      const createdParty = (await response.json()) as {
+        id: string;
+        name: string;
+        phone: string;
+        email?: string | null;
+        address?: string | null;
+        balance: number;
+        type: 'customer' | 'supplier' | 'both';
+      };
+
+      const normalizedParty: Party = {
+        id: createdParty.id,
+        name: createdParty.name,
+        phone: createdParty.phone,
+        email: createdParty.email ?? undefined,
+        address: createdParty.address ?? undefined,
+        balance: Number(createdParty.balance ?? 0),
+        type: createdParty.type,
+      };
+
+      setParties((previousParties) => {
+        const hasExistingParty = previousParties.some(
+          (party) => party.id === normalizedParty.id,
+        );
+
+        const nextParties = hasExistingParty
+          ? previousParties.map((party) =>
+              party.id === normalizedParty.id ? normalizedParty : party,
+            )
+          : [...previousParties, normalizedParty];
+
+        return nextParties.sort((a, b) => a.name.localeCompare(b.name));
+      });
+
+      setSelectedParty(normalizedParty);
+      if (shouldResetForm) {
+        resetPartyForm();
+      }
+
+      if (shouldCloseDialog) {
+        setPartyBeingEdited(null);
+        setShowAddParty(false);
+      } else {
+        setPartyBeingEdited(null);
+      }
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setIsSavingParty(false);
+    }
+  };
+
+  const handleDeleteParty = async (partyToDelete: Party) => {
+    if (isDeletingParty) {
+      return;
+    }
+
+    setIsDeletingParty(true);
+
+    try {
+      const response = await fetch(`/api/parties/${partyToDelete.id}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete party');
+      }
+
+      setParties((previousParties) => {
+        const nextParties = previousParties.filter(
+          (party) => party.id !== partyToDelete.id,
+        );
+
+        setSelectedParty((previousSelectedParty) => {
+          if (!previousSelectedParty || previousSelectedParty.id !== partyToDelete.id) {
+            return previousSelectedParty;
+          }
+
+          if (!nextParties.length) {
+            return null;
+          }
+
+          return nextParties[0];
+        });
+
+        return nextParties;
+      });
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setIsDeletingParty(false);
+      setPartyPendingDelete(null);
+    }
   };
 
   return (
@@ -61,7 +324,7 @@ export function Parties() {
         </div>
         <div className="flex items-center gap-3">
           <button
-            onClick={() => setShowAddParty(true)}
+            onClick={openAddPartyDialog}
             className="bg-[#E53935] hover:bg-red-600 text-white px-4 py-2 rounded-full text-sm font-medium flex items-center gap-1.5"
           >
             <Plus className="w-4 h-4" />
@@ -115,6 +378,14 @@ export function Parties() {
                   <tr
                     key={party.id}
                     onClick={() => setSelectedParty(party)}
+                    onContextMenu={(event) => {
+                      event.preventDefault();
+                      setPartyContextMenu({
+                        party,
+                        x: event.clientX,
+                        y: event.clientY,
+                      });
+                    }}
                     className={`cursor-pointer border-b border-gray-100 ${
                       selectedParty?.id === party.id
                         ? "bg-blue-50 border-l-4 border-l-blue-500"
@@ -142,6 +413,37 @@ export function Parties() {
           </div>
         </div>
 
+        {partyContextMenu && (
+          <div
+            className="fixed z-50 min-w-40 rounded-md border bg-white p-1 shadow-md"
+            style={{
+              top: partyContextMenu.y,
+              left: partyContextMenu.x,
+            }}
+            onClick={(event) => event.stopPropagation()}
+          >
+            <button
+              onClick={() => {
+                setSelectedParty(partyContextMenu.party);
+                openEditPartyDialog(partyContextMenu.party);
+                setPartyContextMenu(null);
+              }}
+              className="w-full rounded-sm px-2 py-1.5 text-left text-sm hover:bg-gray-100"
+            >
+              View/Edit
+            </button>
+            <button
+              onClick={() => {
+                setPartyContextMenu(null);
+                setPartyPendingDelete(partyContextMenu.party);
+              }}
+              className="w-full rounded-sm px-2 py-1.5 text-left text-sm text-red-600 hover:bg-red-50"
+            >
+              Delete
+            </button>
+          </div>
+        )}
+
         {/* Right Panel Card - Party Details */}
         <div className="flex-1 flex flex-col overflow-hidden">
           {selectedParty ? (
@@ -154,9 +456,12 @@ export function Parties() {
                       <h2 className="text-lg font-semibold text-gray-900">
                         {selectedParty.name}
                       </h2>
-                      <Edit2 className="w-4 h-4 text-blue-500 cursor-pointer" />
+                      <Edit2
+                        onClick={() => openEditPartyDialog(selectedParty)}
+                        className="w-4 h-4 text-blue-500 cursor-pointer"
+                      />
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 items-center">
                       <button className="w-9 h-9 rounded-full bg-green-500 flex items-center justify-center hover:bg-green-600">
                         <Phone className="w-4 h-4 text-white" />
                       </button>
@@ -311,10 +616,19 @@ export function Parties() {
       </div>
 
       {/* Add Party Modal */}
-      <Dialog open={showAddParty} onOpenChange={setShowAddParty}>
+      <Dialog
+        open={showAddParty}
+        onOpenChange={(isOpen) => {
+          setShowAddParty(isOpen);
+          if (!isOpen) {
+            setPartyBeingEdited(null);
+            resetPartyForm();
+          }
+        }}
+      >
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader className="flex items-center justify-between">
-            <DialogTitle>Add Party</DialogTitle>
+            <DialogTitle>{partyBeingEdited ? "Edit Party" : "Add Party"}</DialogTitle>
             <div className="flex gap-2 ml-auto">
               <button className="p-1.5 hover:bg-gray-100 rounded">
                 <Settings className="w-5 h-5 text-gray-600" />
@@ -541,26 +855,85 @@ export function Parties() {
           {/* Action Buttons */}
           <div className="flex gap-3 pt-6 border-t border-gray-200 justify-end">
             <button
-              onClick={() => setShowAddParty(false)}
+              onClick={() => {
+                setShowAddParty(false);
+                setPartyBeingEdited(null);
+                resetPartyForm();
+              }}
               className="px-6 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50"
             >
               Cancel
             </button>
+            {!partyBeingEdited && (
+              <button
+                onClick={() =>
+                  void handleSaveParty({ closeDialog: false, resetForm: true })
+                }
+                disabled={isSavingParty || !partyForm.name.trim()}
+                className="px-6 py-2 border border-blue-500 rounded-lg text-sm font-medium text-blue-500 hover:bg-blue-50"
+              >
+                Save & New
+              </button>
+            )}
             <button
-              onClick={handleSaveParty}
-              className="px-6 py-2 border border-blue-500 rounded-lg text-sm font-medium text-blue-500 hover:bg-blue-50"
-            >
-              Save & New
-            </button>
-            <button
-              onClick={handleSaveParty}
+              onClick={() =>
+                void handleSaveParty({ closeDialog: true, resetForm: true })
+              }
+              disabled={isSavingParty || !partyForm.name.trim()}
               className="px-6 py-2 bg-blue-500 text-white rounded-lg text-sm font-medium hover:bg-blue-600"
             >
-              Save
+              {isSavingParty
+                ? partyBeingEdited
+                  ? "Updating..."
+                  : "Saving..."
+                : partyBeingEdited
+                  ? "Update"
+                  : "Save"}
             </button>
           </div>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog
+        open={Boolean(partyPendingDelete)}
+        onOpenChange={(isOpen) => {
+          if (!isOpen && !isDeletingParty) {
+            setPartyPendingDelete(null);
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Party</AlertDialogTitle>
+            <AlertDialogDescription>
+              {partyPendingDelete
+                ? `Are you sure you want to delete ${partyPendingDelete.name}? This action cannot be undone.`
+                : "Are you sure you want to delete this party?"}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeletingParty}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              asChild
+              className="bg-red-600 hover:bg-red-700 focus-visible:ring-red-500"
+            >
+              <button
+                type="button"
+                disabled={isDeletingParty || !partyPendingDelete}
+                onClick={() => {
+                  if (!partyPendingDelete) {
+                    return;
+                  }
+
+                  void handleDeleteParty(partyPendingDelete);
+                }}
+              >
+                {isDeletingParty ? "Deleting..." : "Delete"}
+              </button>
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

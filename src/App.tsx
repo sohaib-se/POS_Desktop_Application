@@ -5,6 +5,7 @@ import { Header } from "@/components/Header";
 import { Dashboard } from "@/components/pages/Dashboard";
 import { Parties } from "@/components/pages/Parties";
 import { Items } from "@/components/pages/Items";
+import { AddSale } from "@/components/pages/AddSale";
 import { SaleInvoices } from "@/components/pages/SaleInvoices";
 import { Estimates } from "@/components/pages/Estimates";
 import { PaymentIn } from "@/components/pages/PaymentIn";
@@ -24,9 +25,25 @@ import type { ViewType } from "@/types";
 
 function App() {
   const [currentView, setCurrentView] = useState<ViewType>("home");
+  const [lastStandardView, setLastStandardView] = useState<ViewType>("home");
 
-  const renderContent = () => {
-    switch (currentView) {
+  const handleViewChange = (view: ViewType) => {
+    if (view !== "add-sale") {
+      setLastStandardView(view);
+    }
+
+    setCurrentView(view);
+  };
+
+  const handleCloseAddSale = () => {
+    setCurrentView(lastStandardView);
+  };
+
+  const activeBaseView =
+    currentView === "add-sale" ? lastStandardView : currentView;
+
+  const renderContent = (view: ViewType) => {
+    switch (view) {
       case "home":
         return <Dashboard />;
       case "parties":
@@ -34,7 +51,7 @@ function App() {
       case "items":
         return <Items />;
       case "sale-invoices":
-        return <SaleInvoices />;
+        return <SaleInvoices onViewChange={handleViewChange} />;
       case "estimates":
         return <Estimates />;
       case "payment-in":
@@ -102,26 +119,34 @@ function App() {
       case "utilities-recycle-bin":
         return <Utilities initialTab="recycle-bin" />;
       case "edit-profile":
-        return <EditProfile onBack={() => setCurrentView("home")} />;
+        return <EditProfile onBack={() => handleViewChange("home")} />;
       default:
         return <Dashboard />;
     }
   };
 
   return (
-    <div className="h-screen flex bg-gray-50 overflow-hidden">
-      {/* Sidebar */}
-      <Sidebar currentView={currentView} onViewChange={setCurrentView} />
+    <>
+      <div className="h-screen flex bg-gray-50 overflow-hidden">
+        {/* Sidebar */}
+        <Sidebar currentView={activeBaseView} onViewChange={handleViewChange} />
 
-      {/* Right Section */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Header */}
-        <Header onViewChange={setCurrentView} />
+        {/* Right Section */}
+        <div className="flex-1 flex flex-col overflow-hidden">
+          {/* Header */}
+          <Header onViewChange={handleViewChange} />
 
-        {/* Content Area */}
-        <div className="flex-1 overflow-hidden">{renderContent()}</div>
+          {/* Content Area */}
+          <div className="flex-1 overflow-hidden">{renderContent(activeBaseView)}</div>
+        </div>
       </div>
-    </div>
+
+      {currentView === "add-sale" && (
+        <div className="fixed inset-0 z-[100]">
+          <AddSale onClose={handleCloseAddSale} />
+        </div>
+      )}
+    </>
   );
 }
 

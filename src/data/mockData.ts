@@ -16,16 +16,56 @@ export const items: Item[] = [
 ];
 
 export const transactions: Transaction[] = [
-  { id: '1', type: 'Sale', invoiceNo: '7', date: '21/02/2026', partyName: 'Cash Sale', amount: 200, balance: 200, paymentType: 'Cash', status: 'Unpaid' },
-  { id: '2', type: 'Sale', invoiceNo: '8', date: '21/02/2026', partyName: 'Khan', amount: 200, balance: 200, paymentType: 'Cash', status: 'Unpaid' },
-  { id: '3', type: 'Estimate', invoiceNo: '3', date: '21/02/2026', partyName: 'Khan', amount: 200, balance: 200, status: 'Open' },
-  { id: '4', type: 'Estimate', invoiceNo: '4', date: '21/02/2026', partyName: 'Sohaib', amount: 200, balance: 200, status: 'Open' },
-  { id: '5', type: 'Purchase', invoiceNo: '1', date: '21/02/2026', partyName: 'Khan', amount: 100, balance: 100, paymentType: 'Cash', status: 'Unpaid' },
-  { id: '6', type: 'PoS Sale', invoiceNo: '5', date: '19/02/2026', partyName: 'Cash Sale', amount: 600, balance: 0, paymentType: 'Cash', status: 'Paid' },
-  { id: '7', type: 'Estimate', invoiceNo: '2', date: '02/02/2026', partyName: 'Walking Customer', amount: 200, balance: 200, status: 'Open' },
-  { id: '8', type: 'PoS Sale', invoiceNo: '4', date: '02/02/2026', partyName: 'Cash Sale', amount: 200, balance: 0, paymentType: 'Cash', status: 'Paid' },
-  { id: '9', type: 'Sale', invoiceNo: '9', date: '21/02/2026', partyName: 'Khan', amount: 160, balance: 160, paymentType: 'Cash', status: 'Unpaid' },
-  { id: '10', type: 'Sale', invoiceNo: '6', date: '20/02/2026', partyName: 'Sohaib', amount: 160, balance: 160, paymentType: 'Cash', status: 'Unpaid' },
+  {
+    id: '1', type: 'Sale', invoiceNo: '7', date: '21/02/2026', partyName: 'Cash Sale', amount: 200, balance: 200, paymentType: 'Cash', status: 'Unpaid',
+    partyId: '',
+    quantity: undefined
+  },
+  {
+    id: '2', type: 'Sale', invoiceNo: '8', date: '21/02/2026', partyName: 'Khan', amount: 200, balance: 200, paymentType: 'Cash', status: 'Unpaid',
+    partyId: '',
+    quantity: undefined
+  },
+  {
+    id: '3', type: 'Estimate', invoiceNo: '3', date: '21/02/2026', partyName: 'Khan', amount: 200, balance: 200, status: 'Open',
+    partyId: '',
+    quantity: undefined
+  },
+  {
+    id: '4', type: 'Estimate', invoiceNo: '4', date: '21/02/2026', partyName: 'Sohaib', amount: 200, balance: 200, status: 'Open',
+    partyId: '',
+    quantity: undefined
+  },
+  {
+    id: '5', type: 'Purchase', invoiceNo: '1', date: '21/02/2026', partyName: 'Khan', amount: 100, balance: 100, paymentType: 'Cash', status: 'Unpaid',
+    partyId: '',
+    quantity: undefined
+  },
+  {
+    id: '6', type: 'PoS Sale', invoiceNo: '5', date: '19/02/2026', partyName: 'Cash Sale', amount: 600, balance: 0, paymentType: 'Cash', status: 'Paid',
+    partyId: '',
+    quantity: undefined
+  },
+  {
+    id: '7', type: 'Estimate', invoiceNo: '2', date: '02/02/2026', partyName: 'Walking Customer', amount: 200, balance: 200, status: 'Open',
+    partyId: '',
+    quantity: undefined
+  },
+  {
+    id: '8', type: 'PoS Sale', invoiceNo: '4', date: '02/02/2026', partyName: 'Cash Sale', amount: 200, balance: 0, paymentType: 'Cash', status: 'Paid',
+    partyId: '',
+    quantity: undefined
+  },
+  {
+    id: '9', type: 'Sale', invoiceNo: '9', date: '21/02/2026', partyName: 'Khan', amount: 160, balance: 160, paymentType: 'Cash', status: 'Unpaid',
+    partyId: '',
+    quantity: undefined
+  },
+  {
+    id: '10', type: 'Sale', invoiceNo: '6', date: '20/02/2026', partyName: 'Sohaib', amount: 160, balance: 160, paymentType: 'Cash', status: 'Unpaid',
+    partyId: '',
+    quantity: undefined
+  },
 ];
 
 export const saleInvoices = [

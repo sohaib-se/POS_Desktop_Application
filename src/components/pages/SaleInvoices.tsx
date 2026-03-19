@@ -11,6 +11,7 @@ import {
   Share2,
 } from "lucide-react";
 import { saleInvoices } from "@/data/mockData";
+import type { ViewType } from "@/types";
 import {
   Dialog,
   DialogContent,
@@ -18,7 +19,11 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
-export function SaleInvoices() {
+interface SaleInvoicesProps {
+  onViewChange: (view: ViewType) => void;
+}
+
+export function SaleInvoices({ onViewChange }: SaleInvoicesProps) {
   const [showAddSale, setShowAddSale] = useState(false);
 
   const totalSales = saleInvoices.reduce((sum, inv) => sum + inv.amount, 0);
@@ -36,7 +41,7 @@ export function SaleInvoices() {
           <ChevronDown className="w-4 h-4 text-gray-500" />
         </div>
         <button
-          onClick={() => setShowAddSale(true)}
+          onClick={() => onViewChange("add-sale")}
           className="bg-[#E53935] hover:bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2"
         >
           <Plus className="w-4 h-4" />

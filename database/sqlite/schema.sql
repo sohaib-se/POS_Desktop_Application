@@ -18,9 +18,15 @@ CREATE TABLE IF NOT EXISTS items (
   code TEXT,
   category TEXT,
   sale_price REAL NOT NULL DEFAULT 0,
+  wholesale_price REAL NOT NULL DEFAULT 0,
   purchase_price REAL NOT NULL DEFAULT 0,
   stock_quantity REAL NOT NULL DEFAULT 0,
   unit TEXT NOT NULL,
+  primary_unit TEXT,
+  secondary_unit TEXT,
+  secondary_stock REAL,
+  conversion_rate REAL,
+  img_path TEXT,
   stock_value REAL,
   min_stock REAL,
   location TEXT,
@@ -145,11 +151,16 @@ CREATE TABLE IF NOT EXISTS units (
   id TEXT PRIMARY KEY,
   full_name TEXT NOT NULL,
   short_name TEXT NOT NULL,
-  base_unit TEXT,
-  secondary_unit TEXT,
-  conversion_rate REAL,
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS conversion_rates (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  base_unit TEXT NOT NULL,
+  secondary_unit TEXT NOT NULL,
+  conversion_rate REAL NOT NULL,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
 CREATE TABLE IF NOT EXISTS reports (

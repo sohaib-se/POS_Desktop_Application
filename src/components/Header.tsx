@@ -35,7 +35,7 @@ export function Header({ onViewChange }: HeaderProps) {
         {/* Action Buttons */}
         <div className="flex items-center gap-3">
           <button
-            onClick={() => setShowAddSale(true)}
+            onClick={() => onViewChange("add-sale")}
             className="bg-[#E53935] hover:bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors"
           >
             <Plus className="w-4 h-4" />

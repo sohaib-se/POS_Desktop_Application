@@ -10,6 +10,7 @@ export function seedDatabase() {
     db.exec(`
       DELETE FROM chart_data;
       DELETE FROM reports;
+      DELETE FROM conversion_rates;
       DELETE FROM units;
       DELETE FROM categories;
       DELETE FROM cash_in_hand_transactions;
@@ -117,17 +118,31 @@ export function seedDatabase() {
     seedData.categories.forEach((category) => insertCategory.run(category));
 
     const insertUnit = db.prepare(`
-      INSERT INTO units (id, full_name, short_name, base_unit, secondary_unit, conversion_rate)
-      VALUES (@id, @fullName, @shortName, @baseUnit, @secondaryUnit, @conversionRate)
+      INSERT INTO units (id, full_name, short_name)
+      VALUES (@id, @fullName, @shortName)
     `);
     seedData.units.forEach((unit) => insertUnit.run({
       id: unit.id,
       fullName: unit.fullName,
-      shortName: unit.shortName,
-      baseUnit: unit.conversion?.baseUnit ?? null,
-      secondaryUnit: unit.conversion?.secondaryUnit ?? null,
-      conversionRate: unit.conversion?.rate ?? null
+      shortName: unit.shortName
     }));
+
+    const insertConversionRate = db.prepare(`
+      INSERT INTO conversion_rates (base_unit, secondary_unit, conversion_rate)
+      VALUES (@baseUnit, @secondaryUnit, @conversionRate)
+    `);
+
+    seedData.units.forEach((unit) => {
+      if (!unit.conversion) {
+        return;
+      }
+
+      insertConversionRate.run({
+        baseUnit: unit.conversion.baseUnit,
+        secondaryUnit: unit.conversion.secondaryUnit,
+        conversionRate: unit.conversion.rate,
+      });
+    });
 
     const insertReport = db.prepare(`
       INSERT INTO reports (id, name, description)

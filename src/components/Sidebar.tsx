@@ -192,6 +192,24 @@ export function Sidebar({ currentView, onViewChange }: SidebarProps) {
               {/* Submenu */}
               {hasChildren && isExpanded && (
                 <div className="ml-4 pl-4 border-l border-gray-700 animate-dropdownExpand overflow-hidden">
+                  {item.id === "sale-invoices" && (
+                    <div
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        onViewChange("add-sale");
+                      }}
+                      className={`
+                        flex items-center px-3 py-2 text-sm rounded-lg cursor-pointer transition-all duration-200 mb-0.5
+                        ${
+                          isActive("add-sale")
+                            ? "bg-white/10 text-white border-l-4 border-[#E53935]"
+                            : "text-gray-400 hover:text-white hover:bg-white/5"
+                        }
+                      `}
+                    >
+                      Add Sale
+                    </div>
+                  )}
                   {item.children?.map((child) => (
                     <div
                       key={child.id}

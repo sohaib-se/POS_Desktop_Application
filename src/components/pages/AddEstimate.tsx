@@ -23,7 +23,7 @@ interface SaleTab {
   showDescriptionInput: boolean;
 }
 
-interface AddSaleProps {
+interface AddEstimateProps {
   onSave?: () => void;
   onShare?: () => void;
   onClose?: () => void;
@@ -41,7 +41,7 @@ let globalTabId = 2;
 function createDefaultTab(id: number): SaleTab {
   return {
     id,
-    label: `Sale #${id}`,
+    label: `Estimate #${id}`,
     paymentMode: "credit",
     customerSearch: "",
     phoneNo: "",
@@ -88,7 +88,7 @@ function useColumnResize(initial: number[]) {
   return { widths, startResize };
 }
 
-export function AddSale({ onSave, onShare, onClose }: AddSaleProps) {
+export function AddEstimate({ onSave, onShare, onClose }: AddEstimateProps) {
   const [tabs, setTabs] = useState<SaleTab[]>([createDefaultTab(1)]);
   const [activeTabId, setActiveTabId] = useState(1);
   const [isOpenAnimated, setIsOpenAnimated] = useState(false);
@@ -283,7 +283,7 @@ export function AddSale({ onSave, onShare, onClose }: AddSaleProps) {
         })}
         <button
           onClick={addTab}
-          title="New Sale"
+          title="New Estimate"
           style={{
             marginBottom: 0, marginLeft: 4, width: 26, height: 26, borderRadius: "50%",
             background: "#3b82f6", color: "#fff", border: "none", cursor: "pointer",
@@ -297,7 +297,7 @@ export function AddSale({ onSave, onShare, onClose }: AddSaleProps) {
         {onClose && (
           <button
             onClick={onClose}
-            aria-label="Close add sale"
+            aria-label="Close add estimate"
             style={{
               marginLeft: "auto",
               marginBottom: 0,
@@ -322,9 +322,9 @@ export function AddSale({ onSave, onShare, onClose }: AddSaleProps) {
         )}
       </div>
 
-      {/* ── TOP BAR (Sale / Credit+Cash / Lite Mode) ── */}
+      {/* ── TOP BAR (Estimate / Credit+Cash / Lite Mode) ── */}
       <div style={{ background: "#fff", flexShrink: 0, padding: "8px 20px", display: "flex", alignItems: "center", gap: 20, borderBottom: "1px solid #e5e7eb" }}>
-        <span style={{ fontSize: 15, fontWeight: 600, color: "#1f2937" }}>Sale</span>
+        <span style={{ fontSize: 15, fontWeight: 600, color: "#1f2937" }}>Estimate</span>
 
         {/* Credit ← toggle → Cash */}
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -365,7 +365,7 @@ export function AddSale({ onSave, onShare, onClose }: AddSaleProps) {
       {/* ── SCROLLABLE CONTENT ── */}
       <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: 0 }}>
 
-        {/* Customer Search + Invoice */}
+        {/* Customer Search + Estimate */}
         <div style={{ background: "#fff", padding: "25px 20px 80px 20px" }}>
           <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16 }}>
             <div style={{ display: "flex", gap: 12 }}>
@@ -401,11 +401,11 @@ export function AddSale({ onSave, onShare, onClose }: AddSaleProps) {
 
             <div style={{ fontSize: 13, textAlign: "right", flexShrink: 0 }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 12, marginBottom: 8 }}>
-                <span style={{ color: "#6b7280" }}>Invoice Number</span>
+                <span style={{ color: "#6b7280" }}>Estimate Number</span>
                 <span style={{ fontWeight: 600, color: "#1f2937" }}>2</span>
               </div>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 12 }}>
-                <span style={{ color: "#6b7280" }}>Invoice Date</span>
+                <span style={{ color: "#6b7280" }}>Estimate Date</span>
                 <span style={{ fontWeight: 600, color: "#1f2937" }}>17/03/2026</span>
                 <button style={{ background: "none", border: "none", cursor: "pointer", color: "#3b82f6", padding: 0 }}>
                   <svg width="17" height="17" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" /></svg>

@@ -9,6 +9,7 @@ import {
   BarChart3,
   RefreshCw,
   Wrench,
+  Settings,
   ChevronDown,
   ChevronRight,
   Plus,
@@ -107,6 +108,12 @@ const menuItems: MenuItem[] = [
       { id: "utilities-verify-data", label: "Verify My Data" },
       { id: "utilities-recycle-bin", label: "Recycle Bin" },
     ],
+  },
+  {
+    id: "settings",
+    label: "Settings",
+    icon: Settings,
+    children: [],
   },
 ];
 

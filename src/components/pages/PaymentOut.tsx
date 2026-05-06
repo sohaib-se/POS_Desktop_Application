@@ -9,21 +9,32 @@ import {
   Building2,
   MoreVertical,
   Share2,
+  Calculator,
+  Camera,
+  FilePlus2,
+  Info,
+  Settings,
+  X,
 } from "lucide-react";
 import { paymentOutRecords } from "@/data/mockData";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 
 export function PaymentOut() {
   const [showAddPayment, setShowAddPayment] = useState(false);
+  const [selectedParty, setSelectedParty] = useState("khan");
 
   const totalAmount = paymentOutRecords.reduce((sum, p) => sum + p.amount, 0);
   const totalPaid = totalAmount;
   const totalOpen = 840;
+
+  const partyOptions = [
+    { value: "khan", label: "Khan", balance: 100 },
+    { value: "cash-sale", label: "Cash Sale", balance: 200 },
+    { value: "supplier-a", label: "Supplier A", balance: 340 },
+  ];
+
+  const selectedPartyBalance =
+    partyOptions.find((party) => party.value === selectedParty)?.balance ?? 0;
 
   return (
     <div className="h-full flex flex-col bg-[#D0DCE7] gap-1">
@@ -177,100 +188,191 @@ export function PaymentOut() {
 
       {/* Add Payment-Out Modal */}
       <Dialog open={showAddPayment} onOpenChange={setShowAddPayment}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Payment-Out</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Party *
-                </label>
-                <select className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
-                  <option>Select Party</option>
-                  <option>Khan (BAL: 100)</option>
-                  <option>Cash Sale (BAL: 200)</option>
-                </select>
+        <DialogContent
+          showCloseButton={false}
+          className="w-[50rem] max-w-none overflow-hidden rounded-lg border-0 bg-white p-0 shadow-[0_24px_80px_rgba(15,23,42,0.28)]"
+          style={{ width: "50rem", maxWidth: "50rem", minWidth: "50rem" }}
+        >
+          <div className="flex flex-col bg-white">
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+              <h2 className="text-[18px] font-semibold text-slate-900">
+                Payment-Out
+              </h2>
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  className="flex h-8 w-8 items-center justify-center rounded hover:bg-slate-100 text-slate-500"
+                  aria-label="Calculator"
+                >
+                  <Calculator className="h-5 w-5" />
+                </button>
+                <button
+                  type="button"
+                  className="relative flex h-8 w-8 items-center justify-center rounded hover:bg-slate-100 text-slate-500"
+                  aria-label="Settings"
+                >
+                  <Settings className="h-5 w-5" />
+                  <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-[#E53935]" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowAddPayment(false)}
+                  className="flex h-8 w-8 items-center justify-center rounded-full bg-[#8B97A8] text-white hover:bg-[#748396]"
+                  aria-label="Close"
+                >
+                  <X className="h-4 w-4" />
+                </button>
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Payment No
-                  </label>
-                  <input
-                    type="text"
-                    value="5"
-                    readOnly
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-gray-50"
-                  />
+            </div>
+
+            {/* Body */}
+            <div className="px-6 py-6">
+              <div className="grid grid-cols-[320px_minmax(0,1fr)] gap-10">
+                {/* Left column */}
+                <div className="flex flex-col gap-5">
+                  <div>
+                    <div className="relative">
+                      <label className="absolute -top-2 left-3 bg-white px-1 text-[11px] font-medium text-slate-500 z-10">
+                        Party <span className="text-[#E53935]">*</span>
+                      </label>
+                      <select
+                        value={selectedParty}
+                        onChange={(e) => setSelectedParty(e.target.value)}
+                        className="h-11 w-full rounded border border-slate-300 bg-white px-3 text-[14px] text-slate-900 outline-none focus:border-[#1976D2] appearance-none pr-8"
+                      >
+                        <option value="">Select Party</option>
+                        {partyOptions.map((party) => (
+                          <option key={party.value} value={party.value}>
+                            {party.label}
+                          </option>
+                        ))}
+                      </select>
+                      <ChevronDown className="absolute right-3 top-3.5 h-4 w-4 text-slate-400 pointer-events-none" />
+                    </div>
+                    <p className="mt-1.5 text-[12px] font-medium text-[#E53935]">
+                      BAL: {selectedPartyBalance}
+                    </p>
+                  </div>
+
+                  <div className="relative w-[180px]">
+                    <label className="absolute -top-2 left-3 bg-white px-1 text-[11px] font-medium text-slate-500 z-10">
+                      Payment Type
+                    </label>
+                    <select className="h-11 w-full rounded border border-slate-300 bg-white px-3 text-[14px] text-slate-900 outline-none focus:border-[#1976D2] appearance-none pr-8">
+                      <option>Cash</option>
+                      <option>Bank Transfer</option>
+                      <option>Cheque</option>
+                      <option>UPI</option>
+                    </select>
+                    <ChevronDown className="absolute right-3 top-3.5 h-4 w-4 text-slate-400 pointer-events-none" />
+                  </div>
+
+                  <button
+                    type="button"
+                    className="inline-flex w-fit items-center gap-1.5 text-[14px] font-medium text-[#1976D2]"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Add Payment type
+                  </button>
+
+                  <button
+                    type="button"
+                    className="inline-flex w-fit items-center gap-2 rounded border border-slate-300 bg-white px-4 py-2.5 text-[13px] font-semibold uppercase tracking-wide text-slate-400 shadow-sm"
+                  >
+                    <FilePlus2 className="h-4 w-4" />
+                    Add Description
+                  </button>
+
+                  <button
+                    type="button"
+                    className="flex h-8 w-8 items-center justify-center text-slate-400"
+                    aria-label="Add attachment"
+                  >
+                    <Camera className="h-5 w-5" />
+                  </button>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Date
-                  </label>
-                  <input
-                    type="text"
-                    value="21/02/2026"
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
-                  />
+
+                {/* Right column */}
+                <div
+                  className="flex flex-col justify-between"
+                  style={{ minHeight: "280px" }}
+                >
+                  <div className="grid grid-cols-2 gap-8">
+                    <div>
+                      <label className="mb-1.5 block text-[12px] text-slate-500">
+                        Payment No
+                      </label>
+                      <input
+                        type="text"
+                        defaultValue="5"
+                        className="h-8 w-full border-0 border-b border-slate-300 bg-transparent px-0 text-[14px] text-slate-900 outline-none focus:border-[#1976D2]"
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1.5 block text-[12px] text-slate-500">
+                        Date
+                      </label>
+                      <div className="relative">
+                        <input
+                          type="text"
+                          defaultValue="21/02/2026"
+                          className="h-8 w-full border-0 border-b border-slate-300 bg-transparent px-0 pr-8 text-[14px] text-slate-900 outline-none focus:border-[#1976D2]"
+                        />
+                        <Calendar className="absolute right-0 top-1.5 h-4 w-4 text-slate-400" />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-6 mt-auto pt-8">
+                    <label className="text-[13px] text-slate-500 whitespace-nowrap">
+                      Paid
+                    </label>
+                    <input
+                      type="number"
+                      className="h-9 w-52 rounded border border-slate-300 bg-white px-3 text-[14px] text-slate-900 outline-none focus:border-[#1976D2]"
+                    />
+                  </div>
                 </div>
               </div>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Payment Type
-              </label>
-              <select className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
-                <option>Cash</option>
-                <option>Bank Transfer</option>
-                <option>Cheque</option>
-                <option>UPI</option>
-              </select>
-            </div>
-
-            <button className="text-blue-600 text-sm">
-              + Add Payment type
-            </button>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Description
-              </label>
-              <textarea
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
-                rows={3}
-                placeholder="Add description..."
-              ></textarea>
-            </div>
-
-            <div className="flex justify-end">
-              <div className="w-48">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Paid
-                </label>
-                <input
-                  type="number"
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
-                />
+            {/* Footer */}
+            <div className="border-t border-slate-200 px-6 py-4">
+              <div className="flex items-center justify-between">
+                <button
+                  type="button"
+                  className="flex items-center gap-3 text-[14px] text-slate-500"
+                >
+                  <span className="relative inline-flex h-5 w-9 items-center rounded-full bg-slate-300">
+                    <span className="h-4 w-4 translate-x-0.5 rounded-full bg-white shadow-sm transition-transform" />
+                  </span>
+                  <span className="font-medium text-[#5E6B84]">
+                    Enable Link Payments to Bills
+                  </span>
+                  <Info className="h-4 w-4 text-slate-400" />
+                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    className="inline-flex h-9 items-center rounded-md border border-slate-300 bg-white px-5 text-[14px] font-medium text-slate-700 shadow-sm hover:bg-slate-50"
+                  >
+                    Share
+                  </button>
+                  <button
+                    type="button"
+                    className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-slate-300 bg-white text-slate-700 shadow-sm hover:bg-slate-50"
+                  >
+                    <ChevronDown className="h-4 w-4" />
+                  </button>
+                  <button
+                    type="button"
+                    className="h-9 rounded bg-[#1E88F7] px-8 text-[14px] font-semibold text-white shadow-[0_4px_12px_rgba(30,136,247,0.3)] hover:bg-[#1878dd]"
+                  >
+                    Save
+                  </button>
+                </div>
               </div>
-            </div>
-
-            <div className="flex justify-end gap-3 pt-4">
-              <button
-                onClick={() => setShowAddPayment(false)}
-                className="px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-700"
-              >
-                Cancel
-              </button>
-              <button className="px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 flex items-center gap-2">
-                Share
-                <ChevronDown className="w-4 h-4" />
-              </button>
-              <button className="px-6 py-2 bg-[#1976D2] text-white rounded-lg text-sm font-medium">
-                Save
-              </button>
             </div>
           </div>
         </DialogContent>

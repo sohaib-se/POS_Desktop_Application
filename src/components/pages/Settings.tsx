@@ -1,10 +1,20 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Settings, Printer, Percent, MessageSquare, Users, Package, Bell, X } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
-export function SettingsPage() {
+interface SettingsPageProps {
+  onClose?: () => void;
+}
+
+export function SettingsPage({ onClose }: SettingsPageProps = {}) {
   const [activeTab, setActiveTab] = useState('general');
   const [showPrintSettings, setShowPrintSettings] = useState(false);
+  const [isOpenAnimated, setIsOpenAnimated] = useState(false);
+
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => setIsOpenAnimated(true));
+    return () => cancelAnimationFrame(frame);
+  }, []);
 
   const tabs = [
     { id: 'general', label: 'GENERAL', icon: Settings },
@@ -18,7 +28,58 @@ export function SettingsPage() {
   ];
 
   return (
-    <div className="h-full flex bg-white">
+    <div
+      style={{
+        height: "100%",
+        display: "flex",
+        flexDirection: "column",
+        background: "#D0DCE7",
+        opacity: isOpenAnimated ? 1 : 0,
+        transform: isOpenAnimated
+          ? "translate3d(0, 0, 0) scale(1)"
+          : "translate3d(-48px, 48px, 0) scale(0.99)",
+        transition:
+          "opacity 120ms ease-out, transform 170ms cubic-bezier(0.2, 0.8, 0.2, 1)",
+      }}
+    >
+      <div
+        style={{
+          background: "#fff",
+          flexShrink: 0,
+          padding: "16px 20px",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          borderBottom: "1px solid #e5e7eb",
+        }}
+      >
+        <h1 style={{ fontSize: 18, fontWeight: 600, color: "#1f2937", margin: 0 }}>
+          Settings
+        </h1>
+        {onClose && (
+          <button
+            onClick={onClose}
+            aria-label="Close settings"
+            style={{
+              width: 32,
+              height: 32,
+              background: "#374151",
+              border: "none",
+              cursor: "pointer",
+              color: "#ffffff",
+              borderRadius: "50%",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              flexShrink: 0,
+            }}
+          >
+            <X className="w-5 h-5" />
+          </button>
+        )}
+      </div>
+
+      <div className="h-full flex bg-white" style={{ flex: 1, overflow: "hidden" }}>
       {/* Left Sidebar */}
       <div className="w-48 border-r border-gray-200 bg-gray-50">
         <div className="p-4">
@@ -215,6 +276,7 @@ export function SettingsPage() {
           <PrintSettings />
         </DialogContent>
       </Dialog>
+      </div>
     </div>
   );
 }

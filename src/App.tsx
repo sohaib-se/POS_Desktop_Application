@@ -27,8 +27,10 @@ function App() {
   const [currentView, setCurrentView] = useState<ViewType>("home");
   const [lastStandardView, setLastStandardView] = useState<ViewType>("home");
 
+  const isOverlayView = (view: ViewType) => view === "add-sale" || view === "settings";
+
   const handleViewChange = (view: ViewType) => {
-    if (view !== "add-sale") {
+    if (!isOverlayView(view)) {
       setLastStandardView(view);
     }
 
@@ -39,8 +41,12 @@ function App() {
     setCurrentView(lastStandardView);
   };
 
+  const handleCloseSettings = () => {
+    setCurrentView(lastStandardView);
+  };
+
   const activeBaseView =
-    currentView === "add-sale" ? lastStandardView : currentView;
+    isOverlayView(currentView) ? lastStandardView : currentView;
 
   const renderContent = (view: ViewType) => {
     switch (view) {
@@ -144,6 +150,12 @@ function App() {
       {currentView === "add-sale" && (
         <div className="fixed inset-0 z-[100]">
           <AddSale onClose={handleCloseAddSale} />
+        </div>
+      )}
+
+      {currentView === "settings" && (
+        <div className="fixed inset-0 z-[110]">
+          <SettingsPage onClose={handleCloseSettings} />
         </div>
       )}
     </>

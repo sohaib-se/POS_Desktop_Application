@@ -86,6 +86,321 @@ export function getItems() {
   return rows;
 }
 
+export function getSaleInvoices() {
+  const db = openDatabase();
+  const rows = db.prepare('SELECT * FROM sale_invoices ORDER BY created_at DESC, invoice_no DESC').all();
+  db.close();
+  return rows;
+}
+
+export function getSaleInvoiceById(id) {
+  const db = openDatabase();
+  const row = db.prepare('SELECT * FROM sale_invoices WHERE id = ?').get(String(id));
+  db.close();
+  return row ?? null;
+}
+
+export function getNextSaleInvoiceNo() {
+  const db = openDatabase();
+  const row = db.prepare('SELECT COALESCE(MAX(CAST(invoice_no AS INTEGER)), 0) + 1 AS nextInvoiceNo FROM sale_invoices').get();
+  db.close();
+  return String(Number(row?.nextInvoiceNo ?? 1));
+}
+
+export function addSaleInvoice(invoice) {
+  const db = openDatabase();
+  db.prepare(`
+    INSERT INTO sale_invoices (
+      id,
+      invoice_no,
+      date,
+      party_name,
+      party_id,
+      party_phone,
+      transaction_type,
+      payment_type,
+      payment_mode,
+      subtotal,
+      discount_percent,
+      discount_amount,
+      tax_label,
+      tax_rate,
+      tax_amount,
+      round_off,
+      round_off_amount,
+      amount,
+      balance,
+      description,
+      line_items_json,
+      attachment_image_path,
+      attachment_image_name,
+      attachment_document_path,
+      attachment_document_name,
+      created_at,
+      updated_at
+    )
+    VALUES (
+      @id,
+      @invoiceNo,
+      @date,
+      @partyName,
+      @partyId,
+      @partyPhone,
+      @transactionType,
+      @paymentType,
+      @paymentMode,
+      @subtotal,
+      @discountPercent,
+      @discountAmount,
+      @taxLabel,
+      @taxRate,
+      @taxAmount,
+      @roundOff,
+      @roundOffAmount,
+      @amount,
+      @balance,
+      @description,
+      @lineItemsJson,
+      @attachmentImagePath,
+      @attachmentImageName,
+      @attachmentDocumentPath,
+      @attachmentDocumentName,
+      datetime('now'),
+      datetime('now')
+    )
+  `).run({
+    ...invoice,
+    partyId: invoice.partyId ?? null,
+    partyPhone: invoice.partyPhone ?? null,
+    paymentMode: invoice.paymentMode ?? null,
+    paymentType: invoice.paymentType ?? null,
+    taxLabel: invoice.taxLabel ?? null,
+    description: invoice.description ?? null,
+    lineItemsJson: invoice.lineItemsJson ?? null,
+    attachmentImagePath: invoice.attachmentImagePath ?? null,
+    attachmentImageName: invoice.attachmentImageName ?? null,
+    attachmentDocumentPath: invoice.attachmentDocumentPath ?? null,
+    attachmentDocumentName: invoice.attachmentDocumentName ?? null,
+  });
+  db.close();
+}
+
+export function updateSaleInvoice(id, invoice) {
+  const db = openDatabase();
+  db.prepare(`
+    UPDATE sale_invoices
+    SET
+      invoice_no = @invoiceNo,
+      date = @date,
+      party_name = @partyName,
+      party_id = @partyId,
+      party_phone = @partyPhone,
+      transaction_type = @transactionType,
+      payment_type = @paymentType,
+      payment_mode = @paymentMode,
+      subtotal = @subtotal,
+      discount_percent = @discountPercent,
+      discount_amount = @discountAmount,
+      tax_label = @taxLabel,
+      tax_rate = @taxRate,
+      tax_amount = @taxAmount,
+      round_off = @roundOff,
+      round_off_amount = @roundOffAmount,
+      amount = @amount,
+      balance = @balance,
+      description = @description,
+      line_items_json = @lineItemsJson,
+      attachment_image_path = @attachmentImagePath,
+      attachment_image_name = @attachmentImageName,
+      attachment_document_path = @attachmentDocumentPath,
+      attachment_document_name = @attachmentDocumentName,
+      updated_at = datetime('now')
+    WHERE id = @id
+  `).run({
+    id: String(id),
+    ...invoice,
+    partyId: invoice.partyId ?? null,
+    partyPhone: invoice.partyPhone ?? null,
+    paymentMode: invoice.paymentMode ?? null,
+    paymentType: invoice.paymentType ?? null,
+    taxLabel: invoice.taxLabel ?? null,
+    description: invoice.description ?? null,
+    lineItemsJson: invoice.lineItemsJson ?? null,
+    attachmentImagePath: invoice.attachmentImagePath ?? null,
+    attachmentImageName: invoice.attachmentImageName ?? null,
+    attachmentDocumentPath: invoice.attachmentDocumentPath ?? null,
+    attachmentDocumentName: invoice.attachmentDocumentName ?? null,
+  });
+  db.close();
+}
+
+export function deleteSaleInvoice(id) {
+  const db = openDatabase();
+  const result = db.prepare('DELETE FROM sale_invoices WHERE id = ?').run(String(id));
+  db.close();
+  return result.changes > 0;
+}
+
+export function getPurchaseBills() {
+  const db = openDatabase();
+  const rows = db.prepare('SELECT * FROM purchase_bills ORDER BY created_at DESC, invoice_no DESC').all();
+  db.close();
+  return rows;
+}
+
+export function getPurchaseBillById(id) {
+  const db = openDatabase();
+  const row = db.prepare('SELECT * FROM purchase_bills WHERE id = ?').get(String(id));
+  db.close();
+  return row ?? null;
+}
+
+export function getNextPurchaseBillNo() {
+  const db = openDatabase();
+  const row = db.prepare('SELECT COALESCE(MAX(CAST(invoice_no AS INTEGER)), 0) + 1 AS nextInvoiceNo FROM purchase_bills').get();
+  db.close();
+  return String(Number(row?.nextInvoiceNo ?? 1));
+}
+
+export function addPurchaseBill(invoice) {
+  const db = openDatabase();
+  db.prepare(`
+    INSERT INTO purchase_bills (
+      id,
+      invoice_no,
+      date,
+      party_name,
+      party_id,
+      party_phone,
+      transaction_type,
+      payment_type,
+      payment_mode,
+      subtotal,
+      discount_percent,
+      discount_amount,
+      tax_label,
+      tax_rate,
+      tax_amount,
+      round_off,
+      round_off_amount,
+      amount,
+      balance,
+      status,
+      description,
+      line_items_json,
+      attachment_image_path,
+      attachment_image_name,
+      attachment_document_path,
+      attachment_document_name,
+      created_at,
+      updated_at
+    )
+    VALUES (
+      @id,
+      @invoiceNo,
+      @date,
+      @partyName,
+      @partyId,
+      @partyPhone,
+      @transactionType,
+      @paymentType,
+      @paymentMode,
+      @subtotal,
+      @discountPercent,
+      @discountAmount,
+      @taxLabel,
+      @taxRate,
+      @taxAmount,
+      @roundOff,
+      @roundOffAmount,
+      @amount,
+      @balance,
+      @status,
+      @description,
+      @lineItemsJson,
+      @attachmentImagePath,
+      @attachmentImageName,
+      @attachmentDocumentPath,
+      @attachmentDocumentName,
+      datetime('now'),
+      datetime('now')
+    )
+  `).run({
+    ...invoice,
+    partyId: invoice.partyId ?? null,
+    partyPhone: invoice.partyPhone ?? null,
+    paymentMode: invoice.paymentMode ?? null,
+    paymentType: invoice.paymentType ?? null,
+    taxLabel: invoice.taxLabel ?? null,
+    description: invoice.description ?? null,
+    lineItemsJson: invoice.lineItemsJson ?? null,
+    attachmentImagePath: invoice.attachmentImagePath ?? null,
+    attachmentImageName: invoice.attachmentImageName ?? null,
+    attachmentDocumentPath: invoice.attachmentDocumentPath ?? null,
+    attachmentDocumentName: invoice.attachmentDocumentName ?? null,
+    status: invoice.status ?? 'Unpaid',
+  });
+  db.close();
+}
+
+export function updatePurchaseBill(id, invoice) {
+  const db = openDatabase();
+  db.prepare(`
+    UPDATE purchase_bills
+    SET
+      invoice_no = @invoiceNo,
+      date = @date,
+      party_name = @partyName,
+      party_id = @partyId,
+      party_phone = @partyPhone,
+      transaction_type = @transactionType,
+      payment_type = @paymentType,
+      payment_mode = @paymentMode,
+      subtotal = @subtotal,
+      discount_percent = @discountPercent,
+      discount_amount = @discountAmount,
+      tax_label = @taxLabel,
+      tax_rate = @taxRate,
+      tax_amount = @taxAmount,
+      round_off = @roundOff,
+      round_off_amount = @roundOffAmount,
+      amount = @amount,
+      balance = @balance,
+      status = @status,
+      description = @description,
+      line_items_json = @lineItemsJson,
+      attachment_image_path = @attachmentImagePath,
+      attachment_image_name = @attachmentImageName,
+      attachment_document_path = @attachmentDocumentPath,
+      attachment_document_name = @attachmentDocumentName,
+      updated_at = datetime('now')
+    WHERE id = @id
+  `).run({
+    id: String(id),
+    ...invoice,
+    partyId: invoice.partyId ?? null,
+    partyPhone: invoice.partyPhone ?? null,
+    paymentMode: invoice.paymentMode ?? null,
+    paymentType: invoice.paymentType ?? null,
+    taxLabel: invoice.taxLabel ?? null,
+    description: invoice.description ?? null,
+    lineItemsJson: invoice.lineItemsJson ?? null,
+    attachmentImagePath: invoice.attachmentImagePath ?? null,
+    attachmentImageName: invoice.attachmentImageName ?? null,
+    attachmentDocumentPath: invoice.attachmentDocumentPath ?? null,
+    attachmentDocumentName: invoice.attachmentDocumentName ?? null,
+    status: invoice.status ?? 'Unpaid',
+  });
+  db.close();
+}
+
+export function deletePurchaseBill(id) {
+  const db = openDatabase();
+  const result = db.prepare('DELETE FROM purchase_bills WHERE id = ?').run(String(id));
+  db.close();
+  return result.changes > 0;
+}
+
 export function upsertItem(item) {
   const db = openDatabase();
   const existingItem = item.id

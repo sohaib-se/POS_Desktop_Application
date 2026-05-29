@@ -1,550 +1,420 @@
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-  type MouseEvent as ReactMouseEvent,
-} from "react";
-import {
+  Search,
   Plus,
   ChevronDown,
+  Download,
   Printer,
   Calendar,
-  Building2,
   MoreVertical,
   Share2,
+  Pencil,
+  Trash2,
+  X,
 } from "lucide-react";
-import { purchaseBills } from "@/data/mockData";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { AddPurchase } from "@/components/pages/AddPurchase";
+import type { PurchaseBillEditData } from "@/types";
+type PurchaseBillApiRow = {
+  id: string;
+  invoice_no: string;
+  date: string;
+  party_name: string;
+  party_id?: string | null;
+  party_phone?: string | null;
+  transaction_type: string;
+  payment_type?: string | null;
+  payment_mode?: string | null;
+  subtotal?: number | null;
+  discount_percent?: number | null;
+  discount_amount?: number | null;
+  tax_label?: string | null;
+  tax_rate?: number | null;
+  tax_amount?: number | null;
+  round_off?: number | null;
+  round_off_amount?: number | null;
+  amount: number;
+  balance: number;
+  description?: string | null;
+  line_items_json?: string | null;
+};
 
-interface PurchaseRow {
-  id: number;
-  item: string;
-  qty: string;
-  unit: string;
-  pricePerUnit: string;
-}
+type PurchaseBillViewRow = {
+  id: string;
+  invoiceNo: string;
+  date: string;
+  partyId?: string;
+  partyName: string;
+  partyPhone?: string;
+  transaction: string;
+  paymentType: string;
+  paymentMode?: string;
+  amount: number;
+  balance: number;
+  monthKey: string;
+  subtotal?: number;
+  discountPercent?: number;
+  discountAmount?: number;
+  taxLabel?: string;
+  taxRate?: number;
+  taxAmount?: number;
+  roundOff?: boolean;
+  roundOffAmount?: number;
+  description?: string;
+  lineItemsJson?: string | null;
+};
 
-interface PurchaseTab {
-  id: number;
-  label: string;
-  paymentMode: "credit" | "cash";
-  customerSearch: string;
-  phoneNo: string;
-  rows: PurchaseRow[];
-  discountPercent: string;
-  discountRs: string;
-  tax: string;
-  roundOff: boolean;
-  description: string;
-  showDescriptionInput: boolean;
-}
+type PurchaseBillLineItem = {
+  id?: number;
+  itemId?: string;
+  name?: string;
+  quantity?: number;
+  unit?: string;
+  price?: number;
+  amount?: number;
+};
 
-const unitOptions = [
-  "NONE",
-  "PCS",
-  "KG",
-  "G",
-  "L",
-  "ML",
-  "M",
-  "CM",
-  "MM",
-  "DOZEN",
-  "BOX",
-  "PACK",
-  "BAG",
-  "BOTTLE",
-  "CAN",
-  "SET",
+
+
+const fallbackPurchaseBills: PurchaseBillViewRow[] = [
+  {
+    id: "1",
+    invoiceNo: "9",
+    date: "21/02/2026",
+    partyName: "Khan",
+    transaction: "Purchase",
+    paymentType: "Cash",
+    amount: 160,
+    balance: 160,
+    monthKey: "2026-02",
+  },
+  {
+    id: "2",
+    invoiceNo: "8",
+    date: "21/02/2026",
+    partyName: "Khan",
+    transaction: "Purchase",
+    paymentType: "Cash",
+    amount: 200,
+    balance: 200,
+    monthKey: "2026-02",
+  },
+  {
+    id: "3",
+    invoiceNo: "7",
+    date: "21/02/2026",
+    partyName: "Cash Sale",
+    transaction: "Purchase",
+    paymentType: "Cash",
+    amount: 200,
+    balance: 200,
+    monthKey: "2026-02",
+  },
+  {
+    id: "4",
+    invoiceNo: "6",
+    date: "20/02/2026",
+    partyName: "Sohaib",
+    transaction: "Purchase",
+    paymentType: "Cash",
+    amount: 160,
+    balance: 160,
+    monthKey: "2026-02",
+  },
 ];
 
-const taxOptions = ["NONE", "GST 5%", "GST 12%", "GST 18%", "GST 28%"];
+function parseInvoiceDate(rawDate: string) {
+  const match = rawDate.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (match) {
+    const [, day, month, year] = match;
+    return new Date(Number(year), Number(month) - 1, Number(day));
+  }
 
-let globalRowId = 3;
-let globalTabId = 2;
-
-function createDefaultTab(id: number): PurchaseTab {
-  return {
-    id,
-    label: `Purchase #${id}`,
-    paymentMode: "credit",
-    customerSearch: "",
-    phoneNo: "",
-    rows: [
-      { id: 1, item: "", qty: "", unit: "NONE", pricePerUnit: "" },
-      { id: 2, item: "", qty: "", unit: "NONE", pricePerUnit: "" },
-    ],
-    discountPercent: "",
-    discountRs: "",
-    tax: "NONE",
-    roundOff: true,
-    description: "",
-    showDescriptionInput: false,
-  };
+  const parsedDate = new Date(rawDate);
+  return Number.isNaN(parsedDate.getTime()) ? new Date() : parsedDate;
 }
 
-function useColumnResize(initial: number[]) {
-  const [widths, setWidths] = useState(initial);
-  const resizing = useRef<{ col: number; startX: number; startW: number } | null>(null);
-
-  const startResize = useCallback(
-    (col: number, e: ReactMouseEvent<HTMLDivElement>) => {
-      e.preventDefault();
-      resizing.current = { col, startX: e.clientX, startW: widths[col] };
-
-      const onMove = (ev: globalThis.MouseEvent) => {
-        if (!resizing.current) return;
-        const delta = ev.clientX - resizing.current.startX;
-        const newW = Math.max(50, resizing.current.startW + delta);
-        setWidths((prev) => {
-          const next = [...prev];
-          next[resizing.current!.col] = newW;
-          return next;
-        });
-      };
-
-      const onUp = () => {
-        resizing.current = null;
-        window.removeEventListener("mousemove", onMove);
-        window.removeEventListener("mouseup", onUp);
-      };
-
-      window.addEventListener("mousemove", onMove);
-      window.addEventListener("mouseup", onUp);
-    },
-    [widths]
-  );
-
-  return { widths, startResize };
+function getMonthKeyFromDate(rawDate: string) {
+  const parsedDate = parseInvoiceDate(rawDate);
+  const year = parsedDate.getFullYear();
+  const month = String(parsedDate.getMonth() + 1).padStart(2, "0");
+  return `${year}-${month}`;
 }
 
-function PurchasePopup({ onClose }: { onClose: () => void }) {
-  const [tabs, setTabs] = useState<PurchaseTab[]>([createDefaultTab(1)]);
-  const [activeTabId, setActiveTabId] = useState(1);
-  const [isOpenAnimated, setIsOpenAnimated] = useState(false);
+function formatMonthLabel(monthKey: string) {
+  const [year, month] = monthKey.split("-");
+  const parsedDate = new Date(Number(year), Number(month) - 1, 1);
+  return parsedDate.toLocaleDateString("en-US", {
+    month: "long",
+    year: "numeric",
+  });
+}
 
-  useEffect(() => {
-    const frame = requestAnimationFrame(() => setIsOpenAnimated(true));
-    return () => cancelAnimationFrame(frame);
-  }, []);
+function formatDateDisplay(date: Date) {
+  return date.toLocaleDateString("en-GB");
+}
 
-  const { widths, startResize } = useColumnResize([42, 340, 90, 110, 130, 120]);
-
-  const activeTab = tabs.find((tab) => tab.id === activeTabId)!;
-
-  const updateTab = (partial: Partial<PurchaseTab>) => {
-    setTabs((prev) => prev.map((tab) => (tab.id === activeTabId ? { ...tab, ...partial } : tab)));
+function createCsvContent(rows: PurchaseBillViewRow[]) {
+  const headers = ["Date", "Invoice No", "Party Name", "Transaction", "Payment Type", "Amount", "Balance"];
+  const escapeCell = (value: string) => {
+    const normalized = value.replace(/"/g, '""');
+    return `"${normalized}"`;
   };
 
-  const addTab = () => {
-    const id = globalTabId++;
-    const newTab = createDefaultTab(id);
-    setTabs((prev) => [...prev, newTab]);
-    setActiveTabId(id);
-  };
+  const lines = [
+    headers.map(escapeCell).join(","),
+    ...rows.map((row) =>
+      [
+        row.date,
+        row.invoiceNo,
+        row.partyName,
+        row.transaction,
+        row.paymentType,
+        row.amount.toString(),
+        row.balance.toString(),
+      ]
+        .map((cell) => escapeCell(cell))
+        .join(","),
+    ),
+  ];
 
-  const closeTab = (id: number, e: ReactMouseEvent<HTMLButtonElement>) => {
-    e.stopPropagation();
-    if (tabs.length === 1) return;
-    setTabs((prev) => {
-      const remaining = prev.filter((tab) => tab.id !== id);
-      if (activeTabId === id) setActiveTabId(remaining[remaining.length - 1].id);
-      return remaining;
-    });
-  };
+  return lines.join("\n");
+}
 
-  const updateRow = (rowId: number, field: keyof PurchaseRow, value: string) => {
-    let updatedRows = activeTab.rows.map((row) => (row.id === rowId ? { ...row, [field]: value } : row));
+function monthLabelForFilter(monthKey: string) {
+  return monthKey ? formatMonthLabel(monthKey) : "All Months";
+}
 
-    const isEmpty = (row: PurchaseRow) => !row.item && !row.qty && !row.pricePerUnit;
+function parseLineItems(lineItemsJson?: string | null) {
+  if (!lineItemsJson) {
+    return [] as PurchaseBillLineItem[];
+  }
 
-    while (updatedRows.length > 2 && isEmpty(updatedRows[updatedRows.length - 1])) {
-      const secondLast = updatedRows[updatedRows.length - 2];
-      if (isEmpty(secondLast)) {
-        updatedRows.pop();
-      } else {
-        break;
-      }
+  try {
+    const parsedValue = JSON.parse(lineItemsJson) as unknown;
+    if (!Array.isArray(parsedValue)) {
+      return [] as PurchaseBillLineItem[];
     }
 
-    const lastRow = updatedRows[updatedRows.length - 1];
-    if (!isEmpty(lastRow)) {
-      updatedRows.push({ id: globalRowId++, item: "", qty: "", unit: "NONE", pricePerUnit: "" });
-    }
-
-    updateTab({ rows: updatedRows });
-  };
-
-  const addRow = () => {
-    updateTab({
-      rows: [...activeTab.rows, { id: globalRowId++, item: "", qty: "", unit: "NONE", pricePerUnit: "" }],
-    });
-  };
-
-  const totalQty = activeTab.rows.reduce((sum, row) => sum + (parseFloat(row.qty) || 0), 0);
-  const totalAmount = activeTab.rows.reduce(
-    (sum, row) => sum + (parseFloat(row.qty) || 0) * (parseFloat(row.pricePerUnit) || 0),
-    0
-  );
-  const taxRate = activeTab.tax === "NONE" ? 0 : parseFloat(activeTab.tax.replace(/[^0-9.]/g, "")) / 100;
-  const taxAmount = totalAmount * taxRate;
-  const discountAmount = activeTab.discountRs ? parseFloat(activeTab.discountRs) : 0;
-  const grandTotal = totalAmount + taxAmount - discountAmount;
-  const roundedTotal = activeTab.roundOff ? Math.round(grandTotal) : grandTotal;
-  const roundOffDiff = roundedTotal - grandTotal;
-
-  const fmt = (n: number) => n.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-
-  const ResizeHandle = ({ col }: { col: number }) => (
-    <div
-      onMouseDown={(e) => startResize(col, e)}
-      style={{
-        position: "absolute",
-        right: 0,
-        top: 0,
-        width: 6,
-        height: "100%",
-        cursor: "col-resize",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        zIndex: 10,
-      }}
-    >
-      <div style={{ width: 1, height: "60%", background: "#d1d5db" }} />
-    </div>
-  );
-
-  return (
-    <div
-      style={{
-        position: "fixed",
-        inset: 0,
-        zIndex: 50,
-        height: "100%",
-        display: "flex",
-        flexDirection: "column",
-        background: "#D0DCE7",
-        opacity: isOpenAnimated ? 1 : 0,
-        transform: isOpenAnimated ? "translate3d(0, 0, 0) scale(1)" : "translate3d(-48px, 48px, 0) scale(0.99)",
-        transition: "opacity 120ms ease-out, transform 170ms cubic-bezier(0.2, 0.8, 0.2, 1)",
-      }}
-    >
-      <div style={{ background: "#c4d3de", display: "flex", alignItems: "flex-end", padding: "2px 10px 0 10px", gap: 4, flexShrink: 0 }}>
-        {tabs.map((tab) => {
-          const active = tab.id === activeTabId;
-          return (
-            <div
-              key={tab.id}
-              onClick={() => setActiveTabId(tab.id)}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-                padding: "7px 20px",
-                background: active ? "#fff" : "#d4dfe9",
-                color: active ? "#1f2937" : "#6b7280",
-                fontWeight: active ? 500 : 400,
-                fontSize: 13,
-                borderTopLeftRadius: 8,
-                borderTopRightRadius: 8,
-                borderBottomLeftRadius: 0,
-                borderBottomRightRadius: 0,
-                cursor: "pointer",
-                borderBottom: active ? "2px solid #fff" : "none",
-                userSelect: "none",
-                boxShadow: active ? "0 -1px 3px rgba(0,0,0,0.06)" : "none",
-                minWidth: 225,
-                position: "relative",
-                overflow: "visible",
-              }}
-            >
-              {active && (
-                <>
-                  <span style={{ position: "absolute", left: -10, bottom: 0, width: 10, height: 10, borderBottomRightRadius: 10, boxShadow: "5px 5px 0 5px #fff", pointerEvents: "none" }} />
-                  <span style={{ position: "absolute", right: -10, bottom: 0, width: 10, height: 10, borderBottomLeftRadius: 10, boxShadow: "-5px 5px 0 5px #fff", pointerEvents: "none" }} />
-                </>
-              )}
-              <span>{tab.label}</span>
-              {tabs.length > 1 && (
-                <button
-                  onClick={(e) => closeTab(tab.id, e)}
-                  style={{
-                    background: "none",
-                    border: "none",
-                    cursor: "pointer",
-                    padding: "2px 6px",
-                    borderRadius: 4,
-                    color: "#9ca3af",
-                    fontSize: 12,
-                    lineHeight: 1,
-                    display: "flex",
-                    alignItems: "center",
-                    marginLeft: "auto",
-                    marginRight: -10,
-                  }}
-                >
-                  ✕
-                </button>
-              )}
-            </div>
-          );
-        })}
-        <button
-          onClick={addTab}
-          title="New Purchase"
-          style={{
-            marginBottom: 0,
-            marginLeft: 4,
-            width: 26,
-            height: 26,
-            borderRadius: "50%",
-            background: "#3b82f6",
-            color: "#fff",
-            border: "none",
-            cursor: "pointer",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            fontSize: 18,
-            fontWeight: 300,
-            alignSelf: "center",
-            flexShrink: 0,
-            boxShadow: "0 1px 4px rgba(59,130,246,0.4)",
-          }}
-        >
-          +
-        </button>
-        <button
-          onClick={onClose}
-          aria-label="Close add purchase"
-          style={{
-            marginLeft: "auto",
-            marginBottom: 0,
-            width: 24,
-            height: 24,
-            background: "#374151",
-            border: "none",
-            cursor: "pointer",
-            color: "#ffffff",
-            padding: 0,
-            borderRadius: "50%",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            alignSelf: "center",
-          }}
-        >
-          <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12" /></svg>
-        </button>
-      </div>
-
-      <div style={{ background: "#fff", flexShrink: 0, padding: "8px 20px", display: "flex", alignItems: "center", gap: 20, borderBottom: "1px solid #e5e7eb" }}>
-        <span style={{ fontSize: 15, fontWeight: 600, color: "#1f2937" }}>Purchase</span>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <span onClick={() => updateTab({ paymentMode: "credit" })} style={{ fontSize: 13, fontWeight: 500, cursor: "pointer", userSelect: "none", color: activeTab.paymentMode === "credit" ? "#2563eb" : "#9ca3af" }}>Credit</span>
-          <button onClick={() => updateTab({ paymentMode: activeTab.paymentMode === "credit" ? "cash" : "credit" })} style={{ width: 38, height: 20, borderRadius: 10, border: "none", cursor: "pointer", background: "#2563eb", position: "relative", padding: 0, flexShrink: 0 }}>
-            <span style={{ position: "absolute", top: 2, width: 16, height: 16, borderRadius: "50%", background: "#fff", boxShadow: "0 1px 3px rgba(0,0,0,0.2)", transition: "left 0.15s", left: activeTab.paymentMode === "cash" ? 20 : 2 }} />
-          </button>
-          <span onClick={() => updateTab({ paymentMode: "cash" })} style={{ fontSize: 13, fontWeight: 500, cursor: "pointer", userSelect: "none", color: activeTab.paymentMode === "cash" ? "#2563eb" : "#9ca3af" }}>Cash</span>
-        </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <span style={{ fontSize: 13, color: "#6b7280" }}>Switch to Lite Mode</span>
-          <div style={{ width: 38, height: 20, borderRadius: 10, background: "#d1d5db", position: "relative", flexShrink: 0 }}>
-            <span style={{ position: "absolute", top: 2, left: 2, width: 16, height: 16, borderRadius: "50%", background: "#fff", boxShadow: "0 1px 3px rgba(0,0,0,0.2)" }} />
-          </div>
-        </div>
-      </div>
-
-      <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: 0 }}>
-        <div style={{ background: "#fff", padding: "25px 20px 80px 20px" }}>
-          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16 }}>
-            <div style={{ display: "flex", gap: 12 }}>
-              <div style={{ position: "relative" }}>
-                <select style={{ appearance: "none", border: "1px solid #d1d5db", borderRadius: 4, fontSize: 13, color: "#6b7280", background: "#fff", padding: "7px 32px 7px 12px", minWidth: 210, cursor: "pointer" }} value={activeTab.customerSearch} onChange={(e) => updateTab({ customerSearch: e.target.value })}>
-                  <option value="">Search by Name/Phone *</option>
-                </select>
-                <span style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", pointerEvents: "none", color: "#9ca3af" }}>▾</span>
-              </div>
-              <input type="text" placeholder="Phone No." style={{ border: "1px solid #d1d5db", borderRadius: 4, fontSize: 13, color: "#6b7280", padding: "7px 12px", width: 150 }} value={activeTab.phoneNo} onChange={(e) => updateTab({ phoneNo: e.target.value })} />
-            </div>
-
-            <div style={{ fontSize: 13, textAlign: "right", flexShrink: 0 }}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 12, marginBottom: 8 }}>
-                <span style={{ color: "#6b7280" }}>Invoice Number</span>
-                <span style={{ fontWeight: 600, color: "#1f2937" }}>2</span>
-              </div>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 12 }}>
-                <span style={{ color: "#6b7280" }}>Invoice Date</span>
-                <span style={{ fontWeight: 600, color: "#1f2937" }}>17/03/2026</span>
-                <button style={{ background: "none", border: "none", cursor: "pointer", color: "#3b82f6", padding: 0 }}>
-                  <svg width="17" height="17" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" /></svg>
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div style={{ background: "#fff", paddingBottom: 80 }}>
-          <table style={{ width: "100%", borderCollapse: "collapse", tableLayout: "fixed" }}>
-            <colgroup>
-              <col style={{ width: widths[0] }} />
-              <col style={{ width: widths[1] }} />
-              <col style={{ width: widths[2] }} />
-              <col style={{ width: widths[3] }} />
-              <col style={{ width: widths[4] }} />
-              <col style={{ width: widths[5] }} />
-              <col style={{ width: 36 }} />
-            </colgroup>
-            <thead>
-              <tr style={{ background: "#f3f6f9", borderTop: "1px solid #e5e7eb", borderBottom: "1px solid #e5e7eb" }}>
-                <th style={{ position: "relative", padding: "8px 0", textAlign: "center", fontSize: 12, fontWeight: 600, color: "#6b7280", borderRight: "1px solid #e5e7eb", letterSpacing: "0.04em" }}>#<ResizeHandle col={0} /></th>
-                <th style={{ position: "relative", padding: "8px 10px", textAlign: "left", fontSize: 12, fontWeight: 600, color: "#6b7280", borderRight: "1px solid #e5e7eb", letterSpacing: "0.04em" }}>ITEM<ResizeHandle col={1} /></th>
-                <th style={{ position: "relative", padding: "8px 10px", textAlign: "right", fontSize: 12, fontWeight: 600, color: "#6b7280", borderRight: "1px solid #e5e7eb", letterSpacing: "0.04em" }}>QTY<ResizeHandle col={2} /></th>
-                <th style={{ position: "relative", padding: "8px 10px", textAlign: "left", fontSize: 12, fontWeight: 600, color: "#6b7280", borderRight: "1px solid #e5e7eb", letterSpacing: "0.04em" }}>UNIT<ResizeHandle col={3} /></th>
-                <th style={{ position: "relative", padding: "8px 10px", textAlign: "right", fontSize: 12, fontWeight: 600, color: "#6b7280", borderRight: "1px solid #e5e7eb", letterSpacing: "0.04em" }}>PRICE/UNIT<ResizeHandle col={4} /></th>
-                <th style={{ position: "relative", padding: "8px 10px", textAlign: "right", fontSize: 12, fontWeight: 600, color: "#6b7280", borderRight: "1px solid #e5e7eb", letterSpacing: "0.04em" }}>AMOUNT<ResizeHandle col={5} /></th>
-                <th style={{ padding: "8px 6px", textAlign: "center", background: "#f3f6f9" }}>
-                  <button style={{ background: "none", border: "none", cursor: "pointer", color: "#3b82f6", padding: 0, display: "flex", alignItems: "center" }}>
-                    <svg width="17" height="17" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" /><path d="M12 8v8M8 12h8" /></svg>
-                  </button>
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {activeTab.rows.map((row, index) => {
-                const amount = (parseFloat(row.qty) || 0) * (parseFloat(row.pricePerUnit) || 0);
-                return (
-                  <tr key={row.id} style={{ borderBottom: "1px solid #f0f0f0" }} onMouseEnter={(e) => (e.currentTarget.style.background = "#f8fbff")} onMouseLeave={(e) => (e.currentTarget.style.background = "")}> 
-                    <td style={{ textAlign: "center", color: "#9ca3af", fontSize: 13, padding: "5px 0", borderRight: "1px solid #e5e7eb" }}>{index + 1}</td>
-                    <td style={{ borderRight: "1px solid #e5e7eb", padding: "4px 8px" }}>
-                      <input type="text" style={{ width: "100%", border: "none", outline: "none", fontSize: 13, color: "#374151", background: "transparent" }} value={row.item} onChange={(e) => updateRow(row.id, "item", e.target.value)} />
-                    </td>
-                    <td style={{ borderRight: "1px solid #e5e7eb", padding: "4px 8px" }}>
-                      <input type="number" style={{ width: "100%", border: "none", outline: "none", fontSize: 13, color: "#374151", background: "transparent", textAlign: "right" }} value={row.qty} onChange={(e) => updateRow(row.id, "qty", e.target.value)} />
-                    </td>
-                    <td style={{ borderRight: "1px solid #e5e7eb", padding: "4px 8px" }}>
-                      <div style={{ display: "flex", alignItems: "center" }}>
-                        <select style={{ flex: 1, border: "none", outline: "none", fontSize: 13, color: "#374151", background: "transparent", appearance: "none", cursor: "pointer" }} value={row.unit} onChange={(e) => updateRow(row.id, "unit", e.target.value)}>
-                          {unitOptions.map((unit) => <option key={unit} value={unit}>{unit}</option>)}
-                        </select>
-                        <span style={{ color: "#9ca3af", fontSize: 10, pointerEvents: "none" }}>▾</span>
-                      </div>
-                    </td>
-                    <td style={{ borderRight: "1px solid #e5e7eb", padding: "4px 8px" }}>
-                      <input type="number" style={{ width: "100%", border: "none", outline: "none", fontSize: 13, color: "#374151", background: "transparent", textAlign: "right" }} value={row.pricePerUnit} onChange={(e) => updateRow(row.id, "pricePerUnit", e.target.value)} />
-                    </td>
-                    <td style={{ borderRight: "1px solid #e5e7eb", padding: "4px 10px", textAlign: "right", fontSize: 13, color: "#374151" }}>{amount > 0 ? fmt(amount) : ""}</td>
-                    <td />
-                  </tr>
-                );
-              })}
-
-              <tr style={{ borderTop: "2px solid #e5e7eb", background: "#fafafa" }}>
-                <td style={{ borderRight: "1px solid #e5e7eb" }} />
-                <td style={{ padding: "8px 8px", borderRight: "1px solid #e5e7eb" }}>
-                  <button onClick={addRow} style={{ fontSize: 11, fontWeight: 700, color: "#3b82f6", border: "1px solid #93c5fd", borderRadius: 4, padding: "3px 10px", background: "#fff", cursor: "pointer", letterSpacing: "0.05em" }}>ADD ROW</button>
-                </td>
-                <td colSpan={2} style={{ padding: "8px 10px", fontSize: 12, fontWeight: 700, color: "#6b7280", borderRight: "1px solid #e5e7eb", letterSpacing: "0.04em" }}>
-                  <span style={{ float: "left" }}>TOTAL</span>
-                  <span style={{ float: "right" }}>{totalQty > 0 ? totalQty : 0}</span>
-                </td>
-                <td style={{ borderRight: "1px solid #e5e7eb" }} />
-                <td style={{ padding: "8px 10px", textAlign: "right", fontSize: 13, fontWeight: 600, color: "#374151", borderRight: "1px solid #e5e7eb" }}>{totalAmount > 0 ? fmt(totalAmount) : "0"}</td>
-                <td />
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
-        <div style={{ background: "#fff", padding: "20px 20px 24px 20px" }}>
-          <div style={{ display: "flex", gap: 24 }}>
-            <div style={{ display: "flex", flexDirection: "column", gap: 14, minWidth: 170 }}>
-              {activeTab.showDescriptionInput ? (
-                <textarea autoFocus rows={3} placeholder="Add description..." style={{ border: "1px solid #d1d5db", borderRadius: 4, fontSize: 13, padding: "8px 10px", resize: "none", width: "100%", outline: "none" }} value={activeTab.description} onChange={(e) => updateTab({ description: e.target.value })} />
-              ) : (
-                <button onClick={() => updateTab({ showDescriptionInput: true })} style={{ background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 8, color: "#9ca3af", fontSize: 12, fontWeight: 600, letterSpacing: "0.05em", padding: 0 }}>
-                  <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /></svg>
-                  ADD DESCRIPTION
-                </button>
-              )}
-              <button style={{ background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 8, color: "#9ca3af", fontSize: 12, fontWeight: 600, letterSpacing: "0.05em", padding: 0 }}>
-                <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" /><circle cx="12" cy="13" r="4" /></svg>
-                ADD IMAGE
-              </button>
-              <button style={{ background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 8, color: "#9ca3af", fontSize: 12, fontWeight: 600, letterSpacing: "0.05em", padding: 0 }}>
-                <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /></svg>
-                ADD DOCUMENT
-              </button>
-            </div>
-
-            <div style={{ marginLeft: "auto", display: "flex", flexDirection: "column", gap: 12, fontSize: 13, minWidth: 370 }}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 8 }}>
-                <span style={{ color: "#6b7280", width: 68, textAlign: "right" }}>Discount</span>
-                <input type="number" style={{ border: "1px solid #d1d5db", borderRadius: 4, padding: "5px 8px", width: 78, textAlign: "right", fontSize: 13, outline: "none" }} value={activeTab.discountPercent} onChange={(e) => { const pct = parseFloat(e.target.value) || 0; updateTab({ discountPercent: e.target.value, discountRs: totalAmount > 0 ? ((totalAmount * pct) / 100).toFixed(2) : "" }); }} />
-                <span style={{ color: "#9ca3af", fontSize: 12 }}>(%)</span>
-                <span style={{ color: "#d1d5db", margin: "0 2px" }}>–</span>
-                <input type="number" style={{ border: "1px solid #d1d5db", borderRadius: 4, padding: "5px 8px", width: 100, textAlign: "right", fontSize: 13, outline: "none" }} value={activeTab.discountRs} onChange={(e) => updateTab({ discountRs: e.target.value })} />
-                <span style={{ color: "#9ca3af", fontSize: 12 }}>(Rs)</span>
-              </div>
-
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 8 }}>
-                <span style={{ color: "#6b7280", width: 68, textAlign: "right" }}>Tax</span>
-                <select style={{ border: "1px solid #d1d5db", borderRadius: 4, padding: "5px 8px", width: 170, fontSize: 13, color: "#374151", background: "#fff", outline: "none" }} value={activeTab.tax} onChange={(e) => updateTab({ tax: e.target.value })}>
-                  {taxOptions.map((tax) => <option key={tax} value={tax}>{tax}</option>)}
-                </select>
-                <span style={{ color: "#374151", width: 62, textAlign: "right" }}>{taxAmount > 0 ? taxAmount.toFixed(2) : "0"}</span>
-              </div>
-
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 8 }}>
-                <label style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer" }}>
-                  <input type="checkbox" checked={activeTab.roundOff} onChange={(e) => updateTab({ roundOff: e.target.checked })} style={{ width: 15, height: 15, accentColor: "#3b82f6", cursor: "pointer" }} />
-                  <span style={{ color: "#6b7280" }}>Round Off</span>
-                </label>
-                <input type="text" readOnly style={{ border: "1px solid #e5e7eb", borderRadius: 4, padding: "5px 8px", width: 80, textAlign: "right", fontSize: 13, color: "#6b7280", background: "#f9fafb" }} value={roundOffDiff !== 0 ? roundOffDiff.toFixed(2) : "0"} />
-              </div>
-
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 8 }}>
-                <span style={{ color: "#374151", fontWeight: 600, width: 68, textAlign: "right" }}>Total</span>
-                <input type="text" readOnly style={{ border: "1px solid #d1d5db", borderRadius: 4, padding: "5px 10px", width: 210, textAlign: "right", fontSize: 13, fontWeight: 600, color: "#1f2937", background: "#fff", outline: "none" }} value={roundedTotal > 0 ? fmt(roundedTotal) : ""} />
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div style={{ background: "#fff", flexShrink: 0, padding: "10px 20px", display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 8, borderTop: "1px solid #e5e7eb" }}>
-        <div style={{ display: "flex", border: "1px solid #d1d5db", borderRadius: 4, overflow: "hidden" }}>
-          <button style={{ padding: "7px 20px", fontSize: 13, fontWeight: 500, color: "#374151", background: "#fff", border: "none", cursor: "pointer" }}>Share</button>
-          <button style={{ padding: "7px 8px", fontSize: 13, color: "#6b7280", background: "#fff", border: "none", borderLeft: "1px solid #d1d5db", cursor: "pointer" }}>
-            <svg width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6" /></svg>
-          </button>
-        </div>
-        <button style={{ padding: "7px 32px", fontSize: 13, fontWeight: 700, color: "#fff", background: "#2563eb", border: "none", borderRadius: 4, cursor: "pointer", boxShadow: "0 1px 4px rgba(37,99,235,0.3)" }}>Save</button>
-      </div>
-    </div>
-  );
+    return parsedValue as PurchaseBillLineItem[];
+  } catch {
+    return [] as PurchaseBillLineItem[];
+  }
 }
 
 export function PurchaseBills() {
+  const [invoiceRows, setInvoiceRows] = useState<PurchaseBillViewRow[]>(fallbackPurchaseBills);
   const [showAddPurchase, setShowAddPurchase] = useState(false);
+  const [editingInvoice, setEditingInvoice] = useState<PurchaseBillEditData | null>(null);
+  const [selectedMonthKey, setSelectedMonthKey] = useState<string>("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [showSearchInput, setShowSearchInput] = useState(false);
+  const [isMonthMenuOpen, setIsMonthMenuOpen] = useState(false);
+  const [openRowMenuId, setOpenRowMenuId] = useState<string | null>(null);
+  const [openRowMenuPosition, setOpenRowMenuPosition] = useState<{ left: number; top: number } | null>(null);
+  const [viewingInvoice, setViewingInvoice] = useState<PurchaseBillViewRow | null>(null);
+  const [statusMessage, setStatusMessage] = useState("");
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
 
-  const totalPaid = 0;
-  const totalUnpaid = purchaseBills.reduce((sum, b) => sum + b.amount, 0);
-  const total = totalPaid + totalUnpaid;
+  useEffect(() => {
+    if (showSearchInput) {
+      requestAnimationFrame(() => searchInputRef.current?.focus());
+    }
+  }, [showSearchInput]);
+
+  useEffect(() => {
+    if (!statusMessage) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setStatusMessage("");
+    }, 3000);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [statusMessage]);
+
+  useEffect(() => {
+    const closeMenus = () => {
+      setIsMonthMenuOpen(false);
+      setOpenRowMenuId(null);
+      setOpenRowMenuPosition(null);
+    };
+
+    window.addEventListener("click", closeMenus);
+    window.addEventListener("scroll", closeMenus, true);
+
+    return () => {
+      window.removeEventListener("click", closeMenus);
+      window.removeEventListener("scroll", closeMenus, true);
+    };
+  }, []);
+
+  const loadPurchaseBills = useCallback(async (preserveMonthSelection = false) => {
+    try {
+      const response = await fetch("/api/purchase_bills");
+      if (!response.ok) {
+        throw new Error("Failed to load purchase bills");
+      }
+
+      const purchaseBills = (await response.json()) as PurchaseBillApiRow[];
+      const normalizedRows = purchaseBills.map((invoice) => ({
+        id: invoice.id,
+        invoiceNo: invoice.invoice_no,
+        date: invoice.date,
+        partyName: invoice.party_name,
+        partyId: invoice.party_id ?? undefined,
+        partyPhone: invoice.party_phone ?? undefined,
+        transaction: invoice.transaction_type,
+        paymentType: invoice.payment_type ?? invoice.payment_mode ?? "",
+        paymentMode: invoice.payment_mode ?? undefined,
+        amount: Number(invoice.amount ?? 0),
+        balance: Number(invoice.balance ?? 0),
+        monthKey: getMonthKeyFromDate(invoice.date),
+        subtotal: Number(invoice.subtotal ?? 0),
+        discountPercent: Number(invoice.discount_percent ?? 0),
+        discountAmount: Number(invoice.discount_amount ?? 0),
+        taxLabel: invoice.tax_label ?? undefined,
+        taxRate: Number(invoice.tax_rate ?? 0),
+        taxAmount: Number(invoice.tax_amount ?? 0),
+        roundOff: Boolean(invoice.round_off),
+        roundOffAmount: Number(invoice.round_off_amount ?? 0),
+        description: invoice.description ?? undefined,
+        lineItemsJson: invoice.line_items_json ?? null,
+      }));
+
+      setInvoiceRows(normalizedRows);
+      if (!preserveMonthSelection) {
+        setSelectedMonthKey((previousMonthKey) => {
+          if (previousMonthKey) {
+            return previousMonthKey;
+          }
+
+          const currentMonthKey = getMonthKeyFromDate(formatDateDisplay(new Date()));
+          const currentMonthExists = normalizedRows.some((row) => row.monthKey === currentMonthKey);
+          if (currentMonthExists) {
+            return currentMonthKey;
+          }
+
+          return normalizedRows[0]?.monthKey ?? "";
+        });
+      }
+      setStatusMessage("");
+    } catch (error) {
+      console.error(error);
+      setInvoiceRows(fallbackPurchaseBills);
+      setStatusMessage("Showing fallback purchase bills because the database could not be loaded.");
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadPurchaseBills();
+  }, [loadPurchaseBills]);
+
+  useEffect(() => {
+    const handleRefresh = (event: Event) => {
+      const customEvent = event as CustomEvent<{ message?: string }>;
+      void loadPurchaseBills(true).then(() => {
+        if (customEvent.detail?.message) {
+          setStatusMessage(customEvent.detail.message);
+        }
+      });
+    };
+
+    window.addEventListener("purchase-bills-refresh", handleRefresh as EventListener);
+
+    return () => {
+      window.removeEventListener("purchase-bills-refresh", handleRefresh as EventListener);
+    };
+  }, [loadPurchaseBills]);
+
+  const monthOptions = useMemo(() => {
+    const uniqueMonths = new Set(invoiceRows.map((row) => row.monthKey));
+    return Array.from(uniqueMonths).sort((left, right) => right.localeCompare(left));
+  }, [invoiceRows]);
+
+  const selectedMonthRows = useMemo(() => {
+    if (!selectedMonthKey) {
+      return invoiceRows;
+    }
+
+    return invoiceRows.filter((row) => row.monthKey === selectedMonthKey);
+  }, [invoiceRows, selectedMonthKey]);
+
+  const visibleRows = useMemo(() => {
+    const normalizedQuery = searchQuery.trim().toLowerCase();
+    if (!normalizedQuery) {
+      return selectedMonthRows;
+    }
+
+    return selectedMonthRows.filter((row) => row.partyName.toLowerCase().includes(normalizedQuery));
+  }, [searchQuery, selectedMonthRows]);
+
+  const totalPurchase = visibleRows.reduce((sum, invoice) => sum + invoice.amount, 0);
+  const totalPaid = visibleRows.filter((invoice) => invoice.balance === 0).reduce((sum, invoice) => sum + invoice.amount, 0);
+  const totalUnpaid = visibleRows.reduce((sum, invoice) => sum + invoice.balance, 0);
+
+  const currentMonthKey = getMonthKeyFromDate(formatDateDisplay(new Date()));
+  const monthButtonLabel = selectedMonthKey === currentMonthKey ? "This Month" : monthLabelForFilter(selectedMonthKey);
+
+  const handleDownloadCsv = () => {
+    const csvContent = createCsvContent(selectedMonthRows);
+    const fileName = selectedMonthKey ? `purchase-bills-${selectedMonthKey}.csv` : "purchase-bills-all-months.csv";
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+
+    link.href = url;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  const openViewDialog = (invoice: PurchaseBillViewRow) => {
+    setViewingInvoice(invoice);
+  };
+
+  const handleDeleteInvoice = async (invoice: PurchaseBillViewRow) => {
+    const confirmed = window.confirm(`Delete invoice ${invoice.invoiceNo} for ${invoice.partyName}?`);
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/purchase_bills/${invoice.id}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok && response.status !== 204) {
+        throw new Error("Failed to delete purchase bill");
+      }
+
+      setInvoiceRows((previousRows) => previousRows.filter((row) => row.id !== invoice.id));
+      setStatusMessage("Purchase bill deleted successfully.");
+    } catch (error) {
+      console.error(error);
+      setStatusMessage("Failed to delete the selected purchase bill.");
+    } finally {
+      setOpenRowMenuId(null);
+    }
+  };
 
   return (
     <div className="h-full flex flex-col bg-[#D0DCE7] gap-1">
-      {/* Header */}
       <div className="p-4 bg-white flex items-center justify-between shrink-0 w-full">
         <div className="flex items-center gap-2">
-          <h2 className="text-lg font-semibold text-gray-900">
-            Purchase Bills
-          </h2>
+          <h2 className="text-lg font-semibold text-gray-900">Purchase Bills</h2>
           <ChevronDown className="w-4 h-4 text-gray-500" />
         </div>
         <button
-          onClick={() => setShowAddPurchase(true)}
+          onClick={() => { setEditingInvoice(null); setShowAddPurchase(true); }}
           className="bg-[#E53935] hover:bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2"
         >
           <Plus className="w-4 h-4" />
@@ -552,80 +422,140 @@ export function PurchaseBills() {
         </button>
       </div>
 
-      {/* Filters */}
       <div
         className="p-4 bg-white rounded-md shadow-sm flex items-center gap-4"
         style={{ marginLeft: "4px", marginRight: "4px" }}
       >
-        <div className="flex items-center gap-2">
+        <div className="relative flex items-center gap-2">
           <span className="text-sm text-gray-500">Filter by :</span>
-          <button className="flex items-center gap-2 px-3 py-1.5 bg-gray-100 rounded-lg text-sm text-gray-700 hover:bg-gray-200">
-            This Month
+          <button
+            onClick={(event) => {
+              event.stopPropagation();
+              setIsMonthMenuOpen((previous) => !previous);
+              setOpenRowMenuId(null);
+            }}
+            className="flex items-center gap-2 px-3 py-1.5 bg-gray-100 rounded-lg text-sm text-gray-700 hover:bg-gray-200"
+          >
+            {monthButtonLabel}
             <ChevronDown className="w-4 h-4" />
           </button>
+
+          {isMonthMenuOpen && (
+            <div
+              className="absolute left-0 top-full mt-2 z-20 min-w-48 rounded-lg border border-gray-200 bg-white shadow-lg overflow-hidden"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <button
+                className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50"
+                onClick={() => {
+                  setSelectedMonthKey("");
+                  setIsMonthMenuOpen(false);
+                }}
+              >
+                All Months
+              </button>
+              {monthOptions.map((monthKey) => (
+                <button
+                  key={monthKey}
+                  className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50"
+                  onClick={() => {
+                    setSelectedMonthKey(monthKey);
+                    setIsMonthMenuOpen(false);
+                  }}
+                >
+                  {formatMonthLabel(monthKey)}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
+
         <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-500">Between</span>
+          <span className="text-sm text-gray-500">Selected month:</span>
           <button className="flex items-center gap-2 px-3 py-1.5 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50">
             <Calendar className="w-4 h-4" />
-            01/02/2026
-          </button>
-          <span className="text-sm text-gray-500">To</span>
-          <button className="flex items-center gap-2 px-3 py-1.5 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50">
-            <Calendar className="w-4 h-4" />
-            28/02/2026
+            {monthButtonLabel}
           </button>
         </div>
-        <button className="flex items-center gap-2 px-3 py-1.5 bg-gray-100 rounded-lg text-sm text-gray-700 hover:bg-gray-200">
-          <Building2 className="w-4 h-4" />
-          Laimsoft
-          <ChevronDown className="w-4 h-4" />
-        </button>
+
+        {showSearchInput && (
+          <div className="flex items-center gap-2 ml-auto">
+            <input
+              ref={searchInputRef}
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
+              placeholder="Search by party name"
+              className="w-72 px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:border-blue-500"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery("")}
+                className="p-2 rounded-lg hover:bg-gray-100"
+                title="Clear search"
+              >
+                <X className="w-4 h-4 text-gray-500" />
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
-      {/* Summary Cards */}
       <div
         className="p-4 bg-white rounded-md shadow-sm"
         style={{ marginLeft: "4px", marginRight: "4px" }}
       >
-        <div className="flex items-center gap-4">
-          {/* Paid Card */}
-          <div className="bg-[#B2DFDB] rounded-xl p-4 min-w-[140px]">
-            <p className="text-sm text-gray-700 mb-1">Paid</p>
-            <p className="text-xl font-bold text-gray-900">
-              Rs {totalPaid.toFixed(2)}
-            </p>
+        <div className="max-w-sm bg-[#F6F0FB] rounded-xl p-4 border border-[#E8D7F6]">
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-sm text-[#6B6B83]">Total Purchase Amount</span>
+            <span className="flex items-center gap-1 text-xs text-[#E53935] bg-[#FCE8EA] px-2 py-0.5 rounded-full">
+              18.31% ↓
+            </span>
           </div>
-
-          <span className="text-2xl text-gray-400">+</span>
-
-          {/* Unpaid Card */}
-          <div className="bg-[#BBDEFB] rounded-xl p-4 min-w-[140px]">
-            <p className="text-sm text-gray-700 mb-1">Unpaid</p>
-            <p className="text-xl font-bold text-gray-900">
-              Rs {totalUnpaid.toFixed(2)}
-            </p>
-          </div>
-
-          <span className="text-2xl text-gray-400">=</span>
-
-          {/* Total Card */}
-          <div className="bg-[#FFE082] rounded-xl p-4 min-w-[140px]">
-            <p className="text-sm text-gray-700 mb-1">Total</p>
-            <p className="text-xl font-bold text-gray-900">
-              Rs {total.toFixed(2)}
-            </p>
+          <p className="text-xl font-bold text-[#1C1F2A]">
+            Rs {totalPurchase.toLocaleString()}
+          </p>
+          <div className="flex items-center gap-3 text-xs text-[#6B6B83] mt-1">
+            <span>Paid: Rs {totalPaid.toLocaleString()}</span>
+            <span>|</span>
+            <span>Unpaid: Rs {totalUnpaid.toLocaleString()}</span>
           </div>
         </div>
       </div>
 
-      {/* Transactions Table */}
       <div
         className="flex-1 bg-white rounded-md shadow-sm overflow-hidden"
         style={{ marginLeft: "4px", marginRight: "4px" }}
       >
         <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
           <h3 className="text-sm font-medium text-gray-700">Transactions</h3>
+          <div className="flex gap-2 items-center">
+            <button
+              onClick={(event) => {
+                event.stopPropagation();
+                setShowSearchInput((previous) => !previous);
+                setIsMonthMenuOpen(false);
+                setOpenRowMenuId(null);
+                setOpenRowMenuPosition(null);
+              }}
+              className="p-2 hover:bg-gray-50 rounded-lg"
+              title="Search"
+            >
+              <Search className="w-4 h-4 text-gray-500" />
+            </button>
+            <button
+              onClick={(event) => {
+                event.stopPropagation();
+                handleDownloadCsv();
+              }}
+              className="p-2 hover:bg-gray-50 rounded-lg"
+              title="Download CSV"
+            >
+              <Download className="w-4 h-4 text-gray-500" />
+            </button>
+            <button className="p-2 hover:bg-gray-50 rounded-lg" title="Print">
+              <Printer className="w-4 h-4 text-gray-500" />
+            </button>
+          </div>
         </div>
 
         <div className="overflow-auto">
@@ -633,49 +563,81 @@ export function PurchaseBills() {
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-4 py-3 text-left font-medium text-gray-600">
-                  DATE
+                  Date
                 </th>
                 <th className="px-4 py-3 text-left font-medium text-gray-600">
-                  INVOICE NO.
+                  Invoice no
                 </th>
                 <th className="px-4 py-3 text-left font-medium text-gray-600">
-                  PARTY NAME
+                  Party Name
                 </th>
                 <th className="px-4 py-3 text-left font-medium text-gray-600">
-                  PAYMENT TYPE
+                  Transaction
+                </th>
+                <th className="px-4 py-3 text-left font-medium text-gray-600">
+                  Payment Type
                 </th>
                 <th className="px-4 py-3 text-right font-medium text-gray-600">
-                  AMOUNT
+                  Amount
                 </th>
                 <th className="px-4 py-3 text-right font-medium text-gray-600">
-                  BALANCE DUE
+                  Balance
                 </th>
                 <th className="px-4 py-3 text-center font-medium text-gray-600">
-                  ACTIONS
+                  Actions
                 </th>
               </tr>
             </thead>
             <tbody>
-              {purchaseBills.map((bill) => (
+              {visibleRows.map((invoice) => (
                 <tr
-                  key={bill.id}
+                  key={invoice.id}
                   className="border-b border-gray-100 hover:bg-gray-50"
                 >
-                  <td className="px-4 py-3">{bill.date}</td>
-                  <td className="px-4 py-3">{bill.invoiceNo}</td>
-                  <td className="px-4 py-3">{bill.partyName}</td>
-                  <td className="px-4 py-3">{bill.paymentType}</td>
-                  <td className="px-4 py-3 text-right">{bill.amount}</td>
-                  <td className="px-4 py-3 text-right">{bill.balance}</td>
+                  <td className="px-4 py-3">{invoice.date}</td>
+                  <td className="px-4 py-3">{invoice.invoiceNo}</td>
+                  <td className="px-4 py-3">{invoice.partyName}</td>
                   <td className="px-4 py-3">
+                    <span className="inline-flex items-center gap-1.5 text-green-600">
+                      <span className="w-2 h-2 rounded-full bg-green-500"></span>
+                      {invoice.transaction}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3">{invoice.paymentType}</td>
+                  <td className="px-4 py-3 text-right">Rs {invoice.amount}</td>
+                  <td className="px-4 py-3 text-right">Rs {invoice.balance}</td>
+                  <td className="px-4 py-3 relative">
                     <div className="flex items-center justify-center gap-2">
-                      <button className="p-1.5 hover:bg-gray-100 rounded">
+                      <button className="p-1.5 hover:bg-gray-100 rounded" title="Print">
                         <Printer className="w-4 h-4 text-gray-500" />
                       </button>
-                      <button className="p-1.5 hover:bg-gray-100 rounded">
+                      <button className="p-1.5 hover:bg-gray-100 rounded" title="Share">
                         <Share2 className="w-4 h-4 text-gray-500" />
                       </button>
-                      <button className="p-1.5 hover:bg-gray-100 rounded">
+                      <button
+                        className="p-1.5 hover:bg-gray-100 rounded"
+                        title="More actions"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          setIsMonthMenuOpen(false);
+                          const targetRect = event.currentTarget.getBoundingClientRect();
+                          const menuWidth = 144;
+                          const menuHeight = 96;
+                          const nextLeft = Math.max(8, Math.min(targetRect.right - menuWidth, window.innerWidth - menuWidth - 8));
+                          const nextTop = targetRect.bottom + menuHeight > window.innerHeight
+                            ? Math.max(8, targetRect.top - menuHeight - 8)
+                            : targetRect.bottom + 8;
+
+                          setOpenRowMenuPosition((previousPosition) =>
+                            openRowMenuId === invoice.id && previousPosition
+                              ? null
+                              : { left: nextLeft, top: nextTop },
+                          );
+                          setOpenRowMenuId((previous) =>
+                            previous === invoice.id ? null : invoice.id,
+                          );
+                        }}
+                      >
                         <MoreVertical className="w-4 h-4 text-gray-500" />
                       </button>
                     </div>
@@ -684,10 +646,200 @@ export function PurchaseBills() {
               ))}
             </tbody>
           </table>
+
+          {!visibleRows.length && (
+            <div className="px-4 py-10 text-center text-sm text-gray-500">
+              No purchase transactions found for the selected month.
+            </div>
+          )}
         </div>
+
+        {statusMessage && (
+          <div className="px-4 py-2 text-sm text-gray-600 border-t border-gray-200 bg-gray-50">
+            {statusMessage}
+          </div>
+        )}
       </div>
 
-      {showAddPurchase && <PurchasePopup onClose={() => setShowAddPurchase(false)} />}
+      <Dialog
+        open={Boolean(viewingInvoice)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setViewingInvoice(null);
+          }
+        }}
+      >
+        <DialogContent className="max-w-4xl w-[min(96vw,56rem)] max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Transaction Details</DialogTitle>
+          </DialogHeader>
+
+          {viewingInvoice && (
+            <div className="space-y-4 text-sm">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="rounded-lg border border-gray-200 p-3">
+                  <div className="text-gray-500">Invoice No</div>
+                  <div className="font-semibold text-gray-900">{viewingInvoice.invoiceNo}</div>
+                </div>
+                <div className="rounded-lg border border-gray-200 p-3">
+                  <div className="text-gray-500">Date</div>
+                  <div className="font-semibold text-gray-900">{viewingInvoice.date}</div>
+                </div>
+                <div className="rounded-lg border border-gray-200 p-3">
+                  <div className="text-gray-500">Party Name</div>
+                  <div className="font-semibold text-gray-900">{viewingInvoice.partyName}</div>
+                </div>
+                <div className="rounded-lg border border-gray-200 p-3">
+                  <div className="text-gray-500">Payment Type</div>
+                  <div className="font-semibold text-gray-900">{viewingInvoice.paymentType}</div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-4">
+                <div className="rounded-lg border border-gray-200 p-3">
+                  <div className="text-gray-500">Subtotal</div>
+                  <div className="font-semibold text-gray-900">Rs {Number(viewingInvoice.subtotal ?? 0).toLocaleString()}</div>
+                </div>
+                <div className="rounded-lg border border-gray-200 p-3">
+                  <div className="text-gray-500">Discount</div>
+                  <div className="font-semibold text-gray-900">Rs {Number(viewingInvoice.discountAmount ?? 0).toLocaleString()}</div>
+                </div>
+                <div className="rounded-lg border border-gray-200 p-3">
+                  <div className="text-gray-500">Tax</div>
+                  <div className="font-semibold text-gray-900">{viewingInvoice.taxLabel ?? "NONE"} - Rs {Number(viewingInvoice.taxAmount ?? 0).toLocaleString()}</div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-4">
+                <div className="rounded-lg border border-gray-200 p-3">
+                  <div className="text-gray-500">Round Off</div>
+                  <div className="font-semibold text-gray-900">Rs {Number(viewingInvoice.roundOffAmount ?? 0).toLocaleString()}</div>
+                </div>
+                <div className="rounded-lg border border-gray-200 p-3">
+                  <div className="text-gray-500">Amount</div>
+                  <div className="font-semibold text-gray-900">Rs {Number(viewingInvoice.amount).toLocaleString()}</div>
+                </div>
+                <div className="rounded-lg border border-gray-200 p-3">
+                  <div className="text-gray-500">Balance</div>
+                  <div className="font-semibold text-gray-900">Rs {Number(viewingInvoice.balance).toLocaleString()}</div>
+                </div>
+              </div>
+
+              {viewingInvoice.description && (
+                <div className="rounded-lg border border-gray-200 p-3">
+                  <div className="text-gray-500 mb-1">Description</div>
+                  <div className="text-gray-900">{viewingInvoice.description}</div>
+                </div>
+              )}
+
+              {parseLineItems(viewingInvoice.lineItemsJson).length > 0 && (
+                <div className="rounded-lg border border-gray-200 p-3">
+                  <div className="text-gray-500 mb-2">Line Items</div>
+                  <div className="overflow-hidden rounded-md border border-gray-200">
+                    <table className="w-full text-sm">
+                      <thead className="bg-gray-50 text-gray-600">
+                        <tr>
+                          <th className="px-3 py-2 text-left font-medium">Item</th>
+                          <th className="px-3 py-2 text-right font-medium">Qty</th>
+                          <th className="px-3 py-2 text-left font-medium">Unit</th>
+                          <th className="px-3 py-2 text-right font-medium">Price</th>
+                          <th className="px-3 py-2 text-right font-medium">Amount</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {parseLineItems(viewingInvoice.lineItemsJson).map((lineItem, index) => (
+                          <tr key={lineItem.id ?? `${lineItem.name ?? "item"}-${index}`} className="border-t border-gray-100">
+                            <td className="px-3 py-2 text-gray-900">{lineItem.name ?? "-"}</td>
+                            <td className="px-3 py-2 text-right text-gray-700">{Number(lineItem.quantity ?? 0).toLocaleString()}</td>
+                            <td className="px-3 py-2 text-gray-700">{lineItem.unit ?? "-"}</td>
+                            <td className="px-3 py-2 text-right text-gray-700">Rs {Number(lineItem.price ?? 0).toLocaleString()}</td>
+                            <td className="px-3 py-2 text-right text-gray-700">Rs {Number(lineItem.amount ?? 0).toLocaleString()}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              <div className="flex items-center justify-end gap-3 pt-2">
+                <button
+                  onClick={() => setViewingInvoice(null)}
+                  className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {openRowMenuId && openRowMenuPosition && (
+        <div
+          className="fixed z-50 w-36 overflow-hidden rounded-lg border border-gray-200 bg-white shadow-lg"
+          style={{ left: openRowMenuPosition.left, top: openRowMenuPosition.top }}
+          onClick={(event) => event.stopPropagation()}
+        >
+          {(() => {
+            const targetInvoice = invoiceRows.find((row) => row.id === openRowMenuId) ?? null;
+
+            if (!targetInvoice) {
+              return null;
+            }
+
+            return (
+              <>
+                <button
+                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-gray-50"
+                  onClick={() => {
+                    openViewDialog(targetInvoice);
+                    setOpenRowMenuId(null);
+                    setOpenRowMenuPosition(null);
+                  }}
+                >
+                  <Search className="w-4 h-4 text-gray-500" />
+                  View
+                </button>
+                <button
+                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-gray-50"
+                  onClick={() => {
+                    setEditingInvoice(targetInvoice); setShowAddPurchase(true);
+                    setOpenRowMenuId(null);
+                    setOpenRowMenuPosition(null);
+                  }}
+                >
+                  <Pencil className="w-4 h-4 text-gray-500" />
+                  Edit
+                </button>
+                <button
+                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50"
+                  onClick={() => handleDeleteInvoice(targetInvoice)}
+                >
+                  <Trash2 className="w-4 h-4" />
+                  Delete
+                </button>
+              </>
+            );
+          })()}
+        </div>
+      )}
+
+      {showAddPurchase && (
+        <div className="fixed inset-0 z-[100]">
+          <AddPurchase
+            initialInvoice={editingInvoice}
+            onClose={() => {
+              setShowAddPurchase(false);
+              setEditingInvoice(null);
+            }}
+            onSave={() => {
+              void loadPurchaseBills(true);
+            }}
+          />
+        </div>
+      )}
     </div>
   );
 }
+

@@ -23,11 +23,72 @@ function ensureItemColumns(db) {
   }
 }
 
+function ensureSaleInvoiceColumns(db) {
+  const saleInvoiceColumns = db.prepare(`PRAGMA table_info(sale_invoices)`).all();
+  const existingColumnNames = new Set(saleInvoiceColumns.map((column) => column.name));
+
+  const addColumn = (columnName, definition) => {
+    if (!existingColumnNames.has(columnName)) {
+      db.exec(`ALTER TABLE sale_invoices ADD COLUMN ${columnName} ${definition}`);
+    }
+  };
+
+  addColumn('party_id', 'TEXT');
+  addColumn('party_phone', 'TEXT');
+  addColumn('payment_mode', 'TEXT');
+  addColumn('subtotal', 'REAL NOT NULL DEFAULT 0');
+  addColumn('discount_percent', 'REAL NOT NULL DEFAULT 0');
+  addColumn('discount_amount', 'REAL NOT NULL DEFAULT 0');
+  addColumn('tax_label', 'TEXT');
+  addColumn('tax_rate', 'REAL NOT NULL DEFAULT 0');
+  addColumn('tax_amount', 'REAL NOT NULL DEFAULT 0');
+  addColumn('round_off', 'INTEGER NOT NULL DEFAULT 0');
+  addColumn('round_off_amount', 'REAL NOT NULL DEFAULT 0');
+  addColumn('description', 'TEXT');
+  addColumn('line_items_json', 'TEXT');
+  addColumn('attachment_image_path', 'TEXT');
+  addColumn('attachment_image_name', 'TEXT');
+  addColumn('attachment_document_path', 'TEXT');
+  addColumn('attachment_document_name', 'TEXT');
+}
+
+function ensurePurchaseBillColumns(db) {
+  const purchaseBillColumns = db.prepare(`PRAGMA table_info(purchase_bills)`).all();
+  const existingColumnNames = new Set(purchaseBillColumns.map((column) => column.name));
+
+  const addColumn = (columnName, definition) => {
+    if (!existingColumnNames.has(columnName)) {
+      db.exec(`ALTER TABLE purchase_bills ADD COLUMN ${columnName} ${definition}`);
+    }
+  };
+
+  addColumn('party_id', 'TEXT');
+  addColumn('party_phone', 'TEXT');
+  addColumn('transaction_type', 'TEXT');
+  addColumn('payment_mode', 'TEXT');
+  addColumn('subtotal', 'REAL NOT NULL DEFAULT 0');
+  addColumn('discount_percent', 'REAL NOT NULL DEFAULT 0');
+  addColumn('discount_amount', 'REAL NOT NULL DEFAULT 0');
+  addColumn('tax_label', 'TEXT');
+  addColumn('tax_rate', 'REAL NOT NULL DEFAULT 0');
+  addColumn('tax_amount', 'REAL NOT NULL DEFAULT 0');
+  addColumn('round_off', 'INTEGER NOT NULL DEFAULT 0');
+  addColumn('round_off_amount', 'REAL NOT NULL DEFAULT 0');
+  addColumn('description', 'TEXT');
+  addColumn('line_items_json', 'TEXT');
+  addColumn('attachment_image_path', 'TEXT');
+  addColumn('attachment_image_name', 'TEXT');
+  addColumn('attachment_document_path', 'TEXT');
+  addColumn('attachment_document_name', 'TEXT');
+}
+
 export function initDatabase() {
   const db = openDatabase();
   const schemaSql = fs.readFileSync(schemaPath, 'utf8');
   db.exec(schemaSql);
   ensureItemColumns(db);
+  ensureSaleInvoiceColumns(db);
+  ensurePurchaseBillColumns(db);
   db.close();
   return dbPath;
 }

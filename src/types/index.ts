@@ -134,6 +134,52 @@ export interface UserSettings {
   transactionHistory: boolean;
 }
 
+export interface SaleInvoiceEditData {
+  id: string;
+  invoiceNo: string;
+  date: string;
+  partyId?: string | null;
+  partyName: string;
+  partyPhone?: string | null;
+  paymentType: string;
+  paymentMode?: string | null;
+  subtotal?: number;
+  discountPercent?: number;
+  discountAmount?: number;
+  taxLabel?: string | null;
+  taxRate?: number;
+  taxAmount?: number;
+  roundOff?: boolean;
+  roundOffAmount?: number;
+  amount: number;
+  balance: number;
+  description?: string;
+  lineItemsJson?: string | null;
+}
+
+export interface PurchaseBillEditData {
+  id: string;
+  invoiceNo: string;
+  date: string;
+  partyId?: string | null;
+  partyName: string;
+  partyPhone?: string | null;
+  paymentType: string;
+  paymentMode?: string | null;
+  subtotal?: number;
+  discountPercent?: number;
+  discountAmount?: number;
+  taxLabel?: string | null;
+  taxRate?: number;
+  taxAmount?: number;
+  roundOff?: boolean;
+  roundOffAmount?: number;
+  amount: number;
+  balance: number;
+  description?: string;
+  lineItemsJson?: string | null;
+}
+
 export type ViewType = 
   | 'home' 
   | 'parties' 

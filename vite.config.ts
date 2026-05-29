@@ -10,6 +10,7 @@ function sqliteApiPlugin() {
     configureServer(server: import('vite').ViteDevServer) {
       const appDataRoot = path.join(process.cwd(), 'app_data');
       const itemsImagesRoot = path.join(appDataRoot, 'items_images');
+      const saleAttachmentsRoot = path.join(appDataRoot, 'sale_attachments');
 
       const resolveManagedImagePath = (rawPath: unknown) => {
         if (!rawPath || typeof rawPath !== 'string') {
@@ -31,6 +32,26 @@ function sqliteApiPlugin() {
         return absolutePath;
       };
 
+      const resolveManagedAttachmentPath = (rawPath: unknown) => {
+        if (!rawPath || typeof rawPath !== 'string') {
+          return null;
+        }
+
+        const trimmedPath = rawPath.trim();
+        if (!trimmedPath.startsWith('/app_data/sale_attachments/')) {
+          return null;
+        }
+
+        const relativePath = trimmedPath.replace(/^\/app_data\//, '');
+        const absolutePath = path.join(appDataRoot, relativePath);
+
+        if (!absolutePath.startsWith(saleAttachmentsRoot)) {
+          return null;
+        }
+
+        return absolutePath;
+      };
+
       const removeManagedImageFile = (rawPath: unknown) => {
         const absolutePath = resolveManagedImagePath(rawPath);
         if (!absolutePath || !fs.existsSync(absolutePath)) {
@@ -43,6 +64,80 @@ function sqliteApiPlugin() {
         }
 
         fs.unlinkSync(absolutePath);
+      };
+
+      const removeManagedAttachmentFile = (rawPath: unknown) => {
+        const absolutePath = resolveManagedAttachmentPath(rawPath);
+        if (!absolutePath || !fs.existsSync(absolutePath)) {
+          return;
+        }
+
+        const stats = fs.statSync(absolutePath);
+        if (!stats.isFile()) {
+          return;
+        }
+
+        fs.unlinkSync(absolutePath);
+      };
+
+      const parseJsonBody = (req: import('node:http').IncomingMessage) =>
+        new Promise<any>((resolve, reject) => {
+          const chunks: Buffer[] = [];
+          req.on('data', (chunk) => chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk)));
+          req.on('end', () => {
+            try {
+              const raw = Buffer.concat(chunks).toString('utf8');
+              resolve(raw ? JSON.parse(raw) : {});
+            } catch (error) {
+              reject(error);
+            }
+          });
+          req.on('error', reject);
+        });
+
+      const saveDataUrlToAppData = ({
+        dataUrl,
+        prefix,
+        targetRoot,
+      }: {
+        dataUrl: unknown;
+        prefix: string;
+        targetRoot: string;
+      }) => {
+        if (!dataUrl || typeof dataUrl !== 'string') {
+          return null;
+        }
+
+        const matchedDataUrl = dataUrl.match(/^data:([\w.+-]+\/[\w.+-]+);base64,(.+)$/);
+        if (!matchedDataUrl) {
+          throw new Error('Invalid file format.');
+        }
+
+        const mimeType = matchedDataUrl[1];
+        const base64Payload = matchedDataUrl[2];
+        const extensionByMimeType: Record<string, string> = {
+          'image/png': '.png',
+          'image/jpeg': '.jpg',
+          'image/jpg': '.jpg',
+          'image/webp': '.webp',
+          'image/gif': '.gif',
+          'application/pdf': '.pdf',
+          'text/plain': '.txt',
+          'application/msword': '.doc',
+          'application/vnd.openxmlformats-officedocument.wordprocessingml.document': '.docx',
+          'application/vnd.ms-excel': '.xls',
+          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': '.xlsx',
+        };
+
+        const fileName = `${prefix}_${Date.now()}${extensionByMimeType[mimeType] ?? '.bin'}`;
+        const absolutePath = path.join(targetRoot, fileName);
+        fs.mkdirSync(targetRoot, { recursive: true });
+        fs.writeFileSync(absolutePath, Buffer.from(base64Payload, 'base64'));
+
+        return {
+          fileName,
+          filePath: `/app_data/${path.basename(targetRoot)}/${fileName}`,
+        };
       };
 
       server.middlewares.use('/app_data', (req, res, next) => {
@@ -628,6 +723,549 @@ function sqliteApiPlugin() {
                 res.end(JSON.stringify({ message: 'Invalid JSON payload.' }));
               }
             });
+            return;
+          }
+
+          res.statusCode = 405;
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify({ message: 'Method not allowed.' }));
+        } catch {
+          res.statusCode = 500;
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify({ message: 'Failed to process request.' }));
+        }
+      });
+
+      server.middlewares.use('/api/sale_invoices', async (req, res) => {
+        try {
+          // @ts-expect-error Runtime-only Node module used in Vite middleware.
+          const repository = await import('./database/sqlite/repository.mjs');
+          const requestUrl = new URL(req.url ?? '/', 'http://localhost');
+
+          if (req.method === 'GET') {
+            const saleInvoices = repository.getSaleInvoices();
+            res.statusCode = 200;
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify(saleInvoices));
+            return;
+          }
+
+          if (req.method === 'POST') {
+            let createdImagePath: string | null = null;
+            let createdDocumentPath: string | null = null;
+
+            try {
+              const payload = await parseJsonBody(req);
+
+              if (!payload.partyName || !String(payload.partyName).trim()) {
+                res.statusCode = 400;
+                res.setHeader('Content-Type', 'application/json');
+                res.end(JSON.stringify({ message: 'Party name is required.' }));
+                return;
+              }
+
+              const lineItems = Array.isArray(payload.lineItems) ? payload.lineItems : [];
+              const subtotal = Number(payload.subtotal ?? 0);
+              const discountPercent = Number(payload.discountPercent ?? 0);
+              const discountAmount = Number(payload.discountAmount ?? 0);
+              const taxRate = Number(payload.taxRate ?? 0);
+              const taxAmount = Number(payload.taxAmount ?? 0);
+              const roundOffAmount = Number(payload.roundOffAmount ?? 0);
+              const amount = Number(payload.amount ?? 0);
+              const balance = Number(payload.balance ?? 0);
+
+              const imageFile = saveDataUrlToAppData({
+                dataUrl: payload.imageDataUrl,
+                prefix: 'sale_invoice_image',
+                targetRoot: saleAttachmentsRoot,
+              });
+              createdImagePath = imageFile?.filePath ?? null;
+              const documentFile = saveDataUrlToAppData({
+                dataUrl: payload.documentDataUrl,
+                prefix: 'sale_invoice_document',
+                targetRoot: saleAttachmentsRoot,
+              });
+              createdDocumentPath = documentFile?.filePath ?? null;
+
+              const invoice = {
+                id: String(payload.id ?? Date.now().toString()),
+                invoiceNo: String(payload.invoiceNo ?? repository.getNextSaleInvoiceNo()),
+                date: String(payload.date ?? new Date().toLocaleDateString('en-GB')),
+                partyName: String(payload.partyName).trim(),
+                partyId: payload.partyId ? String(payload.partyId) : null,
+                partyPhone: payload.partyPhone ? String(payload.partyPhone) : null,
+                transactionType: 'Sale',
+                paymentType: String(payload.paymentType ?? 'Credit'),
+                paymentMode: String(payload.paymentMode ?? 'credit'),
+                subtotal: Number.isFinite(subtotal) ? subtotal : 0,
+                discountPercent: Number.isFinite(discountPercent) ? discountPercent : 0,
+                discountAmount: Number.isFinite(discountAmount) ? discountAmount : 0,
+                taxLabel: payload.taxLabel ? String(payload.taxLabel) : null,
+                taxRate: Number.isFinite(taxRate) ? taxRate : 0,
+                taxAmount: Number.isFinite(taxAmount) ? taxAmount : 0,
+                roundOff: payload.roundOff ? 1 : 0,
+                roundOffAmount: Number.isFinite(roundOffAmount) ? roundOffAmount : 0,
+                amount: Number.isFinite(amount) ? amount : 0,
+                balance: Number.isFinite(balance) ? balance : 0,
+                description: payload.description ? String(payload.description) : null,
+                lineItemsJson: JSON.stringify(lineItems),
+                attachmentImagePath: imageFile?.filePath ?? null,
+                attachmentImageName: imageFile?.fileName ?? null,
+                attachmentDocumentPath: documentFile?.filePath ?? null,
+                attachmentDocumentName: documentFile?.fileName ?? null,
+              };
+
+              repository.addSaleInvoice(invoice);
+
+              res.statusCode = 201;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify(invoice));
+            } catch (error) {
+              if (createdImagePath) {
+                removeManagedAttachmentFile(createdImagePath);
+              }
+
+              if (createdDocumentPath) {
+                removeManagedAttachmentFile(createdDocumentPath);
+              }
+
+              res.statusCode = 400;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify({ message: 'Invalid JSON payload.' }));
+            }
+            return;
+          }
+
+          if (req.method === 'PUT') {
+            let createdImagePath: string | null = null;
+            let createdDocumentPath: string | null = null;
+
+            try {
+              const pathId = requestUrl.pathname.split('/').filter(Boolean)[0];
+              const queryId = requestUrl.searchParams.get('id');
+              const id = (pathId || queryId || '').trim();
+
+              if (!id) {
+                res.statusCode = 400;
+                res.setHeader('Content-Type', 'application/json');
+                res.end(JSON.stringify({ message: 'Sale invoice id is required.' }));
+                return;
+              }
+
+              const existingInvoice = repository.getSaleInvoiceById(id);
+              if (!existingInvoice) {
+                res.statusCode = 404;
+                res.setHeader('Content-Type', 'application/json');
+                res.end(JSON.stringify({ message: 'Sale invoice not found.' }));
+                return;
+              }
+
+              const payload = await parseJsonBody(req);
+
+              const lineItems = Array.isArray(payload.lineItems)
+                ? payload.lineItems
+                : JSON.parse(existingInvoice.line_items_json ?? '[]');
+
+              const imageFile = payload.imageDataUrl
+                ? saveDataUrlToAppData({
+                    dataUrl: payload.imageDataUrl,
+                    prefix: 'sale_invoice_image',
+                    targetRoot: saleAttachmentsRoot,
+                  })
+                : null;
+              createdImagePath = imageFile?.filePath ?? null;
+
+              const documentFile = payload.documentDataUrl
+                ? saveDataUrlToAppData({
+                    dataUrl: payload.documentDataUrl,
+                    prefix: 'sale_invoice_document',
+                    targetRoot: saleAttachmentsRoot,
+                  })
+                : null;
+              createdDocumentPath = documentFile?.filePath ?? null;
+
+              const roundOffFlag = payload.roundOff ?? existingInvoice.round_off;
+              const invoice = {
+                invoiceNo: String(payload.invoiceNo ?? existingInvoice.invoice_no),
+                date: String(payload.date ?? existingInvoice.date),
+                partyName: String(payload.partyName ?? existingInvoice.party_name).trim(),
+                partyId: payload.partyId ? String(payload.partyId) : existingInvoice.party_id ?? null,
+                partyPhone: payload.partyPhone ? String(payload.partyPhone) : existingInvoice.party_phone ?? null,
+                transactionType: String(payload.transactionType ?? existingInvoice.transaction_type ?? 'Sale'),
+                paymentType: String(payload.paymentType ?? existingInvoice.payment_type ?? 'Credit'),
+                paymentMode: String(payload.paymentMode ?? existingInvoice.payment_mode ?? 'credit'),
+                subtotal: Number.isFinite(Number(payload.subtotal))
+                  ? Number(payload.subtotal)
+                  : Number(existingInvoice.subtotal ?? 0),
+                discountPercent: Number.isFinite(Number(payload.discountPercent))
+                  ? Number(payload.discountPercent)
+                  : Number(existingInvoice.discount_percent ?? 0),
+                discountAmount: Number.isFinite(Number(payload.discountAmount))
+                  ? Number(payload.discountAmount)
+                  : Number(existingInvoice.discount_amount ?? 0),
+                taxLabel: payload.taxLabel ? String(payload.taxLabel) : existingInvoice.tax_label ?? null,
+                taxRate: Number.isFinite(Number(payload.taxRate))
+                  ? Number(payload.taxRate)
+                  : Number(existingInvoice.tax_rate ?? 0),
+                taxAmount: Number.isFinite(Number(payload.taxAmount))
+                  ? Number(payload.taxAmount)
+                  : Number(existingInvoice.tax_amount ?? 0),
+                roundOff: roundOffFlag ? 1 : 0,
+                roundOffAmount: Number.isFinite(Number(payload.roundOffAmount))
+                  ? Number(payload.roundOffAmount)
+                  : Number(existingInvoice.round_off_amount ?? 0),
+                amount: Number.isFinite(Number(payload.amount))
+                  ? Number(payload.amount)
+                  : Number(existingInvoice.amount ?? 0),
+                balance: Number.isFinite(Number(payload.balance))
+                  ? Number(payload.balance)
+                  : Number(existingInvoice.balance ?? 0),
+                description: payload.description ? String(payload.description) : existingInvoice.description ?? null,
+                lineItemsJson: JSON.stringify(lineItems),
+                attachmentImagePath: createdImagePath ?? existingInvoice.attachment_image_path ?? null,
+                attachmentImageName: imageFile?.fileName ?? existingInvoice.attachment_image_name ?? null,
+                attachmentDocumentPath: createdDocumentPath ?? existingInvoice.attachment_document_path ?? null,
+                attachmentDocumentName: documentFile?.fileName ?? existingInvoice.attachment_document_name ?? null,
+              };
+
+              repository.updateSaleInvoice(id, invoice);
+
+              if (createdImagePath && existingInvoice.attachment_image_path && existingInvoice.attachment_image_path !== createdImagePath) {
+                removeManagedAttachmentFile(existingInvoice.attachment_image_path);
+              }
+
+              if (createdDocumentPath && existingInvoice.attachment_document_path && existingInvoice.attachment_document_path !== createdDocumentPath) {
+                removeManagedAttachmentFile(existingInvoice.attachment_document_path);
+              }
+
+              res.statusCode = 200;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify({ id, ...invoice }));
+            } catch {
+              if (createdImagePath) {
+                removeManagedAttachmentFile(createdImagePath);
+              }
+
+              if (createdDocumentPath) {
+                removeManagedAttachmentFile(createdDocumentPath);
+              }
+
+              res.statusCode = 400;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify({ message: 'Invalid JSON payload.' }));
+            }
+            return;
+          }
+
+          if (req.method === 'DELETE') {
+            const pathId = requestUrl.pathname.split('/').filter(Boolean)[0];
+            const queryId = requestUrl.searchParams.get('id');
+            const id = (pathId || queryId || '').trim();
+
+            if (!id) {
+              res.statusCode = 400;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify({ message: 'Sale invoice id is required.' }));
+              return;
+            }
+
+            const existingInvoice = repository.getSaleInvoiceById(id);
+            const deleted = repository.deleteSaleInvoice(id);
+            if (!deleted) {
+              res.statusCode = 404;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify({ message: 'Sale invoice not found.' }));
+              return;
+            }
+
+            try {
+              if (existingInvoice?.attachment_image_path) {
+                removeManagedAttachmentFile(existingInvoice.attachment_image_path);
+              }
+
+              if (existingInvoice?.attachment_document_path) {
+                removeManagedAttachmentFile(existingInvoice.attachment_document_path);
+              }
+            } catch (error) {
+              console.error('Failed to remove sale invoice attachments on delete:', error);
+            }
+
+            res.statusCode = 204;
+            res.end();
+            return;
+          }
+
+          res.statusCode = 405;
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify({ message: 'Method not allowed.' }));
+        } catch {
+          res.statusCode = 500;
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify({ message: 'Failed to process request.' }));
+        }
+      });
+
+      server.middlewares.use('/api/purchase_bills', async (req, res) => {
+        try {
+          // @ts-expect-error Runtime-only Node module used in Vite middleware.
+          const repository = await import('./database/sqlite/repository.mjs');
+          const requestUrl = new URL(req.url ?? '/', 'http://localhost');
+
+          if (req.method === 'GET') {
+            const purchaseBills = repository.getPurchaseBills();
+            res.statusCode = 200;
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify(purchaseBills));
+            return;
+          }
+
+          if (req.method === 'POST') {
+            let createdImagePath: string | null = null;
+            let createdDocumentPath: string | null = null;
+
+            try {
+              const payload = await parseJsonBody(req);
+
+              if (!payload.partyName || !String(payload.partyName).trim()) {
+                res.statusCode = 400;
+                res.setHeader('Content-Type', 'application/json');
+                res.end(JSON.stringify({ message: 'Party name is required.' }));
+                return;
+              }
+
+              const lineItems = Array.isArray(payload.lineItems) ? payload.lineItems : [];
+              const subtotal = Number(payload.subtotal ?? 0);
+              const discountPercent = Number(payload.discountPercent ?? 0);
+              const discountAmount = Number(payload.discountAmount ?? 0);
+              const taxRate = Number(payload.taxRate ?? 0);
+              const taxAmount = Number(payload.taxAmount ?? 0);
+              const roundOffAmount = Number(payload.roundOffAmount ?? 0);
+              const amount = Number(payload.amount ?? 0);
+              const balance = Number(payload.balance ?? 0);
+
+              const imageFile = saveDataUrlToAppData({
+                dataUrl: payload.imageDataUrl,
+                prefix: 'purchase_bill_image',
+                targetRoot: saleAttachmentsRoot,
+              });
+              createdImagePath = imageFile?.filePath ?? null;
+
+              const documentFile = saveDataUrlToAppData({
+                dataUrl: payload.documentDataUrl,
+                prefix: 'purchase_bill_document',
+                targetRoot: saleAttachmentsRoot,
+              });
+              createdDocumentPath = documentFile?.filePath ?? null;
+
+              const invoice = {
+                id: String(payload.id ?? Date.now().toString()),
+                invoiceNo: String(payload.invoiceNo ?? repository.getNextPurchaseBillNo()),
+                date: String(payload.date ?? new Date().toLocaleDateString('en-GB')),
+                partyName: String(payload.partyName).trim(),
+                partyId: payload.partyId ? String(payload.partyId) : null,
+                partyPhone: payload.partyPhone ? String(payload.partyPhone) : null,
+                transactionType: 'Purchase',
+                paymentType: String(payload.paymentType ?? 'Credit'),
+                paymentMode: String(payload.paymentMode ?? 'credit'),
+                subtotal: Number.isFinite(subtotal) ? subtotal : 0,
+                discountPercent: Number.isFinite(discountPercent) ? discountPercent : 0,
+                discountAmount: Number.isFinite(discountAmount) ? discountAmount : 0,
+                taxLabel: payload.taxLabel ? String(payload.taxLabel) : null,
+                taxRate: Number.isFinite(taxRate) ? taxRate : 0,
+                taxAmount: Number.isFinite(taxAmount) ? taxAmount : 0,
+                roundOff: payload.roundOff ? 1 : 0,
+                roundOffAmount: Number.isFinite(roundOffAmount) ? roundOffAmount : 0,
+                amount: Number.isFinite(amount) ? amount : 0,
+                balance: Number.isFinite(balance) ? balance : 0,
+                status: balance === 0 ? 'Paid' : 'Unpaid',
+                description: payload.description ? String(payload.description) : null,
+                lineItemsJson: JSON.stringify(lineItems),
+                attachmentImagePath: imageFile?.filePath ?? null,
+                attachmentImageName: imageFile?.fileName ?? null,
+                attachmentDocumentPath: documentFile?.filePath ?? null,
+                attachmentDocumentName: documentFile?.fileName ?? null,
+              };
+
+              repository.addPurchaseBill(invoice);
+
+              res.statusCode = 201;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify(invoice));
+            } catch {
+              if (createdImagePath) {
+                removeManagedAttachmentFile(createdImagePath);
+              }
+
+              if (createdDocumentPath) {
+                removeManagedAttachmentFile(createdDocumentPath);
+              }
+
+              res.statusCode = 400;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify({ message: 'Invalid JSON payload.' }));
+            }
+            return;
+          }
+
+          if (req.method === 'PUT') {
+            let createdImagePath: string | null = null;
+            let createdDocumentPath: string | null = null;
+
+            try {
+              const pathId = requestUrl.pathname.split('/').filter(Boolean)[0];
+              const queryId = requestUrl.searchParams.get('id');
+              const id = (pathId || queryId || '').trim();
+
+              if (!id) {
+                res.statusCode = 400;
+                res.setHeader('Content-Type', 'application/json');
+                res.end(JSON.stringify({ message: 'Purchase bill id is required.' }));
+                return;
+              }
+
+              const existingInvoice = repository.getPurchaseBillById(id);
+              if (!existingInvoice) {
+                res.statusCode = 404;
+                res.setHeader('Content-Type', 'application/json');
+                res.end(JSON.stringify({ message: 'Purchase bill not found.' }));
+                return;
+              }
+
+              const payload = await parseJsonBody(req);
+
+              const lineItems = Array.isArray(payload.lineItems)
+                ? payload.lineItems
+                : JSON.parse(existingInvoice.line_items_json ?? '[]');
+
+              const imageFile = payload.imageDataUrl
+                ? saveDataUrlToAppData({
+                    dataUrl: payload.imageDataUrl,
+                    prefix: 'purchase_bill_image',
+                    targetRoot: saleAttachmentsRoot,
+                  })
+                : null;
+              createdImagePath = imageFile?.filePath ?? null;
+
+              const documentFile = payload.documentDataUrl
+                ? saveDataUrlToAppData({
+                    dataUrl: payload.documentDataUrl,
+                    prefix: 'purchase_bill_document',
+                    targetRoot: saleAttachmentsRoot,
+                  })
+                : null;
+              createdDocumentPath = documentFile?.filePath ?? null;
+
+              const roundOffFlag = payload.roundOff ?? existingInvoice.round_off;
+              const resolvedBalance = Number.isFinite(Number(payload.balance))
+                ? Number(payload.balance)
+                : Number(existingInvoice.balance ?? 0);
+
+              const invoice = {
+                invoiceNo: String(payload.invoiceNo ?? existingInvoice.invoice_no),
+                date: String(payload.date ?? existingInvoice.date),
+                partyName: String(payload.partyName ?? existingInvoice.party_name).trim(),
+                partyId: payload.partyId ? String(payload.partyId) : existingInvoice.party_id ?? null,
+                partyPhone: payload.partyPhone ? String(payload.partyPhone) : existingInvoice.party_phone ?? null,
+                transactionType: String(payload.transactionType ?? existingInvoice.transaction_type ?? 'Purchase'),
+                paymentType: String(payload.paymentType ?? existingInvoice.payment_type ?? 'Credit'),
+                paymentMode: String(payload.paymentMode ?? existingInvoice.payment_mode ?? 'credit'),
+                subtotal: Number.isFinite(Number(payload.subtotal))
+                  ? Number(payload.subtotal)
+                  : Number(existingInvoice.subtotal ?? 0),
+                discountPercent: Number.isFinite(Number(payload.discountPercent))
+                  ? Number(payload.discountPercent)
+                  : Number(existingInvoice.discount_percent ?? 0),
+                discountAmount: Number.isFinite(Number(payload.discountAmount))
+                  ? Number(payload.discountAmount)
+                  : Number(existingInvoice.discount_amount ?? 0),
+                taxLabel: payload.taxLabel ? String(payload.taxLabel) : existingInvoice.tax_label ?? null,
+                taxRate: Number.isFinite(Number(payload.taxRate))
+                  ? Number(payload.taxRate)
+                  : Number(existingInvoice.tax_rate ?? 0),
+                taxAmount: Number.isFinite(Number(payload.taxAmount))
+                  ? Number(payload.taxAmount)
+                  : Number(existingInvoice.tax_amount ?? 0),
+                roundOff: roundOffFlag ? 1 : 0,
+                roundOffAmount: Number.isFinite(Number(payload.roundOffAmount))
+                  ? Number(payload.roundOffAmount)
+                  : Number(existingInvoice.round_off_amount ?? 0),
+                amount: Number.isFinite(Number(payload.amount))
+                  ? Number(payload.amount)
+                  : Number(existingInvoice.amount ?? 0),
+                balance: resolvedBalance,
+                status: resolvedBalance === 0 ? 'Paid' : 'Unpaid',
+                description: payload.description ? String(payload.description) : existingInvoice.description ?? null,
+                lineItemsJson: JSON.stringify(lineItems),
+                attachmentImagePath: createdImagePath ?? existingInvoice.attachment_image_path ?? null,
+                attachmentImageName: imageFile?.fileName ?? existingInvoice.attachment_image_name ?? null,
+                attachmentDocumentPath: createdDocumentPath ?? existingInvoice.attachment_document_path ?? null,
+                attachmentDocumentName: documentFile?.fileName ?? existingInvoice.attachment_document_name ?? null,
+              };
+
+              repository.updatePurchaseBill(id, invoice);
+
+              if (createdImagePath && existingInvoice.attachment_image_path && existingInvoice.attachment_image_path !== createdImagePath) {
+                removeManagedAttachmentFile(existingInvoice.attachment_image_path);
+              }
+
+              if (createdDocumentPath && existingInvoice.attachment_document_path && existingInvoice.attachment_document_path !== createdDocumentPath) {
+                removeManagedAttachmentFile(existingInvoice.attachment_document_path);
+              }
+
+              res.statusCode = 200;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify({ id, ...invoice }));
+            } catch {
+              if (createdImagePath) {
+                removeManagedAttachmentFile(createdImagePath);
+              }
+
+              if (createdDocumentPath) {
+                removeManagedAttachmentFile(createdDocumentPath);
+              }
+
+              res.statusCode = 400;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify({ message: 'Invalid JSON payload.' }));
+            }
+            return;
+          }
+
+          if (req.method === 'DELETE') {
+            const pathId = requestUrl.pathname.split('/').filter(Boolean)[0];
+            const queryId = requestUrl.searchParams.get('id');
+            const id = (pathId || queryId || '').trim();
+
+            if (!id) {
+              res.statusCode = 400;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify({ message: 'Purchase bill id is required.' }));
+              return;
+            }
+
+            const existingInvoice = repository.getPurchaseBillById(id);
+            const deleted = repository.deletePurchaseBill(id);
+            if (!deleted) {
+              res.statusCode = 404;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify({ message: 'Purchase bill not found.' }));
+              return;
+            }
+
+            try {
+              if (existingInvoice?.attachment_image_path) {
+                removeManagedAttachmentFile(existingInvoice.attachment_image_path);
+              }
+
+              if (existingInvoice?.attachment_document_path) {
+                removeManagedAttachmentFile(existingInvoice.attachment_document_path);
+              }
+            } catch (error) {
+              console.error('Failed to remove purchase bill attachments on delete:', error);
+            }
+
+            res.statusCode = 204;
+            res.end();
             return;
           }
 

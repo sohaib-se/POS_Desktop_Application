@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from "react";
-import type { SaleInvoiceEditData } from "@/types";
+import type { PurchaseBillEditData } from "@/types";
 
-interface SaleRow {
+interface PurchaseRow {
   id: number;
   itemId: string;
   item: string;
@@ -10,13 +10,13 @@ interface SaleRow {
   pricePerUnit: string;
 }
 
-interface SaleTab {
+interface PurchaseTab {
   id: number;
   label: string;
   paymentMode: "credit" | "cash";
   customerSearch: string;
   phoneNo: string;
-  rows: SaleRow[];
+  rows: PurchaseRow[];
   discountPercent: string;
   discountRs: string;
   tax: string;
@@ -40,15 +40,15 @@ interface PartyOption {
 interface ItemOption {
   id: string;
   name: string;
-  sale_price?: number;
+  purchase_price?: number;
   unit: string;
 }
 
-interface AddSaleProps {
+interface AddPurchaseProps {
   onSave?: () => void;
   onShare?: () => void;
   onClose?: () => void;
-  initialInvoice?: SaleInvoiceEditData | null;
+  initialInvoice?: PurchaseBillEditData | null;
 }
 
 const unitOptions = [
@@ -60,10 +60,10 @@ const taxOptions = ["NONE", "GST 5%", "GST 12%", "GST 18%", "GST 28%"];
 let globalRowId = 3;
 let globalTabId = 2;
 
-function createDefaultTab(id: number): SaleTab {
+function createDefaultTab(id: number): PurchaseTab {
   return {
     id,
-    label: `Sale #${id}`,
+    label: `Purchase #${id}`,
     paymentMode: "credit",
     customerSearch: "",
     phoneNo: "",
@@ -84,7 +84,7 @@ function createDefaultTab(id: number): SaleTab {
   };
 }
 
-function createEmptyRow(): SaleRow {
+function createEmptyRow(): PurchaseRow {
   return { id: globalRowId++, itemId: "", item: "", qty: "", unit: "NONE", pricePerUnit: "" };
 }
 
@@ -179,8 +179,8 @@ function useColumnResize(initial: number[]) {
   return { widths, startResize };
 }
 
-export function AddSale({ onSave, onShare, onClose, initialInvoice }: AddSaleProps) {
-  const [tabs, setTabs] = useState<SaleTab[]>([createDefaultTab(1)]);
+export function AddPurchase({ onSave, onShare, onClose, initialInvoice }: AddPurchaseProps) {
+  const [tabs, setTabs] = useState<PurchaseTab[]>([createDefaultTab(1)]);
   const [activeTabId, setActiveTabId] = useState(1);
   const [isOpenAnimated, setIsOpenAnimated] = useState(false);
   const [parties, setParties] = useState<PartyOption[]>([]);
@@ -213,7 +213,7 @@ export function AddSale({ onSave, onShare, onClose, initialInvoice }: AddSalePro
     setTabs([
       {
         id: 1,
-        label: `Sale #${initialInvoice.invoiceNo}`,
+        label: `Purchase #${initialInvoice.invoiceNo}`,
         paymentMode,
         customerSearch: initialInvoice.partyId ?? "",
         phoneNo: initialInvoice.partyPhone ?? "",
@@ -254,16 +254,16 @@ export function AddSale({ onSave, onShare, onClose, initialInvoice }: AddSalePro
         const [partiesResponse, itemsResponse, saleInvoicesResponse] = await Promise.all([
           fetch("/api/parties"),
           fetch("/api/items"),
-          fetch("/api/sale_invoices"),
+          fetch("/api/purchase_bills"),
         ]);
 
         if (!partiesResponse.ok || !itemsResponse.ok || !saleInvoicesResponse.ok) {
-          throw new Error("Failed to load sale lookup data");
+          throw new Error("Failed to load purchase lookup data");
         }
 
         const loadedParties = (await partiesResponse.json()) as PartyOption[];
         const loadedItems = (await itemsResponse.json()) as ItemOption[];
-        const saleInvoices = (await saleInvoicesResponse.json()) as Array<{ invoice_no?: string | null }>;
+        const purchaseBills = (await saleInvoicesResponse.json()) as Array<{ invoice_no?: string | null }>;
 
         if (cancelled) {
           return;
@@ -274,7 +274,7 @@ export function AddSale({ onSave, onShare, onClose, initialInvoice }: AddSalePro
         setItems(loadedItems);
         setNextInvoiceNo(
           String(
-            saleInvoices.reduce((highest, invoice) => {
+            purchaseBills.reduce((highest, invoice) => {
               const invoiceNumber = Number(invoice.invoice_no ?? 0);
               return Number.isFinite(invoiceNumber) && invoiceNumber > highest ? invoiceNumber : highest;
             }, 0) + 1,
@@ -316,7 +316,7 @@ export function AddSale({ onSave, onShare, onClose, initialInvoice }: AddSalePro
   const displayedInvoiceNo = initialInvoice?.invoiceNo ?? nextInvoiceNo;
   const displayedInvoiceDate = initialInvoice?.date ?? formatDateForDisplay(new Date());
 
-  const updateTab = (partial: Partial<SaleTab>) => {
+  const updateTab = (partial: Partial<PurchaseTab>) => {
     setTabs((prev) =>
       prev.map((t) => (t.id === activeTabId ? { ...t, ...partial } : t))
     );
@@ -344,8 +344,8 @@ export function AddSale({ onSave, onShare, onClose, initialInvoice }: AddSalePro
         item: matchedItem?.name ?? "",
         unit: matchedItem?.unit ?? row.unit,
         pricePerUnit:
-          matchedItem && Number.isFinite(Number(matchedItem.sale_price))
-            ? String(Number(matchedItem.sale_price ?? 0))
+          matchedItem && Number.isFinite(Number(matchedItem.purchase_price))
+            ? String(Number(matchedItem.purchase_price ?? 0))
             : row.pricePerUnit,
       };
     });
@@ -408,14 +408,14 @@ export function AddSale({ onSave, onShare, onClose, initialInvoice }: AddSalePro
     reader.readAsDataURL(file);
   };
 
-  const handleSaveSale = async () => {
+  const handleSavePurchase = async () => {
     if (isSaving) {
       return;
     }
 
     const selectedParty = parties.find((party) => String(party.id) === activeTab.customerSearch) ?? parties[0];
     if (!selectedParty) {
-      setSaveError("Add at least one party before saving the sale.");
+      setSaveError("Add at least one party before saving the purchase.");
       return;
     }
 
@@ -436,7 +436,7 @@ export function AddSale({ onSave, onShare, onClose, initialInvoice }: AddSalePro
 
     try {
       const isEditing = Boolean(initialInvoice);
-      const response = await fetch(isEditing ? `/api/sale_invoices/${initialInvoice?.id}` : "/api/sale_invoices", {
+      const response = await fetch(isEditing ? `/api/purchase_bills/${initialInvoice?.id}` : "/api/purchase_bills", {
         method: isEditing ? "PUT" : "POST",
         headers: {
           "Content-Type": "application/json",
@@ -477,7 +477,7 @@ export function AddSale({ onSave, onShare, onClose, initialInvoice }: AddSalePro
       });
 
       if (!response.ok) {
-        throw new Error("Failed to save sale");
+        throw new Error("Failed to save purchase");
       }
 
       const savedInvoice = (await response.json()) as { invoiceNo?: string };
@@ -488,11 +488,11 @@ export function AddSale({ onSave, onShare, onClose, initialInvoice }: AddSalePro
       }
 
       window.dispatchEvent(
-        new CustomEvent("sale-invoices-refresh", {
+        new CustomEvent("purchase-bills-refresh", {
           detail: {
             message: isEditing
-              ? "Sale invoice updated successfully."
-              : "Sale invoice saved successfully.",
+              ? "Purchase bill updated successfully."
+              : "Purchase bill saved successfully.",
           },
         }),
       );
@@ -501,7 +501,7 @@ export function AddSale({ onSave, onShare, onClose, initialInvoice }: AddSalePro
       onClose?.();
     } catch (error) {
       console.error(error);
-      setSaveError("Failed to save the sale. Please try again.");
+      setSaveError("Failed to save the purchase. Please try again.");
     } finally {
       setIsSaving(false);
     }
@@ -524,13 +524,13 @@ export function AddSale({ onSave, onShare, onClose, initialInvoice }: AddSalePro
     });
   };
 
-  const updateRow = (rowId: number, field: keyof SaleRow, value: string) => {
+  const updateRow = (rowId: number, field: keyof PurchaseRow, value: string) => {
     let updatedRows = activeTab.rows.map((row) =>
       row.id === rowId ? { ...row, [field]: value } : row
     );
 
     // Helper to check if a row is empty
-    const isEmpty = (row: SaleRow) => !row.itemId && !row.item && !row.qty && !row.pricePerUnit;
+    const isEmpty = (row: PurchaseRow) => !row.itemId && !row.item && !row.qty && !row.pricePerUnit;
 
     // Remove consecutive empty rows from the end, keeping exactly one
     while (updatedRows.length > 2 && isEmpty(updatedRows[updatedRows.length - 1])) {
@@ -681,7 +681,7 @@ export function AddSale({ onSave, onShare, onClose, initialInvoice }: AddSalePro
         })}
         <button
           onClick={addTab}
-          title="New Sale"
+          title="New Purchase"
           style={{
             marginBottom: 0, marginLeft: 4, width: 26, height: 26, borderRadius: "50%",
             background: "#3b82f6", color: "#fff", border: "none", cursor: "pointer",
@@ -695,7 +695,7 @@ export function AddSale({ onSave, onShare, onClose, initialInvoice }: AddSalePro
         {onClose && (
           <button
             onClick={onClose}
-            aria-label="Close add sale"
+            aria-label="Close add purchase"
             style={{
               marginLeft: "auto",
               marginBottom: 0,
@@ -722,7 +722,7 @@ export function AddSale({ onSave, onShare, onClose, initialInvoice }: AddSalePro
 
       {/* ── TOP BAR (Sale / Credit+Cash / Lite Mode) ── */}
       <div style={{ background: "#fff", flexShrink: 0, padding: "8px 20px", display: "flex", alignItems: "center", gap: 20, borderBottom: "1px solid #e5e7eb" }}>
-        <span style={{ fontSize: 15, fontWeight: 600, color: "#1f2937" }}>Sale</span>
+        <span style={{ fontSize: 15, fontWeight: 600, color: "#1f2937" }}>Purchase</span>
 
         {/* Credit ← toggle → Cash */}
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -1081,7 +1081,7 @@ export function AddSale({ onSave, onShare, onClose, initialInvoice }: AddSalePro
             <svg width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6" /></svg>
           </button>
         </div>
-        <button onClick={handleSaveSale}
+        <button onClick={handleSavePurchase}
           disabled={isSaving}
           style={{ padding: "7px 32px", fontSize: 13, fontWeight: 700, color: "#fff", background: isSaving ? "#93c5fd" : "#2563eb", border: "none", borderRadius: 4, cursor: isSaving ? "not-allowed" : "pointer", boxShadow: "0 1px 4px rgba(37,99,235,0.3)" }}>
           {isSaving ? "Saving..." : initialInvoice ? "Update" : "Save"}

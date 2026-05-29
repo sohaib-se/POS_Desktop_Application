@@ -10,7 +10,6 @@ import {
   Settings,
   MoreVertical,
 } from "lucide-react";
-import { transactions } from "@/data/mockData";
 import type { Party } from "@/types";
 import {
   Dialog,
@@ -49,6 +48,56 @@ type PartyTransactionRow = {
   partyId?: number;
 };
 
+type TransactionApiRow = {
+  id: string;
+  invoice_no: string;
+  date: string;
+  party_name: string;
+  party_id?: string | null;
+  transaction_type?: string | null;
+  payment_type?: string | null;
+  amount: number;
+  balance: number;
+  status?: string | null;
+};
+
+function normalizeTransactionType(value: string | null | undefined): Transaction["type"] {
+  const normalizedValue = String(value ?? "").toLowerCase();
+
+  if (normalizedValue.includes("purchase")) {
+    return "Purchase";
+  }
+
+  if (normalizedValue.includes("sale")) {
+    return "Sale";
+  }
+
+  return "Sale";
+}
+
+function normalizePartyTransaction(row: TransactionApiRow): PartyTransactionRow {
+  const numericPartyId = Number(row.party_id);
+  const resolvedType = normalizeTransactionType(row.transaction_type);
+
+  return {
+    id: row.id,
+    type: resolvedType,
+    invoiceNo: row.invoice_no,
+    date: row.date,
+    partyName: row.party_name,
+    amount: Number(row.amount ?? 0),
+    balance: Number(row.balance ?? 0),
+    paymentType: row.payment_type ?? undefined,
+    status:
+      row.status === "Paid" || row.status === "Unpaid" || row.status === "Open" || row.status === "Cancelled"
+        ? row.status
+        : Number(row.balance ?? 0) === 0
+          ? "Paid"
+          : "Unpaid",
+    partyId: Number.isFinite(numericPartyId) ? numericPartyId : undefined,
+  };
+}
+
 export function Parties() {
   const [parties, setParties] = useState<Party[]>([]);
   const [selectedParty, setSelectedParty] = useState<Party | null>(null);
@@ -64,6 +113,7 @@ export function Parties() {
   const [openingBalanceTransactions, setOpeningBalanceTransactions] = useState<
     PartyTransactionRow[]
   >([]);
+  const [partyTransactionsFromApi, setPartyTransactionsFromApi] = useState<PartyTransactionRow[]>([]);
   const [partyForm, setPartyForm] = useState({
     name: "",
     phoneNumber: "",
@@ -115,14 +165,19 @@ export function Parties() {
   };
 
   useEffect(() => {
-    const loadParties = async () => {
+    const loadPartiesAndTransactions = async () => {
       try {
-        const response = await fetch('/api/parties');
-        if (!response.ok) {
+        const [partiesResponse, saleInvoicesResponse, purchaseBillsResponse] = await Promise.all([
+          fetch('/api/parties'),
+          fetch('/api/sale_invoices'),
+          fetch('/api/purchase_bills'),
+        ]);
+
+        if (!partiesResponse.ok) {
           throw new Error('Failed to load parties');
         }
 
-        const dbParties = (await response.json()) as Array<{
+        const dbParties = (await partiesResponse.json()) as Array<{
           id: number;
           name: string;
           phone: string;
@@ -131,6 +186,24 @@ export function Parties() {
           balance: number;
           type: 'customer' | 'supplier' | 'both';
         }>;
+
+        const saleTransactions = saleInvoicesResponse.ok
+          ? ((await saleInvoicesResponse.json()) as TransactionApiRow[]).map((row) => ({
+              ...normalizePartyTransaction({
+                ...row,
+                transaction_type: row.transaction_type ?? 'Sale',
+              }),
+            }))
+          : [];
+
+        const purchaseTransactions = purchaseBillsResponse.ok
+          ? ((await purchaseBillsResponse.json()) as TransactionApiRow[]).map((row) => ({
+              ...normalizePartyTransaction({
+                ...row,
+                transaction_type: row.transaction_type ?? 'Purchase',
+              }),
+            }))
+          : [];
 
         const normalizedParties: Party[] = dbParties.map((party) => ({
           id: party.id,
@@ -143,6 +216,7 @@ export function Parties() {
         }));
 
         setParties(normalizedParties);
+        setPartyTransactionsFromApi([...saleTransactions, ...purchaseTransactions]);
         setSelectedParty((previousSelectedParty) => {
           if (!normalizedParties.length) {
             return null;
@@ -162,7 +236,7 @@ export function Parties() {
       }
     };
 
-    loadParties();
+    loadPartiesAndTransactions();
   }, []);
 
   useEffect(() => {
@@ -187,24 +261,7 @@ export function Parties() {
     p.name.toLowerCase().includes(searchTerm.toLowerCase()),
   );
 
-  const baseTransactions: PartyTransactionRow[] = transactions.map((transaction) => {
-    const numericPartyId = Number(transaction.partyId);
-
-    return {
-      id: transaction.id,
-      type: transaction.type,
-      invoiceNo: transaction.invoiceNo,
-      date: transaction.date,
-      partyName: transaction.partyName,
-      amount: transaction.amount,
-      balance: transaction.balance,
-      paymentType: transaction.paymentType,
-      status: transaction.status,
-      partyId: Number.isFinite(numericPartyId) ? numericPartyId : undefined,
-    };
-  });
-
-  const partyTransactions = [...baseTransactions, ...openingBalanceTransactions].filter(
+  const partyTransactions = [...partyTransactionsFromApi, ...openingBalanceTransactions].filter(
     (transaction) => {
       if (!selectedParty) {
         return false;

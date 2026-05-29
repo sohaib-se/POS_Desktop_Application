@@ -21,11 +21,12 @@ import { SettingsPage } from "@/components/pages/Settings";
 import { Utilities } from "@/components/pages/Utilities";
 import { SyncShare } from "@/components/pages/SyncShare";
 import { EditProfile } from "@/components/pages/EditProfile";
-import type { ViewType } from "@/types";
+import type { SaleInvoiceEditData, ViewType } from "@/types";
 
 function App() {
   const [currentView, setCurrentView] = useState<ViewType>("home");
   const [lastStandardView, setLastStandardView] = useState<ViewType>("home");
+  const [editingSaleInvoice, setEditingSaleInvoice] = useState<SaleInvoiceEditData | null>(null);
 
   const isOverlayView = (view: ViewType) => view === "add-sale" || view === "settings";
 
@@ -34,10 +35,20 @@ function App() {
       setLastStandardView(view);
     }
 
+    if (view === "add-sale") {
+      setEditingSaleInvoice(null);
+    }
+
     setCurrentView(view);
   };
 
+  const handleEditSaleInvoice = (invoice: SaleInvoiceEditData) => {
+    setEditingSaleInvoice(invoice);
+    setCurrentView("add-sale");
+  };
+
   const handleCloseAddSale = () => {
+    setEditingSaleInvoice(null);
     setCurrentView(lastStandardView);
   };
 
@@ -57,7 +68,7 @@ function App() {
       case "items":
         return <Items />;
       case "sale-invoices":
-        return <SaleInvoices onViewChange={handleViewChange} />;
+        return <SaleInvoices onViewChange={handleViewChange} onEditInvoice={handleEditSaleInvoice} />;
       case "estimates":
         return <Estimates />;
       case "payment-in":
@@ -149,7 +160,7 @@ function App() {
 
       {currentView === "add-sale" && (
         <div className="fixed inset-0 z-[100]">
-          <AddSale onClose={handleCloseAddSale} />
+          <AddSale onClose={handleCloseAddSale} initialInvoice={editingSaleInvoice} />
         </div>
       )}
 

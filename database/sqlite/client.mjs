@@ -37,6 +37,65 @@ function ensureItemsTableColumns(db) {
   }
 }
 
+function ensureSaleInvoiceColumns(db) {
+  const rows = db.prepare('PRAGMA table_info(sale_invoices)').all();
+  const existingColumns = new Set(rows.map((row) => row.name));
+
+  const addColumn = (columnName, definition) => {
+    if (!existingColumns.has(columnName)) {
+      db.exec(`ALTER TABLE sale_invoices ADD COLUMN ${columnName} ${definition}`);
+    }
+  };
+
+  addColumn('party_id', 'TEXT');
+  addColumn('party_phone', 'TEXT');
+  addColumn('payment_mode', 'TEXT');
+  addColumn('subtotal', 'REAL NOT NULL DEFAULT 0');
+  addColumn('discount_percent', 'REAL NOT NULL DEFAULT 0');
+  addColumn('discount_amount', 'REAL NOT NULL DEFAULT 0');
+  addColumn('tax_label', 'TEXT');
+  addColumn('tax_rate', 'REAL NOT NULL DEFAULT 0');
+  addColumn('tax_amount', 'REAL NOT NULL DEFAULT 0');
+  addColumn('round_off', 'INTEGER NOT NULL DEFAULT 0');
+  addColumn('round_off_amount', 'REAL NOT NULL DEFAULT 0');
+  addColumn('description', 'TEXT');
+  addColumn('line_items_json', 'TEXT');
+  addColumn('attachment_image_path', 'TEXT');
+  addColumn('attachment_image_name', 'TEXT');
+  addColumn('attachment_document_path', 'TEXT');
+  addColumn('attachment_document_name', 'TEXT');
+}
+
+function ensurePurchaseBillColumns(db) {
+  const rows = db.prepare('PRAGMA table_info(purchase_bills)').all();
+  const existingColumns = new Set(rows.map((row) => row.name));
+
+  const addColumn = (columnName, definition) => {
+    if (!existingColumns.has(columnName)) {
+      db.exec(`ALTER TABLE purchase_bills ADD COLUMN ${columnName} ${definition}`);
+    }
+  };
+
+  addColumn('party_id', 'TEXT');
+  addColumn('party_phone', 'TEXT');
+  addColumn('transaction_type', 'TEXT');
+  addColumn('payment_mode', 'TEXT');
+  addColumn('subtotal', 'REAL NOT NULL DEFAULT 0');
+  addColumn('discount_percent', 'REAL NOT NULL DEFAULT 0');
+  addColumn('discount_amount', 'REAL NOT NULL DEFAULT 0');
+  addColumn('tax_label', 'TEXT');
+  addColumn('tax_rate', 'REAL NOT NULL DEFAULT 0');
+  addColumn('tax_amount', 'REAL NOT NULL DEFAULT 0');
+  addColumn('round_off', 'INTEGER NOT NULL DEFAULT 0');
+  addColumn('round_off_amount', 'REAL NOT NULL DEFAULT 0');
+  addColumn('description', 'TEXT');
+  addColumn('line_items_json', 'TEXT');
+  addColumn('attachment_image_path', 'TEXT');
+  addColumn('attachment_image_name', 'TEXT');
+  addColumn('attachment_document_path', 'TEXT');
+  addColumn('attachment_document_name', 'TEXT');
+}
+
 function ensureUnitsAndConversionRatesTables(db) {
   db.exec(`
     CREATE TABLE IF NOT EXISTS conversion_rates (
@@ -163,6 +222,8 @@ export function openDatabase() {
   db.pragma('journal_mode = WAL');
   db.pragma('foreign_keys = ON');
   ensureItemsTableColumns(db);
+  ensureSaleInvoiceColumns(db);
+  ensurePurchaseBillColumns(db);
   ensureUnitsAndConversionRatesTables(db);
   return db;
 }

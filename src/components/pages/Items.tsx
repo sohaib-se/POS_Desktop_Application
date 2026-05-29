@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Search, Plus, ChevronDown, SlidersHorizontal, X } from "lucide-react";
 
 // --- INLINE TYPES & MOCK DATA ---
@@ -87,6 +87,46 @@ type ConversionRateRecord = {
   created_at?: string;
 };
 
+type ItemTransactionApiRecord = {
+  id: string;
+  invoice_no: string;
+  date: string;
+  party_name: string;
+  party_id?: string | null;
+  transaction_type?: string | null;
+  payment_type?: string | null;
+  amount: number;
+  balance: number;
+  status?: string | null;
+  line_items_json?: string | null;
+};
+
+type ItemTransactionLine = {
+  id?: number;
+  itemId?: string;
+  name?: string;
+  quantity?: number;
+  unit?: string;
+  price?: number;
+  amount?: number;
+};
+
+type ItemTransactionRow = {
+  id: string;
+  type: "Sale" | "Purchase";
+  invoiceNo: string;
+  partyName: string;
+  date: string;
+  quantity: number;
+  unit: string;
+  price: number;
+  amount: number;
+  balance: number;
+  status: "Paid" | "Unpaid" | "Open" | "Cancelled";
+  itemId?: string;
+  itemName: string;
+};
+
 const getInitialAddItemFormState = (): AddItemFormState => ({
   itemName: "",
   categoryId: "",
@@ -137,36 +177,6 @@ const getUnitIdFromLabel = (
 
   return matchedUnit?.id ?? "";
 };
-
-const transactions = [
-  {
-    id: "1",
-    type: "Sale",
-    invoiceNo: "INV-001",
-    partyName: "Cash Customer",
-    date: "10/24/2023",
-    amount: 1500,
-    status: "Paid",
-  },
-  {
-    id: "2",
-    type: "Purchase",
-    invoiceNo: "PUR-001",
-    partyName: "Supplier A",
-    date: "10/22/2023",
-    amount: 5000,
-    status: "Unpaid",
-  },
-  {
-    id: "3",
-    type: "Payment In",
-    invoiceNo: "REC-001",
-    partyName: "John Doe",
-    date: "10/20/2023",
-    amount: 1000,
-    status: "Paid",
-  },
-];
 
 // --- INLINE UI COMPONENTS ---
 const Card = ({ children, className, style }: any) => (
@@ -306,6 +316,7 @@ export function Items() {
   const [secondaryUnitId, setSecondaryUnitId] = useState<string>("");
   const [conversionRate, setConversionRate] = useState<number>(0);
   const [units, setUnits] = useState<UnitRecord[]>([]);
+  const [itemTransactions, setItemTransactions] = useState<ItemTransactionRow[]>([]);
   const [showAddUnit, setShowAddUnit] = useState(false);
   const [addUnitFullName, setAddUnitFullName] = useState('');
   const [addUnitShortName, setAddUnitShortName] = useState('');
@@ -404,6 +415,50 @@ export function Items() {
       .includes(normalizedMoveItemsSearchTerm);
   });
   const moveTargetCategoryName = selectedCategory?.name ?? null;
+
+  const parseLineItems = (lineItemsJson?: string | null) => {
+    if (!lineItemsJson) {
+      return [] as ItemTransactionLine[];
+    }
+
+    try {
+      const parsedValue = JSON.parse(lineItemsJson) as unknown;
+      return Array.isArray(parsedValue) ? (parsedValue as ItemTransactionLine[]) : [];
+    } catch {
+      return [] as ItemTransactionLine[];
+    }
+  };
+
+  const normalizeTransactionType = (
+    transactionType?: string | null,
+  ): ItemTransactionRow["type"] => {
+    const normalizedType = String(transactionType ?? "").toLowerCase();
+    return normalizedType.includes("purchase") ? "Purchase" : "Sale";
+  };
+
+  const normalizeTransactionStatus = (
+    status?: string | null,
+    balance = 0,
+  ): ItemTransactionRow["status"] => {
+    if (status === "Paid" || status === "Unpaid" || status === "Open" || status === "Cancelled") {
+      return status;
+    }
+
+    return balance === 0 ? "Paid" : "Unpaid";
+  };
+
+  const selectedItemTransactions = useMemo(() => {
+    if (!selectedItem) {
+      return [] as ItemTransactionRow[];
+    }
+
+    const normalizedSelectedName = selectedItem.name.trim().toLowerCase();
+    return itemTransactions.filter(
+      (transaction) =>
+        transaction.itemId === selectedItem.id ||
+        transaction.itemName.trim().toLowerCase() === normalizedSelectedName,
+    );
+  }, [itemTransactions, selectedItem]);
 
   const getContextMenuStyle = (x: number, y: number) => {
     if (typeof window === 'undefined') {
@@ -512,6 +567,59 @@ export function Items() {
     };
 
     void loadCategories();
+  }, []);
+
+  useEffect(() => {
+    const loadItemTransactions = async () => {
+      try {
+        const [saleInvoicesResponse, purchaseBillsResponse] = await Promise.all([
+          fetch('/api/sale_invoices'),
+          fetch('/api/purchase_bills'),
+        ]);
+
+        const saleInvoices = saleInvoicesResponse.ok
+          ? ((await saleInvoicesResponse.json()) as ItemTransactionApiRecord[])
+          : [];
+        const purchaseBills = purchaseBillsResponse.ok
+          ? ((await purchaseBillsResponse.json()) as ItemTransactionApiRecord[])
+          : [];
+
+        const nextTransactions = [...saleInvoices, ...purchaseBills].flatMap(
+          (invoice): ItemTransactionRow[] => {
+          const lineItems = parseLineItems(invoice.line_items_json);
+          const transactionType = normalizeTransactionType(invoice.transaction_type);
+          const balance = Number(invoice.balance ?? 0);
+          const status = normalizeTransactionStatus(invoice.status, balance);
+
+          return lineItems.map((lineItem, index) => ({
+            id: `${invoice.id}-${lineItem.id ?? index}`,
+            type: transactionType,
+            invoiceNo: invoice.invoice_no,
+            partyName: invoice.party_name,
+            date: invoice.date,
+            quantity: Number(lineItem.quantity ?? 0),
+            unit: lineItem.unit ?? "",
+            price: Number(lineItem.price ?? 0),
+            amount: Number(
+              lineItem.amount ??
+                Number(lineItem.quantity ?? 0) * Number(lineItem.price ?? 0),
+            ),
+            balance,
+            status,
+            itemId: lineItem.itemId ?? undefined,
+            itemName: lineItem.name ?? "",
+          }));
+          },
+        );
+
+        setItemTransactions(nextTransactions);
+      } catch (error) {
+        console.error(error);
+        setItemTransactions([]);
+      }
+    };
+
+    void loadItemTransactions();
   }, []);
 
   useEffect(() => {
@@ -1641,55 +1749,64 @@ export function Items() {
                             </tr>
                           </thead>
                           <tbody>
-                            {transactions.slice(0, 6).map((t) => (
-                              <tr
-                                key={t.id}
-                                className="border-b border-[#E3EAF2] hover:bg-[#F5F8FA]"
-                              >
-                                <td className="px-4 py-2">
-                                  <span
-                                    className={`inline-flex items-center gap-1.5 ${
-                                      t.type === "Sale"
-                                        ? "text-[#43A047]"
-                                        : t.type === "Purchase"
-                                          ? "text-[#E53935]"
-                                          : "text-[#1976D2]"
-                                    }`}
-                                  >
+                            {selectedItemTransactions.length ? (
+                              selectedItemTransactions.map((transaction) => (
+                                <tr
+                                  key={transaction.id}
+                                  className="border-b border-[#E3EAF2] hover:bg-[#F5F8FA]"
+                                >
+                                  <td className="px-4 py-2">
                                     <span
-                                      className={`w-2 h-2 rounded-full ${
-                                        t.type === "Sale"
-                                          ? "bg-[#43A047]"
-                                          : t.type === "Purchase"
-                                            ? "bg-[#E53935]"
-                                            : "bg-[#1976D2]"
+                                      className={`inline-flex items-center gap-1.5 ${
+                                        transaction.type === "Sale"
+                                          ? "text-[#43A047]"
+                                          : "text-[#E53935]"
                                       }`}
-                                    ></span>
-                                    {t.type}
-                                  </span>
-                                </td>
-                                <td className="px-4 py-2">{t.invoiceNo}</td>
-                                <td className="px-4 py-2">{t.partyName}</td>
-                                <td className="px-4 py-2">{t.date}</td>
-                                <td className="px-4 py-2 text-right">1 Pcs</td>
-                                <td className="px-4 py-2 text-right">
-                                  Rs {t.amount.toFixed(2)}
-                                </td>
-                                <td className="px-4 py-2">
-                                  <span
-                                    className={`text-xs px-2 py-1 rounded-full font-semibold ${
-                                      t.status === "Paid"
-                                        ? "bg-[#E6F4EA] text-[#43A047]"
-                                        : t.status === "Unpaid"
-                                          ? "bg-[#FDEAEA] text-[#E53935]"
-                                          : "bg-[#F7F9FB] text-[#7B8A9A]"
-                                    }`}
-                                  >
-                                    {t.status}
-                                  </span>
+                                    >
+                                      <span
+                                        className={`w-2 h-2 rounded-full ${
+                                          transaction.type === "Sale"
+                                            ? "bg-[#43A047]"
+                                            : "bg-[#E53935]"
+                                        }`}
+                                      ></span>
+                                      {transaction.type}
+                                    </span>
+                                  </td>
+                                  <td className="px-4 py-2">{transaction.invoiceNo}</td>
+                                  <td className="px-4 py-2">{transaction.partyName}</td>
+                                  <td className="px-4 py-2">{transaction.date}</td>
+                                  <td className="px-4 py-2 text-right">
+                                    {Number(transaction.quantity).toLocaleString()} {transaction.unit || ""}
+                                  </td>
+                                  <td className="px-4 py-2 text-right">
+                                    Rs {Number(transaction.price).toFixed(2)}
+                                  </td>
+                                  <td className="px-4 py-2">
+                                    <span
+                                      className={`text-xs px-2 py-1 rounded-full font-semibold ${
+                                        transaction.status === "Paid"
+                                          ? "bg-[#E6F4EA] text-[#43A047]"
+                                          : transaction.status === "Unpaid"
+                                            ? "bg-[#FDEAEA] text-[#E53935]"
+                                            : "bg-[#F7F9FB] text-[#7B8A9A]"
+                                      }`}
+                                    >
+                                      {transaction.status}
+                                    </span>
+                                  </td>
+                                </tr>
+                              ))
+                            ) : (
+                              <tr>
+                                <td
+                                  colSpan={7}
+                                  className="px-4 py-8 text-center text-gray-500"
+                                >
+                                  No transactions found for this item
                                 </td>
                               </tr>
-                            ))}
+                            )}
                           </tbody>
                         </table>
                       </div>

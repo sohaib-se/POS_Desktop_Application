@@ -275,6 +275,17 @@ export function Parties() {
     },
   );
 
+  const selectedPartyBalanceLabel =
+    selectedParty && selectedParty.balance > 0
+      ? "Amount to Pay"
+      : selectedParty && selectedParty.balance < 0
+        ? "Amount to Receive"
+        : "Balance Settled";
+
+  const selectedPartyBalanceAmount = selectedParty
+    ? Math.abs(selectedParty.balance).toFixed(2)
+    : "0.00";
+
   const handleSaveParty = async (
     options?: {
       closeDialog?: boolean;
@@ -627,9 +638,22 @@ export function Parties() {
                     </div>
                     <div>
                       <p className="text-xs text-gray-500 mb-0.5">
-                        Billing Address
+                        Credit / Balance
                       </p>
-                      <p className="text-sm text-gray-900">Jhagra</p>
+                      <p className="text-sm text-gray-900">
+                        {selectedPartyBalanceLabel}
+                      </p>
+                      <p
+                        className={`text-sm font-semibold ${
+                          selectedParty.balance > 0
+                            ? "text-red-600"
+                            : selectedParty.balance < 0
+                              ? "text-green-600"
+                              : "text-gray-900"
+                        }`}
+                      >
+                        Rs {selectedPartyBalanceAmount}
+                      </p>
                     </div>
                   </div>
                 </div>

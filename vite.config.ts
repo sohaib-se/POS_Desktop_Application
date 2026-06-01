@@ -584,6 +584,7 @@ function sqliteApiPlugin() {
                   imgPath: resolvedImgPath,
                   stockValue: Number.isFinite(Number(payload.stockValue)) ? Number(payload.stockValue) : null,
                   minStock: Number.isFinite(Number(payload.minStock)) ? Number(payload.minStock) : null,
+                  batchJson: payload.batchJson ? String(payload.batchJson) : null,
                   location: payload.location ? String(payload.location).trim() : null,
                 };
 
@@ -730,6 +731,257 @@ function sqliteApiPlugin() {
           res.setHeader('Content-Type', 'application/json');
           res.end(JSON.stringify({ message: 'Method not allowed.' }));
         } catch {
+          res.statusCode = 500;
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify({ message: 'Failed to process request.' }));
+        }
+      });
+
+      server.middlewares.use('/api/expense_records', async (req, res) => {
+        let createdImagePath: string | null = null;
+        let createdDocumentPath: string | null = null;
+
+        try {
+          // @ts-expect-error Runtime-only Node module used in Vite middleware.
+          const repository = await import('./database/sqlite/repository.mjs');
+          const requestUrl = new URL(req.url ?? '/', 'http://localhost');
+
+          const resolveExpenseAttachment = (rawValue: unknown, prefix: string) => {
+            if (!rawValue || typeof rawValue !== 'string') {
+              return null;
+            }
+
+            const trimmedValue = rawValue.trim();
+            if (!trimmedValue) {
+              return null;
+            }
+
+            if (trimmedValue.startsWith('/app_data/sale_attachments/')) {
+              return {
+                filePath: trimmedValue,
+                fileName: path.basename(trimmedValue),
+              };
+            }
+
+            return saveDataUrlToAppData({
+              dataUrl: trimmedValue,
+              prefix,
+              targetRoot: saleAttachmentsRoot,
+            });
+          };
+
+          if (req.method === 'GET') {
+            const expenseRecords = repository.getExpenseRecords();
+            res.statusCode = 200;
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify(expenseRecords));
+            return;
+          }
+
+          if (req.method === 'POST') {
+            try {
+              const payload = await parseJsonBody(req);
+
+              if (!payload.partyName || !String(payload.partyName).trim()) {
+                res.statusCode = 400;
+                res.setHeader('Content-Type', 'application/json');
+                res.end(JSON.stringify({ message: 'Party name is required.' }));
+                return;
+              }
+
+              const imageFile = resolveExpenseAttachment(payload.imageDataUrl ?? payload.attachmentImagePath, 'expense_image');
+              createdImagePath = imageFile?.filePath ?? null;
+
+              const documentFile = resolveExpenseAttachment(payload.documentDataUrl ?? payload.attachmentDocumentPath, 'expense_document');
+              createdDocumentPath = documentFile?.filePath ?? null;
+
+              const lineItems = Array.isArray(payload.lineItems)
+                ? payload.lineItems
+                : typeof payload.lineItemsJson === 'string'
+                  ? JSON.parse(payload.lineItemsJson)
+                  : [];
+
+              const amount = Number(payload.amount ?? 0);
+              const roundOffAmount = Number(payload.roundOffAmount ?? 0);
+
+              const record = {
+                id: String(payload.id ?? Date.now().toString()),
+                paymentNo: String(payload.paymentNo ?? repository.getNextExpenseNo()),
+                date: String(payload.date ?? new Date().toLocaleDateString('en-GB')),
+                partyName: String(payload.partyName).trim(),
+                expenseCategoryId: payload.expenseCategoryId ? String(payload.expenseCategoryId) : null,
+                expenseCategoryName: payload.expenseCategoryName ? String(payload.expenseCategoryName) : null,
+                amount: Number.isFinite(amount) ? amount : 0,
+                paymentType: String(payload.paymentType ?? 'Cash'),
+                description: payload.description ? String(payload.description) : null,
+                lineItemsJson: JSON.stringify(lineItems),
+                attachmentImagePath: imageFile?.filePath ?? null,
+                attachmentImageName: imageFile?.fileName ?? null,
+                attachmentDocumentPath: documentFile?.filePath ?? null,
+                attachmentDocumentName: documentFile?.fileName ?? null,
+                roundOff: payload.roundOff ? 1 : 0,
+                roundOffAmount: Number.isFinite(roundOffAmount) ? roundOffAmount : 0,
+              };
+
+              repository.addExpenseRecord(record);
+
+              res.statusCode = 201;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify(record));
+            } catch (error) {
+              if (createdImagePath) {
+                removeManagedAttachmentFile(createdImagePath);
+              }
+
+              if (createdDocumentPath) {
+                removeManagedAttachmentFile(createdDocumentPath);
+              }
+
+              res.statusCode = 400;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify({ message: 'Invalid JSON payload.' }));
+            }
+            return;
+          }
+
+          if (req.method === 'PUT') {
+            try {
+              const pathId = requestUrl.pathname.split('/').filter(Boolean)[0];
+              const queryId = requestUrl.searchParams.get('id');
+              const id = (pathId || queryId || '').trim();
+
+              if (!id) {
+                res.statusCode = 400;
+                res.setHeader('Content-Type', 'application/json');
+                res.end(JSON.stringify({ message: 'Expense record id is required.' }));
+                return;
+              }
+
+              const existingRecord = repository.getExpenseRecordById(id);
+              if (!existingRecord) {
+                res.statusCode = 404;
+                res.setHeader('Content-Type', 'application/json');
+                res.end(JSON.stringify({ message: 'Expense record not found.' }));
+                return;
+              }
+
+              const payload = await parseJsonBody(req);
+
+              const imageFile = payload.imageDataUrl || payload.attachmentImagePath
+                ? resolveExpenseAttachment(payload.imageDataUrl ?? payload.attachmentImagePath, 'expense_image')
+                : null;
+              createdImagePath = imageFile?.filePath ?? null;
+
+              const documentFile = payload.documentDataUrl || payload.attachmentDocumentPath
+                ? resolveExpenseAttachment(payload.documentDataUrl ?? payload.attachmentDocumentPath, 'expense_document')
+                : null;
+              createdDocumentPath = documentFile?.filePath ?? null;
+
+              const lineItems = Array.isArray(payload.lineItems)
+                ? payload.lineItems
+                : typeof payload.lineItemsJson === 'string'
+                  ? JSON.parse(payload.lineItemsJson)
+                  : JSON.parse(existingRecord.line_items_json ?? '[]');
+
+              const record = {
+                paymentNo: String(payload.paymentNo ?? existingRecord.payment_no ?? ''),
+                date: String(payload.date ?? existingRecord.date),
+                partyName: String(payload.partyName ?? existingRecord.party_name).trim(),
+                expenseCategoryId: payload.expenseCategoryId ? String(payload.expenseCategoryId) : existingRecord.expense_category_id ?? null,
+                expenseCategoryName: payload.expenseCategoryName ? String(payload.expenseCategoryName) : existingRecord.expense_category_name ?? null,
+                amount: Number.isFinite(Number(payload.amount)) ? Number(payload.amount) : Number(existingRecord.amount ?? 0),
+                paymentType: String(payload.paymentType ?? existingRecord.payment_type ?? 'Cash'),
+                description: payload.description ? String(payload.description) : existingRecord.description ?? null,
+                lineItemsJson: JSON.stringify(lineItems),
+                attachmentImagePath: createdImagePath ?? existingRecord.attachment_image_path ?? null,
+                attachmentImageName: imageFile?.fileName ?? existingRecord.attachment_image_name ?? null,
+                attachmentDocumentPath: createdDocumentPath ?? existingRecord.attachment_document_path ?? null,
+                attachmentDocumentName: documentFile?.fileName ?? existingRecord.attachment_document_name ?? null,
+                roundOff: payload.roundOff ? 1 : 0,
+                roundOffAmount: Number.isFinite(Number(payload.roundOffAmount))
+                  ? Number(payload.roundOffAmount)
+                  : Number(existingRecord.round_off_amount ?? 0),
+              };
+
+              repository.updateExpenseRecord(id, record);
+
+              if (createdImagePath && existingRecord.attachment_image_path && existingRecord.attachment_image_path !== createdImagePath) {
+                removeManagedAttachmentFile(existingRecord.attachment_image_path);
+              }
+
+              if (createdDocumentPath && existingRecord.attachment_document_path && existingRecord.attachment_document_path !== createdDocumentPath) {
+                removeManagedAttachmentFile(existingRecord.attachment_document_path);
+              }
+
+              res.statusCode = 200;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify({ id, ...record }));
+            } catch (error) {
+              if (createdImagePath) {
+                removeManagedAttachmentFile(createdImagePath);
+              }
+
+              if (createdDocumentPath) {
+                removeManagedAttachmentFile(createdDocumentPath);
+              }
+
+              res.statusCode = 400;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify({ message: 'Invalid JSON payload.' }));
+            }
+            return;
+          }
+
+          if (req.method === 'DELETE') {
+            const pathId = requestUrl.pathname.split('/').filter(Boolean)[0];
+            const queryId = requestUrl.searchParams.get('id');
+            const id = (pathId || queryId || '').trim();
+
+            if (!id) {
+              res.statusCode = 400;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify({ message: 'Expense record id is required.' }));
+              return;
+            }
+
+            const existingRecord = repository.getExpenseRecordById(id);
+            const deleted = repository.deleteExpenseRecord(id);
+            if (!deleted) {
+              res.statusCode = 404;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify({ message: 'Expense record not found.' }));
+              return;
+            }
+
+            try {
+              if (existingRecord?.attachment_image_path) {
+                removeManagedAttachmentFile(existingRecord.attachment_image_path);
+              }
+
+              if (existingRecord?.attachment_document_path) {
+                removeManagedAttachmentFile(existingRecord.attachment_document_path);
+              }
+            } catch (error) {
+              console.error('Failed to remove expense attachments on delete:', error);
+            }
+
+            res.statusCode = 204;
+            res.end();
+            return;
+          }
+
+          res.statusCode = 405;
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify({ message: 'Method not allowed.' }));
+        } catch {
+          if (createdImagePath) {
+            removeManagedAttachmentFile(createdImagePath);
+          }
+
+          if (createdDocumentPath) {
+            removeManagedAttachmentFile(createdDocumentPath);
+          }
+
           res.statusCode = 500;
           res.setHeader('Content-Type', 'application/json');
           res.end(JSON.stringify({ message: 'Failed to process request.' }));

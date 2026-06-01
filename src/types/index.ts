@@ -185,6 +185,7 @@ export type ViewType =
   | 'parties' 
   | 'items' 
   | 'add-sale'
+  | 'add-expense'
   | 'sale-invoices' 
   | 'estimates' 
   | 'payment-in' 

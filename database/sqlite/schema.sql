@@ -29,6 +29,7 @@ CREATE TABLE IF NOT EXISTS items (
   img_path TEXT,
   stock_value REAL,
   min_stock REAL,
+  batch_json TEXT,
   location TEXT,
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at TEXT NOT NULL DEFAULT (datetime('now'))
@@ -137,10 +138,47 @@ CREATE TABLE IF NOT EXISTS purchase_bills (
 
 CREATE TABLE IF NOT EXISTS payment_out_records (
   id TEXT PRIMARY KEY,
+  payment_no TEXT,
   date TEXT NOT NULL,
   party_name TEXT NOT NULL,
+  expense_category_id TEXT,
+  expense_category_name TEXT,
   amount REAL NOT NULL,
   payment_type TEXT NOT NULL,
+  description TEXT,
+  line_items_json TEXT,
+  attachment_image_path TEXT,
+  attachment_image_name TEXT,
+  attachment_document_path TEXT,
+  attachment_document_name TEXT,
+  round_off INTEGER NOT NULL DEFAULT 0,
+  round_off_amount REAL NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS expense_records (
+  id TEXT PRIMARY KEY,
+  expense_no TEXT,
+  category_id TEXT,
+  category_name TEXT,
+  payment_no TEXT,
+  date TEXT NOT NULL,
+  party_name TEXT NOT NULL,
+  expense_category_id TEXT,
+  expense_category_name TEXT,
+  amount REAL NOT NULL,
+  payment_type TEXT NOT NULL,
+  subtotal REAL NOT NULL DEFAULT 0,
+  balance REAL NOT NULL DEFAULT 0,
+  description TEXT,
+  line_items_json TEXT,
+  attachment_image_path TEXT,
+  attachment_image_name TEXT,
+  attachment_document_path TEXT,
+  attachment_document_name TEXT,
+  round_off INTEGER NOT NULL DEFAULT 0,
+  round_off_amount REAL NOT NULL DEFAULT 0,
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );

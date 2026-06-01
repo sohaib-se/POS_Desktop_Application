@@ -2,17 +2,14 @@ import { useState } from "react";
 import { Search, Plus } from "lucide-react";
 import { expenseCategories } from "@/data/mockData";
 import type { ExpenseCategory } from "@/types";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 
-export function Expenses() {
+interface ExpensesProps {
+  onAddExpense?: () => void;
+}
+
+export function Expenses({ onAddExpense }: ExpensesProps) {
   const [selectedCategory, setSelectedCategory] =
     useState<ExpenseCategory | null>(expenseCategories[0]);
-  const [showAddExpense, setShowAddExpense] = useState(false);
   const [activeTab, setActiveTab] = useState<"category" | "items">("category");
 
   return (
@@ -49,7 +46,7 @@ export function Expenses() {
               <Search className="w-4 h-4 text-gray-500" />
             </button>
             <button
-              onClick={() => setShowAddExpense(true)}
+              onClick={onAddExpense}
               className="bg-[#E53935] hover:bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2"
             >
               <Plus className="w-4 h-4" />
@@ -160,67 +157,6 @@ export function Expenses() {
         </div>
       </div>
 
-      {/* Add Expense Modal */}
-      <Dialog open={showAddExpense} onOpenChange={setShowAddExpense}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Add Expense</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Category
-              </label>
-              <select className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
-                {expenseCategories.map((cat) => (
-                  <option key={cat.id}>{cat.name}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Amount
-              </label>
-              <input
-                type="number"
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
-                placeholder="Enter amount"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Date
-              </label>
-              <input
-                type="text"
-                value="21/02/2026"
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Payment Type
-              </label>
-              <select className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
-                <option>Cash</option>
-                <option>Bank Transfer</option>
-                <option>Cheque</option>
-              </select>
-            </div>
-            <div className="flex gap-3 pt-4">
-              <button
-                onClick={() => setShowAddExpense(false)}
-                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50"
-              >
-                Cancel
-              </button>
-              <button className="flex-1 px-4 py-2 bg-[#1976D2] text-white rounded-lg text-sm font-medium hover:bg-blue-600">
-                Save
-              </button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

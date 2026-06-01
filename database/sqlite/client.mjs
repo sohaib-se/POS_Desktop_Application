@@ -35,6 +35,10 @@ function ensureItemsTableColumns(db) {
   if (!existingColumns.has('conversion_rate')) {
     db.exec('ALTER TABLE items ADD COLUMN conversion_rate REAL');
   }
+
+  if (!existingColumns.has('batch_json')) {
+    db.exec('ALTER TABLE items ADD COLUMN batch_json TEXT');
+  }
 }
 
 function ensureSaleInvoiceColumns(db) {
@@ -94,6 +98,151 @@ function ensurePurchaseBillColumns(db) {
   addColumn('attachment_image_name', 'TEXT');
   addColumn('attachment_document_path', 'TEXT');
   addColumn('attachment_document_name', 'TEXT');
+}
+
+function ensurePaymentOutRecordColumns(db) {
+  const rows = db.prepare('PRAGMA table_info(payment_out_records)').all();
+  const existingColumns = new Set(rows.map((row) => row.name));
+
+  const addColumn = (columnName, definition) => {
+    if (!existingColumns.has(columnName)) {
+      db.exec(`ALTER TABLE payment_out_records ADD COLUMN ${columnName} ${definition}`);
+    }
+  };
+
+  addColumn('payment_no', 'TEXT');
+  addColumn('expense_category_id', 'TEXT');
+  addColumn('expense_category_name', 'TEXT');
+  addColumn('description', 'TEXT');
+  addColumn('line_items_json', 'TEXT');
+  addColumn('attachment_image_path', 'TEXT');
+  addColumn('attachment_image_name', 'TEXT');
+  addColumn('attachment_document_path', 'TEXT');
+  addColumn('attachment_document_name', 'TEXT');
+  addColumn('round_off', 'INTEGER NOT NULL DEFAULT 0');
+  addColumn('round_off_amount', 'REAL NOT NULL DEFAULT 0');
+}
+
+function ensureExpenseRecordColumns(db) {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS expense_records (
+      id TEXT PRIMARY KEY,
+      expense_no TEXT,
+      category_id TEXT,
+      category_name TEXT,
+      payment_no TEXT,
+      date TEXT NOT NULL,
+      party_name TEXT NOT NULL,
+      expense_category_id TEXT,
+      expense_category_name TEXT,
+      amount REAL NOT NULL,
+      payment_type TEXT NOT NULL,
+      subtotal REAL NOT NULL DEFAULT 0,
+      balance REAL NOT NULL DEFAULT 0,
+      description TEXT,
+      line_items_json TEXT,
+      attachment_image_path TEXT,
+      attachment_image_name TEXT,
+      attachment_document_path TEXT,
+      attachment_document_name TEXT,
+      round_off INTEGER NOT NULL DEFAULT 0,
+      round_off_amount REAL NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    )
+  `);
+
+  const rows = db.prepare('PRAGMA table_info(expense_records)').all();
+  const existingColumns = new Set(rows.map((row) => row.name));
+
+  const addColumn = (columnName, definition) => {
+    if (!existingColumns.has(columnName)) {
+      db.exec(`ALTER TABLE expense_records ADD COLUMN ${columnName} ${definition}`);
+    }
+  };
+
+  addColumn('date', 'TEXT NOT NULL DEFAULT (datetime(\'now\'))');
+  addColumn('party_name', 'TEXT NOT NULL DEFAULT \"Expense\"');
+  addColumn('amount', 'REAL NOT NULL DEFAULT 0');
+  addColumn('payment_type', 'TEXT NOT NULL DEFAULT \"Cash\"');
+  addColumn('expense_no', 'TEXT');
+  addColumn('category_id', 'TEXT');
+  addColumn('category_name', 'TEXT');
+  addColumn('subtotal', 'REAL NOT NULL DEFAULT 0');
+  addColumn('balance', 'REAL NOT NULL DEFAULT 0');
+  addColumn('payment_no', 'TEXT');
+  addColumn('expense_category_id', 'TEXT');
+  addColumn('expense_category_name', 'TEXT');
+  addColumn('description', 'TEXT');
+  addColumn('line_items_json', 'TEXT');
+  addColumn('attachment_image_path', 'TEXT');
+  addColumn('attachment_image_name', 'TEXT');
+  addColumn('attachment_document_path', 'TEXT');
+  addColumn('attachment_document_name', 'TEXT');
+  addColumn('round_off', 'INTEGER NOT NULL DEFAULT 0');
+  addColumn('round_off_amount', 'REAL NOT NULL DEFAULT 0');
+}
+
+function migratePaymentOutRecordsToExpenseRecords(db) {
+  const tables = db.prepare("SELECT name FROM sqlite_master WHERE type = 'table'").all();
+  const tableNames = new Set(tables.map((row) => row.name));
+
+  if (!tableNames.has('payment_out_records') || !tableNames.has('expense_records')) {
+    return;
+  }
+
+  db.exec(`
+    INSERT OR IGNORE INTO expense_records (
+      id,
+      expense_no,
+      category_id,
+      category_name,
+      payment_no,
+      date,
+      party_name,
+      expense_category_id,
+      expense_category_name,
+      amount,
+      payment_type,
+      subtotal,
+      balance,
+      description,
+      line_items_json,
+      attachment_image_path,
+      attachment_image_name,
+      attachment_document_path,
+      attachment_document_name,
+      round_off,
+      round_off_amount,
+      created_at,
+      updated_at
+    )
+    SELECT
+      id,
+      payment_no,
+      expense_category_id,
+      expense_category_name,
+      payment_no,
+      date,
+      party_name,
+      expense_category_id,
+      expense_category_name,
+      amount,
+      payment_type,
+      amount,
+      0,
+      description,
+      line_items_json,
+      attachment_image_path,
+      attachment_image_name,
+      attachment_document_path,
+      attachment_document_name,
+      round_off,
+      round_off_amount,
+      created_at,
+      updated_at
+    FROM payment_out_records
+  `);
 }
 
 function ensureUnitsAndConversionRatesTables(db) {
@@ -224,6 +373,9 @@ export function openDatabase() {
   ensureItemsTableColumns(db);
   ensureSaleInvoiceColumns(db);
   ensurePurchaseBillColumns(db);
+  ensurePaymentOutRecordColumns(db);
+  ensureExpenseRecordColumns(db);
+  migratePaymentOutRecordsToExpenseRecords(db);
   ensureUnitsAndConversionRatesTables(db);
   return db;
 }

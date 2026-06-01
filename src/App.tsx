@@ -6,6 +6,7 @@ import { Dashboard } from "@/components/pages/Dashboard";
 import { Parties } from "@/components/pages/Parties";
 import { Items } from "@/components/pages/Items";
 import { AddSale } from "@/components/pages/AddSale";
+import { AddExpense } from "@/components/pages/AddExpense";
 import { SaleInvoices } from "@/components/pages/SaleInvoices";
 import { Estimates } from "@/components/pages/Estimates";
 import { PaymentIn } from "@/components/pages/PaymentIn";
@@ -28,7 +29,7 @@ function App() {
   const [lastStandardView, setLastStandardView] = useState<ViewType>("home");
   const [editingSaleInvoice, setEditingSaleInvoice] = useState<SaleInvoiceEditData | null>(null);
 
-  const isOverlayView = (view: ViewType) => view === "add-sale" || view === "settings";
+  const isOverlayView = (view: ViewType) => view === "add-sale" || view === "add-expense" || view === "settings";
 
   const handleViewChange = (view: ViewType) => {
     if (!isOverlayView(view)) {
@@ -49,6 +50,10 @@ function App() {
 
   const handleCloseAddSale = () => {
     setEditingSaleInvoice(null);
+    setCurrentView(lastStandardView);
+  };
+
+  const handleCloseAddExpense = () => {
     setCurrentView(lastStandardView);
   };
 
@@ -88,7 +93,7 @@ function App() {
       case "payment-out":
         return <PaymentOut />;
       case "expenses":
-        return <Expenses />;
+        return <Expenses onAddExpense={() => handleViewChange("add-expense")} />;
       case "purchase-return":
         return (
           <div className="p-6 text-gray-500">
@@ -161,6 +166,12 @@ function App() {
       {currentView === "add-sale" && (
         <div className="fixed inset-0 z-[100]">
           <AddSale onClose={handleCloseAddSale} initialInvoice={editingSaleInvoice} />
+        </div>
+      )}
+
+      {currentView === "add-expense" && (
+        <div className="fixed inset-0 z-[100]">
+          <AddExpense onClose={handleCloseAddExpense} />
         </div>
       )}
 

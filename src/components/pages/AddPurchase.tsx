@@ -5,6 +5,7 @@ interface PurchaseRow {
   id: number;
   itemId: string;
   item: string;
+  size: string;
   qty: string;
   unit: string;
   pricePerUnit: string;
@@ -42,6 +43,7 @@ interface ItemOption {
   name: string;
   purchase_price?: number;
   unit: string;
+  batch_json?: string | null;
 }
 
 interface AddPurchaseProps {
@@ -68,8 +70,8 @@ function createDefaultTab(id: number): PurchaseTab {
     customerSearch: "",
     phoneNo: "",
     rows: [
-      { id: 1, itemId: "", item: "", qty: "", unit: "NONE", pricePerUnit: "" },
-      { id: 2, itemId: "", item: "", qty: "", unit: "NONE", pricePerUnit: "" },
+      { id: 1, itemId: "", item: "", size: "", qty: "", unit: "NONE", pricePerUnit: "" },
+      { id: 2, itemId: "", item: "", size: "", qty: "", unit: "NONE", pricePerUnit: "" },
     ],
     discountPercent: "",
     discountRs: "",
@@ -85,7 +87,7 @@ function createDefaultTab(id: number): PurchaseTab {
 }
 
 function createEmptyRow(): PurchaseRow {
-  return { id: globalRowId++, itemId: "", item: "", qty: "", unit: "NONE", pricePerUnit: "" };
+  return { id: globalRowId++, itemId: "", item: "", size: "", qty: "", unit: "NONE", pricePerUnit: "" };
 }
 
 function parseTaxRate(tax: string) {
@@ -127,6 +129,7 @@ function parseLineItems(lineItemsJson?: string | null) {
       id?: number;
       itemId?: string;
       name?: string;
+      size?: string;
       quantity?: number;
       unit?: string;
       price?: number;
@@ -223,6 +226,7 @@ export function AddPurchase({ onSave, onShare, onClose, initialInvoice }: AddPur
                 id: globalRowId++,
                 itemId: lineItem.itemId ?? "",
                 item: lineItem.name ?? "",
+                size: (lineItem as any).size ?? "",
                 qty: String(lineItem.quantity ?? ""),
                 unit: lineItem.unit ?? "NONE",
                 pricePerUnit: String(lineItem.price ?? ""),
@@ -309,8 +313,22 @@ export function AddPurchase({ onSave, onShare, onClose, initialInvoice }: AddPur
     };
   }, []);
 
-  // col widths: [#, ITEM, QTY, UNIT, PRICE/UNIT, AMOUNT]
-  const { widths, startResize } = useColumnResize([42, 340, 90, 110, 130, 120]);
+  function parseSizesFromBatchJson(batchJson?: string | null) {
+    if (!batchJson) return [] as string[];
+    try {
+      const parsed = JSON.parse(batchJson);
+      if (!Array.isArray(parsed)) return [] as string[];
+      const sizes = parsed
+        .map((b: any) => (b && (b.size ?? b.size_of_batch ?? b.batch_size) ? String(b.size ?? b.size_of_batch ?? b.batch_size) : ""))
+        .filter(Boolean);
+      return Array.from(new Set(sizes));
+    } catch {
+      return [] as string[];
+    }
+  }
+
+  // col widths: [#, ITEM, QTY, UNIT, SIZE, PRICE/UNIT, AMOUNT]
+  const { widths, startResize } = useColumnResize([42, 340, 90, 110, 90, 130, 120]);
 
   const activeTab = tabs.find((t) => t.id === activeTabId)!;
   const displayedInvoiceNo = initialInvoice?.invoiceNo ?? nextInvoiceNo;
@@ -332,7 +350,7 @@ export function AddPurchase({ onSave, onShare, onClose, initialInvoice }: AddPur
 
   const updateRowItem = (rowId: number, itemId: string) => {
     const matchedItem = items.find((item) => item.id === itemId);
-
+    const availableSizes = parseSizesFromBatchJson(matchedItem?.batch_json ?? null);
     const updatedRows = activeTab.rows.map((row) => {
       if (row.id !== rowId) {
         return row;
@@ -342,6 +360,7 @@ export function AddPurchase({ onSave, onShare, onClose, initialInvoice }: AddPur
         ...row,
         itemId,
         item: matchedItem?.name ?? "",
+        size: availableSizes.length ? availableSizes[0] : "",
         unit: matchedItem?.unit ?? row.unit,
         pricePerUnit:
           matchedItem && Number.isFinite(Number(matchedItem.purchase_price))
@@ -464,6 +483,7 @@ export function AddPurchase({ onSave, onShare, onClose, initialInvoice }: AddPur
             id: row.id,
             itemId: row.itemId,
             name: row.item,
+            size: row.size,
             quantity: Number(row.qty) || 0,
             unit: row.unit,
             price: Number(row.pricePerUnit) || 0,
@@ -575,6 +595,12 @@ export function AddPurchase({ onSave, onShare, onClose, initialInvoice }: AddPur
   const roundOffDiff = roundedTotal - grandTotal;
 
   const fmt = (n: number) => n.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+  const showSizeColumn = activeTab.rows.some((r) => {
+    const item = items.find((it) => it.id === r.itemId);
+    const sizes = parseSizesFromBatchJson(item?.batch_json ?? null);
+    return sizes.length > 1;
+  });
 
   // Resize handle between columns
   const ResizeHandle = ({ col }: { col: number }) => (
@@ -820,6 +846,7 @@ export function AddPurchase({ onSave, onShare, onClose, initialInvoice }: AddPur
               <col style={{ width: widths[3] }} />
               <col style={{ width: widths[4] }} />
               <col style={{ width: widths[5] }} />
+              <col style={{ width: widths[6] }} />
               <col style={{ width: 36 }} />
             </colgroup>
             <thead>
@@ -840,13 +867,16 @@ export function AddPurchase({ onSave, onShare, onClose, initialInvoice }: AddPur
                 <th style={{ position: "relative", padding: "8px 10px", textAlign: "left", fontSize: 12, fontWeight: 600, color: "#6b7280", borderRight: "1px solid #e5e7eb", letterSpacing: "0.04em" }}>
                   UNIT<ResizeHandle col={3} />
                 </th>
+                <th style={{ position: "relative", padding: "8px 10px", textAlign: "left", fontSize: 12, fontWeight: 600, color: "#6b7280", borderRight: "1px solid #e5e7eb", letterSpacing: "0.04em" }}>
+                  {showSizeColumn ? "SIZE" : ""}<ResizeHandle col={4} />
+                </th>
                 {/* PRICE/UNIT */}
                 <th style={{ position: "relative", padding: "8px 10px", textAlign: "right", fontSize: 12, fontWeight: 600, color: "#6b7280", borderRight: "1px solid #e5e7eb", letterSpacing: "0.04em" }}>
-                  PRICE/UNIT<ResizeHandle col={4} />
+                  PRICE/UNIT<ResizeHandle col={5} />
                 </th>
                 {/* AMOUNT */}
                 <th style={{ position: "relative", padding: "8px 10px", textAlign: "right", fontSize: 12, fontWeight: 600, color: "#6b7280", borderRight: "1px solid #e5e7eb", letterSpacing: "0.04em" }}>
-                  AMOUNT<ResizeHandle col={5} />
+                  AMOUNT<ResizeHandle col={6} />
                 </th>
                 {/* + col */}
                 <th style={{ padding: "8px 6px", textAlign: "center", background: "#f3f6f9" }}>
@@ -904,6 +934,23 @@ export function AddPurchase({ onSave, onShare, onClose, initialInvoice }: AddPur
                         <span style={{ color: "#9ca3af", fontSize: 10, pointerEvents: "none" }}>▾</span>
                       </div>
                     </td>
+                    {/* SIZE */}
+                    <td style={{ borderRight: "1px solid #e5e7eb", padding: "4px 8px" }}>
+                      {showSizeColumn ? (
+                        <select
+                          style={{ width: "100%", border: "none", outline: "none", fontSize: 13, color: "#374151", background: "transparent", appearance: "none", cursor: "pointer" }}
+                          value={row.size}
+                          onChange={(e) => updateRow(row.id, "size", e.target.value)}
+                        >
+                          <option value="">Select Size</option>
+                          {(() => {
+                            const item = items.find((it) => it.id === row.itemId);
+                            const sizes = parseSizesFromBatchJson(item?.batch_json ?? null);
+                            return sizes.map((s) => <option key={s} value={s}>{s}</option>);
+                          })()}
+                        </select>
+                      ) : null}
+                    </td>
                     {/* PRICE/UNIT */}
                     <td style={{ borderRight: "1px solid #e5e7eb", padding: "4px 8px" }}>
                       <input type="number"
@@ -932,7 +979,7 @@ export function AddPurchase({ onSave, onShare, onClose, initialInvoice }: AddPur
                     ADD ROW
                   </button>
                 </td>
-                <td colSpan={2} style={{ padding: "8px 10px", fontSize: 12, fontWeight: 700, color: "#6b7280", borderRight: "1px solid #e5e7eb", letterSpacing: "0.04em" }}>
+                <td colSpan={3} style={{ padding: "8px 10px", fontSize: 12, fontWeight: 700, color: "#6b7280", borderRight: "1px solid #e5e7eb", letterSpacing: "0.04em" }}>
                   <span style={{ float: "left" }}>TOTAL</span>
                   <span style={{ float: "right" }}>{totalQty > 0 ? totalQty : 0}</span>
                 </td>

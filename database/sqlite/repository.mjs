@@ -401,11 +401,188 @@ export function deletePurchaseBill(id) {
   return result.changes > 0;
 }
 
+export function getExpenseRecords() {
+  const db = openDatabase();
+  const rows = db.prepare('SELECT * FROM expense_records ORDER BY created_at DESC, date DESC').all();
+  db.close();
+  return rows;
+}
+
+export function getExpenseRecordById(id) {
+  const db = openDatabase();
+  const row = db.prepare('SELECT * FROM expense_records WHERE id = ?').get(String(id));
+  db.close();
+  return row ?? null;
+}
+
+export function getNextExpenseNo() {
+  const db = openDatabase();
+  const row = db.prepare('SELECT COALESCE(MAX(CAST(payment_no AS INTEGER)), 0) + 1 AS nextPaymentNo FROM expense_records').get();
+  db.close();
+  return String(Number(row?.nextPaymentNo ?? 1));
+}
+
+export function addExpenseRecord(record) {
+  const db = openDatabase();
+  db.prepare(`
+    INSERT INTO expense_records (
+      id,
+      expense_no,
+      category_id,
+      category_name,
+      payment_no,
+      date,
+      party_name,
+      expense_category_id,
+      expense_category_name,
+      amount,
+      payment_type,
+      subtotal,
+      balance,
+      description,
+      line_items_json,
+      attachment_image_path,
+      attachment_image_name,
+      attachment_document_path,
+      attachment_document_name,
+      round_off,
+      round_off_amount,
+      created_at,
+      updated_at
+    )
+    VALUES (
+      @id,
+      @expenseNo,
+      @categoryId,
+      @categoryName,
+      @paymentNo,
+      @date,
+      @partyName,
+      @expenseCategoryId,
+      @expenseCategoryName,
+      @amount,
+      @paymentType,
+      @subtotal,
+      @balance,
+      @description,
+      @lineItemsJson,
+      @attachmentImagePath,
+      @attachmentImageName,
+      @attachmentDocumentPath,
+      @attachmentDocumentName,
+      @roundOff,
+      @roundOffAmount,
+      datetime('now'),
+      datetime('now')
+    )
+  `).run({
+    ...record,
+    expenseNo: record.expenseNo ?? record.paymentNo ?? null,
+    categoryId: record.categoryId ?? record.expenseCategoryId ?? null,
+    categoryName: record.categoryName ?? record.expenseCategoryName ?? null,
+    paymentNo: record.paymentNo ?? null,
+    expenseCategoryId: record.expenseCategoryId ?? null,
+    expenseCategoryName: record.expenseCategoryName ?? null,
+    subtotal: record.subtotal ?? record.amount ?? 0,
+    balance: record.balance ?? 0,
+    description: record.description ?? null,
+    lineItemsJson: record.lineItemsJson ?? null,
+    attachmentImagePath: record.attachmentImagePath ?? null,
+    attachmentImageName: record.attachmentImageName ?? null,
+    attachmentDocumentPath: record.attachmentDocumentPath ?? null,
+    attachmentDocumentName: record.attachmentDocumentName ?? null,
+    roundOff: record.roundOff ?? 0,
+    roundOffAmount: record.roundOffAmount ?? 0,
+  });
+  db.close();
+}
+
+export function updateExpenseRecord(id, record) {
+  const db = openDatabase();
+  db.prepare(`
+    UPDATE expense_records
+    SET
+      expense_no = @expenseNo,
+      category_id = @categoryId,
+      category_name = @categoryName,
+      payment_no = @paymentNo,
+      date = @date,
+      party_name = @partyName,
+      expense_category_id = @expenseCategoryId,
+      expense_category_name = @expenseCategoryName,
+      amount = @amount,
+      payment_type = @paymentType,
+      subtotal = @subtotal,
+      balance = @balance,
+      description = @description,
+      line_items_json = @lineItemsJson,
+      attachment_image_path = @attachmentImagePath,
+      attachment_image_name = @attachmentImageName,
+      attachment_document_path = @attachmentDocumentPath,
+      attachment_document_name = @attachmentDocumentName,
+      round_off = @roundOff,
+      round_off_amount = @roundOffAmount,
+      updated_at = datetime('now')
+    WHERE id = @id
+  `).run({
+    id: String(id),
+    ...record,
+    expenseNo: record.expenseNo ?? record.paymentNo ?? null,
+    categoryId: record.categoryId ?? record.expenseCategoryId ?? null,
+    categoryName: record.categoryName ?? record.expenseCategoryName ?? null,
+    paymentNo: record.paymentNo ?? null,
+    expenseCategoryId: record.expenseCategoryId ?? null,
+    expenseCategoryName: record.expenseCategoryName ?? null,
+    subtotal: record.subtotal ?? record.amount ?? 0,
+    balance: record.balance ?? 0,
+    description: record.description ?? null,
+    lineItemsJson: record.lineItemsJson ?? null,
+    attachmentImagePath: record.attachmentImagePath ?? null,
+    attachmentImageName: record.attachmentImageName ?? null,
+    attachmentDocumentPath: record.attachmentDocumentPath ?? null,
+    attachmentDocumentName: record.attachmentDocumentName ?? null,
+    roundOff: record.roundOff ?? 0,
+    roundOffAmount: record.roundOffAmount ?? 0,
+  });
+  db.close();
+}
+
+export function deleteExpenseRecord(id) {
+  const db = openDatabase();
+  const result = db.prepare('DELETE FROM expense_records WHERE id = ?').run(String(id));
+  db.close();
+  return result.changes > 0;
+}
+
+export function getPaymentOutRecords() {
+  return getExpenseRecords();
+}
+
+export function getPaymentOutRecordById(id) {
+  return getExpenseRecordById(id);
+}
+
+export function getNextPaymentOutNo() {
+  return getNextExpenseNo();
+}
+
+export function addPaymentOutRecord(record) {
+  return addExpenseRecord(record);
+}
+
+export function updatePaymentOutRecord(id, record) {
+  return updateExpenseRecord(id, record);
+}
+
+export function deletePaymentOutRecord(id) {
+  return deleteExpenseRecord(id);
+}
+
 export function upsertItem(item) {
   const db = openDatabase();
   const existingItem = item.id
     ? db
-        .prepare('SELECT conversion_rate AS conversionRate, img_path AS imgPath FROM items WHERE id = ?')
+        .prepare('SELECT conversion_rate AS conversionRate, img_path AS imgPath, batch_json AS batchJson FROM items WHERE id = ?')
         .get(String(item.id))
     : null;
 
@@ -420,13 +597,19 @@ export function upsertItem(item) {
     : 0;
 
   const resolvedSecondaryStock = resolvedStockQuantity * resolvedConversionRate;
+  const resolvedBatchJson =
+    typeof item.batchJson === 'string'
+      ? item.batchJson
+      : typeof existingItem?.batchJson === 'string'
+        ? existingItem.batchJson
+        : null;
 
   db.prepare(`
     INSERT INTO items (
-      id, name, code, category, sale_price, wholesale_price, purchase_price, stock_quantity, unit, primary_unit, secondary_unit, secondary_stock, conversion_rate, img_path, stock_value, min_stock, location, updated_at
+      id, name, code, category, sale_price, wholesale_price, purchase_price, stock_quantity, unit, primary_unit, secondary_unit, secondary_stock, conversion_rate, img_path, stock_value, min_stock, batch_json, location, updated_at
     )
     VALUES (
-      @id, @name, @code, @category, @salePrice, @wholesalePrice, @purchasePrice, @stockQuantity, @unit, @primaryUnit, @secondaryUnit, @secondaryStock, @conversionRate, @imgPath, @stockValue, @minStock, @location, datetime('now')
+      @id, @name, @code, @category, @salePrice, @wholesalePrice, @purchasePrice, @stockQuantity, @unit, @primaryUnit, @secondaryUnit, @secondaryStock, @conversionRate, @imgPath, @stockValue, @minStock, @batchJson, @location, datetime('now')
     )
     ON CONFLICT(id) DO UPDATE SET
       name = excluded.name,
@@ -444,6 +627,7 @@ export function upsertItem(item) {
         img_path = excluded.img_path,
       stock_value = excluded.stock_value,
       min_stock = excluded.min_stock,
+      batch_json = excluded.batch_json,
       location = excluded.location,
       updated_at = datetime('now')
   `).run({
@@ -461,6 +645,7 @@ export function upsertItem(item) {
     imgPath: item.imgPath ?? existingItem?.imgPath ?? null,
     stockValue: item.stockValue ?? null,
     minStock: item.minStock ?? null,
+    batchJson: resolvedBatchJson,
     location: item.location ?? null
   });
   syncCategoryItemCounts(db);

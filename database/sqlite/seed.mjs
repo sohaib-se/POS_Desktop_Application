@@ -16,6 +16,7 @@ export function seedDatabase() {
       DELETE FROM cash_in_hand_transactions;
       DELETE FROM bank_accounts;
       DELETE FROM expense_categories;
+      DELETE FROM expense_records;
       DELETE FROM payment_out_records;
       DELETE FROM purchase_bills;
       DELETE FROM payment_in_records;

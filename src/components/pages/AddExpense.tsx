@@ -104,7 +104,15 @@ export function AddExpense({ onSave, onShare, onClose }: AddExpenseProps) {
   const [nextExpenseNo, setNextExpenseNo] = useState("1");
   const [saveError, setSaveError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
-  const [expenseCategoryMap, setExpenseCategoryMap] = useState<Record<string, ExpenseCategory>>({});
+  const [expenseCategoryList, setExpenseCategoryList] =
+    useState<ExpenseCategory[]>(expenseCategories);
+  const [expenseCategoryMap, setExpenseCategoryMap] = useState<Record<string, ExpenseCategory>>(
+    () =>
+      expenseCategories.reduce<Record<string, ExpenseCategory>>((accumulator, category) => {
+        accumulator[category.id] = category;
+        return accumulator;
+      }, {}),
+  );
 
   useEffect(() => {
     const frame = requestAnimationFrame(() => setIsOpenAnimated(true));
@@ -112,11 +120,52 @@ export function AddExpense({ onSave, onShare, onClose }: AddExpenseProps) {
   }, []);
 
   useEffect(() => {
-    const categoryLookup = expenseCategories.reduce<Record<string, ExpenseCategory>>((accumulator, category) => {
-      accumulator[category.id] = category;
-      return accumulator;
-    }, {});
-    setExpenseCategoryMap(categoryLookup);
+    let cancelled = false;
+
+    const loadExpenseCategories = async () => {
+      try {
+        const response = await fetch("/api/expense_categories");
+        if (!response.ok) {
+          throw new Error("Failed to load expense categories");
+        }
+
+        const categories = (await response.json()) as ExpenseCategory[];
+        if (cancelled) {
+          return;
+        }
+
+        setExpenseCategoryList(categories);
+        setExpenseCategoryMap(
+          categories.reduce<Record<string, ExpenseCategory>>((accumulator, category) => {
+            accumulator[category.id] = category;
+            return accumulator;
+          }, {}),
+        );
+        setTabs((previousTabs) =>
+          previousTabs.map((tab) => {
+            if (!categories.length) {
+              return { ...tab, expenseCategoryId: "" };
+            }
+
+            const selectedCategoryExists = categories.some(
+              (category) => category.id === tab.expenseCategoryId,
+            );
+
+            return selectedCategoryExists
+              ? tab
+              : { ...tab, expenseCategoryId: categories[0].id };
+          }),
+        );
+      } catch (error) {
+        console.error(error);
+      }
+    };
+
+    void loadExpenseCategories();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
@@ -474,7 +523,7 @@ export function AddExpense({ onSave, onShare, onClose }: AddExpenseProps) {
                 value={activeTab.expenseCategoryId}
                 onChange={(event) => setActiveTabCategory(event.target.value)}
               >
-                {expenseCategories.map((category) => (
+                {expenseCategoryList.map((category) => (
                   <option key={category.id} value={category.id}>
                     {category.name}
                   </option>

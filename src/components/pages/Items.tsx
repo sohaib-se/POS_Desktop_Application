@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Search, Plus, ChevronDown, SlidersHorizontal, Settings2, X } from "lucide-react";
+import { Search, Plus, ChevronDown, SlidersHorizontal, Settings2, X, Printer, Info } from "lucide-react";
 
 // --- INLINE TYPES & MOCK DATA ---
 type Item = {
@@ -11,6 +11,8 @@ type Item = {
   unit?: string | null;
   primaryUnit?: string | null;
   secondaryUnit?: string | null;
+  secondaryStock?: number | null;
+  conversionRate?: number | null;
   minStock?: number | null;
   stockQuantity: number;
   salePrice: number;
@@ -29,6 +31,8 @@ type ItemApiRecord = {
   unit: string;
   primary_unit: string | null;
   secondary_unit: string | null;
+  secondary_stock: number | null;
+  conversion_rate: number | null;
   min_stock: number | null;
   sale_price: number;
   wholesale_price: number;
@@ -182,6 +186,8 @@ const mapItemApiRecord = (record: ItemApiRecord): Item => ({
   unit: record.unit,
   primaryUnit: record.primary_unit,
   secondaryUnit: record.secondary_unit,
+  secondaryStock: record.secondary_stock,
+  conversionRate: record.conversion_rate,
   minStock: record.min_stock,
   salePrice: Number(record.sale_price ?? 0),
   wholesalePrice: Number(record.wholesale_price ?? 0),
@@ -358,8 +364,14 @@ export function Items() {
     }
     setConversionSaving(true);
     try {
-      const res = await fetch("/api/conversion_rates", {
-        method: "POST",
+      const isEditing = !!conversionBeingEdited;
+      const method = isEditing ? "PUT" : "POST";
+      const url = isEditing
+        ? `/api/conversion_rates/${conversionBeingEdited.id}`
+        : "/api/conversion_rates";
+
+      const res = await fetch(url, {
+        method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           baseUnit: conversionBaseUnit,
@@ -369,11 +381,17 @@ export function Items() {
       });
       if (!res.ok) throw new Error("Failed to save conversion");
       const savedConversion = (await res.json()) as ConversionRateRecord;
-      setConversionRates((previousConversions) => [
-        savedConversion,
-        ...previousConversions,
-      ]);
+
+      if (isEditing) {
+        setConversionRates(prev => prev.map(c => c.id === savedConversion.id ? savedConversion : c));
+      } else {
+        setConversionRates((previousConversions) => [
+          savedConversion,
+          ...previousConversions,
+        ]);
+      }
       setShowAddConversion(false);
+      setConversionBeingEdited(null);
       setConversionBaseUnit("");
       setConversionSecondaryUnit("");
       setConversionRateValue(0);
@@ -383,6 +401,23 @@ export function Items() {
       setConversionSaving(false);
     }
   }
+
+  const handleDeleteConversion = async (conversionToDelete: ConversionRateRecord) => {
+    if (isDeletingConversion) return;
+    setIsDeletingConversion(true);
+    try {
+      const response = await fetch(`/api/conversion_rates/${conversionToDelete.id}`, {
+        method: "DELETE",
+      });
+      if (!response.ok) throw new Error("Failed to delete conversion");
+      setConversionRates(prev => prev.filter(c => c.id !== conversionToDelete.id));
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setIsDeletingConversion(false);
+      setConversionPendingDelete(null);
+    }
+  };
   const [activeTab, setActiveTab] = useState<"products" | "category" | "units">(
     "products",
   );
@@ -433,6 +468,11 @@ export function Items() {
   const [productSearchTerm, setProductSearchTerm] = useState('');
   const [categorySearchTerm, setCategorySearchTerm] = useState('');
   const [unitSearchTerm, setUnitSearchTerm] = useState('');
+  const [categoryItemSearchTerm, setCategoryItemSearchTerm] = useState('');
+  const [conversionSearchTerm, setConversionSearchTerm] = useState('');
+  const [transactionSearchTerm, setTransactionSearchTerm] = useState("");
+  const [showTransactionSearch, setShowTransactionSearch] = useState(false);
+  const [showStockDetailsPopup, setShowStockDetailsPopup] = useState(false);
   const [isMovingItems, setIsMovingItems] = useState(false);
   const [addItemTab, setAddItemTab] = useState<"pricing" | "stock">("pricing");
   const [addItemImageDataUrl, setAddItemImageDataUrl] = useState<string | null>(null);
@@ -457,6 +497,10 @@ export function Items() {
   );
   const [unitContextMenu, setUnitContextMenu] =
     useState<UnitContextMenuState | null>(null);
+  const [conversionContextMenu, setConversionContextMenu] = useState<{ conversion: ConversionRateRecord; x: number; y: number; } | null>(null);
+  const [conversionBeingEdited, setConversionBeingEdited] = useState<ConversionRateRecord | null>(null);
+  const [isDeletingConversion, setIsDeletingConversion] = useState(false);
+  const [conversionPendingDelete, setConversionPendingDelete] = useState<ConversionRateRecord | null>(null);
   const [selectedUnitInTabId, setSelectedUnitInTabId] = useState<string | null>(
     null,
   );
@@ -469,23 +513,49 @@ export function Items() {
   const secondaryUnit = units.find((unit) => unit.id === secondaryUnitId);
   const selectedUnitInTab = units.find((unit) => unit.id === selectedUnitInTabId);
   const filteredConversions = conversionRates.filter(
-    (conversion) =>
-      conversion.base_unit.toLowerCase() ===
-      (selectedUnitInTab?.shortName ?? '').trim().toLowerCase(),
+    (conversion) => {
+      const isBaseUnitMatch = conversion.base_unit.toLowerCase() ===
+        (selectedUnitInTab?.shortName ?? '').trim().toLowerCase();
+
+      if (!isBaseUnitMatch) {
+        return false;
+      }
+
+      if (conversionSearchTerm.trim()) {
+        const searchStr = `1 ${conversion.base_unit} = ${Number(conversion.conversion_rate)} ${conversion.secondary_unit}`.toLowerCase();
+        if (!searchStr.includes(conversionSearchTerm.trim().toLowerCase())) {
+          return false;
+        }
+      }
+
+      return true;
+    }
   );
   const selectedCategory = categoryList.find(
     (category) => category.id === selectedCategoryId,
   );
   const filteredCategoryItems = itemList.filter((item) => {
+    let matchesCategory = false;
     if (selectedCategoryId === null) {
-      return !item.category;
+      matchesCategory = !item.category;
+    } else if (!selectedCategory?.name) {
+      matchesCategory = false;
+    } else {
+      matchesCategory = item.category === selectedCategory.name;
     }
 
-    if (!selectedCategory?.name) {
-      return false;
+    if (!matchesCategory) return false;
+
+    if (categoryItemSearchTerm.trim()) {
+      const searchStr = categoryItemSearchTerm.trim().toLowerCase();
+      const matchName = item.name.toLowerCase().includes(searchStr);
+      const matchCode = item.code && item.code.toLowerCase().includes(searchStr);
+      if (!matchName && !matchCode) {
+        return false;
+      }
     }
 
-    return item.category === selectedCategory.name;
+    return true;
   });
   const normalizedProductSearchTerm = productSearchTerm.trim().toLowerCase();
   const normalizedCategorySearchTerm = categorySearchTerm.trim().toLowerCase();
@@ -597,6 +667,113 @@ export function Items() {
     );
   }, [itemTransactions, selectedItem]);
 
+  const filteredItemTransactions = selectedItemTransactions.filter((t) => {
+    if (!transactionSearchTerm) return true;
+    const term = transactionSearchTerm.toLowerCase();
+    return (
+      (t.invoiceNo && t.invoiceNo.toLowerCase().includes(term)) ||
+      (t.date && t.date.toLowerCase().includes(term)) ||
+      (t.type && t.type.toLowerCase().includes(term)) ||
+      (t.amount.toString().includes(term)) ||
+      (t.balance.toString().includes(term))
+    );
+  });
+
+  const handlePrintTransactions = () => {
+    if (!selectedItem) return;
+
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+    document.body.appendChild(iframe);
+
+    const html = `
+      <html>
+        <head>
+          <title>Transactions - ${selectedItem.name}</title>
+          <style>
+            body { font-family: sans-serif; padding: 20px; }
+            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+            th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+            th { background-color: #f2f2f2; }
+          </style>
+        </head>
+        <body>
+          <h2>Transactions - ${selectedItem.name}</h2>
+          <table>
+            <thead>
+              <tr>
+                <th>Type</th>
+                <th>Number</th>
+                <th>Date</th>
+                <th>Total</th>
+                <th>Balance</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${filteredItemTransactions.map(t => `
+                <tr>
+                  <td>${t.type}</td>
+                  <td>${t.invoiceNo || ''}</td>
+                  <td>${t.date}</td>
+                  <td>Rs ${t.amount.toFixed(2)}</td>
+                  <td>Rs ${t.balance.toFixed(2)}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </body>
+      </html>
+    `;
+    const iframeDoc = iframe.contentWindow?.document;
+    if (iframeDoc) {
+      iframeDoc.open();
+      iframeDoc.write(html);
+      iframeDoc.close();
+
+      setTimeout(() => {
+        iframe.contentWindow?.focus();
+        iframe.contentWindow?.print();
+        setTimeout(() => {
+          document.body.removeChild(iframe);
+        }, 1000);
+      }, 250);
+    } else {
+      document.body.removeChild(iframe);
+    }
+  };
+
+  const handleExportExcel = () => {
+    if (!selectedItem) return;
+
+    const headers = ["Type", "Number", "Date", "Total", "Balance"];
+    const rows = filteredItemTransactions.map(t => [
+      t.type,
+      t.invoiceNo || "",
+      t.date,
+      t.amount.toFixed(2),
+      t.balance.toFixed(2)
+    ]);
+
+    const csvContent = [
+      headers.join(","),
+      ...rows.map(row => row.join(","))
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", `${selectedItem.name}_transactions.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const openStockAdjustmentDialog = (item: Item) => {
     const parsedBatchRows = parseBatchRows(item.batchJson);
     const showBatches =
@@ -612,16 +789,16 @@ export function Items() {
       details: '',
       batchRows: showBatches
         ? [
-            ...parsedBatchRows.map((row) => ({
-              id: row.id,
-              mfgDate: row.mfgDate,
-              expDate: row.expDate,
-              size: row.size,
-              currentQty: row.openingQty,
-              qty: '',
-            })),
-            createEmptyStockAdjustmentBatchRow(),
-          ]
+          ...parsedBatchRows.map((row) => ({
+            id: row.id,
+            mfgDate: row.mfgDate,
+            expDate: row.expDate,
+            size: row.size,
+            currentQty: row.openingQty,
+            qty: '',
+          })),
+          createEmptyStockAdjustmentBatchRow(),
+        ]
         : [],
       batchSearchTerm: '',
       showBatches,
@@ -727,27 +904,27 @@ export function Items() {
           minStock: stockAdjustmentForm.item.minStock ?? null,
           batchJson: stockAdjustmentForm.showBatches
             ? JSON.stringify(
-                stockAdjustmentForm.batchRows
-                  .filter(
-                    (row) =>
-                      row.mfgDate || row.expDate || row.size || row.currentQty || row.qty,
-                  )
-                  .map((row) => {
-                    const currentQty = getInputNumberValue(row.currentQty);
-                    const rowQty = getInputNumberValue(row.qty);
-                    const nextQty = currentQty + rowQty * direction;
+              stockAdjustmentForm.batchRows
+                .filter(
+                  (row) =>
+                    row.mfgDate || row.expDate || row.size || row.currentQty || row.qty,
+                )
+                .map((row) => {
+                  const currentQty = getInputNumberValue(row.currentQty);
+                  const rowQty = getInputNumberValue(row.qty);
+                  const nextQty = currentQty + rowQty * direction;
 
-                    return {
-                      id: row.id,
-                      mfgDate: row.mfgDate,
-                      expDate: row.expDate,
-                      size: row.size,
-                      openingQty: String(nextQty),
-                      currentQty: row.currentQty,
-                      qty: row.qty,
-                    };
-                  }),
-              )
+                  return {
+                    id: row.id,
+                    mfgDate: row.mfgDate,
+                    expDate: row.expDate,
+                    size: row.size,
+                    openingQty: String(nextQty),
+                    currentQty: row.currentQty,
+                    qty: row.qty,
+                  };
+                }),
+            )
             : stockAdjustmentForm.item.batchJson ?? null,
           location: null,
         }),
@@ -904,29 +1081,29 @@ export function Items() {
 
         const nextTransactions = [...saleInvoices, ...purchaseBills].flatMap(
           (invoice): ItemTransactionRow[] => {
-          const lineItems = parseLineItems(invoice.line_items_json);
-          const transactionType = normalizeTransactionType(invoice.transaction_type);
-          const balance = Number(invoice.balance ?? 0);
-          const status = normalizeTransactionStatus(invoice.status, balance);
+            const lineItems = parseLineItems(invoice.line_items_json);
+            const transactionType = normalizeTransactionType(invoice.transaction_type);
+            const balance = Number(invoice.balance ?? 0);
+            const status = normalizeTransactionStatus(invoice.status, balance);
 
-          return lineItems.map((lineItem, index) => ({
-            id: `${invoice.id}-${lineItem.id ?? index}`,
-            type: transactionType,
-            invoiceNo: invoice.invoice_no,
-            partyName: invoice.party_name,
-            date: invoice.date,
-            quantity: Number(lineItem.quantity ?? 0),
-            unit: lineItem.unit ?? "",
-            price: Number(lineItem.price ?? 0),
-            amount: Number(
-              lineItem.amount ??
+            return lineItems.map((lineItem, index) => ({
+              id: `${invoice.id}-${lineItem.id ?? index}`,
+              type: transactionType,
+              invoiceNo: invoice.invoice_no,
+              partyName: invoice.party_name,
+              date: invoice.date,
+              quantity: Number(lineItem.quantity ?? 0),
+              unit: lineItem.unit ?? "",
+              price: Number(lineItem.price ?? 0),
+              amount: Number(
+                lineItem.amount ??
                 Number(lineItem.quantity ?? 0) * Number(lineItem.price ?? 0),
-            ),
-            balance,
-            status,
-            itemId: lineItem.itemId ?? undefined,
-            itemName: lineItem.name ?? "",
-          }));
+              ),
+              balance,
+              status,
+              itemId: lineItem.itemId ?? undefined,
+              itemName: lineItem.name ?? "",
+            }));
           },
         );
 
@@ -1030,6 +1207,24 @@ export function Items() {
       window.removeEventListener('scroll', closeMenu, true);
     };
   }, [unitContextMenu]);
+
+  useEffect(() => {
+    if (!conversionContextMenu) {
+      return;
+    }
+
+    const closeMenu = () => setConversionContextMenu(null);
+
+    window.addEventListener('click', closeMenu);
+    window.addEventListener('resize', closeMenu);
+    window.addEventListener('scroll', closeMenu, true);
+
+    return () => {
+      window.removeEventListener('click', closeMenu);
+      window.removeEventListener('resize', closeMenu);
+      window.removeEventListener('scroll', closeMenu, true);
+    };
+  }, [conversionContextMenu]);
 
   useEffect(() => {
     if (isProductSearchActive) {
@@ -1158,8 +1353,8 @@ export function Items() {
 
         const nextUnits = hasExistingUnit
           ? previousUnits.map((unit) =>
-              unit.id === createdUnit.id ? createdUnit : unit,
-            )
+            unit.id === createdUnit.id ? createdUnit : unit,
+          )
           : [...previousUnits, createdUnit];
 
         return nextUnits.sort((a, b) => a.fullName.localeCompare(b.fullName));
@@ -1264,8 +1459,8 @@ export function Items() {
 
         const nextCategories = hasExistingCategory
           ? previousCategories.map((category) =>
-              category.id === createdCategory.id ? createdCategory : category,
-            )
+            category.id === createdCategory.id ? createdCategory : category,
+          )
           : [...previousCategories, createdCategory];
 
         return nextCategories.sort((a, b) => a.name.localeCompare(b.name));
@@ -1528,9 +1723,9 @@ export function Items() {
           previousCategories.map((category) =>
             category.name === item.category
               ? {
-                  ...category,
-                  itemCount: Math.max(0, category.itemCount - 1),
-                }
+                ...category,
+                itemCount: Math.max(0, category.itemCount - 1),
+              }
               : category,
           ),
         );
@@ -1652,7 +1847,7 @@ export function Items() {
         salePrice: Number(createdItemPayload.salePrice ?? salePrice),
         wholesalePrice: Number(
           createdItemPayload.wholesalePrice ??
-            (Number(addItemForm.wholesalePrice) || 0),
+          (Number(addItemForm.wholesalePrice) || 0),
         ),
         purchasePrice: Number(createdItemPayload.purchasePrice ?? purchasePrice),
         stockQuantity: Number(createdItemPayload.stockQuantity ?? openingStock),
@@ -1666,8 +1861,8 @@ export function Items() {
 
         const nextItems = hasExistingItem
           ? previousItems.map((item) =>
-              item.id === createdItem.id ? createdItem : item,
-            )
+            item.id === createdItem.id ? createdItem : item,
+          )
           : [...previousItems, createdItem];
 
         nextItems.sort((first, second) => first.name.localeCompare(second.name));
@@ -1744,11 +1939,10 @@ export function Items() {
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`flex-1 text-sm font-medium pb-2 border-b-2 transition-colors ${
-                activeTab === tab
-                  ? "text-[#E53935] border-[#E53935]"
-                  : "text-gray-500 border-transparent hover:text-gray-700"
-              }`}
+              className={`flex-1 text-sm font-medium pb-2 border-b-2 transition-colors ${activeTab === tab
+                ? "text-[#E53935] border-[#E53935]"
+                : "text-gray-500 border-transparent hover:text-gray-700"
+                }`}
             >
               {tab.toUpperCase()}
             </button>
@@ -1814,31 +2008,11 @@ export function Items() {
                     <tr>
                       <th className="px-4 py-2 text-left font-semibold text-[#7B8A9A] text-xs tracking-wide align-middle">
                         ITEM
-                        <span className="inline-block align-middle ml-1 text-[#E53935]">
-                          <svg width="16" height="16" fill="none">
-                            <path
-                              d="M8 3v7m0 0l3-3m-3 3l-3-3"
-                              stroke="currentColor"
-                              strokeWidth="1.5"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                            />
-                          </svg>
-                        </span>
+
                       </th>
                       <th className="px-4 py-2 text-right font-semibold text-[#7B8A9A] text-xs tracking-wide align-middle">
                         QUANTITY
-                        <span className="inline-block align-middle ml-1 text-[#E53935]">
-                          <svg width="16" height="16" fill="none">
-                            <path
-                              d="M8 3v7m0 0l3-3m-3 3l-3-3"
-                              stroke="currentColor"
-                              strokeWidth="1.5"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                            />
-                          </svg>
-                        </span>
+
                       </th>
                     </tr>
                   </thead>
@@ -1856,21 +2030,19 @@ export function Items() {
                             y: event.clientY,
                           });
                         }}
-                        className={`cursor-pointer border-b border-[#E3EAF2] ${
-                          selectedItem?.id === item.id
-                            ? "bg-[#E3F0FF] border-l-4 border-l-[#1976D2]"
-                            : "hover:bg-[#F5F8FA]"
-                        }`}
+                        className={`cursor-pointer border-b border-[#E3EAF2] ${selectedItem?.id === item.id
+                          ? "bg-[#E3F0FF] border-l-4 border-l-[#1976D2]"
+                          : "hover:bg-[#F5F8FA]"
+                          }`}
                       >
                         <td className="px-4 py-3 text-[#222B45] font-medium">
                           {item.name}
                         </td>
                         <td
-                          className={`px-4 py-3 text-right font-semibold ${
-                            item.stockQuantity < 0
-                              ? "text-[#E53935]"
-                              : "text-[#43A047]"
-                          }`}
+                          className={`px-4 py-3 text-right font-semibold ${item.stockQuantity < 0
+                            ? "text-[#E53935]"
+                            : "text-[#43A047]"
+                            }`}
                         >
                           {item.stockQuantity}
                         </td>
@@ -1957,23 +2129,34 @@ export function Items() {
                               Rs {selectedItem.purchasePrice.toFixed(2)}
                             </span>
                           </span>
+
                         </div>
                       </div>
                       {/* Right: Button and stats */}
                       <div className="flex flex-col items-end justify-between flex-1 pr-6 pt-5 pb-2">
-                        <button
-                          onClick={() => openStockAdjustmentDialog(selectedItem)}
-                          className="bg-[#1976D2] hover:bg-[#1251A3] text-white px-5 py-2 rounded-lg text-sm font-bold flex items-center gap-2 shadow transition-all mb-6"
-                          style={{ minWidth: "140px" }}
-                        >
-                          <SlidersHorizontal className="w-5 h-5" />
-                          ADJUST ITEM
-                        </button>
+                        <div className="flex items-center gap-3 mb-6">
+                          {selectedItem.secondaryUnit && (
+                            <button
+                              onClick={() => setShowStockDetailsPopup(true)}
+                              className="bg-[#F0F4F8] hover:bg-[#E3EAF2] text-[#1976D2] px-4 py-2 rounded-lg text-sm font-bold flex items-center shadow-sm transition-all border border-[#1976D2]"
+                            >
+                              Stock Details
+                            </button>
+                          )}
+                          <button
+                            onClick={() => openStockAdjustmentDialog(selectedItem)}
+                            className="bg-[#1976D2] hover:bg-[#1251A3] text-white px-5 py-2 rounded-lg text-sm font-bold flex items-center gap-2 shadow transition-all"
+                            style={{ minWidth: "140px" }}
+                          >
+                            <SlidersHorizontal className="w-5 h-5" />
+                            ADJUST ITEM
+                          </button>
+                        </div>
                         <div className="flex flex-col gap-2 items-end">
-                          <span className="text-sm font-medium text-[#151B26]">
+                          <span className="text-sm font-medium text-[#151B26] flex items-center gap-2">
                             STOCK QUANTITY:{" "}
                             <span className="text-[#43A047]">
-                              {selectedItem.stockQuantity}
+                              {Math.floor(selectedItem.stockQuantity)}
                             </span>
                           </span>
                           <span className="text-sm font-medium text-[#151B26]">
@@ -1990,65 +2173,51 @@ export function Items() {
                   <Card className="bg-white rounded-md flex flex-col flex-1 overflow-hidden shadow-sm p-0">
                     <CardContent className="p-0">
                       <div className="flex items-center justify-between px-6 pt-4 pb-2">
-                        <h3 className="text-base font-bold text-[#222B45] tracking-wide">
-                          TRANSACTIONS
-                        </h3>
-                        <div className="flex gap-2 items-center">
-                          <div className="relative">
+                        {showTransactionSearch ? (
+                          <div className="flex-1 flex items-center bg-[#F7F9FB] rounded-lg px-3 py-1.5 mr-4 border border-[#E3EAF2]">
+                            <Search className="w-4 h-4 text-gray-400 mr-2" />
                             <input
                               type="text"
-                              placeholder=""
-                              className="bg-[#F7F9FB] border border-[#E3EAF2] rounded-lg px-8 py-1.5 text-sm text-[#222B45] focus:bg-white focus:border-[#1976D2]"
+                              placeholder="Search transactions..."
+                              value={transactionSearchTerm}
+                              onChange={(e) => setTransactionSearchTerm(e.target.value)}
+                              onBlur={() => {
+                                setTimeout(() => {
+                                  setShowTransactionSearch(false);
+                                  setTransactionSearchTerm("");
+                                }, 150);
+                              }}
+                              className="flex-1 bg-transparent border-none outline-none text-sm"
+                              autoFocus
                             />
-                            <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-[#AEB8C4]" />
                           </div>
-                          <button className="p-2 hover:bg-[#F7F9FB] rounded">
-                            <svg width="18" height="18" fill="none">
-                              <rect
-                                x="3"
-                                y="7"
-                                width="12"
-                                height="2"
-                                rx="1"
-                                fill="#7B8A9A"
-                              />
-                              <rect
-                                x="7"
-                                y="3"
-                                width="2"
-                                height="12"
-                                rx="1"
-                                fill="#7B8A9A"
-                              />
-                            </svg>
+                        ) : (
+                          <h3 className="text-base font-bold text-[#222B45] tracking-wide">
+                            TRANSACTIONS
+                          </h3>
+                        )}
+                        <div className="flex gap-2 items-center">
+                          {!showTransactionSearch && (
+                            <button
+                              onClick={() => setShowTransactionSearch(true)}
+                              className="p-1.5 hover:bg-[#F7F9FB] rounded"
+                            >
+                              <Search className="w-4 h-4 text-[#7B8A9A]" />
+                            </button>
+                          )}
+                          <button
+                            onClick={handlePrintTransactions}
+                            className="p-1.5 hover:bg-[#F7F9FB] rounded"
+                          >
+                            <Printer className="w-4 h-4 text-[#7B8A9A]" />
                           </button>
-                          <button className="p-2 hover:bg-[#F7F9FB] rounded">
-                            <svg width="18" height="18" fill="none">
-                              <rect
-                                x="3"
-                                y="3"
-                                width="12"
-                                height="2"
-                                rx="1"
-                                fill="#7B8A9A"
-                              />
-                              <rect
-                                x="3"
-                                y="7"
-                                width="12"
-                                height="2"
-                                rx="1"
-                                fill="#7B8A9A"
-                              />
-                              <rect
-                                x="3"
-                                y="11"
-                                width="12"
-                                height="2"
-                                rx="1"
-                                fill="#7B8A9A"
-                              />
-                            </svg>
+                          <button
+                            onClick={handleExportExcel}
+                            className="p-1.5 hover:bg-[#F7F9FB] rounded relative"
+                          >
+                            <span className="bg-green-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
+                              xls
+                            </span>
                           </button>
                         </div>
                       </div>
@@ -2058,125 +2227,53 @@ export function Items() {
                             <tr>
                               <th className="px-4 py-2 text-left font-semibold text-[#7B8A9A] text-xs tracking-wide align-middle">
                                 TYPE{" "}
-                                <span className="inline-block align-middle ml-1 text-[#E53935]">
-                                  <svg width="16" height="16" fill="none">
-                                    <path
-                                      d="M8 3v7m0 0l3-3m-3 3l-3-3"
-                                      stroke="currentColor"
-                                      strokeWidth="1.5"
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
-                                    />
-                                  </svg>
-                                </span>
+
                               </th>
                               <th className="px-4 py-2 text-left font-semibold text-[#7B8A9A] text-xs tracking-wide align-middle">
                                 INVOICE/#{" "}
-                                <span className="inline-block align-middle ml-1 text-[#E53935]">
-                                  <svg width="16" height="16" fill="none">
-                                    <path
-                                      d="M8 3v7m0 0l3-3m-3 3l-3-3"
-                                      stroke="currentColor"
-                                      strokeWidth="1.5"
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
-                                    />
-                                  </svg>
-                                </span>
+
                               </th>
                               <th className="px-4 py-2 text-left font-semibold text-[#7B8A9A] text-xs tracking-wide align-middle">
                                 NAME{" "}
-                                <span className="inline-block align-middle ml-1 text-[#E53935]">
-                                  <svg width="16" height="16" fill="none">
-                                    <path
-                                      d="M8 3v7m0 0l3-3m-3 3l-3-3"
-                                      stroke="currentColor"
-                                      strokeWidth="1.5"
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
-                                    />
-                                  </svg>
-                                </span>
+
                               </th>
                               <th className="px-4 py-2 text-left font-semibold text-[#7B8A9A] text-xs tracking-wide align-middle">
                                 DATE{" "}
-                                <span className="inline-block align-middle ml-1 text-[#E53935]">
-                                  <svg width="16" height="16" fill="none">
-                                    <path
-                                      d="M8 3v7m0 0l3-3m-3 3l-3-3"
-                                      stroke="currentColor"
-                                      strokeWidth="1.5"
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
-                                    />
-                                  </svg>
-                                </span>
+
                               </th>
                               <th className="px-4 py-2 text-right font-semibold text-[#7B8A9A] text-xs tracking-wide align-middle">
                                 QUANTITY{" "}
-                                <span className="inline-block align-middle ml-1 text-[#E53935]">
-                                  <svg width="16" height="16" fill="none">
-                                    <path
-                                      d="M8 3v7m0 0l3-3m-3 3l-3-3"
-                                      stroke="currentColor"
-                                      strokeWidth="1.5"
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
-                                    />
-                                  </svg>
-                                </span>
+
                               </th>
                               <th className="px-4 py-2 text-right font-semibold text-[#7B8A9A] text-xs tracking-wide align-middle">
                                 PRICE/U...{" "}
-                                <span className="inline-block align-middle ml-1 text-[#E53935]">
-                                  <svg width="16" height="16" fill="none">
-                                    <path
-                                      d="M8 3v7m0 0l3-3m-3 3l-3-3"
-                                      stroke="currentColor"
-                                      strokeWidth="1.5"
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
-                                    />
-                                  </svg>
-                                </span>
+
                               </th>
                               <th className="px-4 py-2 text-left font-semibold text-[#7B8A9A] text-xs tracking-wide align-middle">
                                 STATUS{" "}
-                                <span className="inline-block align-middle ml-1 text-[#E53935]">
-                                  <svg width="16" height="16" fill="none">
-                                    <path
-                                      d="M8 3v7m0 0l3-3m-3 3l-3-3"
-                                      stroke="currentColor"
-                                      strokeWidth="1.5"
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
-                                    />
-                                  </svg>
-                                </span>
+
                               </th>
                             </tr>
                           </thead>
                           <tbody>
-                            {selectedItemTransactions.length ? (
-                              selectedItemTransactions.map((transaction) => (
+                            {filteredItemTransactions.length ? (
+                              filteredItemTransactions.map((transaction) => (
                                 <tr
                                   key={transaction.id}
                                   className="border-b border-[#E3EAF2] hover:bg-[#F5F8FA]"
                                 >
                                   <td className="px-4 py-2">
                                     <span
-                                      className={`inline-flex items-center gap-1.5 ${
-                                        transaction.type === "Sale"
-                                          ? "text-[#43A047]"
-                                          : "text-[#E53935]"
-                                      }`}
+                                      className={`inline-flex items-center gap-1.5 ${transaction.type === "Sale"
+                                        ? "text-[#43A047]"
+                                        : "text-[#E53935]"
+                                        }`}
                                     >
                                       <span
-                                        className={`w-2 h-2 rounded-full ${
-                                          transaction.type === "Sale"
-                                            ? "bg-[#43A047]"
-                                            : "bg-[#E53935]"
-                                        }`}
+                                        className={`w-2 h-2 rounded-full ${transaction.type === "Sale"
+                                          ? "bg-[#43A047]"
+                                          : "bg-[#E53935]"
+                                          }`}
                                       ></span>
                                       {transaction.type}
                                     </span>
@@ -2192,13 +2289,12 @@ export function Items() {
                                   </td>
                                   <td className="px-4 py-2">
                                     <span
-                                      className={`text-xs px-2 py-1 rounded-full font-semibold ${
-                                        transaction.status === "Paid"
-                                          ? "bg-[#E6F4EA] text-[#43A047]"
-                                          : transaction.status === "Unpaid"
-                                            ? "bg-[#FDEAEA] text-[#E53935]"
-                                            : "bg-[#F7F9FB] text-[#7B8A9A]"
-                                      }`}
+                                      className={`text-xs px-2 py-1 rounded-full font-semibold ${transaction.status === "Paid"
+                                        ? "bg-[#E6F4EA] text-[#43A047]"
+                                        : transaction.status === "Unpaid"
+                                          ? "bg-[#FDEAEA] text-[#E53935]"
+                                          : "bg-[#F7F9FB] text-[#7B8A9A]"
+                                        }`}
                                     >
                                       {transaction.status}
                                     </span>
@@ -2405,7 +2501,9 @@ export function Items() {
                       <div className="relative">
                         <input
                           type="text"
-                          placeholder=""
+                          placeholder="Search items..."
+                          value={categoryItemSearchTerm}
+                          onChange={(e) => setCategoryItemSearchTerm(e.target.value)}
                           className="bg-[#F7F9FB] border border-[#E3EAF2] rounded-lg px-8 py-1.5 text-sm text-[#222B45] focus:bg-white focus:border-[#1976D2]"
                         />
                         <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-[#AEB8C4]" />
@@ -2418,45 +2516,15 @@ export function Items() {
                         <tr>
                           <th className="px-4 py-2 text-left font-semibold text-[#7B8A9A] text-xs tracking-wide align-middle">
                             NAME{" "}
-                            <span className="inline-block align-middle ml-1 text-[#E53935]">
-                              <svg width="16" height="16" fill="none">
-                                <path
-                                  d="M8 3v7m0 0l3-3m-3 3l-3-3"
-                                  stroke="currentColor"
-                                  strokeWidth="1.5"
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                />
-                              </svg>
-                            </span>
+
                           </th>
                           <th className="px-4 py-2 text-right font-semibold text-[#7B8A9A] text-xs tracking-wide align-middle">
                             QUANTITY{" "}
-                            <span className="inline-block align-middle ml-1 text-[#E53935]">
-                              <svg width="16" height="16" fill="none">
-                                <path
-                                  d="M8 3v7m0 0l3-3m-3 3l-3-3"
-                                  stroke="currentColor"
-                                  strokeWidth="1.5"
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                />
-                              </svg>
-                            </span>
+
                           </th>
                           <th className="px-4 py-2 text-right font-semibold text-[#7B8A9A] text-xs tracking-wide align-middle">
                             STOCK VALUE{" "}
-                            <span className="inline-block align-middle ml-1 text-[#E53935]">
-                              <svg width="16" height="16" fill="none">
-                                <path
-                                  d="M8 3v7m0 0l3-3m-3 3l-3-3"
-                                  stroke="currentColor"
-                                  strokeWidth="1.5"
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                />
-                              </svg>
-                            </span>
+
                           </th>
                         </tr>
                       </thead>
@@ -2471,11 +2539,10 @@ export function Items() {
                                 {item.name}
                               </td>
                               <td
-                                className={`px-4 py-3 text-right font-semibold ${
-                                  item.stockQuantity < 0
-                                    ? "text-[#E53935]"
-                                    : "text-[#43A047]"
-                                }`}
+                                className={`px-4 py-3 text-right font-semibold ${item.stockQuantity < 0
+                                  ? "text-[#E53935]"
+                                  : "text-[#43A047]"
+                                  }`}
                               >
                                 {item.stockQuantity}
                               </td>
@@ -2586,9 +2653,8 @@ export function Items() {
                               y: event.clientY,
                             });
                           }}
-                          className={`cursor-pointer border-b border-[#E3EAF2] ${
-                            isSelected ? "bg-[#DDEBFA]" : "hover:bg-[#F5F8FA]"
-                          }`}
+                          className={`cursor-pointer border-b border-[#E3EAF2] ${isSelected ? "bg-[#DDEBFA]" : "hover:bg-[#F5F8FA]"
+                            }`}
                         >
                           <td className="px-4 py-3 text-[#222B45] font-medium uppercase">
                             {unit.fullName}
@@ -2597,37 +2663,6 @@ export function Items() {
                             <div className="flex items-center justify-end gap-3">
                               <span className="capitalize">
                                 {unit.shortName}
-                              </span>
-                              <span className="text-[#7B8A9A] cursor-pointer hover:text-[#222B45]">
-                                <svg
-                                  width="16"
-                                  height="16"
-                                  viewBox="0 0 24 24"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  strokeWidth="2"
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                >
-                                  <circle
-                                    cx="12"
-                                    cy="12"
-                                    r="1.5"
-                                    fill="currentColor"
-                                  />
-                                  <circle
-                                    cx="12"
-                                    cy="5"
-                                    r="1.5"
-                                    fill="currentColor"
-                                  />
-                                  <circle
-                                    cx="12"
-                                    cy="19"
-                                    r="1.5"
-                                    fill="currentColor"
-                                  />
-                                </svg>
                               </span>
                             </div>
                           </td>
@@ -2660,6 +2695,37 @@ export function Items() {
                     const unit = unitContextMenu.unit;
                     setUnitContextMenu(null);
                     setUnitPendingDelete(unit);
+                  }}
+                  className="w-full rounded-sm px-2 py-1.5 text-left text-sm text-red-600 hover:bg-red-50"
+                >
+                  Delete
+                </button>
+              </div>
+            )}
+
+            {conversionContextMenu && (
+              <div
+                className="fixed z-50 min-w-40 rounded-md border bg-white p-1 shadow-md"
+                style={getContextMenuStyle(conversionContextMenu.x, conversionContextMenu.y)}
+                onClick={(event) => event.stopPropagation()}
+              >
+                <button
+                  onClick={() => {
+                    setConversionBeingEdited(conversionContextMenu.conversion);
+                    setConversionBaseUnit(conversionContextMenu.conversion.base_unit);
+                    setConversionSecondaryUnit(conversionContextMenu.conversion.secondary_unit);
+                    setConversionRateValue(conversionContextMenu.conversion.conversion_rate);
+                    setShowAddConversion(true);
+                    setConversionContextMenu(null);
+                  }}
+                  className="w-full rounded-sm px-2 py-1.5 text-left text-sm hover:bg-gray-100"
+                >
+                  Edit
+                </button>
+                <button
+                  onClick={() => {
+                    setConversionContextMenu(null);
+                    setConversionPendingDelete(conversionContextMenu.conversion);
                   }}
                   className="w-full rounded-sm px-2 py-1.5 text-left text-sm text-red-600 hover:bg-red-50"
                 >
@@ -2701,7 +2767,9 @@ export function Items() {
                       <div className="relative">
                         <input
                           type="text"
-                          placeholder=""
+                          placeholder="Search..."
+                          value={conversionSearchTerm}
+                          onChange={(e) => setConversionSearchTerm(e.target.value)}
                           className="bg-[#F7F9FB] border border-[#E3EAF2] rounded-lg px-8 py-1.5 text-sm text-[#222B45] focus:bg-white focus:border-[#1976D2]"
                         />
                         <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-[#AEB8C4]" />
@@ -2723,7 +2791,15 @@ export function Items() {
                           filteredConversions.map((conversion, index) => (
                             <tr
                               key={conversion.id}
-                              className="border-b border-[#E3EAF2] hover:bg-[#F5F8FA]"
+                              onContextMenu={(event) => {
+                                event.preventDefault();
+                                setConversionContextMenu({
+                                  conversion,
+                                  x: event.clientX,
+                                  y: event.clientY,
+                                });
+                              }}
+                              className="border-b border-[#E3EAF2] hover:bg-[#F5F8FA] cursor-pointer"
                             >
                               <td className="px-4 py-3 text-[#4B5563] font-medium">
                                 {index + 1}
@@ -3028,11 +3104,10 @@ export function Items() {
                 <button
                   key={tab.key}
                   onClick={() => setAddItemTab(tab.key as "pricing" | "stock")}
-                  className={`pb-2 text-sm font-medium ${
-                    addItemTab === tab.key
-                      ? "text-[#E53935] border-b-2 border-[#E53935]"
-                      : "text-gray-500"
-                  }`}
+                  className={`pb-2 text-sm font-medium ${addItemTab === tab.key
+                    ? "text-[#E53935] border-b-2 border-[#E53935]"
+                    : "text-gray-500"
+                    }`}
                 >
                   {tab.label}
                 </button>
@@ -3247,11 +3322,10 @@ export function Items() {
                         previousForm ? { ...previousForm, mode: 'add' } : previousForm,
                       )
                     }
-                    className={`transition-colors ${
-                      stockAdjustmentForm.mode === 'add'
-                        ? 'text-[#1C78FF]'
-                        : 'text-[#9AA5B5]'
-                    }`}
+                    className={`transition-colors ${stockAdjustmentForm.mode === 'add'
+                      ? 'text-[#1C78FF]'
+                      : 'text-[#9AA5B5]'
+                      }`}
                   >
                     Add Stock
                   </button>
@@ -3262,18 +3336,17 @@ export function Items() {
                       setStockAdjustmentForm((previousForm) =>
                         previousForm
                           ? {
-                              ...previousForm,
-                              mode: previousForm.mode === 'add' ? 'reduce' : 'add',
-                            }
+                            ...previousForm,
+                            mode: previousForm.mode === 'add' ? 'reduce' : 'add',
+                          }
                           : previousForm,
                       )
                     }
                     className="relative h-7 w-12 rounded-full bg-[#1C78FF] shadow-inner"
                   >
                     <span
-                      className={`absolute top-0.5 h-6 w-6 rounded-full bg-white shadow transition-transform ${
-                        stockAdjustmentForm.mode === 'add' ? 'translate-x-0.5' : 'translate-x-[22px]'
-                      }`}
+                      className={`absolute top-0.5 h-6 w-6 rounded-full bg-white shadow transition-transform ${stockAdjustmentForm.mode === 'add' ? 'translate-x-0.5' : 'translate-x-[22px]'
+                        }`}
                     />
                   </button>
                   <button
@@ -3283,11 +3356,10 @@ export function Items() {
                         previousForm ? { ...previousForm, mode: 'reduce' } : previousForm,
                       )
                     }
-                    className={`transition-colors ${
-                      stockAdjustmentForm.mode === 'reduce'
-                        ? 'text-[#1C78FF]'
-                        : 'text-[#9AA5B5]'
-                    }`}
+                    className={`transition-colors ${stockAdjustmentForm.mode === 'reduce'
+                      ? 'text-[#1C78FF]'
+                      : 'text-[#9AA5B5]'
+                      }`}
                   >
                     Reduce Stock
                   </button>
@@ -3659,86 +3731,86 @@ export function Items() {
             aria-label="Close item settings backdrop"
           />
           <div className="absolute inset-y-0 right-0 z-[131] flex w-full max-w-[420px] flex-col border-l border-gray-200 bg-white shadow-2xl">
-          <div className="flex items-center justify-between border-b border-gray-200 px-5 py-4">
-            <h3 className="text-base font-semibold text-gray-900">Item Settings</h3>
-            <button
-              type="button"
-              onClick={closeItemSettingsPanel}
-              className="rounded p-1 text-gray-500 hover:bg-gray-100 hover:text-gray-700"
-              aria-label="Close item settings"
-            >
-              <X className="h-5 w-5" />
-            </button>
-          </div>
-          <div className="flex-1 overflow-y-auto px-5 py-4">
-            <div className="space-y-1">
-              {[
-                'Wholesale Price',
-                'Mfg Date',
-                'Exp Date',
-                'Size',
-              ].map((label) => (
-                <div
-                  key={label}
-                  className="flex items-center justify-between rounded-lg px-1 py-3 text-sm text-gray-700 hover:bg-gray-50"
-                >
-                  <span>{label}</span>
-                  {label === 'Mfg Date' ? (
-                    <input
-                      type="checkbox"
-                      checked={draftBatchMfgDate}
-                      onChange={(event) => setDraftBatchMfgDate(event.target.checked)}
-                      className="h-5 w-5 rounded border-gray-300 text-blue-600"
-                      aria-label={label}
-                    />
-                  ) : label === 'Exp Date' ? (
-                    <input
-                      type="checkbox"
-                      checked={draftBatchExpDate}
-                      onChange={(event) => setDraftBatchExpDate(event.target.checked)}
-                      className="h-5 w-5 rounded border-gray-300 text-blue-600"
-                      aria-label={label}
-                    />
-                  ) : label === 'Size' ? (
-                    <input
-                      type="checkbox"
-                      checked={draftBatchSize}
-                      onChange={(event) => setDraftBatchSize(event.target.checked)}
-                      className="h-5 w-5 rounded border-gray-300 text-blue-600"
-                      aria-label={label}
-                    />
-                  ) : (
-                    <input
-                      type="checkbox"
-                      defaultChecked
-                      className="h-5 w-5 rounded border-gray-300 text-blue-600"
-                      aria-label={label}
-                    />
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-          <div className="border-t border-gray-200 px-5 py-4">
-            <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center justify-between border-b border-gray-200 px-5 py-4">
+              <h3 className="text-base font-semibold text-gray-900">Item Settings</h3>
               <button
                 type="button"
-                className="flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium text-blue-600 hover:bg-blue-50"
+                onClick={closeItemSettingsPanel}
+                className="rounded p-1 text-gray-500 hover:bg-gray-100 hover:text-gray-700"
+                aria-label="Close item settings"
               >
-                <Settings2 className="h-4 w-4" />
-                More Settings
+                <X className="h-5 w-5" />
               </button>
-              {hasDraftBatchChanges ? (
+            </div>
+            <div className="flex-1 overflow-y-auto px-5 py-4">
+              <div className="space-y-1">
+                {[
+                  'Wholesale Price',
+                  'Mfg Date',
+                  'Exp Date',
+                  'Size',
+                ].map((label) => (
+                  <div
+                    key={label}
+                    className="flex items-center justify-between rounded-lg px-1 py-3 text-sm text-gray-700 hover:bg-gray-50"
+                  >
+                    <span>{label}</span>
+                    {label === 'Mfg Date' ? (
+                      <input
+                        type="checkbox"
+                        checked={draftBatchMfgDate}
+                        onChange={(event) => setDraftBatchMfgDate(event.target.checked)}
+                        className="h-5 w-5 rounded border-gray-300 text-blue-600"
+                        aria-label={label}
+                      />
+                    ) : label === 'Exp Date' ? (
+                      <input
+                        type="checkbox"
+                        checked={draftBatchExpDate}
+                        onChange={(event) => setDraftBatchExpDate(event.target.checked)}
+                        className="h-5 w-5 rounded border-gray-300 text-blue-600"
+                        aria-label={label}
+                      />
+                    ) : label === 'Size' ? (
+                      <input
+                        type="checkbox"
+                        checked={draftBatchSize}
+                        onChange={(event) => setDraftBatchSize(event.target.checked)}
+                        className="h-5 w-5 rounded border-gray-300 text-blue-600"
+                        aria-label={label}
+                      />
+                    ) : (
+                      <input
+                        type="checkbox"
+                        defaultChecked
+                        className="h-5 w-5 rounded border-gray-300 text-blue-600"
+                        aria-label={label}
+                      />
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="border-t border-gray-200 px-5 py-4">
+              <div className="flex items-center justify-between gap-3">
                 <button
                   type="button"
-                  onClick={saveItemSettingsChanges}
-                  className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
+                  className="flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium text-blue-600 hover:bg-blue-50"
                 >
-                  Save
+                  <Settings2 className="h-4 w-4" />
+                  More Settings
                 </button>
-              ) : null}
+                {hasDraftBatchChanges ? (
+                  <button
+                    type="button"
+                    onClick={saveItemSettingsChanges}
+                    className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
+                  >
+                    Save
+                  </button>
+                ) : null}
+              </div>
             </div>
-          </div>
           </div>
         </div>
       ) : null}
@@ -3978,11 +4050,10 @@ export function Items() {
                               toggleMoveItemSelection(item.id);
                             }
                           }}
-                          className={`border-b border-[#E3EAF2] ${
-                            isAlreadyInTargetCategory
-                              ? 'bg-gray-50 text-gray-400'
-                              : 'cursor-pointer hover:bg-[#F5F8FA]'
-                          } ${isSelected ? 'bg-[#E3F0FF]' : ''}`}
+                          className={`border-b border-[#E3EAF2] ${isAlreadyInTargetCategory
+                            ? 'bg-gray-50 text-gray-400'
+                            : 'cursor-pointer hover:bg-[#F5F8FA]'
+                            } ${isSelected ? 'bg-[#E3F0FF]' : ''}`}
                         >
                           <td className="px-4 py-3">
                             <input
@@ -4082,7 +4153,34 @@ export function Items() {
                 </select>
               </div>
             </div>
-            <div className="flex items-center gap-2">
+            {baseUnit && conversionRates.filter(c => c.base_unit === baseUnit.fullName).length > 0 && (
+              <div className="mt-2 pt-3 border-t border-gray-100">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Existing Conversions for {baseUnit.fullName}
+                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {conversionRates.filter(c => c.base_unit === baseUnit.fullName).map((conv) => {
+                    const secUnit = units.find(u => u.fullName === conv.secondary_unit);
+                    return (
+                      <button
+                        key={conv.id}
+                        onClick={() => {
+                          if (secUnit) setSecondaryUnitId(secUnit.id);
+                          setConversionRate(conv.conversion_rate);
+                        }}
+                        className="flex flex-col items-start p-2 border border-gray-200 rounded-lg hover:border-[#1976D2] hover:bg-blue-50 transition-colors text-left"
+                      >
+                        <span className="text-sm font-semibold text-gray-800">
+                          1 {baseUnit.shortName} = {conv.conversion_rate} {secUnit?.shortName || conv.secondary_unit}
+                        </span>
+                        <span className="text-xs text-gray-500 mt-0.5">Click to select</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+            <div className="flex items-center gap-2 mt-4 pt-3 border-t border-gray-100">
               <span className="text-sm text-gray-600">
                 1 {baseUnit?.fullName ?? "BASE UNIT"} =
               </span>
@@ -4224,6 +4322,121 @@ export function Items() {
                 {isDeletingUnit ? 'Deleting...' : 'Delete'}
               </button>
             </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Conversion Dialog */}
+      <Dialog
+        open={Boolean(conversionPendingDelete)}
+        onOpenChange={(isOpen: boolean) => {
+          if (!isOpen && !isDeletingConversion) {
+            setConversionPendingDelete(null);
+          }
+        }}
+      >
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Delete Conversion</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-gray-600">
+              Are you sure you want to delete this conversion rate?
+            </p>
+            <div className="flex justify-end gap-2">
+              <button
+                type="button"
+                disabled={isDeletingConversion}
+                onClick={() => setConversionPendingDelete(null)}
+                className="px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={isDeletingConversion || !conversionPendingDelete}
+                onClick={() => {
+                  if (!conversionPendingDelete) return;
+                  void handleDeleteConversion(conversionPendingDelete);
+                }}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 disabled:opacity-60"
+              >
+                {isDeletingConversion ? 'Deleting...' : 'Delete'}
+              </button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Stock Details Dialog */}
+      <Dialog
+        open={showStockDetailsPopup}
+        onOpenChange={(isOpen: boolean) => setShowStockDetailsPopup(isOpen)}
+      >
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Stock Details</DialogTitle>
+          </DialogHeader>
+          {selectedItem && (
+            <div className="space-y-4 pt-2 pb-4">
+              <div className="flex justify-between items-center border-b pb-2">
+                <span className="text-sm text-gray-500 font-medium">{selectedItem.primaryUnit || selectedItem.unit || 'Primary Unit'}</span>
+                <span className="text-sm font-semibold text-gray-800">{Math.floor(selectedItem.stockQuantity)}</span>
+              </div>
+              <div className="flex justify-between items-center border-b pb-2">
+                <span className="text-sm text-gray-500 font-medium">{selectedItem.secondaryUnit || 'Secondary Unit'}</span>
+                <span className="text-sm font-semibold text-gray-800">{selectedItem.secondaryStock ?? 0}</span>
+              </div>
+              <div className="flex justify-between items-center border-b pb-2">
+                <span className="text-sm text-gray-500 font-medium">Conversion Rate</span>
+                <span className="text-sm font-semibold text-gray-800">
+                  {selectedItem.conversionRate
+                    ? `1 ${(selectedItem.primaryUnit || selectedItem.unit || 'Unit').includes('(') ? (selectedItem.primaryUnit || selectedItem.unit || 'Unit').split('(')[1].replace(')', '').trim() : (selectedItem.primaryUnit || selectedItem.unit || 'Unit')} = ${selectedItem.conversionRate} ${(selectedItem.secondaryUnit || 'Secondary Unit').includes('(') ? (selectedItem.secondaryUnit || 'Secondary Unit').split('(')[1].replace(')', '').trim() : (selectedItem.secondaryUnit || 'Secondary Unit')}`
+                    : '-'}
+                </span>
+              </div>
+              <div className="flex justify-between items-center pb-2">
+                <span className="text-sm text-gray-500 font-medium">Price Per {selectedItem.secondaryUnit || 'Secondary Unit'}</span>
+                <span className="text-sm font-semibold text-[#43A047]">
+                  Rs {
+                    (selectedItem.conversionRate && selectedItem.conversionRate > 0)
+                      ? (selectedItem.salePrice / selectedItem.conversionRate).toFixed(2)
+                      : '-'
+                  }
+                </span>
+              </div>
+              <div className="flex justify-between items-center border-t pt-2 pb-2">
+                <span className="text-sm text-gray-500 font-medium">Wholesale Price</span>
+                <span className="text-sm font-semibold text-[#43A047]">
+                  Rs {selectedItem.wholesalePrice.toFixed(2)}
+                </span>
+              </div>
+              <div className="flex justify-between items-center border-t pt-2 pb-2">
+                <span className="text-sm text-gray-500 font-medium">Wholesale Price Per {selectedItem.secondaryUnit || 'Secondary Unit'}</span>
+                <span className="text-sm font-semibold text-[#43A047]">
+                  Rs {
+                    (selectedItem.conversionRate && selectedItem.conversionRate > 0)
+                      ? (selectedItem.wholesalePrice / selectedItem.conversionRate).toFixed(2)
+                      : '-'
+                  }
+                </span>
+              </div>
+              <div className="flex justify-between items-center border-t pt-2 pb-2">
+                <span className="text-sm text-gray-500 font-medium">Min Wholesale Qty</span>
+                <span className="text-sm font-semibold text-gray-800">
+                  {selectedItem.minStock ?? '-'}
+                </span>
+              </div>
+            </div>
+          )}
+          <div className="flex justify-end mt-2">
+            <button
+              type="button"
+              onClick={() => setShowStockDetailsPopup(false)}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
+            >
+              Close
+            </button>
           </div>
         </DialogContent>
       </Dialog>

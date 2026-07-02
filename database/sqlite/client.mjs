@@ -8,6 +8,20 @@ const workspaceRoot = path.resolve(currentDir, '../..');
 const dataDir = path.join(workspaceRoot, 'data');
 const dbPath = path.join(dataDir, 'pos.db');
 
+function ensurePartiesColumns(db) {
+  const rows = db.prepare('PRAGMA table_info(parties)').all();
+  const existingColumns = new Set(rows.map((row) => row.name));
+
+  const addColumn = (columnName, definition) => {
+    if (!existingColumns.has(columnName)) {
+      db.exec(`ALTER TABLE parties ADD COLUMN ${columnName} ${definition}`);
+    }
+  };
+
+  addColumn('shipping_address', 'TEXT');
+  addColumn('credit_limit', 'REAL');
+}
+
 function ensureItemsTableColumns(db) {
   const rows = db.prepare('PRAGMA table_info(items)').all();
   const existingColumns = new Set(rows.map((row) => row.name));
@@ -361,6 +375,22 @@ function ensureUnitsAndConversionRatesTables(db) {
   });
 }
 
+function ensureBankAccountColumns(db) {
+  const rows = db.prepare('PRAGMA table_info(bank_accounts)').all();
+  const existingColumns = new Set(rows.map((row) => row.name));
+
+  const addColumn = (columnName, definition) => {
+    if (!existingColumns.has(columnName)) {
+      db.exec(`ALTER TABLE bank_accounts ADD COLUMN ${columnName} ${definition}`);
+    }
+  };
+
+  addColumn('swift_code', 'TEXT');
+  addColumn('iban', 'TEXT');
+  addColumn('account_holder_name', 'TEXT');
+  addColumn('print_details', 'INTEGER NOT NULL DEFAULT 0');
+}
+
 export function ensureDataDirectory() {
   fs.mkdirSync(dataDir, { recursive: true });
 }
@@ -370,6 +400,7 @@ export function openDatabase() {
   const db = new Database(dbPath);
   db.pragma('journal_mode = WAL');
   db.pragma('foreign_keys = ON');
+  ensurePartiesColumns(db);
   ensureItemsTableColumns(db);
   ensureSaleInvoiceColumns(db);
   ensurePurchaseBillColumns(db);
@@ -377,6 +408,7 @@ export function openDatabase() {
   ensureExpenseRecordColumns(db);
   migratePaymentOutRecordsToExpenseRecords(db);
   ensureUnitsAndConversionRatesTables(db);
+  ensureBankAccountColumns(db);
   return db;
 }
 

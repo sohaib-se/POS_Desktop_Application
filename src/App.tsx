@@ -15,8 +15,6 @@ import { PurchaseBills } from "@/components/pages/PurchaseBills";
 import { Expenses } from "@/components/pages/Expenses";
 import { CashBank } from "@/components/pages/CashBank";
 import { BankAccounts } from "@/components/pages/BankAccounts";
-import { Cheques } from "@/components/pages/Cheques";
-import { LoanAccounts } from "@/components/pages/LoanAccounts";
 import { Reports } from "@/components/pages/Reports";
 import { SettingsPage } from "@/components/pages/Settings";
 import { Utilities } from "@/components/pages/Utilities";
@@ -104,10 +102,6 @@ function App() {
         return <BankAccounts />;
       case "cash-in-hand":
         return <CashBank subView={currentView} />;
-      case "cheques":
-        return <Cheques />;
-      case "loan-accounts":
-        return <LoanAccounts />;
       case "reports":
         return <Reports />;
       case "sync-share":

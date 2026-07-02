@@ -180,6 +180,138 @@ function sqliteApiPlugin() {
           console.error(error);
         });
 
+      server.middlewares.use('/api/bank_accounts', async (req, res) => {
+        try {
+          // @ts-expect-error Runtime-only Node module used in Vite middleware.
+          const repository = await import('./database/sqlite/repository.mjs');
+          const requestUrl = new URL(req.url ?? '/', 'http://localhost');
+
+          if (req.method === 'GET') {
+            const accounts = repository.getBankAccounts();
+            res.statusCode = 200;
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify(accounts));
+            return;
+          }
+
+          if (req.method === 'POST') {
+            const chunks: Buffer[] = [];
+            req.on('data', (chunk) => chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk)));
+            req.on('end', () => {
+              try {
+                const raw = Buffer.concat(chunks).toString('utf8');
+                const payload = raw ? JSON.parse(raw) : {};
+
+                if (!payload.name || !String(payload.name).trim()) {
+                  res.statusCode = 400;
+                  res.setHeader('Content-Type', 'application/json');
+                  res.end(JSON.stringify({ message: 'Account name is required.' }));
+                  return;
+                }
+
+                const id = repository.addBankAccount(payload);
+                res.statusCode = 201;
+                res.setHeader('Content-Type', 'application/json');
+                res.end(JSON.stringify({ ...payload, id }));
+              } catch {
+                res.statusCode = 400;
+                res.setHeader('Content-Type', 'application/json');
+                res.end(JSON.stringify({ message: 'Invalid JSON payload.' }));
+              }
+            });
+            return;
+          }
+
+          if (req.method === 'PUT') {
+            const pathSegments = requestUrl.pathname.split('/').filter(Boolean);
+            const id = requestUrl.searchParams.get('id') || pathSegments[0];
+            const chunks: Buffer[] = [];
+            req.on('data', (chunk) => chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk)));
+            req.on('end', () => {
+              try {
+                const raw = Buffer.concat(chunks).toString('utf8');
+                const payload = raw ? JSON.parse(raw) : {};
+                
+                repository.updateBankAccount(id, payload);
+                res.statusCode = 200;
+                res.setHeader('Content-Type', 'application/json');
+                res.end(JSON.stringify({ ...payload, id }));
+              } catch {
+                res.statusCode = 400;
+                res.setHeader('Content-Type', 'application/json');
+                res.end(JSON.stringify({ message: 'Invalid JSON payload.' }));
+              }
+            });
+            return;
+          }
+
+          if (req.method === 'DELETE') {
+            const pathSegments = requestUrl.pathname.split('/').filter(Boolean);
+            const id = requestUrl.searchParams.get('id') || pathSegments[0];
+            
+            if (!id) {
+              res.statusCode = 400;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify({ message: 'ID is required.' }));
+              return;
+            }
+            
+            repository.deleteBankAccount(id);
+            res.statusCode = 200;
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({ success: true }));
+            return;
+          }
+
+          res.statusCode = 405;
+          res.end();
+        } catch (error) {
+          console.error(error);
+          res.statusCode = 500;
+          res.end(JSON.stringify({ message: 'Internal Server Error' }));
+        }
+      });
+
+      server.middlewares.use('/api/payment_in_records', async (req, res) => {
+        try {
+          // @ts-expect-error Runtime-only Node module used in Vite middleware.
+          const repository = await import('./database/sqlite/repository.mjs');
+          
+          if (req.method === 'GET') {
+            const records = repository.getPaymentInRecords();
+            res.statusCode = 200;
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify(records));
+            return;
+          }
+          res.statusCode = 405;
+          res.end();
+        } catch (error) {
+          res.statusCode = 500;
+          res.end();
+        }
+      });
+
+      server.middlewares.use('/api/payment_out_records', async (req, res) => {
+        try {
+          // @ts-expect-error Runtime-only Node module used in Vite middleware.
+          const repository = await import('./database/sqlite/repository.mjs');
+          
+          if (req.method === 'GET') {
+            const records = repository.getPaymentOutRecordsReal();
+            res.statusCode = 200;
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify(records));
+            return;
+          }
+          res.statusCode = 405;
+          res.end();
+        } catch (error) {
+          res.statusCode = 500;
+          res.end();
+        }
+      });
+
       server.middlewares.use('/api/parties', async (req, res) => {
         try {
           // @ts-expect-error Runtime-only Node module used in Vite middleware.
@@ -221,11 +353,23 @@ function sqliteApiPlugin() {
                   phone: String(payload.phone ?? ''),
                   email: payload.email ? String(payload.email) : null,
                   address: payload.address ? String(payload.address) : null,
+                  shippingAddress: payload.shippingAddress ? String(payload.shippingAddress) : null,
                   balance: Number.isFinite(normalizedBalance) ? normalizedBalance : 0,
+                  creditLimit: payload.creditLimit ? Number(payload.creditLimit) : null,
                   type: payload.type ?? 'customer'
                 };
 
+                const isNew = !Number.isFinite(Number(payload.id));
+
                 repository.upsertParty(party);
+
+                if (isNew && Math.abs(party.balance) > 0) {
+                  repository.saveOpeningBalanceTransaction(
+                    party.name,
+                    party.balance,
+                    payload.asOfDate || new Date().toLocaleDateString('en-GB')
+                  );
+                }
                 res.statusCode = 201;
                 res.setHeader('Content-Type', 'application/json');
                 res.end(JSON.stringify(party));
@@ -727,6 +871,167 @@ function sqliteApiPlugin() {
             return;
           }
 
+          if (req.method === 'PUT') {
+            const idMatch = requestUrl.pathname.match(/^\/(\d+)$/);
+            if (!idMatch) {
+              res.statusCode = 400;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify({ message: 'Invalid ID.' }));
+              return;
+            }
+            const id = parseInt(idMatch[1], 10);
+
+            const chunks: Buffer[] = [];
+            req.on('data', (chunk) => chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk)));
+            req.on('end', () => {
+              try {
+                const raw = Buffer.concat(chunks).toString('utf8');
+                const payload = raw ? JSON.parse(raw) : {};
+
+                const baseUnit = String(payload.baseUnit ?? '').trim();
+                const secondaryUnit = String(payload.secondaryUnit ?? '').trim();
+                const conversionRate = Number(payload.conversionRate);
+
+                if (!baseUnit || !secondaryUnit || !Number.isFinite(conversionRate) || conversionRate <= 0) {
+                  res.statusCode = 400;
+                  res.setHeader('Content-Type', 'application/json');
+                  res.end(JSON.stringify({ message: 'Invalid input.' }));
+                  return;
+                }
+
+                const updated = repository.updateConversionRate(id, {
+                  baseUnit,
+                  secondaryUnit,
+                  conversionRate,
+                });
+
+                if (updated) {
+                  res.statusCode = 200;
+                  res.setHeader('Content-Type', 'application/json');
+                  res.end(
+                    JSON.stringify({
+                      id,
+                      base_unit: baseUnit,
+                      secondary_unit: secondaryUnit,
+                      conversion_rate: conversionRate,
+                    }),
+                  );
+                } else {
+                  res.statusCode = 404;
+                  res.setHeader('Content-Type', 'application/json');
+                  res.end(JSON.stringify({ message: 'Conversion rate not found.' }));
+                }
+              } catch {
+                res.statusCode = 400;
+                res.setHeader('Content-Type', 'application/json');
+                res.end(JSON.stringify({ message: 'Invalid JSON payload.' }));
+              }
+            });
+            return;
+          }
+
+          if (req.method === 'DELETE') {
+            const idMatch = requestUrl.pathname.match(/^\/(\d+)$/);
+            if (!idMatch) {
+              res.statusCode = 400;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify({ message: 'Invalid ID.' }));
+              return;
+            }
+            const id = parseInt(idMatch[1], 10);
+
+            const deleted = repository.deleteConversionRate(id);
+            if (deleted) {
+              res.statusCode = 204;
+              res.end();
+            } else {
+              res.statusCode = 404;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify({ message: 'Conversion rate not found.' }));
+            }
+            return;
+          }
+
+          res.statusCode = 405;
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify({ message: 'Method not allowed.' }));
+        } catch {
+          res.statusCode = 500;
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify({ message: 'Failed to process request.' }));
+        }
+      });
+
+      server.middlewares.use('/api/expense_categories', async (req, res) => {
+        try {
+          // @ts-expect-error Runtime-only Node module used in Vite middleware.
+          const repository = await import('./database/sqlite/repository.mjs');
+          const requestUrl = new URL(req.url ?? '/', 'http://localhost');
+
+          if (req.method === 'GET') {
+            const categories = repository.getExpenseCategories();
+            res.statusCode = 200;
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify(categories));
+            return;
+          }
+
+          if (req.method === 'POST') {
+            try {
+              const payload = await parseJsonBody(req);
+
+              if (!payload.name || !String(payload.name).trim()) {
+                res.statusCode = 400;
+                res.setHeader('Content-Type', 'application/json');
+                res.end(JSON.stringify({ message: 'Category name is required.' }));
+                return;
+              }
+
+              const category = {
+                id: payload.id ? String(payload.id) : Date.now().toString(),
+                name: String(payload.name).trim(),
+                amount: Number.isFinite(Number(payload.amount))
+                  ? Number(payload.amount)
+                  : 0,
+              };
+
+              const savedCategory = repository.upsertExpenseCategory(category);
+              res.statusCode = 201;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify(savedCategory ?? category));
+            } catch {
+              res.statusCode = 400;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify({ message: 'Invalid JSON payload.' }));
+            }
+            return;
+          }
+
+          if (req.method === 'DELETE') {
+            const pathId = requestUrl.pathname.split('/').filter(Boolean)[0];
+            const queryId = requestUrl.searchParams.get('id');
+            const id = (pathId || queryId || '').trim();
+
+            if (!id) {
+              res.statusCode = 400;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify({ message: 'Category id is required.' }));
+              return;
+            }
+
+            const deleted = repository.deleteExpenseCategory(id);
+            if (!deleted) {
+              res.statusCode = 404;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify({ message: 'Category not found.' }));
+              return;
+            }
+
+            res.statusCode = 204;
+            res.end();
+            return;
+          }
+
           res.statusCode = 405;
           res.setHeader('Content-Type', 'application/json');
           res.end(JSON.stringify({ message: 'Method not allowed.' }));
@@ -1068,6 +1373,25 @@ function sqliteApiPlugin() {
               };
 
               repository.addSaleInvoice(invoice);
+
+              try {
+                const allItems = repository.getItems();
+                for (const lineItem of lineItems) {
+                  if (!lineItem.itemId || !lineItem.quantity) continue;
+                  const dbItem = allItems.find((i: any) => i.id === lineItem.itemId);
+                  if (!dbItem) continue;
+                  
+                  const isSecondary = lineItem.unit === dbItem.secondary_unit;
+                  repository.deductItemStock(
+                    lineItem.itemId, 
+                    lineItem.quantity, 
+                    isSecondary,
+                    dbItem.conversion_rate
+                  );
+                }
+              } catch (stockError) {
+                console.error("Failed to deduct stock:", stockError);
+              }
 
               res.statusCode = 201;
               res.setHeader('Content-Type', 'application/json');
@@ -1530,7 +1854,105 @@ function sqliteApiPlugin() {
           res.end(JSON.stringify({ message: 'Failed to process request.' }));
         }
       });
+      server.middlewares.use('/api/cash_transactions', async (req, res) => {
+        try {
+          // @ts-expect-error Runtime-only Node module used in Vite middleware.
+          const repository = await import('./database/sqlite/repository.mjs');
+          const requestUrl = new URL(req.url ?? '/', 'http://localhost');
+
+          if (req.method === 'GET') {
+            const cashInHand = repository.getCashInHandTransactions();
+            const fromTransactions = repository.getCashTransactionsFromTransactions();
+            const merged = [...cashInHand, ...fromTransactions].sort((a, b) => {
+              const dateA = new Date(a.created_at).getTime();
+              const dateB = new Date(b.created_at).getTime();
+              return dateB - dateA; // Descending
+            });
+            res.statusCode = 200;
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify(merged));
+            return;
+          }
+
+          if (req.method === 'POST') {
+            const chunks: Buffer[] = [];
+            req.on('data', (chunk) => chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk)));
+            req.on('end', () => {
+              try {
+                const raw = Buffer.concat(chunks).toString('utf8');
+                const payload = raw ? JSON.parse(raw) : {};
+
+                if (!payload.name || !String(payload.name).trim()) {
+                  res.statusCode = 400;
+                  res.setHeader('Content-Type', 'application/json');
+                  res.end(JSON.stringify({ message: 'Name/description is required.' }));
+                  return;
+                }
+
+                if (!payload.amount || Number.isNaN(Number(payload.amount))) {
+                  res.statusCode = 400;
+                  res.setHeader('Content-Type', 'application/json');
+                  res.end(JSON.stringify({ message: 'Valid amount is required.' }));
+                  return;
+                }
+
+                const entry = {
+                  id: payload.id ? String(payload.id) : Date.now().toString(),
+                  date: String(payload.date || new Date().toLocaleDateString('en-GB')),
+                  name: String(payload.name).trim(),
+                  type: String(payload.type).trim(),
+                  amount: Number(payload.amount),
+                };
+
+                repository.addCashInHandTransaction(entry);
+                res.statusCode = 201;
+                res.setHeader('Content-Type', 'application/json');
+                res.end(JSON.stringify(entry));
+              } catch {
+                res.statusCode = 400;
+                res.setHeader('Content-Type', 'application/json');
+                res.end(JSON.stringify({ message: 'Invalid JSON payload.' }));
+              }
+            });
+            return;
+          }
+
+          if (req.method === 'DELETE') {
+            const pathId = requestUrl.pathname.split('/').filter(Boolean)[0];
+            const queryId = requestUrl.searchParams.get('id');
+            const id = (pathId || queryId || '').trim();
+
+            if (!id) {
+              res.statusCode = 400;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify({ message: 'Transaction id is required.' }));
+              return;
+            }
+
+            const deleted = repository.deleteCashInHandTransaction(id);
+            if (!deleted) {
+              res.statusCode = 404;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify({ message: 'Transaction not found or it is a system transaction.' }));
+              return;
+            }
+
+            res.statusCode = 204;
+            res.end();
+            return;
+          }
+
+          res.statusCode = 405;
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify({ message: 'Method not allowed.' }));
+        } catch {
+          res.statusCode = 500;
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify({ message: 'Failed to process request.' }));
+        }
+      });
     }
+
   };
 }
 

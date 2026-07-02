@@ -20,6 +20,24 @@ export function addConversionRate({ baseUnit, secondaryUnit, conversionRate }) {
   db.close();
   return result.lastInsertRowid;
 }
+
+export function updateConversionRate(id, { baseUnit, secondaryUnit, conversionRate }) {
+  const db = openDatabase();
+  const result = db.prepare(`
+    UPDATE conversion_rates 
+    SET base_unit = ?, secondary_unit = ?, conversion_rate = ?
+    WHERE id = ?
+  `).run(baseUnit, secondaryUnit, conversionRate, id);
+  db.close();
+  return result.changes > 0;
+}
+
+export function deleteConversionRate(id) {
+  const db = openDatabase();
+  const result = db.prepare('DELETE FROM conversion_rates WHERE id = ?').run(id);
+  db.close();
+  return result.changes > 0;
+}
 import { openDatabase } from './client.mjs';
 
 function syncCategoryItemCounts(db) {
@@ -52,22 +70,63 @@ export function getNextPartyId() {
 export function upsertParty(party) {
   const db = openDatabase();
   db.prepare(`
-    INSERT INTO parties (id, name, phone, email, address, balance, type, updated_at)
-    VALUES (@id, @name, @phone, @email, @address, @balance, @type, datetime('now'))
+    INSERT INTO parties (id, name, phone, email, address, shipping_address, balance, credit_limit, type, updated_at)
+    VALUES (@id, @name, @phone, @email, @address, @shipping_address, @balance, @credit_limit, @type, datetime('now'))
     ON CONFLICT(id) DO UPDATE SET
       name = excluded.name,
       phone = excluded.phone,
       email = excluded.email,
       address = excluded.address,
+      shipping_address = excluded.shipping_address,
       balance = excluded.balance,
+      credit_limit = excluded.credit_limit,
       type = excluded.type,
       updated_at = datetime('now')
   `).run({
     ...party,
     email: party.email ?? null,
-    address: party.address ?? null
+    address: party.address ?? null,
+    shipping_address: party.shippingAddress ?? null,
+    credit_limit: party.creditLimit ?? null
   });
   db.close();
+}
+
+export function saveOpeningBalanceTransaction(partyName, balance, date) {
+  const db = openDatabase();
+  const id = Date.now().toString();
+  if (balance > 0) {
+    // Receivable Opening Balance -> payment_out_records (per user request)
+    const nextNoRow = db.prepare('SELECT COALESCE(MAX(CAST(payment_no AS INTEGER)), 0) + 1 AS nextNo FROM payment_out_records').get();
+    const nextNo = String(Number(nextNoRow?.nextNo ?? 1));
+    db.prepare(`
+      INSERT INTO payment_out_records (id, payment_no, date, party_name, amount, payment_type, description, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, 'Receivable Opening Balance', 'OB', datetime('now'), datetime('now'))
+    `).run(id, nextNo, date, partyName, Math.abs(balance));
+  } else if (balance < 0) {
+    // Payable Opening Balance -> payment_in_records (per user request)
+    const nextNoRow = db.prepare('SELECT COALESCE(MAX(CAST(receipt_no AS INTEGER)), 0) + 1 AS nextNo FROM payment_in_records').get();
+    const nextNo = String(Number(nextNoRow?.nextNo ?? 1));
+    db.prepare(`
+      INSERT INTO payment_in_records (id, receipt_no, date, party_name, amount, payment_type, reference, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, 'Payable Opening Balance', 'OB', datetime('now'), datetime('now'))
+    `).run(id, nextNo, date, partyName, Math.abs(balance));
+  }
+  db.close();
+}
+
+export function getPaymentInRecords() {
+  const db = openDatabase();
+  const rows = db.prepare('SELECT * FROM payment_in_records ORDER BY created_at DESC, date DESC').all();
+  db.close();
+  return rows;
+}
+
+export function getPaymentOutRecordsReal() {
+  const db = openDatabase();
+  const rows = db.prepare('SELECT * FROM payment_out_records ORDER BY created_at DESC, date DESC').all();
+  db.close();
+  return rows;
 }
 
 export function deleteParty(id) {
@@ -84,6 +143,41 @@ export function getItems() {
   const rows = db.prepare('SELECT * FROM items ORDER BY name ASC').all();
   db.close();
   return rows;
+}
+
+export function deductItemStock(itemId, quantity, isSecondary, conversionRate) {
+  const db = openDatabase();
+  
+  let primaryQtyToDeduct = Number(quantity);
+  let secondaryQtyToDeduct = Number(quantity);
+  
+  const validConversion = Number.isFinite(Number(conversionRate)) && Number(conversionRate) > 0;
+
+  if (isSecondary) {
+    if (validConversion) {
+      primaryQtyToDeduct = Number(quantity) / Number(conversionRate);
+    }
+  } else {
+    if (validConversion) {
+      secondaryQtyToDeduct = Number(quantity) * Number(conversionRate);
+    }
+  }
+  
+  const stmt = db.prepare(`
+    UPDATE items 
+    SET 
+      stock_quantity = COALESCE(stock_quantity, 0) - @primaryQty,
+      secondary_stock = COALESCE(secondary_stock, 0) - @secondaryQty
+    WHERE id = @id
+  `);
+  
+  const result = stmt.run({ 
+    id: String(itemId), 
+    primaryQty: primaryQtyToDeduct,
+    secondaryQty: secondaryQtyToDeduct
+  });
+  db.close();
+  return result.changes > 0;
 }
 
 export function getSaleInvoices() {
@@ -730,6 +824,132 @@ export function deleteUnit(id) {
   const result = db
     .prepare('DELETE FROM units WHERE id = ?')
     .run(String(id));
+  db.close();
+  return result.changes > 0;
+}
+
+export function getCashInHandTransactions() {
+  const db = openDatabase();
+  const rows = db.prepare('SELECT * FROM cash_in_hand_transactions ORDER BY date DESC, created_at DESC').all();
+  db.close();
+  return rows;
+}
+
+export function getCashTransactionsFromTransactions() {
+  const db = openDatabase();
+  const rows = db.prepare(`
+    SELECT id, date, party_name AS name, type, amount, payment_type AS paymentType, created_at 
+    FROM transactions 
+    WHERE LOWER(payment_type) = 'cash' AND LOWER(type) NOT IN ('increase cash', 'decrease cash', 'adjustment-add', 'adjustment-reduce')
+    ORDER BY date DESC, created_at DESC
+  `).all();
+  db.close();
+  return rows;
+}
+
+export function addCashInHandTransaction(entry) {
+  const db = openDatabase();
+  const txId = entry.id || Date.now().toString();
+
+  db.prepare(`
+    INSERT INTO cash_in_hand_transactions (id, date, name, type, amount, created_at, updated_at)
+    VALUES (@id, @date, @name, @type, @amount, datetime('now'), datetime('now'))
+  `).run({
+    id: txId,
+    date: entry.date,
+    name: entry.name,
+    type: entry.type,
+    amount: Number(entry.amount)
+  });
+
+  db.prepare(`
+    INSERT INTO transactions (id, type, invoice_no, reference_no, date, party_name, amount, balance, payment_type, status, quantity, created_at, updated_at)
+    VALUES (@id, @type, NULL, NULL, @date, @partyName, @amount, 0, 'cash', 'Completed', NULL, datetime('now'), datetime('now'))
+  `).run({
+    id: txId,
+    type: entry.type,
+    date: entry.date,
+    partyName: entry.name,
+    amount: Number(entry.amount)
+  });
+
+  db.close();
+}
+
+export function deleteCashInHandTransaction(id) {
+  const db = openDatabase();
+  const txId = String(id);
+  const result = db
+    .prepare('DELETE FROM cash_in_hand_transactions WHERE id = ?')
+    .run(txId);
+  db.prepare('DELETE FROM transactions WHERE id = ?').run(txId);
+  db.close();
+  return result.changes > 0;
+}
+
+export function getBankAccounts() {
+  const db = openDatabase();
+  const rows = db.prepare('SELECT * FROM bank_accounts ORDER BY created_at DESC').all();
+  db.close();
+  return rows;
+}
+
+export function addBankAccount(account) {
+  const db = openDatabase();
+  const id = account.id || Date.now().toString();
+  db.prepare(`
+    INSERT INTO bank_accounts (id, name, account_number, bank_name, balance, type, swift_code, iban, account_holder_name, print_details, created_at, updated_at)
+    VALUES (@id, @name, @account_number, @bank_name, @balance, @type, @swift_code, @iban, @account_holder_name, @print_details, datetime('now'), datetime('now'))
+  `).run({
+    id,
+    name: account.name,
+    account_number: account.account_number || null,
+    bank_name: account.bank_name || null,
+    balance: Number(account.balance || 0),
+    type: account.type || 'bank',
+    swift_code: account.swift_code || null,
+    iban: account.iban || null,
+    account_holder_name: account.account_holder_name || null,
+    print_details: account.print_details ? 1 : 0
+  });
+  db.close();
+  return id;
+}
+
+export function updateBankAccount(id, account) {
+  const db = openDatabase();
+  const result = db.prepare(`
+    UPDATE bank_accounts
+    SET name = @name,
+        account_number = @account_number,
+        bank_name = @bank_name,
+        balance = @balance,
+        type = @type,
+        swift_code = @swift_code,
+        iban = @iban,
+        account_holder_name = @account_holder_name,
+        print_details = @print_details,
+        updated_at = datetime('now')
+    WHERE id = @id
+  `).run({
+    id: String(id),
+    name: account.name,
+    account_number: account.account_number || null,
+    bank_name: account.bank_name || null,
+    balance: Number(account.balance || 0),
+    type: account.type || 'bank',
+    swift_code: account.swift_code || null,
+    iban: account.iban || null,
+    account_holder_name: account.account_holder_name || null,
+    print_details: account.print_details ? 1 : 0
+  });
+  db.close();
+  return result.changes > 0;
+}
+
+export function deleteBankAccount(id) {
+  const db = openDatabase();
+  const result = db.prepare('DELETE FROM bank_accounts WHERE id = ?').run(String(id));
   db.close();
   return result.changes > 0;
 }

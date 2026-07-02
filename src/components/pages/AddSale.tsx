@@ -43,6 +43,9 @@ interface ItemOption {
   name: string;
   sale_price?: number;
   unit: string;
+  primary_unit?: string | null;
+  secondary_unit?: string | null;
+  conversion_rate?: number | null;
   batch_json?: string | null;
 }
 
@@ -394,12 +397,16 @@ export function AddSale({ onSave, onShare, onClose, initialInvoice }: AddSalePro
         ? row.size
         : sizeOptions[0] ?? "";
 
+      const nextUnit = matchedItem
+        ? matchedItem.primary_unit || matchedItem.unit || "NONE"
+        : row.unit;
+
       return {
         ...row,
         itemId,
         item: matchedItem?.name ?? "",
         size: nextSize,
-        unit: matchedItem?.unit ?? row.unit,
+        unit: nextUnit,
         pricePerUnit:
           matchedItem && Number.isFinite(Number(matchedItem.sale_price))
             ? String(Number(matchedItem.sale_price ?? 0))
@@ -583,9 +590,31 @@ export function AddSale({ onSave, onShare, onClose, initialInvoice }: AddSalePro
   };
 
   const updateRow = (rowId: number, field: keyof SaleRow, value: string) => {
-    let updatedRows = activeTab.rows.map((row) =>
-      row.id === rowId ? { ...row, [field]: value } : row
-    );
+    let updatedRows = activeTab.rows.map((row) => {
+      if (row.id !== rowId) return row;
+
+      const updatedRow = { ...row, [field]: value };
+
+      if (field === "unit" && updatedRow.itemId) {
+        const matchedItem = items.find((item) => item.id === updatedRow.itemId);
+        if (matchedItem && Number.isFinite(Number(matchedItem.sale_price))) {
+          const basePrice = Number(matchedItem.sale_price);
+          if (
+            value === matchedItem.secondary_unit &&
+            Number.isFinite(Number(matchedItem.conversion_rate)) &&
+            Number(matchedItem.conversion_rate) > 0
+          ) {
+            updatedRow.pricePerUnit = String(
+              basePrice / Number(matchedItem.conversion_rate)
+            );
+          } else {
+            updatedRow.pricePerUnit = String(basePrice);
+          }
+        }
+      }
+
+      return updatedRow;
+    });
 
     // Helper to check if a row is empty
     const isEmpty = (row: SaleRow) => !row.itemId && !row.item && !row.qty && !row.pricePerUnit;
@@ -958,14 +987,43 @@ export function AddSale({ onSave, onShare, onClose, initialInvoice }: AddSalePro
                     {/* UNIT */}
                     <td style={{ borderRight: "1px solid #e5e7eb", padding: "4px 8px" }}>
                       <div style={{ display: "flex", alignItems: "center" }}>
-                        <select
-                          style={{ flex: 1, border: "none", outline: "none", fontSize: 13, color: "#374151", background: "transparent", appearance: "none", cursor: "pointer" }}
-                          value={row.unit}
-                          onChange={(e) => updateRow(row.id, "unit", e.target.value)}
-                        >
-                          {unitOptions.map((u) => <option key={u} value={u}>{u}</option>)}
-                        </select>
-                        <span style={{ color: "#9ca3af", fontSize: 10, pointerEvents: "none" }}>▾</span>
+                        {(() => {
+                          const matchedItem = items.find((item) => item.id === row.itemId);
+                          let currentUnitOptions = ["NONE"];
+                          
+                          if (matchedItem) {
+                            currentUnitOptions = [];
+                            if (matchedItem.primary_unit) currentUnitOptions.push(matchedItem.primary_unit);
+                            else if (matchedItem.unit && matchedItem.unit !== "NONE") currentUnitOptions.push(matchedItem.unit);
+                            
+                            if (matchedItem.secondary_unit) currentUnitOptions.push(matchedItem.secondary_unit);
+                            
+                            if (currentUnitOptions.length === 0) currentUnitOptions = ["NONE"];
+                          }
+                          
+                          const isDisabled = !row.itemId;
+
+                          return (
+                            <select
+                              style={{ 
+                                flex: 1, 
+                                border: "none", 
+                                outline: "none", 
+                                fontSize: 13, 
+                                color: isDisabled ? "#9ca3af" : "#374151", 
+                                background: "transparent", 
+                                appearance: "none", 
+                                cursor: isDisabled ? "not-allowed" : "pointer" 
+                              }}
+                              value={row.unit}
+                              onChange={(e) => updateRow(row.id, "unit", e.target.value)}
+                              disabled={isDisabled}
+                            >
+                              {currentUnitOptions.map((u) => <option key={u} value={u}>{u}</option>)}
+                            </select>
+                          );
+                        })()}
+                        <span style={{ color: "#9ca3af", fontSize: 10, pointerEvents: "none" }}>▼</span>
                       </div>
                     </td>
                     {showSizeColumn ? (

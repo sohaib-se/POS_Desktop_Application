@@ -72,8 +72,6 @@ const menuItems: MenuItem[] = [
     children: [
       { id: "bank-accounts", label: "Bank Accounts" },
       { id: "cash-in-hand", label: "Cash In Hand" },
-      { id: "cheques", label: "Cheques" },
-      { id: "loan-accounts", label: "Loan Accounts" },
     ],
   },
   {

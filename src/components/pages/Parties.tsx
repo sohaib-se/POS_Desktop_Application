@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import {
   Search,
   Plus,
@@ -64,6 +64,22 @@ type TransactionApiRow = {
 function normalizeTransactionType(value: string | null | undefined): Transaction["type"] {
   const normalizedValue = String(value ?? "").toLowerCase();
 
+  if (normalizedValue.includes("payable opening balance")) {
+    return "Payable Opening Balance";
+  }
+
+  if (normalizedValue.includes("receivable opening balance")) {
+    return "Receivable Opening Balance";
+  }
+
+  if (normalizedValue.includes("payment-in")) {
+    return "Payment-In";
+  }
+
+  if (normalizedValue.includes("payment-out")) {
+    return "Payment-Out";
+  }
+
   if (normalizedValue.includes("purchase")) {
     return "Purchase";
   }
@@ -109,10 +125,10 @@ export function Parties() {
   const [partyContextMenu, setPartyContextMenu] =
     useState<PartyContextMenuState | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [transactionSearchTerm, setTransactionSearchTerm] = useState("");
+  const [showTransactionSearch, setShowTransactionSearch] = useState(false);
+  const [showShippingAddress, setShowShippingAddress] = useState(false);
   const [activeTab, setActiveTab] = useState<"address" | "credit">("address");
-  const [openingBalanceTransactions, setOpeningBalanceTransactions] = useState<
-    PartyTransactionRow[]
-  >([]);
   const [partyTransactionsFromApi, setPartyTransactionsFromApi] = useState<PartyTransactionRow[]>([]);
   const [partyForm, setPartyForm] = useState({
     name: "",
@@ -124,6 +140,7 @@ export function Parties() {
     asOfDate: new Date().toLocaleDateString("en-IN"),
     balanceType: "to-receive" as "to-pay" | "to-receive",
     creditLimit: "no-limit" as "no-limit" | "custom",
+    creditLimitAmount: "",
   });
 
   const resetPartyForm = () => {
@@ -137,6 +154,7 @@ export function Parties() {
       asOfDate: new Date().toLocaleDateString("en-IN"),
       balanceType: "to-receive",
       creditLimit: "no-limit",
+      creditLimitAmount: "",
     });
     setActiveTab("address");
   };
@@ -144,6 +162,7 @@ export function Parties() {
   const openAddPartyDialog = () => {
     setPartyBeingEdited(null);
     resetPartyForm();
+    setShowShippingAddress(false);
     setShowAddParty(true);
   };
 
@@ -154,90 +173,135 @@ export function Parties() {
       phoneNumber: party.phone,
       email: party.email ?? "",
       billingAddress: party.address ?? "",
-      shippingAddress: "",
+      shippingAddress: party.shippingAddress ?? "",
       openingBalance: Math.abs(party.balance).toString(),
       asOfDate: new Date().toLocaleDateString("en-IN"),
       balanceType: party.balance < 0 ? "to-pay" : "to-receive",
-      creditLimit: "no-limit",
+      creditLimit: party.creditLimit ? "custom" : "no-limit",
+      creditLimitAmount: party.creditLimit ? party.creditLimit.toString() : "",
     });
+    setShowShippingAddress(!!party.shippingAddress);
     setActiveTab("address");
     setShowAddParty(true);
   };
 
-  useEffect(() => {
-    const loadPartiesAndTransactions = async () => {
-      try {
-        const [partiesResponse, saleInvoicesResponse, purchaseBillsResponse] = await Promise.all([
-          fetch('/api/parties'),
-          fetch('/api/sale_invoices'),
-          fetch('/api/purchase_bills'),
-        ]);
+  const loadPartiesAndTransactions = useCallback(async () => {
+    try {
+      const [
+        partiesResponse,
+        saleInvoicesResponse,
+        purchaseBillsResponse,
+        paymentInResponse,
+        paymentOutResponse
+      ] = await Promise.all([
+        fetch('/api/parties'),
+        fetch('/api/sale_invoices'),
+        fetch('/api/purchase_bills'),
+        fetch('/api/payment_in_records'),
+        fetch('/api/payment_out_records'),
+      ]);
 
-        if (!partiesResponse.ok) {
-          throw new Error('Failed to load parties');
+      if (!partiesResponse.ok) {
+        throw new Error('Failed to load parties');
+      }
+
+      const dbParties = (await partiesResponse.json()) as Array<{
+        id: number;
+        name: string;
+        phone: string;
+        email?: string | null;
+        address?: string | null;
+        shipping_address?: string | null;
+        balance: number;
+        credit_limit?: number | null;
+        type: 'customer' | 'supplier' | 'both';
+      }>;
+
+      const saleTransactions = saleInvoicesResponse.ok
+        ? ((await saleInvoicesResponse.json()) as TransactionApiRow[]).map((row) => ({
+          ...normalizePartyTransaction({
+            ...row,
+            transaction_type: row.transaction_type ?? 'Sale',
+          }),
+        }))
+        : [];
+
+      const purchaseTransactions = purchaseBillsResponse.ok
+        ? ((await purchaseBillsResponse.json()) as TransactionApiRow[]).map((row) => ({
+          ...normalizePartyTransaction({
+            ...row,
+            transaction_type: row.transaction_type ?? 'Purchase',
+          }),
+        }))
+        : [];
+
+      const paymentInTransactions = paymentInResponse.ok
+        ? ((await paymentInResponse.json()) as any[]).map((row) => ({
+          ...normalizePartyTransaction({
+            ...row,
+            transaction_type: row.payment_type === 'Payable Opening Balance' || row.payment_type === 'Receivable Opening Balance' || row.payment_type === 'Opening Balance'
+              ? row.payment_type
+              : 'Payment-In',
+            invoice_no: row.receipt_no,
+            balance: 0,
+          }),
+        }))
+        : [];
+
+      const paymentOutTransactions = paymentOutResponse.ok
+        ? ((await paymentOutResponse.json()) as any[]).map((row) => ({
+          ...normalizePartyTransaction({
+            ...row,
+            transaction_type: row.payment_type === 'Receivable Opening Balance' || row.payment_type === 'Payable Opening Balance' || row.payment_type === 'Opening Balance'
+              ? row.payment_type
+              : 'Payment-Out',
+            invoice_no: row.payment_no,
+            balance: 0,
+          }),
+        }))
+        : [];
+
+      const normalizedParties: Party[] = dbParties.map((party) => ({
+        id: party.id,
+        name: party.name,
+        phone: party.phone,
+        email: party.email ?? undefined,
+        address: party.address ?? undefined,
+        shippingAddress: party.shipping_address ?? undefined,
+        balance: Number(party.balance ?? 0),
+        creditLimit: party.credit_limit ? Number(party.credit_limit) : undefined,
+        type: party.type,
+      }));
+
+      setParties(normalizedParties);
+      setPartyTransactionsFromApi([
+        ...saleTransactions,
+        ...purchaseTransactions,
+        ...paymentInTransactions,
+        ...paymentOutTransactions,
+      ]);
+      setSelectedParty((previousSelectedParty) => {
+        if (!normalizedParties.length) {
+          return null;
         }
 
-        const dbParties = (await partiesResponse.json()) as Array<{
-          id: number;
-          name: string;
-          phone: string;
-          email?: string | null;
-          address?: string | null;
-          balance: number;
-          type: 'customer' | 'supplier' | 'both';
-        }>;
+        if (!previousSelectedParty) {
+          return normalizedParties[0];
+        }
 
-        const saleTransactions = saleInvoicesResponse.ok
-          ? ((await saleInvoicesResponse.json()) as TransactionApiRow[]).map((row) => ({
-              ...normalizePartyTransaction({
-                ...row,
-                transaction_type: row.transaction_type ?? 'Sale',
-              }),
-            }))
-          : [];
-
-        const purchaseTransactions = purchaseBillsResponse.ok
-          ? ((await purchaseBillsResponse.json()) as TransactionApiRow[]).map((row) => ({
-              ...normalizePartyTransaction({
-                ...row,
-                transaction_type: row.transaction_type ?? 'Purchase',
-              }),
-            }))
-          : [];
-
-        const normalizedParties: Party[] = dbParties.map((party) => ({
-          id: party.id,
-          name: party.name,
-          phone: party.phone,
-          email: party.email ?? undefined,
-          address: party.address ?? undefined,
-          balance: Number(party.balance ?? 0),
-          type: party.type,
-        }));
-
-        setParties(normalizedParties);
-        setPartyTransactionsFromApi([...saleTransactions, ...purchaseTransactions]);
-        setSelectedParty((previousSelectedParty) => {
-          if (!normalizedParties.length) {
-            return null;
-          }
-
-          if (!previousSelectedParty) {
-            return normalizedParties[0];
-          }
-
-          return (
-            normalizedParties.find((party) => party.id === previousSelectedParty.id) ??
-            normalizedParties[0]
-          );
-        });
-      } catch (error) {
-        console.error(error);
-      }
-    };
-
-    loadPartiesAndTransactions();
+        return (
+          normalizedParties.find((party) => party.id === previousSelectedParty.id) ??
+          normalizedParties[0]
+        );
+      });
+    } catch (error) {
+      console.error(error);
+    }
   }, []);
+
+  useEffect(() => {
+    loadPartiesAndTransactions();
+  }, [loadPartiesAndTransactions]);
 
   useEffect(() => {
     if (!partyContextMenu) {
@@ -261,7 +325,7 @@ export function Parties() {
     p.name.toLowerCase().includes(searchTerm.toLowerCase()),
   );
 
-  const partyTransactions = [...partyTransactionsFromApi, ...openingBalanceTransactions].filter(
+  const partyTransactions = [...partyTransactionsFromApi].filter(
     (transaction) => {
       if (!selectedParty) {
         return false;
@@ -275,11 +339,118 @@ export function Parties() {
     },
   );
 
+  const filteredPartyTransactions = partyTransactions.filter((t) => {
+    if (!transactionSearchTerm) return true;
+    const term = transactionSearchTerm.toLowerCase();
+    return (
+      (t.invoiceNo && t.invoiceNo.toLowerCase().includes(term)) ||
+      (t.date && t.date.toLowerCase().includes(term)) ||
+      (t.type && t.type.toLowerCase().includes(term)) ||
+      (t.amount.toString().includes(term)) ||
+      (t.balance.toString().includes(term))
+    );
+  });
+
+  const handlePrintTransactions = () => {
+    if (!selectedParty) return;
+
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+    document.body.appendChild(iframe);
+
+    const html = `
+      <html>
+        <head>
+          <title>Transactions - ${selectedParty.name}</title>
+          <style>
+            body { font-family: sans-serif; padding: 20px; }
+            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+            th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+            th { background-color: #f2f2f2; }
+          </style>
+        </head>
+        <body>
+          <h2>Transactions - ${selectedParty.name}</h2>
+          <table>
+            <thead>
+              <tr>
+                <th>Type</th>
+                <th>Number</th>
+                <th>Date</th>
+                <th>Total</th>
+                <th>Balance</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${filteredPartyTransactions.map(t => `
+                <tr>
+                  <td>${t.type}</td>
+                  <td>${t.invoiceNo || ''}</td>
+                  <td>${t.date}</td>
+                  <td>Rs ${t.amount.toFixed(2)}</td>
+                  <td>Rs ${t.balance.toFixed(2)}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </body>
+      </html>
+    `;
+    const iframeDoc = iframe.contentWindow?.document;
+    if (iframeDoc) {
+      iframeDoc.open();
+      iframeDoc.write(html);
+      iframeDoc.close();
+
+      setTimeout(() => {
+        iframe.contentWindow?.focus();
+        iframe.contentWindow?.print();
+        setTimeout(() => {
+          document.body.removeChild(iframe);
+        }, 1000);
+      }, 250);
+    } else {
+      document.body.removeChild(iframe);
+    }
+  };
+
+  const handleExportExcel = () => {
+    if (!selectedParty) return;
+
+    const headers = ["Type", "Number", "Date", "Total", "Balance"];
+    const rows = filteredPartyTransactions.map(t => [
+      t.type,
+      t.invoiceNo || "",
+      t.date,
+      t.amount.toFixed(2),
+      t.balance.toFixed(2)
+    ]);
+
+    const csvContent = [
+      headers.join(","),
+      ...rows.map(row => row.join(","))
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", `${selectedParty.name}_transactions.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const selectedPartyBalanceLabel =
     selectedParty && selectedParty.balance > 0
-      ? "Amount to Pay"
+      ? "Amount to Receive"
       : selectedParty && selectedParty.balance < 0
-        ? "Amount to Receive"
+        ? "Amount to Pay"
         : "Balance Settled";
 
   const selectedPartyBalanceAmount = selectedParty
@@ -320,7 +491,10 @@ export function Parties() {
           phone: partyForm.phoneNumber,
           email: partyForm.email,
           address: partyForm.billingAddress,
+          shippingAddress: partyForm.shippingAddress,
           balance,
+          creditLimit: partyForm.creditLimit === 'custom' ? Number(partyForm.creditLimitAmount) : null,
+          asOfDate: partyForm.asOfDate,
           type: partyBeingEdited?.type ?? 'customer',
         }),
       });
@@ -335,7 +509,9 @@ export function Parties() {
         phone: string;
         email?: string | null;
         address?: string | null;
+        shippingAddress?: string | null;
         balance: number;
+        creditLimit?: number | null;
         type: 'customer' | 'supplier' | 'both';
       };
 
@@ -345,58 +521,28 @@ export function Parties() {
         phone: createdParty.phone,
         email: createdParty.email ?? undefined,
         address: createdParty.address ?? undefined,
+        shippingAddress: createdParty.shippingAddress ?? undefined,
         balance: Number(createdParty.balance ?? 0),
+        creditLimit: createdParty.creditLimit ? Number(createdParty.creditLimit) : undefined,
         type: createdParty.type,
       };
 
-      const openingBalanceTransactionId = `opening-balance-${normalizedParty.id}`;
-
-      setOpeningBalanceTransactions((previousTransactions) => {
-        const nextTransactions = previousTransactions.map((transaction) =>
-          transaction.id === openingBalanceTransactionId
-            ? {
-                ...transaction,
-                partyName: normalizedParty.name,
-              }
-            : transaction,
-        );
-
-        if (partyBeingEdited || Math.abs(balance) === 0) {
-          return nextTransactions;
-        }
-
-        return [
-          ...nextTransactions,
-          {
-            id: openingBalanceTransactionId,
-            type: balance < 0 ? 'Payment-Out' : 'Payment-In',
-            invoiceNo: 'OB',
-            date: partyForm.asOfDate,
-            partyName: normalizedParty.name,
-            partyId: normalizedParty.id,
-            amount: Math.abs(balance),
-            balance,
-            paymentType: 'Opening Balance',
-            status: 'Paid',
-          },
-        ];
-      });
-
-      setParties((previousParties) => {
-        const hasExistingParty = previousParties.some(
+      setParties((prev) => {
+        const hasExistingParty = prev.some(
           (party) => party.id === normalizedParty.id,
         );
 
         const nextParties = hasExistingParty
-          ? previousParties.map((party) =>
-              party.id === normalizedParty.id ? normalizedParty : party,
-            )
-          : [...previousParties, normalizedParty];
+          ? prev.map((party) =>
+            party.id === normalizedParty.id ? normalizedParty : party,
+          )
+          : [...prev, normalizedParty];
 
         return nextParties.sort((a, b) => a.name.localeCompare(b.name));
       });
 
       setSelectedParty(normalizedParty);
+      await loadPartiesAndTransactions();
       if (shouldResetForm) {
         resetPartyForm();
       }
@@ -449,12 +595,6 @@ export function Parties() {
 
         return nextParties;
       });
-
-      setOpeningBalanceTransactions((previousTransactions) =>
-        previousTransactions.filter(
-          (transaction) => transaction.partyId !== partyToDelete.id,
-        ),
-      );
     } catch (error) {
       console.error(error);
     } finally {
@@ -535,23 +675,21 @@ export function Parties() {
                         y: event.clientY,
                       });
                     }}
-                    className={`cursor-pointer border-b border-gray-100 ${
-                      selectedParty?.id === party.id
-                        ? "bg-blue-50 border-l-4 border-l-blue-500"
-                        : "hover:bg-gray-50"
-                    }`}
+                    className={`cursor-pointer border-b border-gray-100 ${selectedParty?.id === party.id
+                      ? "bg-blue-50 border-l-4 border-l-blue-500"
+                      : "hover:bg-gray-50"
+                      }`}
                   >
                     <td className="px-4 py-3">
                       <span className="text-gray-900">{party.name}</span>
                     </td>
                     <td
-                      className={`px-4 py-3 text-right font-medium ${
-                        party.balance > 0
+                      className={`px-4 py-3 text-right font-medium ${party.balance > 0
+                        ? "text-green-500"
+                        : party.balance < 0
                           ? "text-red-500"
-                          : party.balance < 0
-                            ? "text-green-500"
-                            : "text-gray-900"
-                      }`}
+                          : "text-gray-900"
+                        }`}
                     >
                       {party.balance.toFixed(2)}
                     </td>
@@ -611,10 +749,32 @@ export function Parties() {
                       />
                     </div>
                     <div className="flex gap-2 items-center">
-                      <button className="w-9 h-9 rounded-full bg-green-500 flex items-center justify-center hover:bg-green-600">
-                        <Phone className="w-4 h-4 text-white" />
+                      <button
+                        className="w-9 h-9 rounded-full bg-green-500 flex items-center justify-center hover:bg-green-600"
+                        onClick={() => {
+                          if (selectedParty?.phone) {
+                            const formattedPhone = selectedParty.phone.replace(/[^0-9+]/g, '');
+                            window.open(`https://wa.me/${formattedPhone}`, '_blank');
+                          }
+                        }}
+                      >
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          viewBox="0 0 24 24"
+                          fill="currentColor"
+                          className="w-4 h-4 text-white"
+                        >
+                          <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z" />
+                        </svg>
                       </button>
-                      <button className="w-9 h-9 rounded-full bg-orange-400 flex items-center justify-center hover:bg-orange-500">
+                      <button
+                        className="w-9 h-9 rounded-full bg-orange-400 flex items-center justify-center hover:bg-orange-500"
+                        onClick={() => {
+                          if (selectedParty?.email) {
+                            window.open(`https://mail.google.com/mail/?view=cm&fs=1&to=${selectedParty.email}`, '_blank');
+                          }
+                        }}
+                      >
                         <Mail className="w-4 h-4 text-white" />
                       </button>
                     </div>
@@ -644,13 +804,12 @@ export function Parties() {
                         {selectedPartyBalanceLabel}
                       </p>
                       <p
-                        className={`text-sm font-semibold ${
-                          selectedParty.balance > 0
+                        className={`text-sm font-semibold ${selectedParty.balance > 0
+                          ? "text-green-600"
+                          : selectedParty.balance < 0
                             ? "text-red-600"
-                            : selectedParty.balance < 0
-                              ? "text-green-600"
-                              : "text-gray-900"
-                        }`}
+                            : "text-gray-900"
+                          }`}
                       >
                         Rs {selectedPartyBalanceAmount}
                       </p>
@@ -662,17 +821,48 @@ export function Parties() {
               {/* Transactions */}
               <div className="flex-1 bg-white rounded-md flex flex-col overflow-hidden">
                 <div className="flex items-center justify-between px-5 py-3 border-b border-gray-200 shrink-0">
-                  <h3 className="text-base font-semibold text-gray-900">
-                    Transactions
-                  </h3>
+                  {showTransactionSearch ? (
+                    <div className="flex-1 flex items-center bg-gray-50 rounded px-3 py-1.5 mr-4 border border-gray-200">
+                      <Search className="w-4 h-4 text-gray-400 mr-2" />
+                      <input
+                        type="text"
+                        placeholder="Search transactions..."
+                        value={transactionSearchTerm}
+                        onChange={(e) => setTransactionSearchTerm(e.target.value)}
+                        onBlur={() => {
+                          setTimeout(() => {
+                            setShowTransactionSearch(false);
+                            setTransactionSearchTerm("");
+                          }, 150);
+                        }}
+                        className="flex-1 bg-transparent border-none outline-none text-sm"
+                        autoFocus
+                      />
+                    </div>
+                  ) : (
+                    <h3 className="text-base font-semibold text-gray-900">
+                      Transactions
+                    </h3>
+                  )}
                   <div className="flex gap-2 items-center">
-                    <button className="p-1.5 hover:bg-gray-100 rounded">
-                      <Search className="w-4 h-4 text-gray-500" />
-                    </button>
-                    <button className="p-1.5 hover:bg-gray-100 rounded">
+                    {!showTransactionSearch && (
+                      <button
+                        onClick={() => setShowTransactionSearch(true)}
+                        className="p-1.5 hover:bg-gray-100 rounded"
+                      >
+                        <Search className="w-4 h-4 text-gray-500" />
+                      </button>
+                    )}
+                    <button
+                      onClick={handlePrintTransactions}
+                      className="p-1.5 hover:bg-gray-100 rounded"
+                    >
                       <Printer className="w-4 h-4 text-gray-500" />
                     </button>
-                    <button className="p-1.5 hover:bg-gray-100 rounded relative">
+                    <button
+                      onClick={handleExportExcel}
+                      className="p-1.5 hover:bg-gray-100 rounded relative"
+                    >
                       <span className="bg-green-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
                         xls
                       </span>
@@ -718,21 +908,20 @@ export function Parties() {
                       </tr>
                     </thead>
                     <tbody>
-                      {partyTransactions.length > 0 ? (
-                        partyTransactions.map((t) => (
+                      {filteredPartyTransactions.length > 0 ? (
+                        filteredPartyTransactions.map((t) => (
                           <tr
                             key={t.id}
                             className="border-b border-gray-100 hover:bg-gray-50"
                           >
                             <td className="px-4 py-3">
                               <span
-                                className={`${
-                                  t.type === "Sale"
-                                    ? "text-green-600"
-                                    : t.type === "Purchase"
-                                      ? "text-red-600"
-                                      : "text-blue-600"
-                                }`}
+                                className={`${t.type === "Sale"
+                                  ? "text-green-600"
+                                  : t.type === "Purchase"
+                                    ? "text-red-600"
+                                    : "text-blue-600"
+                                  }`}
                               >
                                 {t.type}
                               </span>
@@ -829,21 +1018,19 @@ export function Parties() {
           <div className="flex border-b border-gray-200 mb-4">
             <button
               onClick={() => setActiveTab("address")}
-              className={`px-4 py-2 text-sm font-medium border-b-2 ${
-                activeTab === "address"
-                  ? "border-blue-500 text-gray-900"
-                  : "border-transparent text-gray-500 hover:text-gray-700"
-              }`}
+              className={`px-4 py-2 text-sm font-medium border-b-2 ${activeTab === "address"
+                ? "border-blue-500 text-gray-900"
+                : "border-transparent text-gray-500 hover:text-gray-700"
+                }`}
             >
               Address
             </button>
             <button
               onClick={() => setActiveTab("credit")}
-              className={`px-4 py-2 text-sm font-medium border-b-2 ${
-                activeTab === "credit"
-                  ? "border-blue-500 text-gray-900"
-                  : "border-transparent text-gray-500 hover:text-gray-700"
-              }`}
+              className={`px-4 py-2 text-sm font-medium border-b-2 ${activeTab === "credit"
+                ? "border-blue-500 text-gray-900"
+                : "border-transparent text-gray-500 hover:text-gray-700"
+                }`}
             >
               Credit & Balance
             </button>
@@ -884,9 +1071,32 @@ export function Parties() {
                 />
               </div>
               <div>
-                <button className="text-blue-500 text-sm font-medium hover:text-blue-600">
-                  + Enable Shipping Address
-                </button>
+                {!showShippingAddress ? (
+                  <button
+                    onClick={() => setShowShippingAddress(true)}
+                    className="text-blue-500 text-sm font-medium hover:text-blue-600"
+                  >
+                    + Enable Shipping Address
+                  </button>
+                ) : (
+                  <>
+                    <h3 className="text-sm font-medium text-gray-900 mb-3">
+                      Shipping Address
+                    </h3>
+                    <textarea
+                      value={partyForm.shippingAddress}
+                      onChange={(e) =>
+                        setPartyForm({
+                          ...partyForm,
+                          shippingAddress: e.target.value,
+                        })
+                      }
+                      placeholder="Shipping Address"
+                      rows={4}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#E53935]"
+                    />
+                  </>
+                )}
               </div>
             </div>
           )}
@@ -982,6 +1192,22 @@ export function Parties() {
                     <span className="text-sm text-gray-700">Custom Limit</span>
                   </label>
                 </div>
+                {partyForm.creditLimit === "custom" && (
+                  <div className="mt-3">
+                    <input
+                      type="number"
+                      value={partyForm.creditLimitAmount}
+                      onChange={(e) =>
+                        setPartyForm({
+                          ...partyForm,
+                          creditLimitAmount: e.target.value,
+                        })
+                      }
+                      placeholder="Enter amount"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#E53935]"
+                    />
+                  </div>
+                )}
               </div>
             </div>
           )}

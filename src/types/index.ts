@@ -6,7 +6,9 @@ export interface Party {
   phone: string;
   email?: string;
   address?: string;
+  shippingAddress?: string;
   balance: number;
+  creditLimit?: number;
   type: 'customer' | 'supplier' | 'both';
 }
 
@@ -28,7 +30,7 @@ export interface Transaction {
   partyId: string;
   quantity: ReactNode;
   id: string;
-  type: 'Sale' | 'Purchase' | 'Payment-In' | 'Payment-Out' | 'Estimate' | 'Credit Note' | 'Debit Note' | 'PoS Sale';
+  type: 'Sale' | 'Purchase' | 'Payment-In' | 'Payment-Out' | 'Estimate' | 'Credit Note' | 'Debit Note' | 'PoS Sale' | 'Payable Opening Balance' | 'Receivable Opening Balance';
   invoiceNo?: string;
   referenceNo?: string;
   date: string;
@@ -60,7 +62,7 @@ export interface BankAccount {
   accountNumber?: string;
   bankName?: string;
   balance: number;
-  type: 'bank' | 'cash' | 'loan';
+  type: 'bank' | 'cash';
 }
 
 export interface Category {
@@ -197,8 +199,6 @@ export type ViewType =
   | 'purchase-return'
   | 'bank-accounts'
   | 'cash-in-hand'
-  | 'cheques'
-  | 'loan-accounts'
   | 'reports'
   | 'sync-share'
   | 'sync-auto-backup'

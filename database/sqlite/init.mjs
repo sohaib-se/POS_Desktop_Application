@@ -169,6 +169,22 @@ function ensureExpenseRecordColumns(db) {
   addColumn('round_off_amount', 'REAL NOT NULL DEFAULT 0');
 }
 
+function ensureBankAccountColumns(db) {
+  const bankAccountColumns = db.prepare(`PRAGMA table_info(bank_accounts)`).all();
+  const existingColumnNames = new Set(bankAccountColumns.map((column) => column.name));
+
+  const addColumn = (columnName, definition) => {
+    if (!existingColumnNames.has(columnName)) {
+      db.exec(`ALTER TABLE bank_accounts ADD COLUMN ${columnName} ${definition}`);
+    }
+  };
+
+  addColumn('swift_code', 'TEXT');
+  addColumn('iban', 'TEXT');
+  addColumn('account_holder_name', 'TEXT');
+  addColumn('print_details', 'INTEGER NOT NULL DEFAULT 0');
+}
+
 function migratePaymentOutRecordsToExpenseRecords(db) {
   const tables = db.prepare("SELECT name FROM sqlite_master WHERE type = 'table'").all();
   const tableNames = new Set(tables.map((row) => row.name));
@@ -241,6 +257,7 @@ export function initDatabase() {
   ensurePaymentOutRecordColumns(db);
   ensureExpenseRecordColumns(db);
   migratePaymentOutRecordsToExpenseRecords(db);
+  ensureBankAccountColumns(db);
   db.close();
   return dbPath;
 }

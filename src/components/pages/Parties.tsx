@@ -821,30 +821,29 @@ export function Parties() {
               {/* Transactions */}
               <div className="flex-1 bg-white rounded-md flex flex-col overflow-hidden">
                 <div className="flex items-center justify-between px-5 py-3 border-b border-gray-200 shrink-0">
-                  {showTransactionSearch ? (
-                    <div className="flex-1 flex items-center bg-gray-50 rounded px-3 py-1.5 mr-4 border border-gray-200">
-                      <Search className="w-4 h-4 text-gray-400 mr-2" />
-                      <input
-                        type="text"
-                        placeholder="Search transactions..."
-                        value={transactionSearchTerm}
-                        onChange={(e) => setTransactionSearchTerm(e.target.value)}
-                        onBlur={() => {
-                          setTimeout(() => {
-                            setShowTransactionSearch(false);
-                            setTransactionSearchTerm("");
-                          }, 150);
-                        }}
-                        className="flex-1 bg-transparent border-none outline-none text-sm"
-                        autoFocus
-                      />
-                    </div>
-                  ) : (
-                    <h3 className="text-base font-semibold text-gray-900">
-                      Transactions
-                    </h3>
-                  )}
+                  <h3 className="text-base font-semibold text-gray-900">
+                    Transactions
+                  </h3>
                   <div className="flex gap-2 items-center">
+                    {showTransactionSearch && (
+                      <div className="flex items-center bg-gray-50 rounded px-3 py-1.5 border border-gray-200 w-64 mr-2">
+                        <Search className="w-4 h-4 text-gray-400 mr-2 shrink-0" />
+                        <input
+                          type="text"
+                          placeholder="Search transactions..."
+                          value={transactionSearchTerm}
+                          onChange={(e) => setTransactionSearchTerm(e.target.value)}
+                          onBlur={() => {
+                            setTimeout(() => {
+                              setShowTransactionSearch(false);
+                              setTransactionSearchTerm("");
+                            }, 150);
+                          }}
+                          className="w-full bg-transparent border-none outline-none text-sm"
+                          autoFocus
+                        />
+                      </div>
+                    )}
                     {!showTransactionSearch && (
                       <button
                         onClick={() => setShowTransactionSearch(true)}

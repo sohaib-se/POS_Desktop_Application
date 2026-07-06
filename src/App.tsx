@@ -76,12 +76,7 @@ function App() {
         return <Estimates />;
       case "payment-in":
         return <PaymentIn />;
-      case "sale-return":
-        return (
-          <div className="p-6 text-gray-500">
-            Sale Return / Credit Note - Coming Soon
-          </div>
-        );
+
       case "pos":
         return (
           <div className="p-6 text-gray-500">Vyapar POS - Coming Soon</div>
@@ -92,12 +87,7 @@ function App() {
         return <PaymentOut />;
       case "expenses":
         return <Expenses onAddExpense={() => handleViewChange("add-expense")} />;
-      case "purchase-return":
-        return (
-          <div className="p-6 text-gray-500">
-            Purchase Return / Dr. Note - Coming Soon
-          </div>
-        );
+
       case "bank-accounts":
         return <BankAccounts />;
       case "cash-in-hand":

@@ -122,11 +122,32 @@ export function getPaymentInRecords() {
   return rows;
 }
 
+export function deletePaymentInRecord(id) {
+  const db = openDatabase();
+  const result = db.prepare('DELETE FROM payment_in_records WHERE id = ?').run(String(id));
+  db.close();
+  return result.changes > 0;
+}
+
 export function getPaymentOutRecordsReal() {
   const db = openDatabase();
   const rows = db.prepare('SELECT * FROM payment_out_records ORDER BY created_at DESC, date DESC').all();
   db.close();
   return rows;
+}
+
+export function getEstimates() {
+  const db = openDatabase();
+  const rows = db.prepare('SELECT * FROM estimates ORDER BY created_at DESC, date DESC').all();
+  db.close();
+  return rows;
+}
+
+export function deleteEstimate(id) {
+  const db = openDatabase();
+  const result = db.prepare('DELETE FROM estimates WHERE id = ?').run(String(id));
+  db.close();
+  return result.changes > 0;
 }
 
 export function deleteParty(id) {
@@ -669,7 +690,10 @@ export function updatePaymentOutRecord(id, record) {
 }
 
 export function deletePaymentOutRecord(id) {
-  return deleteExpenseRecord(id);
+  const db = openDatabase();
+  const result = db.prepare('DELETE FROM payment_out_records WHERE id = ?').run(String(id));
+  db.close();
+  return result.changes > 0;
 }
 
 export function upsertItem(item) {

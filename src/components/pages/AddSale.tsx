@@ -47,6 +47,8 @@ interface ItemOption {
   secondary_unit?: string | null;
   conversion_rate?: number | null;
   batch_json?: string | null;
+  wholesale_price?: number;
+  min_stock?: number | null;
 }
 
 interface AddSaleProps {
@@ -401,16 +403,37 @@ export function AddSale({ onSave, onShare, onClose, initialInvoice }: AddSalePro
         ? matchedItem.primary_unit || matchedItem.unit || "NONE"
         : row.unit;
 
+      let nextPricePerUnit = row.pricePerUnit;
+      if (matchedItem && Number.isFinite(Number(matchedItem.sale_price))) {
+        const qty = Number(row.qty) || 0;
+        const isSecondary = nextUnit === matchedItem.secondary_unit;
+        const convRate = Number(matchedItem.conversion_rate) || 1;
+        const primaryQtyEquiv = isSecondary && convRate > 0 ? qty / convRate : qty;
+
+        let basePrice = Number(matchedItem.sale_price);
+
+        if (
+          Number.isFinite(Number(matchedItem.min_stock)) &&
+          Number(matchedItem.min_stock) > 0 &&
+          primaryQtyEquiv >= Number(matchedItem.min_stock)
+        ) {
+          basePrice = Number(matchedItem.wholesale_price || matchedItem.sale_price);
+        }
+
+        if (isSecondary && convRate > 0) {
+          nextPricePerUnit = String(basePrice / convRate);
+        } else {
+          nextPricePerUnit = String(basePrice);
+        }
+      }
+
       return {
         ...row,
         itemId,
         item: matchedItem?.name ?? "",
         size: nextSize,
         unit: nextUnit,
-        pricePerUnit:
-          matchedItem && Number.isFinite(Number(matchedItem.sale_price))
-            ? String(Number(matchedItem.sale_price ?? 0))
-            : row.pricePerUnit,
+        pricePerUnit: nextPricePerUnit,
       };
     });
 
@@ -595,18 +618,26 @@ export function AddSale({ onSave, onShare, onClose, initialInvoice }: AddSalePro
 
       const updatedRow = { ...row, [field]: value };
 
-      if (field === "unit" && updatedRow.itemId) {
+      if ((field === "unit" || field === "qty") && updatedRow.itemId) {
         const matchedItem = items.find((item) => item.id === updatedRow.itemId);
         if (matchedItem && Number.isFinite(Number(matchedItem.sale_price))) {
-          const basePrice = Number(matchedItem.sale_price);
+          const qty = Number(updatedRow.qty) || 0;
+          const isSecondary = updatedRow.unit === matchedItem.secondary_unit;
+          const convRate = Number(matchedItem.conversion_rate) || 1;
+          const primaryQtyEquiv = isSecondary && convRate > 0 ? qty / convRate : qty;
+
+          let basePrice = Number(matchedItem.sale_price);
+          
           if (
-            value === matchedItem.secondary_unit &&
-            Number.isFinite(Number(matchedItem.conversion_rate)) &&
-            Number(matchedItem.conversion_rate) > 0
+            Number.isFinite(Number(matchedItem.min_stock)) && 
+            Number(matchedItem.min_stock) > 0 &&
+            primaryQtyEquiv >= Number(matchedItem.min_stock)
           ) {
-            updatedRow.pricePerUnit = String(
-              basePrice / Number(matchedItem.conversion_rate)
-            );
+            basePrice = Number(matchedItem.wholesale_price || matchedItem.sale_price);
+          }
+
+          if (isSecondary && convRate > 0) {
+            updatedRow.pricePerUnit = String(basePrice / convRate);
           } else {
             updatedRow.pricePerUnit = String(basePrice);
           }

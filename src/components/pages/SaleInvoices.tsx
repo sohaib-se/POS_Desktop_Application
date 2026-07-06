@@ -210,7 +210,7 @@ function parseLineItems(lineItemsJson?: string | null) {
 }
 
 export function SaleInvoices({ onViewChange, onEditInvoice }: SaleInvoicesProps) {
-  const [invoiceRows, setInvoiceRows] = useState<SaleInvoiceViewRow[]>(fallbackSaleInvoices);
+  const [invoiceRows, setInvoiceRows] = useState<SaleInvoiceViewRow[]>([]);
   const [selectedMonthKey, setSelectedMonthKey] = useState<string>("");
   const [searchQuery, setSearchQuery] = useState("");
   const [showSearchInput, setShowSearchInput] = useState(false);
@@ -407,7 +407,7 @@ export function SaleInvoices({ onViewChange, onEditInvoice }: SaleInvoicesProps)
   };
 
   return (
-    <div className="h-full flex flex-col bg-[#D0DCE7] gap-1">
+    <div className="h-full flex flex-col bg-[#D0DCE7] gap-1 overflow-y-auto">
       <div className="p-4 bg-white flex items-center justify-between shrink-0 w-full">
         <div className="flex items-center gap-2">
           <h2 className="text-lg font-semibold text-gray-900">Sale Invoices</h2>
@@ -423,7 +423,7 @@ export function SaleInvoices({ onViewChange, onEditInvoice }: SaleInvoicesProps)
       </div>
 
       <div
-        className="p-4 bg-white rounded-md shadow-sm flex items-center gap-4"
+        className="p-4 bg-white rounded-md shadow-sm flex items-center gap-4 shrink-0"
         style={{ marginLeft: "4px", marginRight: "4px" }}
       >
         <div className="relative flex items-center gap-2">
@@ -478,30 +478,11 @@ export function SaleInvoices({ onViewChange, onEditInvoice }: SaleInvoicesProps)
           </button>
         </div>
 
-        {showSearchInput && (
-          <div className="flex items-center gap-2 ml-auto">
-            <input
-              ref={searchInputRef}
-              value={searchQuery}
-              onChange={(event) => setSearchQuery(event.target.value)}
-              placeholder="Search by party name"
-              className="w-72 px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:border-blue-500"
-            />
-            {searchQuery && (
-              <button
-                onClick={() => setSearchQuery("")}
-                className="p-2 rounded-lg hover:bg-gray-100"
-                title="Clear search"
-              >
-                <X className="w-4 h-4 text-gray-500" />
-              </button>
-            )}
-          </div>
-        )}
+
       </div>
 
       <div
-        className="p-4 bg-white rounded-md shadow-sm"
+        className="p-4 bg-white rounded-md shadow-sm shrink-0"
         style={{ marginLeft: "4px", marginRight: "4px" }}
       >
         <div className="max-w-sm bg-[#F6F0FB] rounded-xl p-4 border border-[#E8D7F6]">
@@ -523,44 +504,74 @@ export function SaleInvoices({ onViewChange, onEditInvoice }: SaleInvoicesProps)
       </div>
 
       <div
-        className="flex-1 bg-white rounded-md shadow-sm overflow-hidden"
-        style={{ marginLeft: "4px", marginRight: "4px" }}
+        className="bg-white rounded-md shadow-sm flex flex-col sticky top-0 z-10"
+        style={{ marginLeft: "4px", marginRight: "4px", height: "100%", flexShrink: 0 }}
       >
-        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
-          <h3 className="text-sm font-medium text-gray-700">Transactions</h3>
+        <div className="flex items-center justify-between px-6 pt-4 pb-2 border-b border-gray-200">
+          <h3 className="text-base font-bold text-[#222B45] tracking-wide">
+            TRANSACTIONS
+          </h3>
           <div className="flex gap-2 items-center">
+            {showSearchInput && (
+              <div className="flex items-center bg-[#F7F9FB] rounded-lg px-3 py-1.5 border border-[#E3EAF2] w-64 mr-2">
+                <Search className="w-4 h-4 text-gray-400 mr-2 shrink-0" />
+                <input
+                  ref={searchInputRef}
+                  type="text"
+                  placeholder="Search transactions..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onBlur={() => {
+                    setTimeout(() => {
+                      setShowSearchInput(false);
+                      setSearchQuery("");
+                    }, 150);
+                  }}
+                  className="w-full bg-transparent border-none outline-none text-sm"
+                  autoFocus
+                />
+              </div>
+            )}
+            {!showSearchInput && (
+              <button
+                onClick={(event) => {
+                  event.stopPropagation();
+                  setShowSearchInput(true);
+                  setIsMonthMenuOpen(false);
+                  setOpenRowMenuId(null);
+                  setOpenRowMenuPosition(null);
+                }}
+                className="p-1.5 hover:bg-[#F7F9FB] rounded"
+                title="Search"
+              >
+                <Search className="w-4 h-4 text-[#7B8A9A]" />
+              </button>
+            )}
             <button
-              onClick={(event) => {
-                event.stopPropagation();
-                setShowSearchInput((previous) => !previous);
-                setIsMonthMenuOpen(false);
-                setOpenRowMenuId(null);
-                setOpenRowMenuPosition(null);
-              }}
-              className="p-2 hover:bg-gray-50 rounded-lg"
-              title="Search"
+              onClick={() => window.print()}
+              className="p-1.5 hover:bg-[#F7F9FB] rounded"
+              title="Print"
             >
-              <Search className="w-4 h-4 text-gray-500" />
+              <Printer className="w-4 h-4 text-[#7B8A9A]" />
             </button>
             <button
               onClick={(event) => {
                 event.stopPropagation();
                 handleDownloadCsv();
               }}
-              className="p-2 hover:bg-gray-50 rounded-lg"
-              title="Download CSV"
+              className="p-1.5 hover:bg-[#F7F9FB] rounded relative"
+              title="Download Excel/CSV"
             >
-              <Download className="w-4 h-4 text-gray-500" />
-            </button>
-            <button className="p-2 hover:bg-gray-50 rounded-lg" title="Print">
-              <Printer className="w-4 h-4 text-gray-500" />
+              <span className="bg-green-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
+                xls
+              </span>
             </button>
           </div>
         </div>
 
-        <div className="overflow-auto">
+        <div className="overflow-auto flex-1">
           <table className="w-full text-sm">
-            <thead className="bg-gray-50">
+            <thead className="bg-gray-50 sticky top-0 z-10">
               <tr>
                 <th className="px-4 py-3 text-left font-medium text-gray-600">
                   Date

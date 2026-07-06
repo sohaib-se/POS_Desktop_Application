@@ -50,7 +50,7 @@ const menuItems: MenuItem[] = [
       { id: "sale-invoices", label: "Sale Invoices" },
       { id: "estimates", label: "Estimate/ Quotation" },
       { id: "payment-in", label: "Payment-In" },
-      { id: "sale-return", label: "Sale Return/ Credit Note" },
+
       { id: "pos", label: "Vyapar POS" },
     ],
   },
@@ -62,7 +62,7 @@ const menuItems: MenuItem[] = [
       { id: "purchase-bills", label: "Purchase Bills" },
       { id: "payment-out", label: "Payment-Out" },
       { id: "expenses", label: "Expenses" },
-      { id: "purchase-return", label: "Purchase Return/ Dr. Note" },
+
     ],
   },
   {

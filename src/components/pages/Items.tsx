@@ -515,7 +515,7 @@ export function Items() {
   const filteredConversions = conversionRates.filter(
     (conversion) => {
       const isBaseUnitMatch = conversion.base_unit.toLowerCase() ===
-        (selectedUnitInTab?.shortName ?? '').trim().toLowerCase();
+        (selectedUnitInTab?.fullName ?? '').trim().toLowerCase();
 
       if (!isBaseUnitMatch) {
         return false;
@@ -1304,9 +1304,40 @@ export function Items() {
     });
   };
 
-  const handleUnitSave = () => {
+  const handleUnitSave = async () => {
     if (baseUnitId) {
       setSelectedUnitId(baseUnitId);
+    }
+
+    const currentBaseUnit = units.find(u => u.id === baseUnitId);
+    const currentSecondaryUnit = units.find(u => u.id === secondaryUnitId);
+
+    if (currentBaseUnit && currentSecondaryUnit && conversionRate > 0) {
+      const existingConv = conversionRates.find(c =>
+        c.base_unit === currentBaseUnit.fullName &&
+        c.secondary_unit === currentSecondaryUnit.fullName &&
+        c.conversion_rate === conversionRate
+      );
+
+      if (!existingConv) {
+        try {
+          const res = await fetch('/api/conversion_rates', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              baseUnit: currentBaseUnit.fullName,
+              secondaryUnit: currentSecondaryUnit.fullName,
+              conversionRate: conversionRate,
+            }),
+          });
+          if (res.ok) {
+            const savedConversion = (await res.json()) as ConversionRateRecord;
+            setConversionRates(prev => [savedConversion, ...prev]);
+          }
+        } catch (error) {
+          console.error("Failed to save conversion rate globally", error);
+        }
+      }
     }
 
     setShowUnitSelector(false);
@@ -1670,7 +1701,7 @@ export function Items() {
     setSelectedUnitId(matchedPrimaryUnitId || matchedUnitId);
     setBaseUnitId(matchedPrimaryUnitId || matchedUnitId);
     setSecondaryUnitId(matchedSecondaryUnitId);
-    setConversionRate(0);
+    setConversionRate(item.conversionRate ?? 0);
     setAddItemImageDataUrl(null);
     setAddItemImageFileName('');
     setAddItemExistingImagePath(item.imgPath ?? null);
@@ -1813,6 +1844,7 @@ export function Items() {
         unit?: string | null;
         primaryUnit?: string | null;
         secondaryUnit?: string | null;
+        conversionRate?: number | null;
         imgPath?: string | null;
         minStock?: number | null;
         salePrice: number;
@@ -1821,6 +1853,7 @@ export function Items() {
         stockQuantity: number;
         stockValue: number;
         batchJson?: string | null;
+        secondaryStock?: number | null;
       };
 
       const createdItem: Item = {
@@ -1839,6 +1872,9 @@ export function Items() {
           (secondaryUnit
             ? `${secondaryUnit.fullName} (${secondaryUnit.shortName})`
             : null),
+        conversionRate:
+          createdItemPayload.conversionRate ??
+          (Number(conversionRate) || null),
         imgPath: createdItemPayload.imgPath ?? addItemExistingImagePath,
         batchJson: createdItemPayload.batchJson ?? batchJson,
         minStock:
@@ -1852,6 +1888,7 @@ export function Items() {
         purchasePrice: Number(createdItemPayload.purchasePrice ?? purchasePrice),
         stockQuantity: Number(createdItemPayload.stockQuantity ?? openingStock),
         stockValue: Number(createdItemPayload.stockValue ?? openingStockValue),
+        secondaryStock: createdItemPayload.secondaryStock ?? (Number(createdItemPayload.stockQuantity ?? openingStock) * (Number(conversionRate) || 0)),
       };
 
       setItemList((previousItems) => {
@@ -2173,30 +2210,29 @@ export function Items() {
                   <Card className="bg-white rounded-md flex flex-col flex-1 overflow-hidden shadow-sm p-0">
                     <CardContent className="p-0">
                       <div className="flex items-center justify-between px-6 pt-4 pb-2">
-                        {showTransactionSearch ? (
-                          <div className="flex-1 flex items-center bg-[#F7F9FB] rounded-lg px-3 py-1.5 mr-4 border border-[#E3EAF2]">
-                            <Search className="w-4 h-4 text-gray-400 mr-2" />
-                            <input
-                              type="text"
-                              placeholder="Search transactions..."
-                              value={transactionSearchTerm}
-                              onChange={(e) => setTransactionSearchTerm(e.target.value)}
-                              onBlur={() => {
-                                setTimeout(() => {
-                                  setShowTransactionSearch(false);
-                                  setTransactionSearchTerm("");
-                                }, 150);
-                              }}
-                              className="flex-1 bg-transparent border-none outline-none text-sm"
-                              autoFocus
-                            />
-                          </div>
-                        ) : (
-                          <h3 className="text-base font-bold text-[#222B45] tracking-wide">
-                            TRANSACTIONS
-                          </h3>
-                        )}
+                        <h3 className="text-base font-bold text-[#222B45] tracking-wide">
+                          TRANSACTIONS
+                        </h3>
                         <div className="flex gap-2 items-center">
+                          {showTransactionSearch && (
+                            <div className="flex items-center bg-[#F7F9FB] rounded-lg px-3 py-1.5 border border-[#E3EAF2] w-64 mr-2">
+                              <Search className="w-4 h-4 text-gray-400 mr-2 shrink-0" />
+                              <input
+                                type="text"
+                                placeholder="Search transactions..."
+                                value={transactionSearchTerm}
+                                onChange={(e) => setTransactionSearchTerm(e.target.value)}
+                                onBlur={() => {
+                                  setTimeout(() => {
+                                    setShowTransactionSearch(false);
+                                    setTransactionSearchTerm("");
+                                  }, 150);
+                                }}
+                                className="w-full bg-transparent border-none outline-none text-sm"
+                                autoFocus
+                              />
+                            </div>
+                          )}
                           {!showTransactionSearch && (
                             <button
                               onClick={() => setShowTransactionSearch(true)}

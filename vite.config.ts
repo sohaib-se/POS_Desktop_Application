@@ -277,11 +277,29 @@ function sqliteApiPlugin() {
           // @ts-expect-error Runtime-only Node module used in Vite middleware.
           const repository = await import('./database/sqlite/repository.mjs');
           
+          const requestUrl = new URL(req.url ?? '/', 'http://localhost');
+          
           if (req.method === 'GET') {
             const records = repository.getPaymentInRecords();
             res.statusCode = 200;
             res.setHeader('Content-Type', 'application/json');
             res.end(JSON.stringify(records));
+            return;
+          }
+
+          if (req.method === 'DELETE') {
+            const pathId = requestUrl.pathname.split('/').filter(Boolean)[0];
+            const queryId = requestUrl.searchParams.get('id');
+            const id = (pathId || queryId || '').trim();
+
+            if (id) {
+              repository.deletePaymentInRecord(id);
+              res.statusCode = 204;
+              res.end();
+            } else {
+              res.statusCode = 400;
+              res.end(JSON.stringify({ message: 'ID required' }));
+            }
             return;
           }
           res.statusCode = 405;
@@ -297,6 +315,8 @@ function sqliteApiPlugin() {
           // @ts-expect-error Runtime-only Node module used in Vite middleware.
           const repository = await import('./database/sqlite/repository.mjs');
           
+          const requestUrl = new URL(req.url ?? '/', 'http://localhost');
+          
           if (req.method === 'GET') {
             const records = repository.getPaymentOutRecordsReal();
             res.statusCode = 200;
@@ -304,6 +324,60 @@ function sqliteApiPlugin() {
             res.end(JSON.stringify(records));
             return;
           }
+
+          if (req.method === 'DELETE') {
+            const pathId = requestUrl.pathname.split('/').filter(Boolean)[0];
+            const queryId = requestUrl.searchParams.get('id');
+            const id = (pathId || queryId || '').trim();
+
+            if (id) {
+              repository.deletePaymentOutRecord(id);
+              res.statusCode = 204;
+              res.end();
+            } else {
+              res.statusCode = 400;
+              res.end(JSON.stringify({ message: 'ID required' }));
+            }
+            return;
+          }
+          res.statusCode = 405;
+          res.end();
+        } catch (error) {
+          res.statusCode = 500;
+          res.end();
+        }
+      });
+
+      server.middlewares.use('/api/estimates', async (req, res) => {
+        try {
+          // @ts-expect-error Runtime-only Node module used in Vite middleware.
+          const repository = await import('./database/sqlite/repository.mjs');
+          const requestUrl = new URL(req.url ?? '/', 'http://localhost');
+
+          if (req.method === 'GET') {
+            const records = repository.getEstimates();
+            res.statusCode = 200;
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify(records));
+            return;
+          }
+
+          if (req.method === 'DELETE') {
+            const pathId = requestUrl.pathname.split('/').filter(Boolean)[0];
+            const queryId = requestUrl.searchParams.get('id');
+            const id = (pathId || queryId || '').trim();
+
+            if (id) {
+              repository.deleteEstimate(id);
+              res.statusCode = 204;
+              res.end();
+            } else {
+              res.statusCode = 400;
+              res.end(JSON.stringify({ message: 'ID required' }));
+            }
+            return;
+          }
+
           res.statusCode = 405;
           res.end();
         } catch (error) {

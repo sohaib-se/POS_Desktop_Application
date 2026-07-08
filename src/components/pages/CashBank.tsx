@@ -186,7 +186,7 @@ function DetailsModal({ open, onClose, transaction }: { open: boolean, onClose: 
         </div>
         <div>
           <span className="block text-sm text-gray-500">Name / Description</span>
-          <span className="text-gray-900 font-medium">{transaction.name}</span>
+          <span className="text-gray-900 font-medium">{transaction.name.replace(' (Payment In)', '').replace(' (Payment Out)', '').replace(' (Received)', '')}</span>
         </div>
         <div>
           <span className="block text-sm text-gray-500">Type</span>
@@ -362,7 +362,7 @@ export function CashBank({ subView }: CashBankProps) {
 
         {/* Transactions */}
         <div className="flex-1 overflow-auto mx-1 mb-1">
-          <div className="bg-white rounded-md shadow-sm overflow-hidden h-full">
+          <div className="bg-white rounded-md shadow-sm min-h-full">
             <div className="px-6 py-3 border-b border-gray-100">
               <h3 className="text-sm font-semibold text-gray-800">
                 Transactions
@@ -398,7 +398,7 @@ export function CashBank({ subView }: CashBankProps) {
                       <td className="px-6 py-3 font-medium text-gray-800">
                         {tx.type}
                       </td>
-                      <td className="px-6 py-3 text-gray-700">{tx.name}</td>
+                      <td className="px-6 py-3 text-gray-700">{tx.name.replace(' (Payment In)', '').replace(' (Payment Out)', '').replace(' (Received)', '')}</td>
                       <td className="px-6 py-3 text-gray-600">{tx.date}</td>
                       <td
                         className={`px-6 py-3 font-medium ${isCashIn

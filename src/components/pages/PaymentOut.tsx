@@ -22,20 +22,48 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 
 export function PaymentOut() {
   const [showAddPayment, setShowAddPayment] = useState(false);
-  const [selectedParty, setSelectedParty] = useState("khan");
+  const [parties, setParties] = useState<any[]>([]);
+  const [selectedParty, setSelectedParty] = useState("");
+  const [bankAccounts, setBankAccounts] = useState<any[]>([]);
   const [records, setRecords] = useState<any[]>([]);
   const [viewingRecord, setViewingRecord] = useState<any>(null);
+
+  const [paymentType, setPaymentType] = useState("Cash");
+  const [amount, setAmount] = useState("");
+  const [paymentNo, setPaymentNo] = useState("1");
+  const [referenceNo, setReferenceNo] = useState("");
+  const [paymentDate, setPaymentDate] = useState(new Date().toLocaleDateString('en-GB'));
+  const [description, setDescription] = useState("");
+  const [showDescription, setShowDescription] = useState(false);
+  const [imageDataUrl, setImageDataUrl] = useState("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const [searchQuery, setSearchQuery] = useState("");
   const [showSearchInput, setShowSearchInput] = useState(false);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const [openRowMenuId, setOpenRowMenuId] = useState<string | null>(null);
   const [openRowMenuPosition, setOpenRowMenuPosition] = useState<{ left: number; top: number } | null>(null);
 
-  useEffect(() => {
+  const fetchData = () => {
     fetch('/api/payment_out_records')
       .then(res => res.json())
       .then(data => setRecords(data))
       .catch(err => console.error("Failed to fetch payment_out_records:", err));
+    fetch('/api/parties')
+      .then(res => res.json())
+      .then(data => {
+         setParties(data);
+         if (data.length > 0 && !selectedParty) setSelectedParty(String(data[0].id));
+      })
+      .catch(console.error);
+    fetch('/api/bank_accounts')
+      .then(res => res.json())
+      .then(data => setBankAccounts(data))
+      .catch(console.error);
+  };
+
+  useEffect(() => {
+    fetchData();
   }, []);
 
   useEffect(() => {
@@ -70,16 +98,56 @@ export function PaymentOut() {
 
   const totalAmount = records.reduce((sum, p) => sum + p.amount, 0);
   const totalPaid = totalAmount;
-  const totalOpen = 840;
+  const totalOpen = parties.reduce((sum, p) => sum + Number(p.balance || 0), 0);
 
-  const partyOptions = [
-    { value: "khan", label: "Khan", balance: 100 },
-    { value: "cash-sale", label: "Cash Sale", balance: 200 },
-    { value: "supplier-a", label: "Supplier A", balance: 340 },
-  ];
+  const partyOptions = parties.map(p => ({
+    value: String(p.id),
+    label: p.name,
+    balance: Number(p.balance || 0),
+  }));
 
   const selectedPartyBalance =
     partyOptions.find((party) => party.value === selectedParty)?.balance ?? 0;
+
+  const handleSave = async () => {
+    if (!amount || Number(amount) <= 0) {
+      alert("Please enter a valid amount.");
+      return;
+    }
+    const party = parties.find(p => String(p.id) === selectedParty);
+    const payload = {
+      paymentNo,
+      date: paymentDate,
+      partyId: selectedParty,
+      partyName: party ? party.name : "Cash Purchase",
+      amount: Number(amount),
+      paymentType,
+      reference: referenceNo,
+      description: showDescription ? description : "",
+      imageDataUrl: imageDataUrl || undefined,
+    };
+    try {
+      const response = await fetch('/api/payment_out_records', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (response.ok) {
+        setShowAddPayment(false);
+        setAmount("");
+        setReferenceNo("");
+        setDescription("");
+        setShowDescription(false);
+        setImageDataUrl("");
+        fetchData();
+      } else {
+        alert("Failed to save payment out record.");
+      }
+    } catch (error) {
+      console.error(error);
+      alert("Failed to save payment out record.");
+    }
+  };
 
   return (
     <div className="h-full flex flex-col bg-[#D0DCE7] gap-1 overflow-y-auto">
@@ -221,6 +289,9 @@ export function PaymentOut() {
                   Date
                 </th>
                 <th className="px-4 py-3 text-left font-medium text-gray-600">
+                  Ref. no.
+                </th>
+                <th className="px-4 py-3 text-left font-medium text-gray-600">
                   Party Name
                 </th>
                 <th className="px-4 py-3 text-right font-medium text-gray-600">
@@ -244,6 +315,7 @@ export function PaymentOut() {
                   className="border-b border-gray-100 hover:bg-gray-50"
                 >
                   <td className="px-4 py-3">{payment.date}</td>
+                  <td className="px-4 py-3">{payment.reference || ""}</td>
                   <td className="px-4 py-3">{payment.partyName}</td>
                   <td className="px-4 py-3 text-right">
                     Rs {payment.amount.toFixed(2)}
@@ -367,38 +439,75 @@ export function PaymentOut() {
                     <label className="absolute -top-2 left-3 bg-white px-1 text-[11px] font-medium text-slate-500 z-10">
                       Payment Type
                     </label>
-                    <select className="h-11 w-full rounded border border-slate-300 bg-white px-3 text-[14px] text-slate-900 outline-none focus:border-[#1976D2] appearance-none pr-8">
-                      <option>Cash</option>
-                      <option>Bank Transfer</option>
-                      <option>Cheque</option>
-                      <option>UPI</option>
+                    <select 
+                      value={paymentType}
+                      onChange={e => setPaymentType(e.target.value)}
+                      className="h-11 w-full rounded border border-slate-300 bg-white px-3 text-[14px] text-slate-900 outline-none focus:border-[#1976D2] appearance-none pr-8">
+                      <option value="Cash">Cash</option>
+                      {bankAccounts.map((b, i) => (
+                        <option key={i} value={b.name}>{b.name}</option>
+                      ))}
                     </select>
                     <ChevronDown className="absolute right-3 top-3.5 h-4 w-4 text-slate-400 pointer-events-none" />
                   </div>
 
-                  <button
-                    type="button"
-                    className="inline-flex w-fit items-center gap-1.5 text-[14px] font-medium text-[#1976D2]"
-                  >
-                    <Plus className="h-4 w-4" />
-                    Add Payment type
-                  </button>
+                  {/* Reference No - outlined floating label style */}
+                  <div className="relative w-full">
+                    <label className="absolute -top-2 left-3 bg-white px-1 text-[11px] font-medium text-slate-500 z-10">
+                      Reference No
+                    </label>
+                    <input
+                      type="text"
+                      value={referenceNo}
+                      onChange={e => setReferenceNo(e.target.value)}
+                      className="h-11 w-full rounded border border-slate-300 bg-white px-3 text-[14px] text-slate-900 outline-none focus:border-[#1976D2]"
+                    />
+                  </div>
 
-                  <button
-                    type="button"
-                    className="inline-flex w-fit items-center gap-2 rounded border border-slate-300 bg-white px-4 py-2.5 text-[13px] font-semibold uppercase tracking-wide text-slate-400 shadow-sm"
-                  >
-                    <FilePlus2 className="h-4 w-4" />
-                    Add Description
-                  </button>
+                  {!showDescription ? (
+                    <button
+                      type="button"
+                      onClick={() => setShowDescription(true)}
+                      className="inline-flex w-fit items-center gap-2 rounded border border-slate-300 bg-white px-4 py-2.5 text-[13px] font-semibold uppercase tracking-wide text-slate-400 shadow-sm"
+                    >
+                      <FilePlus2 className="h-4 w-4" />
+                      Add Description
+                    </button>
+                  ) : (
+                    <textarea 
+                      placeholder="Add description..." 
+                      value={description}
+                      onChange={e => setDescription(e.target.value)}
+                      className="w-full rounded border border-slate-300 bg-white p-3 text-[14px] text-slate-900 outline-none focus:border-[#1976D2]"
+                      rows={2}
+                    />
+                  )}
 
-                  <button
-                    type="button"
-                    className="flex h-8 w-8 items-center justify-center text-slate-400"
-                    aria-label="Add attachment"
-                  >
-                    <Camera className="h-5 w-5" />
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="flex h-8 w-8 items-center justify-center text-slate-400 border border-slate-300 rounded hover:bg-slate-50"
+                      aria-label="Add attachment"
+                    >
+                      <Camera className="h-5 w-5" />
+                    </button>
+                    <input 
+                      type="file" 
+                      accept="image/*" 
+                      ref={fileInputRef} 
+                      className="hidden" 
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          const reader = new FileReader();
+                          reader.onloadend = () => setImageDataUrl(reader.result as string);
+                          reader.readAsDataURL(file);
+                        }
+                      }} 
+                    />
+                    {imageDataUrl && <span className="text-[12px] text-slate-500">Image attached</span>}
+                  </div>
                 </div>
 
                 {/* Right column */}
@@ -413,7 +522,8 @@ export function PaymentOut() {
                       </label>
                       <input
                         type="text"
-                        defaultValue="5"
+                        value={paymentNo}
+                        onChange={e => setPaymentNo(e.target.value)}
                         className="h-8 w-full border-0 border-b border-slate-300 bg-transparent px-0 text-[14px] text-slate-900 outline-none focus:border-[#1976D2]"
                       />
                     </div>
@@ -424,7 +534,8 @@ export function PaymentOut() {
                       <div className="relative">
                         <input
                           type="text"
-                          defaultValue="21/02/2026"
+                          value={paymentDate}
+                          onChange={e => setPaymentDate(e.target.value)}
                           className="h-8 w-full border-0 border-b border-slate-300 bg-transparent px-0 pr-8 text-[14px] text-slate-900 outline-none focus:border-[#1976D2]"
                         />
                         <Calendar className="absolute right-0 top-1.5 h-4 w-4 text-slate-400" />
@@ -438,6 +549,8 @@ export function PaymentOut() {
                     </label>
                     <input
                       type="number"
+                      value={amount}
+                      onChange={e => setAmount(e.target.value)}
                       className="h-9 w-52 rounded border border-slate-300 bg-white px-3 text-[14px] text-slate-900 outline-none focus:border-[#1976D2]"
                     />
                   </div>
@@ -448,18 +561,7 @@ export function PaymentOut() {
             {/* Footer */}
             <div className="border-t border-slate-200 px-6 py-4">
               <div className="flex items-center justify-between">
-                <button
-                  type="button"
-                  className="flex items-center gap-3 text-[14px] text-slate-500"
-                >
-                  <span className="relative inline-flex h-5 w-9 items-center rounded-full bg-slate-300">
-                    <span className="h-4 w-4 translate-x-0.5 rounded-full bg-white shadow-sm transition-transform" />
-                  </span>
-                  <span className="font-medium text-[#5E6B84]">
-                    Enable Link Payments to Bills
-                  </span>
-                  <Info className="h-4 w-4 text-slate-400" />
-                </button>
+                <div />
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
@@ -475,6 +577,7 @@ export function PaymentOut() {
                   </button>
                   <button
                     type="button"
+                    onClick={handleSave}
                     className="h-9 rounded bg-[#1E88F7] px-8 text-[14px] font-semibold text-white shadow-[0_4px_12px_rgba(30,136,247,0.3)] hover:bg-[#1878dd]"
                   >
                     Save

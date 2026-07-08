@@ -720,7 +720,7 @@ function AccountDetail({ account, onDeposit }: AccountDetailProps) {
 
         {/* Table header */}
         <div className="grid grid-cols-4 px-6 py-2 border-b border-gray-100 text-xs text-gray-500 font-medium">
-          {["Type", "Name", "Date", "Amount"].map((col) => (
+          {["Payment Type", "Name", "Date", "Amount"].map((col) => (
             <div key={col} className="flex items-center gap-1">
               {col}
               <Filter className="w-3 h-3" />
@@ -736,12 +736,12 @@ function AccountDetail({ account, onDeposit }: AccountDetailProps) {
               }`}
           >
             <div className="font-medium text-gray-800">{tx.type}</div>
-            <div className="text-gray-700">{tx.name}</div>
+            <div className="text-gray-700">{tx.name.replace(' (Payment In)', '').replace(' (Payment Out)', '').replace(' (Received)', '')}</div>
             <div className="text-gray-600">{tx.date}</div>
             <div className="flex items-center justify-between">
-              <span className="text-green-600 font-medium">
+              <span className={`font-medium ${Number(tx.amount) < 0 ? 'text-[#E53935]' : 'text-green-600'}`}>
                 Rs{" "}
-                {tx.amount.toLocaleString("en-IN", {
+                {Math.abs(Number(tx.amount)).toLocaleString("en-IN", {
                   minimumFractionDigits: 2,
                 })}
               </span>
@@ -762,6 +762,7 @@ export function BankAccounts() {
   const [accounts, setAccounts] = useState<BankAccount[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [showAdd, setShowAdd] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   const [editingAccount, setEditingAccount] = useState<BankAccount | null>(null);
   const [contextMenu, setContextMenu] = useState<{ x: number, y: number, accountId: string } | null>(null);
@@ -774,7 +775,7 @@ export function BankAccounts() {
         ...a,
         bankName: a.bank_name,
         accountNumber: a.account_number,
-        transactions: [] // Dummy empty transactions for now
+        transactions: a.transactions || []
       }));
       setAccounts(mapped);
       if (mapped.length > 0) {
@@ -783,7 +784,7 @@ export function BankAccounts() {
     } catch (err) {
       console.error(err);
     } finally {
-      // setIsLoading(false);
+      setIsLoading(false);
     }
   };
 
@@ -814,18 +815,19 @@ export function BankAccounts() {
   return (
     <div className="h-full flex flex-col bg-[#D0DCE7] gap-1 p-1" onClick={() => setContextMenu(null)}>
       {/* Top bar */}
-      {!isEmpty && (
+      {(!isEmpty || isLoading) && (
         <div className="bg-white rounded-md shadow-sm px-6 py-3 flex items-center justify-between mx-1">
           <h1 className="text-base font-semibold text-gray-900">Banks</h1>
           <div className="flex items-center gap-2">
             <button
               onClick={() => setShowAdd(true)}
-              className="bg-[#E53935] hover:bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2"
+              disabled={isLoading}
+              className="bg-[#E53935] hover:bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 disabled:opacity-50"
             >
               <Plus className="w-4 h-4" />
               Add Bank
             </button>
-            <button className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg">
+            <button className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg disabled:opacity-50" disabled={isLoading}>
               <MoreVertical className="w-5 h-5" />
             </button>
           </div>
@@ -834,7 +836,11 @@ export function BankAccounts() {
 
       {/* Main content */}
       <div className="bg-white rounded-md shadow-sm flex-1 overflow-hidden mx-1 flex">
-        {isEmpty ? (
+        {isLoading ? (
+          <div className="flex-1 flex items-center justify-center">
+             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#E53935]"></div>
+          </div>
+        ) : isEmpty ? (
           <EmptyState onAdd={() => setShowAdd(true)} />
         ) : (
           <>

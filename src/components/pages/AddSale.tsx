@@ -28,6 +28,8 @@ interface SaleTab {
   imageFileName: string;
   documentDataUrl: string;
   documentFileName: string;
+  received: string;
+  receivedAll: boolean;
 }
 
 interface PartyOption {
@@ -88,6 +90,8 @@ function createDefaultTab(id: number): SaleTab {
     imageFileName: "",
     documentDataUrl: "",
     documentFileName: "",
+    received: "",
+    receivedAll: false,
   };
 }
 
@@ -260,17 +264,17 @@ export function AddSale({ onSave, onShare, onClose, initialInvoice }: AddSalePro
         phoneNo: initialInvoice.partyPhone ?? "",
         rows: parsedRows.length
           ? [
-              ...parsedRows.map((lineItem) => ({
-                id: globalRowId++,
-                itemId: lineItem.itemId ?? "",
-                item: lineItem.name ?? "",
-                size: lineItem.size ?? "",
-                qty: String(lineItem.quantity ?? ""),
-                unit: lineItem.unit ?? "NONE",
-                pricePerUnit: String(lineItem.price ?? ""),
-              })),
-              createEmptyRow(),
-            ]
+            ...parsedRows.map((lineItem) => ({
+              id: globalRowId++,
+              itemId: lineItem.itemId ?? "",
+              item: lineItem.name ?? "",
+              size: lineItem.size ?? "",
+              qty: String(lineItem.quantity ?? ""),
+              unit: lineItem.unit ?? "NONE",
+              pricePerUnit: String(lineItem.price ?? ""),
+            })),
+            createEmptyRow(),
+          ]
           : [createEmptyRow(), createEmptyRow()],
         discountPercent: String(initialInvoice.discountPercent ?? ""),
         discountRs: String(initialInvoice.discountAmount ?? ""),
@@ -282,6 +286,8 @@ export function AddSale({ onSave, onShare, onClose, initialInvoice }: AddSalePro
         imageFileName: "",
         documentDataUrl: "",
         documentFileName: "",
+        received: "",
+        receivedAll: false,
       },
     ]);
     setActiveTabId(1);
@@ -324,20 +330,7 @@ export function AddSale({ onSave, onShare, onClose, initialInvoice }: AddSalePro
         );
 
         setTabs((previousTabs) => {
-          if (!previousTabs.length || previousTabs[0].customerSearch) {
-            return previousTabs;
-          }
-
-          const defaultParty = sortedParties[0];
-          if (!defaultParty) {
-            return previousTabs;
-          }
-
-          return previousTabs.map((tab) => ({
-            ...tab,
-            customerSearch: String(defaultParty.id),
-            phoneNo: defaultParty.phone,
-          }));
+          return previousTabs;
         });
       } catch (error) {
         console.error(error);
@@ -500,9 +493,13 @@ export function AddSale({ onSave, onShare, onClose, initialInvoice }: AddSalePro
       return;
     }
 
-    const selectedParty = parties.find((party) => String(party.id) === activeTab.customerSearch) ?? parties[0];
-    if (!selectedParty) {
-      setSaveError("Add at least one party before saving the sale.");
+    const isCredit = activeTab.paymentMode === "credit";
+    const selectedParty = activeTab.customerSearch
+      ? parties.find((party) => String(party.id) === activeTab.customerSearch)
+      : null;
+
+    if (isCredit && !selectedParty) {
+      setSaveError("Please select a party for credit sale.");
       return;
     }
 
@@ -531,8 +528,8 @@ export function AddSale({ onSave, onShare, onClose, initialInvoice }: AddSalePro
         body: JSON.stringify({
           invoiceNo: isEditing ? initialInvoice?.invoiceNo : nextInvoiceNo,
           date: displayedInvoiceDate,
-          partyId: String(selectedParty.id),
-          partyName: selectedParty.name,
+          partyId: selectedParty ? String(selectedParty.id) : null,
+          partyName: selectedParty ? selectedParty.name : "Cash Sale",
           partyPhone: activeTab.phoneNo,
           paymentType: activeTab.paymentMode === "cash" ? "Cash" : "Credit",
           paymentMode: activeTab.paymentMode,
@@ -545,7 +542,7 @@ export function AddSale({ onSave, onShare, onClose, initialInvoice }: AddSalePro
           roundOff: activeTab.roundOff,
           roundOffAmount: roundOffAmountValue,
           amount: roundedValue,
-          balance: activeTab.paymentMode === "cash" ? 0 : roundedValue,
+          balance: activeTab.paymentMode === "cash" ? 0 : Math.max(0, computedBalance),
           description: activeTab.description,
           lineItems: validRows.map((row) => ({
             id: row.id,
@@ -627,9 +624,9 @@ export function AddSale({ onSave, onShare, onClose, initialInvoice }: AddSalePro
           const primaryQtyEquiv = isSecondary && convRate > 0 ? qty / convRate : qty;
 
           let basePrice = Number(matchedItem.sale_price);
-          
+
           if (
-            Number.isFinite(Number(matchedItem.min_stock)) && 
+            Number.isFinite(Number(matchedItem.min_stock)) &&
             Number(matchedItem.min_stock) > 0 &&
             primaryQtyEquiv >= Number(matchedItem.min_stock)
           ) {
@@ -691,6 +688,12 @@ export function AddSale({ onSave, onShare, onClose, initialInvoice }: AddSalePro
   const grandTotal = totalAmount + taxAmount - discountAmount;
   const roundedTotal = activeTab.roundOff ? Math.round(grandTotal) : grandTotal;
   const roundOffDiff = roundedTotal - grandTotal;
+
+  const receivedValue = activeTab.receivedAll ? roundedTotal : parseFloat(activeTab.received) || 0;
+  let computedBalance = 0;
+  if (activeTab.paymentMode === "credit") {
+    computedBalance = roundedTotal - receivedValue;
+  }
 
   const fmt = (n: number) => n.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -1021,30 +1024,30 @@ export function AddSale({ onSave, onShare, onClose, initialInvoice }: AddSalePro
                         {(() => {
                           const matchedItem = items.find((item) => item.id === row.itemId);
                           let currentUnitOptions = ["NONE"];
-                          
+
                           if (matchedItem) {
                             currentUnitOptions = [];
                             if (matchedItem.primary_unit) currentUnitOptions.push(matchedItem.primary_unit);
                             else if (matchedItem.unit && matchedItem.unit !== "NONE") currentUnitOptions.push(matchedItem.unit);
-                            
+
                             if (matchedItem.secondary_unit) currentUnitOptions.push(matchedItem.secondary_unit);
-                            
+
                             if (currentUnitOptions.length === 0) currentUnitOptions = ["NONE"];
                           }
-                          
+
                           const isDisabled = !row.itemId;
 
                           return (
                             <select
-                              style={{ 
-                                flex: 1, 
-                                border: "none", 
-                                outline: "none", 
-                                fontSize: 13, 
-                                color: isDisabled ? "#9ca3af" : "#374151", 
-                                background: "transparent", 
-                                appearance: "none", 
-                                cursor: isDisabled ? "not-allowed" : "pointer" 
+                              style={{
+                                flex: 1,
+                                border: "none",
+                                outline: "none",
+                                fontSize: 13,
+                                color: isDisabled ? "#9ca3af" : "#374151",
+                                background: "transparent",
+                                appearance: "none",
+                                cursor: isDisabled ? "not-allowed" : "pointer"
                               }}
                               value={row.unit}
                               onChange={(e) => updateRow(row.id, "unit", e.target.value)}
@@ -1216,11 +1219,47 @@ export function AddSale({ onSave, onShare, onClose, initialInvoice }: AddSalePro
               {/* Total */}
               <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 8 }}>
                 <span style={{ color: "#374151", fontWeight: 600, width: 68, textAlign: "right" }}>Total</span>
-                <input type="text" readOnly
-                  style={{ border: "1px solid #d1d5db", borderRadius: 4, padding: "5px 10px", width: 210, textAlign: "right", fontSize: 13, fontWeight: 600, color: "#1f2937", background: "#fff", outline: "none" }}
+                <input type="text" readOnly={activeTab.paymentMode === "cash"} disabled={activeTab.paymentMode === "cash"}
+                  style={{ border: "1px solid #d1d5db", borderRadius: 4, padding: "5px 10px", width: 210, textAlign: "right", fontSize: 13, fontWeight: 600, color: "#1f2937", background: activeTab.paymentMode === "cash" ? "#f9fafb" : "#fff", outline: "none" }}
                   value={roundedTotal > 0 ? fmt(roundedTotal) : ""}
                 />
               </div>
+
+              {/* Received & Balance (Credit Only) */}
+              {activeTab.paymentMode === "credit" && (
+                <>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 8 }}>
+                    <label style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer", marginRight: "auto" }}>
+                      <input type="checkbox" checked={activeTab.receivedAll}
+                        onChange={(e) => {
+                          const checked = e.target.checked;
+                          updateTab({ receivedAll: checked, received: checked ? String(roundedTotal) : activeTab.received });
+                        }}
+                        style={{ width: 15, height: 15, accentColor: "#3b82f6", cursor: "pointer" }}
+                      />
+                      <span style={{ color: "#6b7280" }}>Received All</span>
+                    </label>
+                    <span style={{ color: "#6b7280", width: 68, textAlign: "right" }}>Received</span>
+                    <input type="number"
+                      style={{ border: "1px solid #d1d5db", borderRadius: 4, padding: "5px 10px", width: 210, textAlign: "right", fontSize: 13, color: "#1f2937", background: "#fff", outline: "none" }}
+                      value={activeTab.received}
+                      onChange={(e) => {
+                        updateTab({ received: e.target.value, receivedAll: false });
+                      }}
+                    />
+                  </div>
+
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 8 }}>
+                    <span style={{ color: computedBalance < 0 ? "#b91c1c" : "#374151", fontWeight: 600, width: 120, textAlign: "right" }}>
+                      {computedBalance < 0 ? "Change To Return" : "Balance"}
+                    </span>
+                    <input type="text" readOnly
+                      style={{ border: "1px solid #e5e7eb", borderRadius: 4, padding: "5px 10px", width: 210, textAlign: "right", fontSize: 13, fontWeight: 600, color: computedBalance < 0 ? "#b91c1c" : "#1f2937", background: "#f9fafb" }}
+                      value={fmt(Math.abs(computedBalance))}
+                    />
+                  </div>
+                </>
+              )}
             </div>
           </div>
 

@@ -2081,7 +2081,7 @@ export function Items() {
                             : "text-[#43A047]"
                             }`}
                         >
-                          {item.stockQuantity}
+                          {Math.trunc(Number(item.stockQuantity || 0))}
                         </td>
                       </tr>
                     ))}

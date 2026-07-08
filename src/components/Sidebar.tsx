@@ -51,7 +51,7 @@ const menuItems: MenuItem[] = [
       { id: "estimates", label: "Estimate/ Quotation" },
       { id: "payment-in", label: "Payment-In" },
 
-      { id: "pos", label: "Vyapar POS" },
+      { id: "pos", label: "Laimsoft POS" },
     ],
   },
   {
@@ -62,7 +62,6 @@ const menuItems: MenuItem[] = [
       { id: "purchase-bills", label: "Purchase Bills" },
       { id: "payment-out", label: "Payment-Out" },
       { id: "expenses", label: "Expenses" },
-
     ],
   },
   {

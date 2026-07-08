@@ -188,9 +188,13 @@ function sqliteApiPlugin() {
 
           if (req.method === 'GET') {
             const accounts = repository.getBankAccounts();
+            const withTransactions = accounts.map((acc: any) => ({
+              ...acc,
+              transactions: repository.getBankAccountTransactions(acc.name)
+            }));
             res.statusCode = 200;
             res.setHeader('Content-Type', 'application/json');
-            res.end(JSON.stringify(accounts));
+            res.end(JSON.stringify(withTransactions));
             return;
           }
 
@@ -281,9 +285,86 @@ function sqliteApiPlugin() {
           
           if (req.method === 'GET') {
             const records = repository.getPaymentInRecords();
+            const mapped = records.map((r: any) => ({
+              ...r,
+              receiptNo: r.receipt_no,
+              partyName: r.party_name,
+              paymentType: r.payment_type
+            }));
             res.statusCode = 200;
             res.setHeader('Content-Type', 'application/json');
-            res.end(JSON.stringify(records));
+            res.end(JSON.stringify(mapped));
+            return;
+          }
+
+          if (req.method === 'POST') {
+            try {
+              const payload = await parseJsonBody(req);
+              let createdImagePath = null;
+              
+              if (payload.imageDataUrl) {
+                const imageFile = saveDataUrlToAppData({
+                  dataUrl: payload.imageDataUrl,
+                  prefix: 'payment_in_image',
+                  targetRoot: saleAttachmentsRoot,
+                });
+                createdImagePath = imageFile?.filePath ?? null;
+              }
+
+              const record = {
+                id: String(Date.now()),
+                receiptNo: payload.receiptNo ?? '',
+                date: payload.date ?? new Date().toLocaleDateString('en-GB'),
+                partyName: payload.partyName ?? 'Cash Sale',
+                partyId: payload.partyId ?? null,
+                amount: Number(payload.amount ?? 0),
+                paymentType: payload.paymentType ?? 'Cash',
+                reference: payload.reference ?? null,
+                description: payload.description ?? null,
+                attachmentImagePath: createdImagePath,
+                attachmentImageName: null,
+                attachmentDocumentPath: null,
+                attachmentDocumentName: null,
+              };
+              
+              repository.addPaymentInRecord(record);
+              
+              if (record.partyId) {
+                const allParties = repository.getParties();
+                const party = allParties.find((p: any) => String(p.id) === String(record.partyId));
+                if (party) {
+                   party.balance = Number(party.balance || 0) - Number(record.amount || 0);
+                   repository.upsertParty(party);
+                }
+              }
+              
+              if (String(record.paymentType).toLowerCase() === 'cash') {
+                repository.addCashInHandTransaction({
+                  id: 'cash_payment_in_' + record.id,
+                  date: record.date,
+                  name: record.partyName,
+                  type: 'Payment In',
+                  amount: record.amount
+                });
+              } else if (record.paymentType) {
+                repository.addBankAccountTransaction({
+                  id: 'bank_payment_in_' + record.id,
+                  date: record.date,
+                  name: record.partyName,
+                  type: 'Payment In',
+                  amount: record.amount,
+                  paymentType: record.paymentType
+                });
+              }
+
+              res.statusCode = 201;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify(record));
+            } catch (error) {
+              console.error('POST /api/payment_in_records error:', error);
+              res.statusCode = 400;
+              res.end(JSON.stringify({ message: 'Bad Request' }));
+            }
             return;
           }
 
@@ -319,9 +400,82 @@ function sqliteApiPlugin() {
           
           if (req.method === 'GET') {
             const records = repository.getPaymentOutRecordsReal();
+            const mapped = records.map((r: any) => ({
+              ...r,
+              paymentNo: r.payment_no,
+              partyName: r.party_name,
+              paymentType: r.payment_type
+            }));
             res.statusCode = 200;
             res.setHeader('Content-Type', 'application/json');
-            res.end(JSON.stringify(records));
+            res.end(JSON.stringify(mapped));
+            return;
+          }
+
+          if (req.method === 'POST') {
+            try {
+              const payload = await parseJsonBody(req);
+              let createdImagePath = null;
+              
+              if (payload.imageDataUrl) {
+                const imageFile = saveDataUrlToAppData({
+                  dataUrl: payload.imageDataUrl,
+                  prefix: 'payment_out_image',
+                  targetRoot: saleAttachmentsRoot,
+                });
+                createdImagePath = imageFile?.filePath ?? null;
+              }
+
+              const record = {
+                id: String(Date.now()),
+                paymentNo: payload.paymentNo ?? '',
+                date: payload.date ?? new Date().toLocaleDateString('en-GB'),
+                partyName: payload.partyName ?? 'Cash Purchase',
+                amount: Number(payload.amount ?? 0),
+                paymentType: payload.paymentType ?? 'Cash',
+                reference: payload.reference ?? null,
+                description: payload.description ?? null,
+                attachmentImagePath: createdImagePath,
+              };
+              
+              repository.addPaymentOutRecord(record);
+              
+              if (payload.partyId) {
+                const allParties = repository.getParties();
+                const party = allParties.find((p: any) => String(p.id) === String(payload.partyId));
+                if (party) {
+                   party.balance = Number(party.balance || 0) + Number(record.amount || 0);
+                   repository.upsertParty(party);
+                }
+              }
+              
+              if (String(record.paymentType).toLowerCase() === 'cash') {
+                repository.addCashInHandTransaction({
+                  id: 'cash_payment_out_' + record.id,
+                  date: record.date,
+                  name: record.partyName,
+                  type: 'Payment Out',
+                  amount: -record.amount
+                });
+              } else if (record.paymentType) {
+                repository.addBankAccountTransaction({
+                  id: 'bank_payment_out_' + record.id,
+                  date: record.date,
+                  name: record.partyName,
+                  type: 'Payment Out',
+                  amount: -record.amount,
+                  paymentType: record.paymentType
+                });
+              }
+
+              res.statusCode = 201;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify(record));
+            } catch (error) {
+              console.error('POST /api/payment_out_records error:', error);
+              res.statusCode = 400;
+              res.end(JSON.stringify({ message: 'Bad Request' }));
+            }
             return;
           }
 
@@ -1449,6 +1603,38 @@ function sqliteApiPlugin() {
               repository.addSaleInvoice(invoice);
 
               try {
+                if (String(invoice.paymentMode).toLowerCase() === 'cash') {
+                  repository.addCashInHandTransaction({
+                    id: 'cash_' + invoice.id,
+                    date: invoice.date,
+                    name: invoice.partyName || 'Cash Sale',
+                    type: 'POS Sale',
+                    amount: invoice.amount
+                  });
+                } else if (String(invoice.paymentMode).toLowerCase() === 'credit' && invoice.partyId) {
+                  const allParties = repository.getParties();
+                  const party = allParties.find((p: any) => String(p.id) === String(invoice.partyId));
+                  if (party) {
+                    party.balance = Number(party.balance || 0) + Number(invoice.balance || 0);
+                    repository.upsertParty(party);
+                  }
+                  
+                  const receivedAmount = Number(invoice.amount || 0) - Number(invoice.balance || 0);
+                  if (receivedAmount > 0) {
+                    repository.addCashInHandTransaction({
+                      id: 'cash_' + invoice.id + '_received',
+                      date: invoice.date,
+                      name: invoice.partyName,
+                      type: 'POS Sale',
+                      amount: receivedAmount
+                    });
+                  }
+                }
+              } catch (txError) {
+                console.error("Failed to update cash/credit balance:", txError);
+              }
+
+              try {
                 const allItems = repository.getItems();
                 for (const lineItem of lineItems) {
                   if (!lineItem.itemId || !lineItem.quantity) continue;
@@ -1937,7 +2123,10 @@ function sqliteApiPlugin() {
           if (req.method === 'GET') {
             const cashInHand = repository.getCashInHandTransactions();
             const fromTransactions = repository.getCashTransactionsFromTransactions();
-            const merged = [...cashInHand, ...fromTransactions].sort((a, b) => {
+            const allMerged = [...cashInHand, ...fromTransactions];
+            const uniqueMap = new Map();
+            allMerged.forEach(tx => uniqueMap.set(tx.id, tx));
+            const merged = Array.from(uniqueMap.values()).sort((a, b) => {
               const dateA = new Date(a.created_at).getTime();
               const dateB = new Date(b.created_at).getTime();
               return dateB - dateA; // Descending

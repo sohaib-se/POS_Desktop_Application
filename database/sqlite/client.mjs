@@ -114,6 +114,25 @@ function ensurePurchaseBillColumns(db) {
   addColumn('attachment_document_name', 'TEXT');
 }
 
+function ensurePaymentInRecordColumns(db) {
+  const rows = db.prepare('PRAGMA table_info(payment_in_records)').all();
+  const existingColumns = new Set(rows.map((row) => row.name));
+
+  const addColumn = (columnName, definition) => {
+    if (!existingColumns.has(columnName)) {
+      db.exec(`ALTER TABLE payment_in_records ADD COLUMN ${columnName} ${definition}`);
+    }
+  };
+
+  addColumn('party_id', 'TEXT');
+  addColumn('reference', 'TEXT');
+  addColumn('description', 'TEXT');
+  addColumn('attachment_image_path', 'TEXT');
+  addColumn('attachment_image_name', 'TEXT');
+  addColumn('attachment_document_path', 'TEXT');
+  addColumn('attachment_document_name', 'TEXT');
+}
+
 function ensurePaymentOutRecordColumns(db) {
   const rows = db.prepare('PRAGMA table_info(payment_out_records)').all();
   const existingColumns = new Set(rows.map((row) => row.name));
@@ -125,6 +144,8 @@ function ensurePaymentOutRecordColumns(db) {
   };
 
   addColumn('payment_no', 'TEXT');
+  addColumn('party_id', 'TEXT');
+  addColumn('reference', 'TEXT');
   addColumn('expense_category_id', 'TEXT');
   addColumn('expense_category_name', 'TEXT');
   addColumn('description', 'TEXT');
@@ -404,12 +425,29 @@ export function openDatabase() {
   ensureItemsTableColumns(db);
   ensureSaleInvoiceColumns(db);
   ensurePurchaseBillColumns(db);
+  ensurePaymentInRecordColumns(db);
   ensurePaymentOutRecordColumns(db);
   ensureExpenseRecordColumns(db);
   migratePaymentOutRecordsToExpenseRecords(db);
   ensureUnitsAndConversionRatesTables(db);
   ensureBankAccountColumns(db);
+  ensureBankAccountTransactionsTable(db);
   return db;
+}
+
+function ensureBankAccountTransactionsTable(db) {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS bank_account_transactions (
+      id TEXT PRIMARY KEY,
+      bank_account_name TEXT NOT NULL,
+      date TEXT NOT NULL,
+      name TEXT NOT NULL,
+      type TEXT NOT NULL,
+      amount REAL NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    )
+  `);
 }
 
 export { dbPath };

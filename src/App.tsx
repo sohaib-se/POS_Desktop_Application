@@ -20,14 +20,20 @@ import { SettingsPage } from "@/components/pages/Settings";
 import { Utilities } from "@/components/pages/Utilities";
 import { SyncShare } from "@/components/pages/SyncShare";
 import { EditProfile } from "@/components/pages/EditProfile";
+import { LaimsoftPos } from "@/components/pages/LaimsoftPos";
 import type { SaleInvoiceEditData, ViewType } from "@/types";
 
 function App() {
   const [currentView, setCurrentView] = useState<ViewType>("home");
   const [lastStandardView, setLastStandardView] = useState<ViewType>("home");
-  const [editingSaleInvoice, setEditingSaleInvoice] = useState<SaleInvoiceEditData | null>(null);
+  const [editingSaleInvoice, setEditingSaleInvoice] =
+    useState<SaleInvoiceEditData | null>(null);
 
-  const isOverlayView = (view: ViewType) => view === "add-sale" || view === "add-expense" || view === "settings";
+  const isOverlayView = (view: ViewType) =>
+    view === "add-sale" ||
+    view === "add-expense" ||
+    view === "settings" ||
+    view === "pos";
 
   const handleViewChange = (view: ViewType) => {
     if (!isOverlayView(view)) {
@@ -59,8 +65,13 @@ function App() {
     setCurrentView(lastStandardView);
   };
 
-  const activeBaseView =
-    isOverlayView(currentView) ? lastStandardView : currentView;
+  const handleClosePos = () => {
+    setCurrentView(lastStandardView);
+  };
+
+  const activeBaseView = isOverlayView(currentView)
+    ? lastStandardView
+    : currentView;
 
   const renderContent = (view: ViewType) => {
     switch (view) {
@@ -71,22 +82,24 @@ function App() {
       case "items":
         return <Items />;
       case "sale-invoices":
-        return <SaleInvoices onViewChange={handleViewChange} onEditInvoice={handleEditSaleInvoice} />;
+        return (
+          <SaleInvoices
+            onViewChange={handleViewChange}
+            onEditInvoice={handleEditSaleInvoice}
+          />
+        );
       case "estimates":
         return <Estimates />;
       case "payment-in":
         return <PaymentIn />;
-
-      case "pos":
-        return (
-          <div className="p-6 text-gray-500">Vyapar POS - Coming Soon</div>
-        );
       case "purchase-bills":
         return <PurchaseBills />;
       case "payment-out":
         return <PaymentOut />;
       case "expenses":
-        return <Expenses onAddExpense={() => handleViewChange("add-expense")} />;
+        return (
+          <Expenses onAddExpense={() => handleViewChange("add-expense")} />
+        );
 
       case "bank-accounts":
         return <BankAccounts />;
@@ -143,13 +156,18 @@ function App() {
           <Header onViewChange={handleViewChange} />
 
           {/* Content Area */}
-          <div className="flex-1 overflow-hidden">{renderContent(activeBaseView)}</div>
+          <div className="flex-1 overflow-hidden">
+            {renderContent(activeBaseView)}
+          </div>
         </div>
       </div>
 
       {currentView === "add-sale" && (
         <div className="fixed inset-0 z-[100]">
-          <AddSale onClose={handleCloseAddSale} initialInvoice={editingSaleInvoice} />
+          <AddSale
+            onClose={handleCloseAddSale}
+            initialInvoice={editingSaleInvoice}
+          />
         </div>
       )}
 
@@ -162,6 +180,12 @@ function App() {
       {currentView === "settings" && (
         <div className="fixed inset-0 z-[110]">
           <SettingsPage onClose={handleCloseSettings} />
+        </div>
+      )}
+
+      {currentView === "pos" && (
+        <div className="fixed inset-0 z-[120]">
+          <LaimsoftPos onClose={handleClosePos} />
         </div>
       )}
     </>

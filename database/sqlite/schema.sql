@@ -147,6 +147,7 @@ CREATE TABLE IF NOT EXISTS payment_out_records (
   expense_category_name TEXT,
   amount REAL NOT NULL,
   payment_type TEXT NOT NULL,
+  reference TEXT,
   description TEXT,
   line_items_json TEXT,
   attachment_image_path TEXT,
@@ -210,6 +211,17 @@ CREATE TABLE IF NOT EXISTS bank_accounts (
 
 CREATE TABLE IF NOT EXISTS cash_in_hand_transactions (
   id TEXT PRIMARY KEY,
+  date TEXT NOT NULL,
+  name TEXT NOT NULL,
+  type TEXT NOT NULL,
+  amount REAL NOT NULL,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS bank_account_transactions (
+  id TEXT PRIMARY KEY,
+  bank_account_name TEXT NOT NULL,
   date TEXT NOT NULL,
   name TEXT NOT NULL,
   type TEXT NOT NULL,

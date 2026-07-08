@@ -122,6 +122,28 @@ export function getPaymentInRecords() {
   return rows;
 }
 
+export function addPaymentInRecord(record) {
+  const db = openDatabase();
+  db.prepare(`
+    INSERT INTO payment_in_records (
+      id, receipt_no, date, party_name, party_id, amount, payment_type, reference, description, attachment_image_path, attachment_image_name, attachment_document_path, attachment_document_name, created_at, updated_at
+    ) VALUES (
+      @id, @receiptNo, @date, @partyName, @partyId, @amount, @paymentType, @reference, @description, @attachmentImagePath, @attachmentImageName, @attachmentDocumentPath, @attachmentDocumentName, datetime('now'), datetime('now')
+    )
+  `).run({
+    ...record,
+    partyId: record.partyId ?? null,
+    receiptNo: record.receiptNo ?? null,
+    reference: record.reference ?? null,
+    description: record.description ?? null,
+    attachmentImagePath: record.attachmentImagePath ?? null,
+    attachmentImageName: record.attachmentImageName ?? null,
+    attachmentDocumentPath: record.attachmentDocumentPath ?? null,
+    attachmentDocumentName: record.attachmentDocumentName ?? null,
+  });
+  db.close();
+}
+
 export function deletePaymentInRecord(id) {
   const db = openDatabase();
   const result = db.prepare('DELETE FROM payment_in_records WHERE id = ?').run(String(id));
@@ -134,6 +156,28 @@ export function getPaymentOutRecordsReal() {
   const rows = db.prepare('SELECT * FROM payment_out_records ORDER BY created_at DESC, date DESC').all();
   db.close();
   return rows;
+}
+
+export function addPaymentOutRecord(record) {
+  const db = openDatabase();
+  db.prepare(`
+    INSERT INTO payment_out_records (
+      id, payment_no, date, party_name, party_id, amount, payment_type, reference, description, attachment_image_path, attachment_image_name, attachment_document_path, attachment_document_name, created_at, updated_at
+    ) VALUES (
+      @id, @paymentNo, @date, @partyName, @partyId, @amount, @paymentType, @reference, @description, @attachmentImagePath, @attachmentImageName, @attachmentDocumentPath, @attachmentDocumentName, datetime('now'), datetime('now')
+    )
+  `).run({
+    ...record,
+    partyId: record.partyId ?? null,
+    paymentNo: record.paymentNo ?? null,
+    reference: record.reference ?? null,
+    description: record.description ?? null,
+    attachmentImagePath: record.attachmentImagePath ?? null,
+    attachmentImageName: record.attachmentImageName ?? null,
+    attachmentDocumentPath: record.attachmentDocumentPath ?? null,
+    attachmentDocumentName: record.attachmentDocumentName ?? null,
+  });
+  db.close();
 }
 
 export function getEstimates() {
@@ -681,10 +725,6 @@ export function getNextPaymentOutNo() {
   return getNextExpenseNo();
 }
 
-export function addPaymentOutRecord(record) {
-  return addExpenseRecord(record);
-}
-
 export function updatePaymentOutRecord(id, record) {
   return updateExpenseRecord(id, record);
 }
@@ -976,4 +1016,54 @@ export function deleteBankAccount(id) {
   const result = db.prepare('DELETE FROM bank_accounts WHERE id = ?').run(String(id));
   db.close();
   return result.changes > 0;
+}
+
+export function addBankAccountTransaction(entry) {
+  const db = openDatabase();
+  const txId = entry.id || Date.now().toString();
+
+  db.prepare(`
+    INSERT INTO bank_account_transactions (id, bank_account_name, date, name, type, amount, created_at, updated_at)
+    VALUES (@id, @paymentType, @date, @name, @type, @amount, datetime('now'), datetime('now'))
+  `).run({
+    id: txId,
+    paymentType: entry.paymentType,
+    date: entry.date,
+    name: entry.name,
+    type: entry.type,
+    amount: Number(entry.amount)
+  });
+
+  db.prepare(`
+    INSERT INTO transactions (id, type, invoice_no, reference_no, date, party_name, amount, balance, payment_type, status, quantity, created_at, updated_at)
+    VALUES (@id, @type, NULL, NULL, @date, @partyName, @amount, 0, @paymentType, 'Completed', NULL, datetime('now'), datetime('now'))
+  `).run({
+    id: txId,
+    type: entry.type,
+    date: entry.date,
+    partyName: entry.name,
+    amount: Number(entry.amount),
+    paymentType: entry.paymentType
+  });
+
+  db.prepare(`
+    UPDATE bank_accounts SET balance = balance + @amount WHERE name = @paymentType
+  `).run({
+    amount: Number(entry.amount),
+    paymentType: entry.paymentType
+  });
+
+  db.close();
+}
+
+export function getBankAccountTransactions(bankName) {
+  const db = openDatabase();
+  const rows = db.prepare(`
+    SELECT id, date, name, type, amount, bank_account_name AS paymentType, created_at 
+    FROM bank_account_transactions 
+    WHERE bank_account_name = ?
+    ORDER BY date DESC, created_at DESC
+  `).all(bankName);
+  db.close();
+  return rows;
 }

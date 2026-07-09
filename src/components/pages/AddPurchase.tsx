@@ -5,7 +5,6 @@ interface PurchaseRow {
   id: number;
   itemId: string;
   item: string;
-  size: string;
   qty: string;
   unit: string;
   pricePerUnit: string;
@@ -43,7 +42,8 @@ interface ItemOption {
   name: string;
   purchase_price?: number;
   unit: string;
-  batch_json?: string | null;
+  mfg_date?: string | null;
+  exp_date?: string | null;
 }
 
 interface AddPurchaseProps {
@@ -70,8 +70,8 @@ function createDefaultTab(id: number): PurchaseTab {
     customerSearch: "",
     phoneNo: "",
     rows: [
-      { id: 1, itemId: "", item: "", size: "", qty: "", unit: "NONE", pricePerUnit: "" },
-      { id: 2, itemId: "", item: "", size: "", qty: "", unit: "NONE", pricePerUnit: "" },
+      { id: 1, itemId: "", item: "", qty: "", unit: "NONE", pricePerUnit: "" },
+      { id: 2, itemId: "", item: "", qty: "", unit: "NONE", pricePerUnit: "" },
     ],
     discountPercent: "",
     discountRs: "",
@@ -87,7 +87,7 @@ function createDefaultTab(id: number): PurchaseTab {
 }
 
 function createEmptyRow(): PurchaseRow {
-  return { id: globalRowId++, itemId: "", item: "", size: "", qty: "", unit: "NONE", pricePerUnit: "" };
+  return { id: globalRowId++, itemId: "", item: "", qty: "", unit: "NONE", pricePerUnit: "" };
 }
 
 function parseTaxRate(tax: string) {
@@ -129,7 +129,7 @@ function parseLineItems(lineItemsJson?: string | null) {
       id?: number;
       itemId?: string;
       name?: string;
-      size?: string;
+
       quantity?: number;
       unit?: string;
       price?: number;
@@ -222,17 +222,16 @@ export function AddPurchase({ onSave, onShare, onClose, initialInvoice }: AddPur
         phoneNo: initialInvoice.partyPhone ?? "",
         rows: parsedRows.length
           ? [
-              ...parsedRows.map((lineItem) => ({
-                id: globalRowId++,
-                itemId: lineItem.itemId ?? "",
-                item: lineItem.name ?? "",
-                size: (lineItem as any).size ?? "",
-                qty: String(lineItem.quantity ?? ""),
-                unit: lineItem.unit ?? "NONE",
-                pricePerUnit: String(lineItem.price ?? ""),
-              })),
-              createEmptyRow(),
-            ]
+            ...parsedRows.map((lineItem) => ({
+              id: globalRowId++,
+              itemId: lineItem.itemId ?? "",
+              item: lineItem.name ?? "",
+              qty: String(lineItem.quantity ?? ""),
+              unit: lineItem.unit ?? "NONE",
+              pricePerUnit: String(lineItem.price ?? ""),
+            })),
+            createEmptyRow(),
+          ]
           : [createEmptyRow(), createEmptyRow()],
         discountPercent: String(initialInvoice.discountPercent ?? ""),
         discountRs: String(initialInvoice.discountAmount ?? ""),
@@ -313,20 +312,6 @@ export function AddPurchase({ onSave, onShare, onClose, initialInvoice }: AddPur
     };
   }, []);
 
-  function parseSizesFromBatchJson(batchJson?: string | null) {
-    if (!batchJson) return [] as string[];
-    try {
-      const parsed = JSON.parse(batchJson);
-      if (!Array.isArray(parsed)) return [] as string[];
-      const sizes = parsed
-        .map((b: any) => (b && (b.size ?? b.size_of_batch ?? b.batch_size) ? String(b.size ?? b.size_of_batch ?? b.batch_size) : ""))
-        .filter(Boolean);
-      return Array.from(new Set(sizes));
-    } catch {
-      return [] as string[];
-    }
-  }
-
   // col widths: [#, ITEM, QTY, UNIT, SIZE, PRICE/UNIT, AMOUNT]
   const { widths, startResize } = useColumnResize([42, 340, 90, 110, 90, 130, 120]);
 
@@ -350,7 +335,6 @@ export function AddPurchase({ onSave, onShare, onClose, initialInvoice }: AddPur
 
   const updateRowItem = (rowId: number, itemId: string) => {
     const matchedItem = items.find((item) => item.id === itemId);
-    const availableSizes = parseSizesFromBatchJson(matchedItem?.batch_json ?? null);
     const updatedRows = activeTab.rows.map((row) => {
       if (row.id !== rowId) {
         return row;
@@ -360,7 +344,6 @@ export function AddPurchase({ onSave, onShare, onClose, initialInvoice }: AddPur
         ...row,
         itemId,
         item: matchedItem?.name ?? "",
-        size: availableSizes.length ? availableSizes[0] : "",
         unit: matchedItem?.unit ?? row.unit,
         pricePerUnit:
           matchedItem && Number.isFinite(Number(matchedItem.purchase_price))
@@ -483,7 +466,6 @@ export function AddPurchase({ onSave, onShare, onClose, initialInvoice }: AddPur
             id: row.id,
             itemId: row.itemId,
             name: row.item,
-            size: row.size,
             quantity: Number(row.qty) || 0,
             unit: row.unit,
             price: Number(row.pricePerUnit) || 0,
@@ -545,7 +527,7 @@ export function AddPurchase({ onSave, onShare, onClose, initialInvoice }: AddPur
   };
 
   const updateRow = (rowId: number, field: keyof PurchaseRow, value: string) => {
-    let updatedRows = activeTab.rows.map((row) =>
+    const updatedRows = activeTab.rows.map((row) =>
       row.id === rowId ? { ...row, [field]: value } : row
     );
 
@@ -596,11 +578,7 @@ export function AddPurchase({ onSave, onShare, onClose, initialInvoice }: AddPur
 
   const fmt = (n: number) => n.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-  const showSizeColumn = activeTab.rows.some((r) => {
-    const item = items.find((it) => it.id === r.itemId);
-    const sizes = parseSizesFromBatchJson(item?.batch_json ?? null);
-    return sizes.length > 1;
-  });
+  const showSizeColumn = false;
 
   // Resize handle between columns
   const ResizeHandle = ({ col }: { col: number }) => (
@@ -934,23 +912,7 @@ export function AddPurchase({ onSave, onShare, onClose, initialInvoice }: AddPur
                         <span style={{ color: "#9ca3af", fontSize: 10, pointerEvents: "none" }}>▾</span>
                       </div>
                     </td>
-                    {/* SIZE */}
-                    <td style={{ borderRight: "1px solid #e5e7eb", padding: "4px 8px" }}>
-                      {showSizeColumn ? (
-                        <select
-                          style={{ width: "100%", border: "none", outline: "none", fontSize: 13, color: "#374151", background: "transparent", appearance: "none", cursor: "pointer" }}
-                          value={row.size}
-                          onChange={(e) => updateRow(row.id, "size", e.target.value)}
-                        >
-                          <option value="">Select Size</option>
-                          {(() => {
-                            const item = items.find((it) => it.id === row.itemId);
-                            const sizes = parseSizesFromBatchJson(item?.batch_json ?? null);
-                            return sizes.map((s) => <option key={s} value={s}>{s}</option>);
-                          })()}
-                        </select>
-                      ) : null}
-                    </td>
+
                     {/* PRICE/UNIT */}
                     <td style={{ borderRight: "1px solid #e5e7eb", padding: "4px 8px" }}>
                       <input type="number"

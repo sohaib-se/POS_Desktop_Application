@@ -958,6 +958,9 @@ function sqliteApiPlugin() {
                   minStock: Number.isFinite(Number(payload.minStock)) ? Number(payload.minStock) : null,
                   batchJson: payload.batchJson ? String(payload.batchJson) : null,
                   location: payload.location ? String(payload.location).trim() : null,
+                  atPrice: payload.atPrice !== undefined && payload.atPrice !== null ? Number(payload.atPrice) : null,
+                  mfgDate: payload.mfgDate ? String(payload.mfgDate) : null,
+                  expDate: payload.expDate ? String(payload.expDate) : null,
                 };
 
                 const secondaryStock = Number(item.stockQuantity) * Number(item.conversionRate ?? 0);
@@ -969,7 +972,8 @@ function sqliteApiPlugin() {
                   ...item,
                   secondaryStock,
                 }));
-              } catch {
+              } catch (err) {
+                console.error('Error saving item:', err);
                 res.statusCode = 400;
                 res.setHeader('Content-Type', 'application/json');
                 res.end(JSON.stringify({ message: 'Invalid JSON payload.' }));

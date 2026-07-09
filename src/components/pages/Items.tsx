@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Search, Plus, ChevronDown, SlidersHorizontal, Settings2, X, Printer, Info } from "lucide-react";
+import { ChevronDown, Plus, Search, X, SlidersHorizontal, Printer, Package } from "lucide-react";
 
 // --- INLINE TYPES & MOCK DATA ---
 type Item = {
@@ -19,7 +19,9 @@ type Item = {
   wholesalePrice: number;
   purchasePrice: number;
   stockValue: number;
-  batchJson?: string | null;
+  mfgDate?: string | null;
+  expDate?: string | null;
+  atPrice?: number;
 };
 
 type ItemApiRecord = {
@@ -39,7 +41,9 @@ type ItemApiRecord = {
   purchase_price: number;
   stock_quantity: number;
   stock_value: number | null;
-  batch_json?: string | null;
+  mfg_date?: string | null;
+  exp_date?: string | null;
+  at_price?: number | null;
 };
 
 type AddItemFormState = {
@@ -53,6 +57,8 @@ type AddItemFormState = {
   openingStock: string;
   atPrice: string;
   asOfDate: string;
+  mfgDate: string;
+  expDate: string;
 };
 
 type CategoryRecord = {
@@ -60,6 +66,37 @@ type CategoryRecord = {
   name: string;
   itemCount: number;
 };
+
+type UnitRecord = {
+  id: string;
+  fullName: string;
+  shortName: string;
+};
+
+type ConversionRateRecord = {
+  id: number;
+  base_unit: string;
+  secondary_unit: string;
+  conversion_rate: number;
+  created_at?: string;
+};
+
+type ItemTransactionRow = {
+  id: string;
+  type: "Sale" | "Purchase";
+  invoiceNo: string;
+  partyName: string;
+  date: string;
+  quantity: number;
+  unit: string;
+  price: number;
+  amount: number;
+  balance: number;
+  status: "Paid" | "Unpaid" | "Open" | "Cancelled";
+  itemId?: string;
+  itemName: string;
+};
+
 
 type CategoryContextMenuState = {
   category: CategoryRecord;
@@ -79,89 +116,25 @@ type UnitContextMenuState = {
   y: number;
 };
 
-type UnitRecord = {
-  id: string;
-  fullName: string;
-  shortName: string;
-};
-
-type ConversionRateRecord = {
-  id: number;
-  base_unit: string;
-  secondary_unit: string;
-  conversion_rate: number;
-  created_at?: string;
-};
-
-type ItemBatchRow = {
-  id: string;
-  mfgDate: string;
-  expDate: string;
-  size: string;
-  openingQty: string;
-};
-
-type StockAdjustmentBatchRow = {
-  id: string;
-  mfgDate: string;
-  expDate: string;
-  size: string;
-  currentQty: string;
-  qty: string;
-};
-
-type ItemTransactionApiRecord = {
-  id: string;
-  invoice_no: string;
-  date: string;
-  party_name: string;
-  party_id?: string | null;
-  transaction_type?: string | null;
-  payment_type?: string | null;
-  amount: number;
-  balance: number;
-  status?: string | null;
-  line_items_json?: string | null;
-};
-
 type ItemTransactionLine = {
-  id?: number;
-  itemId?: string;
-  name?: string;
+  id?: string;
   quantity?: number;
   unit?: string;
   price?: number;
   amount?: number;
-};
-
-type ItemTransactionRow = {
-  id: string;
-  type: "Sale" | "Purchase";
-  invoiceNo: string;
-  partyName: string;
-  date: string;
-  quantity: number;
-  unit: string;
-  price: number;
-  amount: number;
-  balance: number;
-  status: "Paid" | "Unpaid" | "Open" | "Cancelled";
   itemId?: string;
-  itemName: string;
+  name?: string;
 };
 
-type StockAdjustmentMode = "add" | "reduce";
-
-type StockAdjustmentFormState = {
-  item: Item | null;
-  mode: StockAdjustmentMode;
-  adjustmentDate: string;
-  totalQty: string;
-  atPrice: string;
-  details: string;
-  batchRows: StockAdjustmentBatchRow[];
-  batchSearchTerm: string;
-  showBatches: boolean;
+type ItemTransactionApiRecord = {
+  id: string;
+  transaction_type?: string;
+  invoice_no: string;
+  party_name: string;
+  date: string;
+  balance?: number;
+  status?: string;
+  line_items_json?: string;
 };
 
 const getInitialAddItemFormState = (): AddItemFormState => ({
@@ -175,6 +148,8 @@ const getInitialAddItemFormState = (): AddItemFormState => ({
   openingStock: "",
   atPrice: "",
   asOfDate: "",
+  mfgDate: "",
+  expDate: "",
 });
 
 const mapItemApiRecord = (record: ItemApiRecord): Item => ({
@@ -192,9 +167,11 @@ const mapItemApiRecord = (record: ItemApiRecord): Item => ({
   salePrice: Number(record.sale_price ?? 0),
   wholesalePrice: Number(record.wholesale_price ?? 0),
   purchasePrice: Number(record.purchase_price ?? 0),
+  atPrice: record.at_price != null ? Number(record.at_price) : undefined,
   stockQuantity: Number(record.stock_quantity ?? 0),
   stockValue: Number(record.stock_value ?? 0),
-  batchJson: record.batch_json ?? null,
+  mfgDate: record.mfg_date ?? null,
+  expDate: record.exp_date ?? null,
 });
 
 const getUnitIdFromLabel = (
@@ -218,28 +195,6 @@ const getUnitIdFromLabel = (
   return matchedUnit?.id ?? "";
 };
 
-const createEmptyBatchRow = (): ItemBatchRow => ({
-  id:
-    typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
-      ? crypto.randomUUID()
-      : `${Date.now()}-${Math.random().toString(16).slice(2)}`,
-  mfgDate: '',
-  expDate: '',
-  size: '',
-  openingQty: '',
-});
-
-const createEmptyStockAdjustmentBatchRow = (): StockAdjustmentBatchRow => ({
-  id:
-    typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
-      ? crypto.randomUUID()
-      : `${Date.now()}-${Math.random().toString(16).slice(2)}`,
-  mfgDate: '',
-  expDate: '',
-  size: '',
-  currentQty: '',
-  qty: '',
-});
 
 const getInputNumberValue = (value: string) => {
   const trimmedValue = value.trim();
@@ -266,43 +221,9 @@ const resolveStockValueFromPrices = (
   return quantity * resolvedUnitPrice;
 };
 
-const formatInputDate = (value: Date = new Date()) =>
-  value.toISOString().slice(0, 10);
-
-const parseBatchRows = (batchJson?: string | null): ItemBatchRow[] => {
-  if (!batchJson) {
-    return [];
-  }
-
-  try {
-    const parsedValue = JSON.parse(batchJson) as unknown;
-    if (!Array.isArray(parsedValue)) {
-      return [];
-    }
-
-    return parsedValue
-      .map((entry) => {
-        if (!entry || typeof entry !== 'object') {
-          return null;
-        }
-
-        const batchEntry = entry as Partial<ItemBatchRow>;
-        return {
-          id: String(batchEntry.id ?? createEmptyBatchRow().id),
-          mfgDate: String(batchEntry.mfgDate ?? ''),
-          expDate: String(batchEntry.expDate ?? ''),
-          size: String(batchEntry.size ?? ''),
-          openingQty: String(batchEntry.openingQty ?? ''),
-        };
-      })
-      .filter((entry): entry is ItemBatchRow => Boolean(entry));
-  } catch {
-    return [];
-  }
-};
 
 // --- INLINE UI COMPONENTS ---
-const Card = ({ children, className, style }: any) => (
+const Card = ({ children, className, style }: { children?: React.ReactNode; className?: string; style?: React.CSSProperties }) => (
   <div
     className={`bg-white rounded-lg border shadow-sm ${className || ""}`}
     style={style}
@@ -310,13 +231,13 @@ const Card = ({ children, className, style }: any) => (
     {children}
   </div>
 );
-const CardHeader = ({ children, className }: any) => (
+const CardHeader = ({ children, className }: { children?: React.ReactNode; className?: string }) => (
   <div className={`${className || ""}`}>{children}</div>
 );
-const CardContent = ({ children, className }: any) => (
+const CardContent = ({ children, className }: { children?: React.ReactNode; className?: string }) => (
   <div className={`${className || ""}`}>{children}</div>
 );
-const Dialog = ({ open, onOpenChange, children }: any) => {
+const Dialog = ({ open, onOpenChange, children }: { open?: boolean; onOpenChange: (open: boolean) => void; children?: React.ReactNode }) => {
   if (!open) return null;
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 overflow-y-auto">
@@ -331,17 +252,17 @@ const Dialog = ({ open, onOpenChange, children }: any) => {
     </div>
   );
 };
-const DialogContent = ({ children, className }: any) => (
+const DialogContent = ({ children, className }: { children?: React.ReactNode; className?: string }) => (
   <div
     className={`bg-white rounded-lg p-6 w-full max-w-lg relative shadow-xl ${className || ""}`}
   >
     {children}
   </div>
 );
-const DialogHeader = ({ children }: any) => (
+const DialogHeader = ({ children }: { children?: React.ReactNode }) => (
   <div className="mb-4">{children}</div>
 );
-const DialogTitle = ({ children, className }: any) => (
+const DialogTitle = ({ children, className }: { children?: React.ReactNode; className?: string }) => (
   <h2 className={`text-lg font-semibold ${className || ""}`}>{children}</h2>
 );
 
@@ -395,7 +316,7 @@ export function Items() {
       setConversionBaseUnit("");
       setConversionSecondaryUnit("");
       setConversionRateValue(0);
-    } catch (e) {
+    } catch {
       setConversionError("Failed to save conversion");
     } finally {
       setConversionSaving(false);
@@ -422,18 +343,14 @@ export function Items() {
     "products",
   );
   const [itemList, setItemList] = useState<Item[]>([]);
+  const [isItemsLoading, setIsItemsLoading] = useState(true);
+  
+  // Cache to prevent flickering on load by predicting the layout
+  const cachedHasItems = localStorage.getItem('items_hasItems') !== 'false';
+  const [hasItemsCache, setHasItemsCache] = useState(cachedHasItems);
+
   const [selectedItem, setSelectedItem] = useState<Item | null>(null);
   const [showAddItem, setShowAddItem] = useState(false);
-  const [showItemSettingsPanel, setShowItemSettingsPanel] = useState(false);
-  const [showBatchDialog, setShowBatchDialog] = useState(false);
-  const [stockAdjustmentForm, setStockAdjustmentForm] =
-    useState<StockAdjustmentFormState | null>(null);
-  const [showBatchMfgDate, setShowBatchMfgDate] = useState(true);
-  const [showBatchExpDate, setShowBatchExpDate] = useState(true);
-  const [showBatchSize, setShowBatchSize] = useState(true);
-  const [draftBatchMfgDate, setDraftBatchMfgDate] = useState(true);
-  const [draftBatchExpDate, setDraftBatchExpDate] = useState(true);
-  const [draftBatchSize, setDraftBatchSize] = useState(true);
   const [isSavingItem, setIsSavingItem] = useState(false);
   const [itemBeingEdited, setItemBeingEdited] = useState<Item | null>(null);
   const [isDeletingItem, setIsDeletingItem] = useState(false);
@@ -482,7 +399,7 @@ export function Items() {
   const [baseUnitId, setBaseUnitId] = useState<string>("");
   const [secondaryUnitId, setSecondaryUnitId] = useState<string>("");
   const [conversionRate, setConversionRate] = useState<number>(0);
-  const [batchRows, setBatchRows] = useState<ItemBatchRow[]>([createEmptyBatchRow()]);
+
   const [units, setUnits] = useState<UnitRecord[]>([]);
   const [itemTransactions, setItemTransactions] = useState<ItemTransactionRow[]>([]);
   const [showAddUnit, setShowAddUnit] = useState(false);
@@ -515,7 +432,7 @@ export function Items() {
   const filteredConversions = conversionRates.filter(
     (conversion) => {
       const isBaseUnitMatch = conversion.base_unit.toLowerCase() ===
-        (selectedUnitInTab?.fullName ?? '').trim().toLowerCase();
+        (selectedUnitInTab?.shortName ?? '').trim().toLowerCase();
 
       if (!isBaseUnitMatch) {
         return false;
@@ -613,15 +530,7 @@ export function Items() {
       .includes(normalizedMoveItemsSearchTerm);
   });
   const moveTargetCategoryName = selectedCategory?.name ?? null;
-  const batchOpeningQtyTotal = batchRows.reduce(
-    (sum, row) => sum + (Number(row.openingQty) || 0),
-    0,
-  );
-  const hasBatchOptionalFields = showBatchMfgDate || showBatchExpDate || showBatchSize;
-  const hasDraftBatchChanges =
-    draftBatchMfgDate !== showBatchMfgDate ||
-    draftBatchExpDate !== showBatchExpDate ||
-    draftBatchSize !== showBatchSize;
+
 
   const parseLineItems = (lineItemsJson?: string | null) => {
     if (!lineItemsJson) {
@@ -774,186 +683,7 @@ export function Items() {
     document.body.removeChild(link);
   };
 
-  const openStockAdjustmentDialog = (item: Item) => {
-    const parsedBatchRows = parseBatchRows(item.batchJson);
-    const showBatches =
-      parsedBatchRows.length > 1 ||
-      parsedBatchRows.some((row) => row.size.trim().length > 0);
 
-    setStockAdjustmentForm({
-      item,
-      mode: 'add',
-      adjustmentDate: formatInputDate(),
-      totalQty: '',
-      atPrice: '',
-      details: '',
-      batchRows: showBatches
-        ? [
-          ...parsedBatchRows.map((row) => ({
-            id: row.id,
-            mfgDate: row.mfgDate,
-            expDate: row.expDate,
-            size: row.size,
-            currentQty: row.openingQty,
-            qty: '',
-          })),
-          createEmptyStockAdjustmentBatchRow(),
-        ]
-        : [],
-      batchSearchTerm: '',
-      showBatches,
-    });
-  };
-
-  const closeStockAdjustmentDialog = () => {
-    setStockAdjustmentForm(null);
-  };
-
-  const updateStockAdjustmentBatchRow = (
-    rowId: string,
-    field: keyof Omit<StockAdjustmentBatchRow, 'id'>,
-    value: string,
-  ) => {
-    setStockAdjustmentForm((previousForm) => {
-      if (!previousForm) {
-        return previousForm;
-      }
-
-      return {
-        ...previousForm,
-        batchRows: previousForm.batchRows.map((row) =>
-          row.id === rowId ? { ...row, [field]: value } : row,
-        ),
-      };
-    });
-  };
-
-  const addStockAdjustmentBatchRow = () => {
-    setStockAdjustmentForm((previousForm) => {
-      if (!previousForm) {
-        return previousForm;
-      }
-
-      return {
-        ...previousForm,
-        batchRows: [...previousForm.batchRows, createEmptyStockAdjustmentBatchRow()],
-      };
-    });
-  };
-
-  const removeStockAdjustmentBatchRow = (rowId: string) => {
-    setStockAdjustmentForm((previousForm) => {
-      if (!previousForm) {
-        return previousForm;
-      }
-
-      const nextRows = previousForm.batchRows.filter((row) => row.id !== rowId);
-      return {
-        ...previousForm,
-        batchRows: nextRows.length ? nextRows : [createEmptyStockAdjustmentBatchRow()],
-      };
-    });
-  };
-
-  const saveStockAdjustment = async () => {
-    if (!stockAdjustmentForm?.item) {
-      return;
-    }
-
-    const adjustmentQuantity = stockAdjustmentForm.showBatches
-      ? stockAdjustmentForm.batchRows.reduce((sum, row) => sum + getInputNumberValue(row.qty), 0)
-      : getInputNumberValue(stockAdjustmentForm.totalQty);
-
-    if (!adjustmentQuantity) {
-      return;
-    }
-
-    const direction = stockAdjustmentForm.mode === 'add' ? 1 : -1;
-    const signedQuantity = adjustmentQuantity * direction;
-    const currentStockQuantity = Number(stockAdjustmentForm.item.stockQuantity ?? 0);
-    const currentStockValue = Number(stockAdjustmentForm.item.stockValue ?? 0);
-    const unitValue =
-      stockAdjustmentForm.atPrice.trim() !== ''
-        ? getInputNumberValue(stockAdjustmentForm.atPrice)
-        : Number.isFinite(stockAdjustmentForm.item.purchasePrice)
-          ? stockAdjustmentForm.item.purchasePrice
-          : 0;
-    const nextStockQuantity = currentStockQuantity + signedQuantity;
-    const nextStockValue = currentStockValue + signedQuantity * unitValue;
-
-    try {
-      const response = await fetch('/api/items', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          id: stockAdjustmentForm.item.id,
-          name: stockAdjustmentForm.item.name,
-          code: stockAdjustmentForm.item.code ?? null,
-          category: stockAdjustmentForm.item.category ?? null,
-          salePrice: stockAdjustmentForm.item.salePrice,
-          wholesalePrice: stockAdjustmentForm.item.wholesalePrice,
-          purchasePrice: stockAdjustmentForm.item.purchasePrice,
-          stockQuantity: nextStockQuantity,
-          unit: stockAdjustmentForm.item.unit,
-          primaryUnit: stockAdjustmentForm.item.primaryUnit ?? null,
-          secondaryUnit: stockAdjustmentForm.item.secondaryUnit ?? null,
-          imgPath: stockAdjustmentForm.item.imgPath ?? null,
-          stockValue: nextStockValue,
-          minStock: stockAdjustmentForm.item.minStock ?? null,
-          batchJson: stockAdjustmentForm.showBatches
-            ? JSON.stringify(
-              stockAdjustmentForm.batchRows
-                .filter(
-                  (row) =>
-                    row.mfgDate || row.expDate || row.size || row.currentQty || row.qty,
-                )
-                .map((row) => {
-                  const currentQty = getInputNumberValue(row.currentQty);
-                  const rowQty = getInputNumberValue(row.qty);
-                  const nextQty = currentQty + rowQty * direction;
-
-                  return {
-                    id: row.id,
-                    mfgDate: row.mfgDate,
-                    expDate: row.expDate,
-                    size: row.size,
-                    openingQty: String(nextQty),
-                    currentQty: row.currentQty,
-                    qty: row.qty,
-                  };
-                }),
-            )
-            : stockAdjustmentForm.item.batchJson ?? null,
-          location: null,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to update item stock');
-      }
-
-      const updatedItemResponse = (await response.json()) as Partial<Item> & {
-        batchJson?: string | null;
-      };
-
-      const updatedItem: Item = {
-        ...stockAdjustmentForm.item,
-        stockQuantity: Number(updatedItemResponse.stockQuantity ?? nextStockQuantity),
-        stockValue: Number(updatedItemResponse.stockValue ?? nextStockValue),
-        batchJson: updatedItemResponse.batchJson ?? stockAdjustmentForm.item.batchJson ?? null,
-      };
-
-      setItemList((previousItems) =>
-        previousItems.map((entry) => (entry.id === updatedItem.id ? updatedItem : entry)),
-      );
-      setSelectedItem(updatedItem);
-      closeStockAdjustmentDialog();
-    } catch (error) {
-      console.error(error);
-    }
-  };
 
   const getContextMenuStyle = (x: number, y: number) => {
     if (typeof window === 'undefined') {
@@ -1015,6 +745,7 @@ export function Items() {
 
   useEffect(() => {
     const loadItems = async () => {
+      setIsItemsLoading(true);
       try {
         const response = await fetch('/api/items');
         if (!response.ok) {
@@ -1022,9 +753,16 @@ export function Items() {
         }
 
         const itemRows = (await response.json()) as ItemApiRecord[];
-        setItemList(itemRows.map(mapItemApiRecord));
+        const mappedItems = itemRows.map(mapItemApiRecord);
+        setItemList(mappedItems);
+        
+        const hasItems = mappedItems.length > 0;
+        setHasItemsCache(hasItems);
+        localStorage.setItem('items_hasItems', hasItems ? 'true' : 'false');
       } catch (error) {
         console.error(error);
+      } finally {
+        setIsItemsLoading(false);
       }
     };
 
@@ -1244,65 +982,7 @@ export function Items() {
     }
   }, [isUnitSearchActive]);
 
-  const openBatchDialog = () => {
-    setBatchRows((previousRows) => {
-      if (previousRows.length) {
-        return previousRows.map((row, index) =>
-          index === 0 && !row.openingQty && addItemForm.openingStock
-            ? { ...row, openingQty: addItemForm.openingStock }
-            : row,
-        );
-      }
 
-      return [
-        {
-          ...createEmptyBatchRow(),
-          openingQty: addItemForm.openingStock,
-        },
-      ];
-    });
-    setShowBatchDialog(true);
-  };
-
-  const canOpenBatchDialog = hasBatchOptionalFields;
-
-  const openItemSettingsPanel = () => {
-    setDraftBatchMfgDate(showBatchMfgDate);
-    setDraftBatchExpDate(showBatchExpDate);
-    setDraftBatchSize(showBatchSize);
-    setShowItemSettingsPanel(true);
-  };
-
-  const closeItemSettingsPanel = () => {
-    setDraftBatchMfgDate(showBatchMfgDate);
-    setDraftBatchExpDate(showBatchExpDate);
-    setDraftBatchSize(showBatchSize);
-    setShowItemSettingsPanel(false);
-  };
-
-  const saveItemSettingsChanges = () => {
-    setShowBatchMfgDate(draftBatchMfgDate);
-    setShowBatchExpDate(draftBatchExpDate);
-    setShowBatchSize(draftBatchSize);
-    setShowItemSettingsPanel(false);
-  };
-
-  const updateBatchRow = (rowId: string, field: keyof Omit<ItemBatchRow, 'id'>, value: string) => {
-    setBatchRows((previousRows) =>
-      previousRows.map((row) => (row.id === rowId ? { ...row, [field]: value } : row)),
-    );
-  };
-
-  const addBatchRow = () => {
-    setBatchRows((previousRows) => [...previousRows, createEmptyBatchRow()]);
-  };
-
-  const removeBatchRow = (rowId: string) => {
-    setBatchRows((previousRows) => {
-      const nextRows = previousRows.filter((row) => row.id !== rowId);
-      return nextRows.length ? nextRows : [createEmptyBatchRow()];
-    });
-  };
 
   const handleUnitSave = async () => {
     if (baseUnitId) {
@@ -1325,8 +1005,8 @@ export function Items() {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              baseUnit: currentBaseUnit.fullName,
-              secondaryUnit: currentSecondaryUnit.fullName,
+              baseUnit: currentBaseUnit.shortName,
+              secondaryUnit: currentSecondaryUnit.shortName,
               conversionRate: conversionRate,
             }),
           });
@@ -1638,15 +1318,7 @@ export function Items() {
     setAddItemTab('pricing');
     setAddItemForm(getInitialAddItemFormState());
     setItemBeingEdited(null);
-    setShowItemSettingsPanel(false);
-    setShowBatchDialog(false);
-    setShowBatchMfgDate(true);
-    setShowBatchExpDate(true);
-    setShowBatchSize(true);
-    setDraftBatchMfgDate(true);
-    setDraftBatchExpDate(true);
-    setDraftBatchSize(true);
-    setBatchRows([createEmptyBatchRow()]);
+
     setSelectedUnitId('');
     setBaseUnitId('');
     setSecondaryUnitId('');
@@ -1670,15 +1342,7 @@ export function Items() {
 
     setItemBeingEdited(item);
     setAddItemTab('pricing');
-    setShowItemSettingsPanel(false);
-    setShowBatchDialog(false);
-    setShowBatchMfgDate(true);
-    setShowBatchExpDate(true);
-    setShowBatchSize(true);
-    setDraftBatchMfgDate(true);
-    setDraftBatchExpDate(true);
-    setDraftBatchSize(true);
-    setBatchRows(parseBatchRows(item.batchJson));
+
     setAddItemForm({
       itemName: item.name,
       categoryId: matchedCategory?.id ?? '',
@@ -1691,11 +1355,10 @@ export function Items() {
           ? ''
           : String(item.minStock),
       openingStock: String(item.stockQuantity ?? ''),
-      atPrice:
-        item.stockQuantity && item.stockQuantity !== 0
-          ? String(item.stockValue / item.stockQuantity)
-          : '',
+      atPrice: item.atPrice != null ? String(item.atPrice) : '',
       asOfDate: '',
+      mfgDate: item.mfgDate ?? '',
+      expDate: item.expDate ?? '',
     });
 
     setSelectedUnitId(matchedPrimaryUnitId || matchedUnitId);
@@ -1793,10 +1456,8 @@ export function Items() {
     );
     const previousCategoryName = itemBeingEdited?.category ?? null;
     const currentCategoryName = selectedItemCategory?.name ?? null;
-    const normalizedBatchRows = batchRows.filter(
-      (row) => row.mfgDate || row.expDate || row.size || row.openingQty,
-    );
-    const batchJson = normalizedBatchRows.length ? JSON.stringify(normalizedBatchRows) : null;
+    const mfgDate = addItemForm.mfgDate ? addItemForm.mfgDate : null;
+    const expDate = addItemForm.expDate ? addItemForm.expDate : null;
 
     const payload = {
       id: itemBeingEdited?.id,
@@ -1806,6 +1467,7 @@ export function Items() {
       salePrice,
       wholesalePrice: Number(addItemForm.wholesalePrice) || 0,
       purchasePrice,
+      atPrice: addItemForm.atPrice !== '' ? Number(addItemForm.atPrice) : null,
       stockQuantity: openingStock,
       unit: `${selectedUnit.fullName} (${selectedUnit.shortName})`,
       primaryUnit: baseUnit ? `${baseUnit.fullName} (${baseUnit.shortName})` : null,
@@ -1816,7 +1478,8 @@ export function Items() {
       imgPath: addItemExistingImagePath,
       imageDataUrl: addItemImageDataUrl,
       imageFileName: addItemImageFileName,
-      batchJson,
+      mfgDate,
+      expDate,
       stockValue: openingStockValue,
       minStock: minWholesaleQty,
     };
@@ -1854,6 +1517,8 @@ export function Items() {
         stockValue: number;
         batchJson?: string | null;
         secondaryStock?: number | null;
+        mfgDate?: string | null;
+        expDate?: string | null;
       };
 
       const createdItem: Item = {
@@ -1876,7 +1541,8 @@ export function Items() {
           createdItemPayload.conversionRate ??
           (Number(conversionRate) || null),
         imgPath: createdItemPayload.imgPath ?? addItemExistingImagePath,
-        batchJson: createdItemPayload.batchJson ?? batchJson,
+        mfgDate: createdItemPayload.mfgDate ?? mfgDate,
+        expDate: createdItemPayload.expDate ?? expDate,
         minStock:
           createdItemPayload.minStock ??
           (minWholesaleQty === 0 ? null : minWholesaleQty),
@@ -1955,7 +1621,7 @@ export function Items() {
 
       if (closeAfterSave) {
         setShowAddItem(false);
-        setShowBatchDialog(false);
+
       }
     } catch (error) {
       console.error(error);
@@ -1964,10 +1630,13 @@ export function Items() {
     }
   };
 
+  const showEmptyState = activeTab === 'products' && (!isItemsLoading ? itemList.length === 0 : !hasItemsCache);
+
   return (
     <div className="h-full flex flex-col bg-[#D0DCE7] p-0 gap-1">
       {/* Top Header Card */}
-      <div
+      {!showEmptyState && (
+        <div
         className="p-0 bg-white rounded-none flex items-center justify-between shrink-0 w-full"
         style={{ minHeight: "56px" }}
       >
@@ -1985,13 +1654,48 @@ export function Items() {
             </button>
           ))}
         </div>
-      </div>
+        </div>
+      )}
 
       {/* Main Content Area */}
-      <div className="flex-1 flex gap-1 overflow-hidden">
-        {activeTab === "products" && (
-          <>
-            {/* Left Panel Card - Item List */}
+      {showEmptyState ? (
+        <div className="flex-1 flex flex-col items-center justify-center w-full h-full text-center py-12 px-4 bg-white m-1 rounded-md shadow-sm">
+          <div className="w-32 h-32 mx-auto mb-6 relative">
+            <div className="absolute inset-0 bg-gradient-to-br from-blue-100 to-blue-200 rounded-2xl transform rotate-6" />
+            <div className="absolute inset-0 bg-white rounded-2xl shadow-lg flex items-center justify-center">
+              <Package className="w-16 h-16 text-gray-400" />
+            </div>
+            <div className="absolute -top-2 -right-2 w-8 h-8 bg-blue-400 rounded-full flex items-center justify-center">
+              <span className="text-blue-800 text-lg font-bold">I</span>
+            </div>
+            <div className="absolute -bottom-2 -left-2 w-6 h-6 bg-blue-300 rounded-full flex items-center justify-center">
+              <span className="text-blue-800 text-sm font-bold">i</span>
+            </div>
+          </div>
+          <h2 className="text-2xl font-semibold text-gray-900 mb-2">
+            Manage Your Items
+          </h2>
+          <p className="text-gray-500 mb-8 max-w-md mx-auto">
+            Keep track of all your products, services, and inventory in one place. Add your first item to get started.
+          </p>
+
+          <button
+            onClick={() => setShowAddItem(true)}
+            className="bg-[#E53935] hover:bg-red-600 text-white px-8 py-3 rounded-full text-base font-medium inline-flex items-center gap-2 transition-colors shadow-sm hover:shadow"
+          >
+            <Plus className="w-5 h-5" />
+            Add First Item
+          </button>
+        </div>
+      ) : isItemsLoading && activeTab === 'products' ? (
+        <div className="flex-1 flex items-center justify-center bg-white m-1 rounded-md shadow-sm">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#E53935]"></div>
+        </div>
+      ) : (
+        <div className="flex-1 flex gap-1 overflow-hidden">
+          {activeTab === "products" && (
+            <>
+              {/* Left Panel Card - Item List */}
             <Card
               className="w-80 bg-white rounded-md flex flex-col shrink-0 overflow-hidden shadow-sm"
               style={{ marginLeft: "4px" }}
@@ -2172,16 +1876,14 @@ export function Items() {
                       {/* Right: Button and stats */}
                       <div className="flex flex-col items-end justify-between flex-1 pr-6 pt-5 pb-2">
                         <div className="flex items-center gap-3 mb-6">
-                          {selectedItem.secondaryUnit && (
-                            <button
-                              onClick={() => setShowStockDetailsPopup(true)}
-                              className="bg-[#F0F4F8] hover:bg-[#E3EAF2] text-[#1976D2] px-4 py-2 rounded-lg text-sm font-bold flex items-center shadow-sm transition-all border border-[#1976D2]"
-                            >
-                              Stock Details
-                            </button>
-                          )}
                           <button
-                            onClick={() => openStockAdjustmentDialog(selectedItem)}
+                            onClick={() => setShowStockDetailsPopup(true)}
+                            className="bg-[#F0F4F8] hover:bg-[#E3EAF2] text-[#1976D2] px-4 py-2 rounded-lg text-sm font-bold flex items-center shadow-sm transition-all border border-[#1976D2]"
+                          >
+                            Stock Details
+                          </button>
+                          <button
+                            onClick={() => openEditItemDialog(selectedItem)}
                             className="bg-[#1976D2] hover:bg-[#1251A3] text-white px-5 py-2 rounded-lg text-sm font-bold flex items-center gap-2 shadow transition-all"
                             style={{ minWidth: "140px" }}
                           >
@@ -2864,8 +2566,9 @@ export function Items() {
           </div>
         )}
       </div>
+      )}
 
-      {/* Add Conversion Modal */}
+      {/* Modals & Popups */}
       <Dialog
         open={showAddConversion}
         onOpenChange={(isOpen: boolean) => {
@@ -2970,7 +2673,6 @@ export function Items() {
         onOpenChange={(isOpen: boolean) => {
           setShowAddItem(isOpen);
           if (!isOpen) {
-            setShowItemSettingsPanel(false);
             setAddItemTab('pricing');
             setAddItemForm(getInitialAddItemFormState());
             setItemBeingEdited(null);
@@ -2989,15 +2691,7 @@ export function Items() {
             <DialogTitle className="flex items-center justify-between gap-3">
               <span>{itemBeingEdited ? 'Edit Item' : 'Add Item'}</span>
               <div className="flex items-center gap-1">
-                <button
-                  type="button"
-                  onClick={() => setShowItemSettingsPanel(true)}
-                  className="rounded p-1 text-gray-500 hover:bg-gray-100 hover:text-gray-700"
-                  aria-label="Open item settings"
-                  title="Item settings"
-                >
-                  <Settings2 className="h-4 w-4" />
-                </button>
+
                 <button
                   type="button"
                   onClick={() => setShowAddItem(false)}
@@ -3235,15 +2929,7 @@ export function Items() {
                       <label className="block text-sm font-medium text-gray-700">
                         Opening Stock
                       </label>
-                      {canOpenBatchDialog ? (
-                        <button
-                          type="button"
-                          onClick={openBatchDialog}
-                          className="rounded-md bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-600 hover:bg-blue-100"
-                        >
-                          Batch
-                        </button>
-                      ) : null}
+
                     </div>
                     <input
                       type="number"
@@ -3293,6 +2979,43 @@ export function Items() {
                     className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
                   />
                 </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Manufacturing Date (Optional)
+                    </label>
+                    <input
+                      type="date"
+                      placeholder="YYYY-MM-DD"
+                      value={addItemForm.mfgDate}
+                      onChange={(event) =>
+                        setAddItemForm((previousValue) => ({
+                          ...previousValue,
+                          mfgDate: event.target.value,
+                        }))
+                      }
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Expiry Date (Optional)
+                    </label>
+                    <input
+                      type="date"
+                      placeholder="YYYY-MM-DD"
+                      value={addItemForm.expDate}
+                      onChange={(event) =>
+                        setAddItemForm((previousValue) => ({
+                          ...previousValue,
+                          expDate: event.target.value,
+                        }))
+                      }
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                    />
+                  </div>
+                </div>
               </div>
             )}
 
@@ -3335,521 +3058,7 @@ export function Items() {
         </DialogContent>
       </Dialog>
 
-      {stockAdjustmentForm ? (
-        <div className="fixed inset-0 z-[115] flex items-center justify-center bg-black/45 p-3 sm:p-4">
-          <div className="relative flex w-full max-w-[1040px] max-h-[92vh] flex-col overflow-hidden overflow-y-auto rounded-[14px] bg-white shadow-[0_20px_70px_rgba(15,23,42,0.25)]">
-            <button
-              type="button"
-              onClick={closeStockAdjustmentDialog}
-              className="absolute right-4 top-4 rounded-full p-1 text-[#96A0B5] transition-colors hover:bg-slate-100 hover:text-slate-700"
-              aria-label="Close stock adjustment dialog"
-            >
-              <X className="h-6 w-6" />
-            </button>
 
-            <div className="flex items-start justify-between gap-4 px-5 pb-3 pt-11 sm:px-6">
-              <div className="flex items-center gap-6">
-                <h2 className="text-[18px] font-semibold text-[#2F3A52]">Stock Adjustment</h2>
-                <div className="flex items-center gap-2 text-sm font-semibold">
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setStockAdjustmentForm((previousForm) =>
-                        previousForm ? { ...previousForm, mode: 'add' } : previousForm,
-                      )
-                    }
-                    className={`transition-colors ${stockAdjustmentForm.mode === 'add'
-                      ? 'text-[#1C78FF]'
-                      : 'text-[#9AA5B5]'
-                      }`}
-                  >
-                    Add Stock
-                  </button>
-                  <button
-                    type="button"
-                    aria-label="Toggle stock adjustment mode"
-                    onClick={() =>
-                      setStockAdjustmentForm((previousForm) =>
-                        previousForm
-                          ? {
-                            ...previousForm,
-                            mode: previousForm.mode === 'add' ? 'reduce' : 'add',
-                          }
-                          : previousForm,
-                      )
-                    }
-                    className="relative h-7 w-12 rounded-full bg-[#1C78FF] shadow-inner"
-                  >
-                    <span
-                      className={`absolute top-0.5 h-6 w-6 rounded-full bg-white shadow transition-transform ${stockAdjustmentForm.mode === 'add' ? 'translate-x-0.5' : 'translate-x-[22px]'
-                        }`}
-                    />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setStockAdjustmentForm((previousForm) =>
-                        previousForm ? { ...previousForm, mode: 'reduce' } : previousForm,
-                      )
-                    }
-                    className={`transition-colors ${stockAdjustmentForm.mode === 'reduce'
-                      ? 'text-[#1C78FF]'
-                      : 'text-[#9AA5B5]'
-                      }`}
-                  >
-                    Reduce Stock
-                  </button>
-                </div>
-              </div>
-
-              <div className="flex w-full max-w-[260px] flex-col items-start gap-1 sm:items-end">
-                <label className="text-[12px] font-medium text-[#8B94A6]">Adjustment Date</label>
-                <input
-                  type="date"
-                  value={stockAdjustmentForm.adjustmentDate}
-                  onChange={(event) =>
-                    setStockAdjustmentForm((previousForm) =>
-                      previousForm
-                        ? { ...previousForm, adjustmentDate: event.target.value }
-                        : previousForm,
-                    )
-                  }
-                  className="h-10 w-full rounded-md border border-[#D7DCE6] bg-white px-3 text-sm text-[#273246] outline-none ring-0 focus:border-[#1C78FF] sm:max-w-[190px]"
-                />
-              </div>
-            </div>
-
-            <div className="border-t border-[#E3E7EF] px-5 pb-5 pt-4 sm:px-6">
-              <div className="mb-4">
-                <div className="text-[12px] font-medium text-[#8B94A6]">Item Name</div>
-                <div className="mt-1 text-[15px] font-semibold text-[#2F3A52]">
-                  {stockAdjustmentForm.item?.name ?? ''}
-                </div>
-              </div>
-
-              {stockAdjustmentForm.showBatches ? (
-                <>
-                  <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <div className="relative w-full max-w-[240px]">
-                      <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#AAB2C2]" />
-                      <input
-                        type="text"
-                        value={stockAdjustmentForm.batchSearchTerm}
-                        onChange={(event) =>
-                          setStockAdjustmentForm((previousForm) =>
-                            previousForm
-                              ? { ...previousForm, batchSearchTerm: event.target.value }
-                              : previousForm,
-                          )
-                        }
-                        placeholder="Search"
-                        className="h-10 w-full rounded border border-[#D7DCE6] bg-[#FAFAFB] pl-10 pr-3 text-sm text-[#273246] outline-none focus:border-[#1C78FF]"
-                      />
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={addStockAdjustmentBatchRow}
-                      className="inline-flex h-12 items-center gap-2 rounded-[8px] bg-[#F2F7FF] px-4 text-[14px] font-semibold text-[#1C78FF] shadow-[0_6px_16px_rgba(28,120,255,0.14)] transition-colors hover:bg-[#E6F0FF]"
-                    >
-                      <span className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-[#1C78FF] text-[15px] leading-none">
-                        +
-                      </span>
-                      Add Batch
-                    </button>
-                  </div>
-
-                  <div className="overflow-hidden rounded-[2px] border border-[#D9DEE8]">
-                    <table className="w-full border-collapse text-sm">
-                      <thead>
-                        <tr className="bg-white text-left text-[13px] text-[#2F3A52]">
-                          <th className="border-b border-r border-[#D9DEE8] px-3 py-4 font-medium">Mfg. Date</th>
-                          <th className="border-b border-r border-[#D9DEE8] px-3 py-4 font-medium">Exp. Date</th>
-                          <th className="border-b border-r border-[#D9DEE8] px-3 py-4 font-medium">Size</th>
-                          <th className="border-b border-r border-[#D9DEE8] px-3 py-4 font-medium">CURRENT QTY</th>
-                          <th className="border-b border-r border-[#D9DEE8] px-3 py-4 font-medium">QTY</th>
-                          <th className="border-b border-[#D9DEE8] px-3 py-4 font-medium" />
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {stockAdjustmentForm.batchRows
-                          .filter((row) => {
-                            const normalizedSearch = stockAdjustmentForm.batchSearchTerm.trim().toLowerCase();
-                            const rowText = [row.mfgDate, row.expDate, row.size, row.currentQty, row.qty]
-                              .join(' ')
-                              .toLowerCase();
-                            return !normalizedSearch || rowText.includes(normalizedSearch);
-                          })
-                          .map((row, index) => {
-                            const isBlankRow =
-                              !row.mfgDate && !row.expDate && !row.size && !row.currentQty && !row.qty;
-
-                            return (
-                              <tr key={row.id} className={index % 2 === 0 ? 'bg-white' : 'bg-[#FAFAFB]'}>
-                                <td className="border-t border-r border-[#D9DEE8] px-2 py-2">
-                                  <input
-                                    type="date"
-                                    value={row.mfgDate}
-                                    onChange={(event) =>
-                                      updateStockAdjustmentBatchRow(row.id, 'mfgDate', event.target.value)
-                                    }
-                                    className="h-9 w-full rounded border border-[#D7DCE6] px-2 text-sm outline-none focus:border-[#1C78FF]"
-                                  />
-                                </td>
-                                <td className="border-t border-r border-[#D9DEE8] px-2 py-2">
-                                  <input
-                                    type="date"
-                                    value={row.expDate}
-                                    onChange={(event) =>
-                                      updateStockAdjustmentBatchRow(row.id, 'expDate', event.target.value)
-                                    }
-                                    className="h-9 w-full rounded border border-[#D7DCE6] px-2 text-sm outline-none focus:border-[#1C78FF]"
-                                  />
-                                </td>
-                                <td className="border-t border-r border-[#D9DEE8] px-2 py-2">
-                                  <input
-                                    type="text"
-                                    value={row.size}
-                                    onChange={(event) =>
-                                      updateStockAdjustmentBatchRow(row.id, 'size', event.target.value)
-                                    }
-                                    placeholder="Size"
-                                    className="h-9 w-full rounded border border-[#D7DCE6] px-2 text-sm outline-none focus:border-[#1C78FF]"
-                                  />
-                                </td>
-                                <td className="border-t border-r border-[#D9DEE8] px-3 py-2 text-[#2F3A52]">
-                                  <div className="h-9 rounded px-1 py-2 text-sm font-medium">
-                                    {row.currentQty}
-                                  </div>
-                                </td>
-                                <td className="border-t border-r border-[#D9DEE8] px-2 py-2">
-                                  <input
-                                    type="number"
-                                    value={row.qty}
-                                    onChange={(event) =>
-                                      updateStockAdjustmentBatchRow(row.id, 'qty', event.target.value)
-                                    }
-                                    placeholder="0"
-                                    className="h-9 w-full rounded border border-[#D7DCE6] px-2 text-sm outline-none focus:border-[#1C78FF]"
-                                  />
-                                </td>
-                                <td className="border-t border-[#D9DEE8] px-2 py-2 text-center">
-                                  {!isBlankRow ? (
-                                    <button
-                                      type="button"
-                                      onClick={() => removeStockAdjustmentBatchRow(row.id)}
-                                      className="inline-flex h-8 w-8 items-center justify-center rounded-full text-[#96A0B5] transition-colors hover:bg-slate-100 hover:text-slate-700"
-                                      aria-label="Remove batch row"
-                                    >
-                                      <X className="h-4 w-4" />
-                                    </button>
-                                  ) : null}
-                                </td>
-                              </tr>
-                            );
-                          })}
-                      </tbody>
-                    </table>
-                  </div>
-
-                  <div className="mt-4 flex flex-col items-end gap-4 sm:flex-row sm:items-center sm:justify-between">
-                    <div className="text-[14px] text-[#2F3A52]">
-                      Total <span className="ml-4 font-semibold">{stockAdjustmentForm.batchRows.reduce((sum, row) => sum + getInputNumberValue(row.qty), 0)}</span>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={saveStockAdjustment}
-                      className="min-w-[98px] rounded-[6px] bg-[#1C78FF] px-6 py-3 text-[14px] font-semibold text-white shadow-[0_8px_20px_rgba(28,120,255,0.28)] transition-colors hover:bg-[#155fe0]"
-                    >
-                      Save
-                    </button>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div className="grid gap-6 sm:grid-cols-3">
-                    <div className="sm:max-w-[180px]">
-                      <label className="mb-1 block text-[12px] font-medium text-[#8B94A6]">Total Qty</label>
-                      <input
-                        type="number"
-                        value={stockAdjustmentForm.totalQty}
-                        onChange={(event) =>
-                          setStockAdjustmentForm((previousForm) =>
-                            previousForm
-                              ? { ...previousForm, totalQty: event.target.value }
-                              : previousForm,
-                          )
-                        }
-                        placeholder="0"
-                        className="h-10 w-full rounded-md border border-[#D7DCE6] bg-white px-3 text-sm text-[#273246] outline-none focus:border-[#1C78FF]"
-                      />
-                    </div>
-                    <div className="sm:max-w-[220px]">
-                      <label className="mb-1 block text-[12px] font-medium text-[#8B94A6]">At Price</label>
-                      <input
-                        type="number"
-                        value={stockAdjustmentForm.atPrice}
-                        onChange={(event) =>
-                          setStockAdjustmentForm((previousForm) =>
-                            previousForm
-                              ? { ...previousForm, atPrice: event.target.value }
-                              : previousForm,
-                          )
-                        }
-                        placeholder="0"
-                        className="h-10 w-full rounded-md border border-[#D7DCE6] bg-white px-3 text-sm text-[#273246] outline-none focus:border-[#1C78FF]"
-                      />
-                    </div>
-                    <div className="w-full">
-                      <label className="mb-1 block text-[12px] font-medium text-[#8B94A6]">Details</label>
-                      <input
-                        type="text"
-                        value={stockAdjustmentForm.details}
-                        onChange={(event) =>
-                          setStockAdjustmentForm((previousForm) =>
-                            previousForm
-                              ? { ...previousForm, details: event.target.value }
-                              : previousForm,
-                          )
-                        }
-                        placeholder=""
-                        className="h-10 w-full rounded-md border border-[#D7DCE6] bg-white px-3 text-sm text-[#273246] outline-none focus:border-[#1C78FF]"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="mt-8 flex justify-end">
-                    <button
-                      type="button"
-                      onClick={saveStockAdjustment}
-                      className="min-w-[98px] rounded-[6px] bg-[#1C78FF] px-6 py-3 text-[14px] font-semibold text-white shadow-[0_8px_20px_rgba(28,120,255,0.28)] transition-colors hover:bg-[#155fe0]"
-                    >
-                      Save
-                    </button>
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
-        </div>
-      ) : null}
-
-      {showBatchDialog ? (
-        <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-5xl rounded-lg bg-white shadow-2xl">
-            <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4">
-              <h3 className="text-lg font-semibold text-gray-800">Add Stock - Batches</h3>
-              <button
-                type="button"
-                onClick={() => setShowBatchDialog(false)}
-                className="rounded p-1 text-gray-500 hover:bg-gray-100 hover:text-gray-700"
-                aria-label="Close batch popup"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            <div className="px-6 py-4">
-              <div className="overflow-hidden rounded border border-gray-200">
-                <table className="w-full border-collapse text-sm">
-                  <thead>
-                    <tr className="bg-white">
-                      {showBatchMfgDate ? (
-                        <th className="border-b border-r border-gray-200 px-3 py-3 text-left font-medium text-gray-700">Mfg. Date</th>
-                      ) : null}
-                      {showBatchExpDate ? (
-                        <th className="border-b border-r border-gray-200 px-3 py-3 text-left font-medium text-gray-700">Exp. Date</th>
-                      ) : null}
-                      {showBatchSize ? (
-                        <th className="border-b border-r border-gray-200 px-3 py-3 text-left font-medium text-gray-700">Size</th>
-                      ) : null}
-                      <th className="border-b border-r border-gray-200 px-3 py-3 text-left font-medium text-gray-700">OPENING QTY</th>
-                      <th className="border-b border-gray-200 px-3 py-3 text-left font-medium text-gray-700" />
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {batchRows.map((row) => (
-                      <tr key={row.id} className="bg-gray-50">
-                        {showBatchMfgDate ? (
-                          <td className="border-t border-r border-gray-200 px-3 py-2">
-                            <input
-                              type="date"
-                              value={row.mfgDate}
-                              onChange={(event) => updateBatchRow(row.id, 'mfgDate', event.target.value)}
-                              className="w-full rounded border border-gray-300 px-3 py-2 text-sm"
-                            />
-                          </td>
-                        ) : null}
-                        {showBatchExpDate ? (
-                          <td className="border-t border-r border-gray-200 px-3 py-2">
-                            <input
-                              type="date"
-                              value={row.expDate}
-                              onChange={(event) => updateBatchRow(row.id, 'expDate', event.target.value)}
-                              className="w-full rounded border border-gray-300 px-3 py-2 text-sm"
-                            />
-                          </td>
-                        ) : null}
-                        {showBatchSize ? (
-                          <td className="border-t border-r border-gray-200 px-3 py-2">
-                            <input
-                              type="text"
-                              value={row.size}
-                              onChange={(event) => updateBatchRow(row.id, 'size', event.target.value)}
-                              className="w-full rounded border border-gray-300 px-3 py-2 text-sm"
-                              placeholder="Size"
-                            />
-                          </td>
-                        ) : null}
-                        <td className="border-t border-r border-gray-200 px-3 py-2">
-                          <input
-                            type="number"
-                            value={row.openingQty}
-                            onChange={(event) => updateBatchRow(row.id, 'openingQty', event.target.value)}
-                            className="w-full rounded border border-gray-300 px-3 py-2 text-sm"
-                            placeholder="0"
-                          />
-                        </td>
-                        <td className="border-t border-gray-200 px-3 py-2 text-center">
-                          <button
-                            type="button"
-                            onClick={() => removeBatchRow(row.id)}
-                            className="inline-flex items-center justify-center rounded p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
-                            aria-label="Delete batch row"
-                          >
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                              <path
-                                d="M3 6h18M8 6V4h8v2m-7 0l1 14h6l1-14M10 10v6M14 10v6"
-                                stroke="currentColor"
-                                strokeWidth="1.5"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                              />
-                            </svg>
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-
-              <div className="mt-4 flex items-center justify-between">
-                <button
-                  type="button"
-                  onClick={addBatchRow}
-                  className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-medium text-blue-700 hover:bg-blue-100"
-                >
-                  Add Row
-                </button>
-                <div className="text-sm text-gray-700">
-                  Total <span className="ml-3 font-semibold">{batchOpeningQtyTotal}</span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setShowBatchDialog(false)}
-                  className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
-                >
-                  Save
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      ) : null}
-
-      {showAddItem && showItemSettingsPanel ? (
-        <div className="fixed inset-0 z-[130]">
-          <button
-            type="button"
-            className="absolute inset-0 h-full w-full cursor-default bg-black/10"
-            onClick={closeItemSettingsPanel}
-            aria-label="Close item settings backdrop"
-          />
-          <div className="absolute inset-y-0 right-0 z-[131] flex w-full max-w-[420px] flex-col border-l border-gray-200 bg-white shadow-2xl">
-            <div className="flex items-center justify-between border-b border-gray-200 px-5 py-4">
-              <h3 className="text-base font-semibold text-gray-900">Item Settings</h3>
-              <button
-                type="button"
-                onClick={closeItemSettingsPanel}
-                className="rounded p-1 text-gray-500 hover:bg-gray-100 hover:text-gray-700"
-                aria-label="Close item settings"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-            <div className="flex-1 overflow-y-auto px-5 py-4">
-              <div className="space-y-1">
-                {[
-                  'Wholesale Price',
-                  'Mfg Date',
-                  'Exp Date',
-                  'Size',
-                ].map((label) => (
-                  <div
-                    key={label}
-                    className="flex items-center justify-between rounded-lg px-1 py-3 text-sm text-gray-700 hover:bg-gray-50"
-                  >
-                    <span>{label}</span>
-                    {label === 'Mfg Date' ? (
-                      <input
-                        type="checkbox"
-                        checked={draftBatchMfgDate}
-                        onChange={(event) => setDraftBatchMfgDate(event.target.checked)}
-                        className="h-5 w-5 rounded border-gray-300 text-blue-600"
-                        aria-label={label}
-                      />
-                    ) : label === 'Exp Date' ? (
-                      <input
-                        type="checkbox"
-                        checked={draftBatchExpDate}
-                        onChange={(event) => setDraftBatchExpDate(event.target.checked)}
-                        className="h-5 w-5 rounded border-gray-300 text-blue-600"
-                        aria-label={label}
-                      />
-                    ) : label === 'Size' ? (
-                      <input
-                        type="checkbox"
-                        checked={draftBatchSize}
-                        onChange={(event) => setDraftBatchSize(event.target.checked)}
-                        className="h-5 w-5 rounded border-gray-300 text-blue-600"
-                        aria-label={label}
-                      />
-                    ) : (
-                      <input
-                        type="checkbox"
-                        defaultChecked
-                        className="h-5 w-5 rounded border-gray-300 text-blue-600"
-                        aria-label={label}
-                      />
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-            <div className="border-t border-gray-200 px-5 py-4">
-              <div className="flex items-center justify-between gap-3">
-                <button
-                  type="button"
-                  className="flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium text-blue-600 hover:bg-blue-50"
-                >
-                  <Settings2 className="h-4 w-4" />
-                  More Settings
-                </button>
-                {hasDraftBatchChanges ? (
-                  <button
-                    type="button"
-                    onClick={saveItemSettingsChanges}
-                    className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
-                  >
-                    Save
-                  </button>
-                ) : null}
-              </div>
-            </div>
-          </div>
-        </div>
-      ) : null}
 
       <Dialog
         open={Boolean(itemPendingDelete)}
@@ -4189,14 +3398,14 @@ export function Items() {
                 </select>
               </div>
             </div>
-            {baseUnit && conversionRates.filter(c => c.base_unit === baseUnit.fullName).length > 0 && (
+            {baseUnit && conversionRates.filter(c => c.base_unit === baseUnit.shortName).length > 0 && (
               <div className="mt-2 pt-3 border-t border-gray-100">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Existing Conversions for {baseUnit.fullName}
                 </label>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {conversionRates.filter(c => c.base_unit === baseUnit.fullName).map((conv) => {
-                    const secUnit = units.find(u => u.fullName === conv.secondary_unit);
+                  {conversionRates.filter(c => c.base_unit === baseUnit.shortName).map((conv) => {
+                    const secUnit = units.find(u => u.shortName === conv.secondary_unit);
                     return (
                       <button
                         key={conv.id}

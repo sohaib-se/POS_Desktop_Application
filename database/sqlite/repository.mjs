@@ -212,10 +212,10 @@ export function getItems() {
 
 export function deductItemStock(itemId, quantity, isSecondary, conversionRate) {
   const db = openDatabase();
-  
+
   let primaryQtyToDeduct = Number(quantity);
   let secondaryQtyToDeduct = Number(quantity);
-  
+
   const validConversion = Number.isFinite(Number(conversionRate)) && Number(conversionRate) > 0;
 
   if (isSecondary) {
@@ -227,7 +227,7 @@ export function deductItemStock(itemId, quantity, isSecondary, conversionRate) {
       secondaryQtyToDeduct = Number(quantity) * Number(conversionRate);
     }
   }
-  
+
   const stmt = db.prepare(`
     UPDATE items 
     SET 
@@ -235,9 +235,9 @@ export function deductItemStock(itemId, quantity, isSecondary, conversionRate) {
       secondary_stock = COALESCE(secondary_stock, 0) - @secondaryQty
     WHERE id = @id
   `);
-  
-  const result = stmt.run({ 
-    id: String(itemId), 
+
+  const result = stmt.run({
+    id: String(itemId),
     primaryQty: primaryQtyToDeduct,
     secondaryQty: secondaryQtyToDeduct
   });
@@ -740,8 +740,8 @@ export function upsertItem(item) {
   const db = openDatabase();
   const existingItem = item.id
     ? db
-        .prepare('SELECT conversion_rate AS conversionRate, img_path AS imgPath, batch_json AS batchJson FROM items WHERE id = ?')
-        .get(String(item.id))
+      .prepare('SELECT conversion_rate AS conversionRate, img_path AS imgPath FROM items WHERE id = ?')
+      .get(String(item.id))
     : null;
 
   const resolvedConversionRate = Number.isFinite(Number(item.conversionRate))
@@ -755,19 +755,15 @@ export function upsertItem(item) {
     : 0;
 
   const resolvedSecondaryStock = resolvedStockQuantity * resolvedConversionRate;
-  const resolvedBatchJson =
-    typeof item.batchJson === 'string'
-      ? item.batchJson
-      : typeof existingItem?.batchJson === 'string'
-        ? existingItem.batchJson
-        : null;
+  const resolvedMfgDate = typeof item.mfgDate === 'string' ? item.mfgDate : null;
+  const resolvedExpDate = typeof item.expDate === 'string' ? item.expDate : null;
 
   db.prepare(`
     INSERT INTO items (
-      id, name, code, category, sale_price, wholesale_price, purchase_price, stock_quantity, unit, primary_unit, secondary_unit, secondary_stock, conversion_rate, img_path, stock_value, min_stock, batch_json, location, updated_at
+      id, name, code, category, sale_price, wholesale_price, purchase_price, at_price, stock_quantity, unit, primary_unit, secondary_unit, secondary_stock, conversion_rate, img_path, stock_value, min_stock, mfg_date, exp_date, location, updated_at
     )
     VALUES (
-      @id, @name, @code, @category, @salePrice, @wholesalePrice, @purchasePrice, @stockQuantity, @unit, @primaryUnit, @secondaryUnit, @secondaryStock, @conversionRate, @imgPath, @stockValue, @minStock, @batchJson, @location, datetime('now')
+      @id, @name, @code, @category, @salePrice, @wholesalePrice, @purchasePrice, @atPrice, @stockQuantity, @unit, @primaryUnit, @secondaryUnit, @secondaryStock, @conversionRate, @imgPath, @stockValue, @minStock, @mfgDate, @expDate, @location, datetime('now')
     )
     ON CONFLICT(id) DO UPDATE SET
       name = excluded.name,
@@ -776,6 +772,7 @@ export function upsertItem(item) {
       sale_price = excluded.sale_price,
       wholesale_price = excluded.wholesale_price,
       purchase_price = excluded.purchase_price,
+      at_price = excluded.at_price,
       stock_quantity = excluded.stock_quantity,
       unit = excluded.unit,
       primary_unit = excluded.primary_unit,
@@ -785,11 +782,13 @@ export function upsertItem(item) {
         img_path = excluded.img_path,
       stock_value = excluded.stock_value,
       min_stock = excluded.min_stock,
-      batch_json = excluded.batch_json,
+      mfg_date = excluded.mfg_date,
+      exp_date = excluded.exp_date,
       location = excluded.location,
       updated_at = datetime('now')
   `).run({
     ...item,
+    atPrice: item.atPrice ?? null,
     code: item.code ?? null,
     category: item.category ?? null,
     wholesalePrice: Number.isFinite(Number(item.wholesalePrice))
@@ -803,7 +802,8 @@ export function upsertItem(item) {
     imgPath: item.imgPath ?? existingItem?.imgPath ?? null,
     stockValue: item.stockValue ?? null,
     minStock: item.minStock ?? null,
-    batchJson: resolvedBatchJson,
+    mfgDate: resolvedMfgDate,
+    expDate: resolvedExpDate,
     location: item.location ?? null
   });
   syncCategoryItemCounts(db);

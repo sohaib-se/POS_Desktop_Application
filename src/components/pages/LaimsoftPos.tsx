@@ -34,7 +34,8 @@ interface ItemOption {
   primary_unit?: string | null;
   secondary_unit?: string | null;
   conversion_rate?: number | null;
-  batch_json?: string | null;
+  mfg_date?: string | null;
+  exp_date?: string | null;
   wholesale_price?: number;
   min_stock?: number | null;
 }

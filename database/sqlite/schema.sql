@@ -22,6 +22,7 @@ CREATE TABLE IF NOT EXISTS items (
   sale_price REAL NOT NULL DEFAULT 0,
   wholesale_price REAL NOT NULL DEFAULT 0,
   purchase_price REAL NOT NULL DEFAULT 0,
+  at_price REAL,
   stock_quantity REAL NOT NULL DEFAULT 0,
   unit TEXT NOT NULL,
   primary_unit TEXT,
@@ -31,7 +32,8 @@ CREATE TABLE IF NOT EXISTS items (
   img_path TEXT,
   stock_value REAL,
   min_stock REAL,
-  batch_json TEXT,
+  mfg_date TEXT,
+  exp_date TEXT,
   location TEXT,
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at TEXT NOT NULL DEFAULT (datetime('now'))

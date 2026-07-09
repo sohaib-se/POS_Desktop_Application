@@ -19,6 +19,7 @@ export interface Item {
   category?: string;
   salePrice: number;
   purchasePrice: number;
+  atPrice?: number;
   stockQuantity: number;
   unit: string;
   stockValue?: number;
@@ -187,6 +188,7 @@ export type ViewType =
   | 'parties' 
   | 'items' 
   | 'add-sale'
+  | 'add-purchase'
   | 'add-expense'
   | 'sale-invoices' 
   | 'estimates' 

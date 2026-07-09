@@ -764,6 +764,10 @@ export function BankAccounts() {
   const [showAdd, setShowAdd] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Cache to prevent flickering on load by predicting the layout
+  const cachedHasAccounts = localStorage.getItem('bank_accounts_hasAccounts') !== 'false';
+  const [hasAccountsCache, setHasAccountsCache] = useState(cachedHasAccounts);
+
   const [editingAccount, setEditingAccount] = useState<BankAccount | null>(null);
   const [contextMenu, setContextMenu] = useState<{ x: number, y: number, accountId: string } | null>(null);
 
@@ -778,6 +782,11 @@ export function BankAccounts() {
         transactions: a.transactions || []
       }));
       setAccounts(mapped);
+      
+      const hasAccounts = mapped.length > 0;
+      setHasAccountsCache(hasAccounts);
+      localStorage.setItem('bank_accounts_hasAccounts', hasAccounts ? 'true' : 'false');
+
       if (mapped.length > 0) {
         setSelectedId(prev => prev || mapped[0].id);
       }
@@ -811,11 +820,12 @@ export function BankAccounts() {
   const selectedAccount = accounts.find((a: BankAccount) => a.id === selectedId);
 
   const isEmpty = accounts.length === 0;
+  const showEmptyState = !isLoading ? isEmpty : !hasAccountsCache;
 
   return (
     <div className="h-full flex flex-col bg-[#D0DCE7] gap-1 p-1" onClick={() => setContextMenu(null)}>
       {/* Top bar */}
-      {(!isEmpty || isLoading) && (
+      {!showEmptyState && (
         <div className="bg-white rounded-md shadow-sm px-6 py-3 flex items-center justify-between mx-1">
           <h1 className="text-base font-semibold text-gray-900">Banks</h1>
           <div className="flex items-center gap-2">
@@ -836,12 +846,12 @@ export function BankAccounts() {
 
       {/* Main content */}
       <div className="bg-white rounded-md shadow-sm flex-1 overflow-hidden mx-1 flex">
-        {isLoading ? (
+        {showEmptyState ? (
+          <EmptyState onAdd={() => setShowAdd(true)} />
+        ) : isLoading ? (
           <div className="flex-1 flex items-center justify-center">
              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#E53935]"></div>
           </div>
-        ) : isEmpty ? (
-          <EmptyState onAdd={() => setShowAdd(true)} />
         ) : (
           <>
             <AccountListView

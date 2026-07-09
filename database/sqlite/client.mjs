@@ -50,8 +50,20 @@ function ensureItemsTableColumns(db) {
     db.exec('ALTER TABLE items ADD COLUMN conversion_rate REAL');
   }
 
-  if (!existingColumns.has('batch_json')) {
-    db.exec('ALTER TABLE items ADD COLUMN batch_json TEXT');
+  if (existingColumns.has('batch_json')) {
+    try {
+      db.exec('ALTER TABLE items DROP COLUMN batch_json');
+    } catch (error) {
+      console.warn('Could not drop batch_json column, ignoring', error);
+    }
+  }
+
+  if (!existingColumns.has('mfg_date')) {
+    db.exec('ALTER TABLE items ADD COLUMN mfg_date TEXT');
+  }
+
+  if (!existingColumns.has('exp_date')) {
+    db.exec('ALTER TABLE items ADD COLUMN exp_date TEXT');
   }
 }
 

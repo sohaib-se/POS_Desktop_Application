@@ -22,8 +22,28 @@ function ensureItemColumns(db) {
     db.exec('ALTER TABLE items ADD COLUMN conversion_rate REAL');
   }
 
-  if (!existingColumnNames.has('batch_json')) {
-    db.exec('ALTER TABLE items ADD COLUMN batch_json TEXT');
+  if (existingColumnNames.has('batch_json')) {
+    try {
+      db.exec('ALTER TABLE items DROP COLUMN batch_json');
+    } catch (error) {
+      console.warn('Could not drop batch_json column, ignoring', error);
+    }
+  }
+
+  if (!existingColumnNames.has('mfg_date')) {
+    db.exec('ALTER TABLE items ADD COLUMN mfg_date TEXT');
+  }
+
+  if (!existingColumnNames.has('exp_date')) {
+    db.exec('ALTER TABLE items ADD COLUMN exp_date TEXT');
+  }
+
+  if (!existingColumnNames.has('at_price')) {
+    db.exec('ALTER TABLE items ADD COLUMN at_price REAL');
+  }
+
+  if (!existingColumnNames.has('location')) {
+    db.exec('ALTER TABLE items ADD COLUMN location TEXT');
   }
 }
 

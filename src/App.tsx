@@ -6,6 +6,7 @@ import { Dashboard } from "@/components/pages/Dashboard";
 import { Parties } from "@/components/pages/Parties";
 import { Items } from "@/components/pages/Items";
 import { AddSale } from "@/components/pages/AddSale";
+import { AddPurchase } from "@/components/pages/AddPurchase";
 import { AddExpense } from "@/components/pages/AddExpense";
 import { SaleInvoices } from "@/components/pages/SaleInvoices";
 import { Estimates } from "@/components/pages/Estimates";
@@ -28,9 +29,11 @@ function App() {
   const [lastStandardView, setLastStandardView] = useState<ViewType>("home");
   const [editingSaleInvoice, setEditingSaleInvoice] =
     useState<SaleInvoiceEditData | null>(null);
+  const [settingsInitialTab, setSettingsInitialTab] = useState<string>("general");
 
   const isOverlayView = (view: ViewType) =>
     view === "add-sale" ||
+    view === "add-purchase" ||
     view === "add-expense" ||
     view === "settings" ||
     view === "pos";
@@ -42,6 +45,10 @@ function App() {
 
     if (view === "add-sale") {
       setEditingSaleInvoice(null);
+    }
+
+    if (view === "settings") {
+      setSettingsInitialTab("general");
     }
 
     setCurrentView(view);
@@ -57,12 +64,21 @@ function App() {
     setCurrentView(lastStandardView);
   };
 
+  const handleCloseAddPurchase = () => {
+    setCurrentView(lastStandardView);
+  };
+
   const handleCloseAddExpense = () => {
     setCurrentView(lastStandardView);
   };
 
   const handleCloseSettings = () => {
     setCurrentView(lastStandardView);
+  };
+
+  const handleOpenSettings = (tab = "general") => {
+    setSettingsInitialTab(tab);
+    setCurrentView("settings");
   };
 
   const handleClosePos = () => {
@@ -78,7 +94,7 @@ function App() {
       case "home":
         return <Dashboard />;
       case "parties":
-        return <Parties />;
+        return <Parties onOpenSettings={handleOpenSettings} />;
       case "items":
         return <Items />;
       case "sale-invoices":
@@ -118,7 +134,7 @@ function App() {
       case "sync-restore-backup":
         return <SyncShare initialTab="restore-backup" />;
       case "settings":
-        return <SettingsPage />;
+        return <SettingsPage initialTab={settingsInitialTab} />;
       case "utilities":
         return <Utilities />;
       case "utilities-import-items":
@@ -171,6 +187,12 @@ function App() {
         </div>
       )}
 
+      {currentView === "add-purchase" && (
+        <div className="fixed inset-0 z-[100]">
+          <AddPurchase onClose={handleCloseAddPurchase} />
+        </div>
+      )}
+
       {currentView === "add-expense" && (
         <div className="fixed inset-0 z-[100]">
           <AddExpense onClose={handleCloseAddExpense} />
@@ -179,7 +201,7 @@ function App() {
 
       {currentView === "settings" && (
         <div className="fixed inset-0 z-[110]">
-          <SettingsPage onClose={handleCloseSettings} />
+          <SettingsPage onClose={handleCloseSettings} initialTab={settingsInitialTab} />
         </div>
       )}
 

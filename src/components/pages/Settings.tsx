@@ -22,6 +22,7 @@ import {
 
 interface SettingsPageProps {
   onClose?: () => void;
+  initialTab?: string;
 }
 
 const tabs = [
@@ -33,8 +34,8 @@ const tabs = [
   { id: "item", label: "ITEM", icon: Package },
 ];
 
-export function SettingsPage({ onClose }: SettingsPageProps = {}) {
-  const [activeTab, setActiveTab] = useState("general");
+export function SettingsPage({ onClose, initialTab }: SettingsPageProps = {}) {
+  const [activeTab, setActiveTab] = useState(initialTab || "general");
   const [showPrintSettings, setShowPrintSettings] = useState(false);
   const [isOpenAnimated, setIsOpenAnimated] = useState(false);
 

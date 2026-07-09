@@ -1,11 +1,10 @@
-import { useState, useRef, useCallback, useEffect, useMemo } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import type { SaleInvoiceEditData } from "@/types";
 
 interface SaleRow {
   id: number;
   itemId: string;
   item: string;
-  size: string;
   qty: string;
   unit: string;
   pricePerUnit: string;
@@ -48,7 +47,8 @@ interface ItemOption {
   primary_unit?: string | null;
   secondary_unit?: string | null;
   conversion_rate?: number | null;
-  batch_json?: string | null;
+  mfg_date?: string | null;
+  exp_date?: string | null;
   wholesale_price?: number;
   min_stock?: number | null;
 }
@@ -60,10 +60,7 @@ interface AddSaleProps {
   initialInvoice?: SaleInvoiceEditData | null;
 }
 
-const unitOptions = [
-  "NONE", "PCS", "KG", "G", "L", "ML", "M", "CM", "MM",
-  "DOZEN", "BOX", "PACK", "BAG", "BOTTLE", "CAN", "SET",
-];
+
 const taxOptions = ["NONE", "GST 5%", "GST 12%", "GST 18%", "GST 28%"];
 
 let globalRowId = 3;
@@ -77,8 +74,8 @@ function createDefaultTab(id: number): SaleTab {
     customerSearch: "",
     phoneNo: "",
     rows: [
-      { id: 1, itemId: "", item: "", size: "", qty: "", unit: "NONE", pricePerUnit: "" },
-      { id: 2, itemId: "", item: "", size: "", qty: "", unit: "NONE", pricePerUnit: "" },
+      { id: 1, itemId: "", item: "", qty: "", unit: "NONE", pricePerUnit: "" },
+      { id: 2, itemId: "", item: "", qty: "", unit: "NONE", pricePerUnit: "" },
     ],
     discountPercent: "",
     discountRs: "",
@@ -94,40 +91,11 @@ function createDefaultTab(id: number): SaleTab {
     receivedAll: false,
   };
 }
-
 function createEmptyRow(): SaleRow {
-  return { id: globalRowId++, itemId: "", item: "", size: "", qty: "", unit: "NONE", pricePerUnit: "" };
+  return { id: globalRowId++, itemId: "", item: "", qty: "", unit: "NONE", pricePerUnit: "" };
 }
 
-function parseItemBatchSizes(batchJson?: string | null): string[] {
-  if (!batchJson) {
-    return [];
-  }
 
-  try {
-    const parsedValue = JSON.parse(batchJson) as unknown;
-    if (!Array.isArray(parsedValue)) {
-      return [];
-    }
-
-    const uniqueSizes = new Set<string>();
-    parsedValue.forEach((entry) => {
-      if (!entry || typeof entry !== "object") {
-        return;
-      }
-
-      const batchRow = entry as { size?: unknown };
-      const normalizedSize = String(batchRow.size ?? "").trim();
-      if (normalizedSize) {
-        uniqueSizes.add(normalizedSize);
-      }
-    });
-
-    return Array.from(uniqueSizes);
-  } catch {
-    return [];
-  }
-}
 
 function parseTaxRate(tax: string) {
   if (tax === "NONE") {
@@ -268,7 +236,6 @@ export function AddSale({ onSave, onShare, onClose, initialInvoice }: AddSalePro
               id: globalRowId++,
               itemId: lineItem.itemId ?? "",
               item: lineItem.name ?? "",
-              size: lineItem.size ?? "",
               qty: String(lineItem.quantity ?? ""),
               unit: lineItem.unit ?? "NONE",
               pricePerUnit: String(lineItem.price ?? ""),
@@ -350,20 +317,7 @@ export function AddSale({ onSave, onShare, onClose, initialInvoice }: AddSalePro
   const activeTab = tabs.find((t) => t.id === activeTabId)!;
   const displayedInvoiceNo = initialInvoice?.invoiceNo ?? nextInvoiceNo;
   const displayedInvoiceDate = initialInvoice?.date ?? formatDateForDisplay(new Date());
-  const itemBatchSizesById = useMemo(() => {
-    const sizeMap: Record<string, string[]> = {};
-    items.forEach((item) => {
-      sizeMap[item.id] = parseItemBatchSizes(item.batch_json);
-    });
-    return sizeMap;
-  }, [items]);
-  const showSizeColumn = activeTab.rows.some((row) => {
-    if (!row.itemId) {
-      return false;
-    }
 
-    return (itemBatchSizesById[row.itemId]?.length ?? 0) > 1;
-  });
 
   const updateTab = (partial: Partial<SaleTab>) => {
     setTabs((prev) =>
@@ -381,16 +335,11 @@ export function AddSale({ onSave, onShare, onClose, initialInvoice }: AddSalePro
 
   const updateRowItem = (rowId: number, itemId: string) => {
     const matchedItem = items.find((item) => item.id === itemId);
-    const sizeOptions = itemBatchSizesById[itemId] ?? [];
 
     const updatedRows = activeTab.rows.map((row) => {
       if (row.id !== rowId) {
         return row;
       }
-
-      const nextSize = sizeOptions.includes(row.size)
-        ? row.size
-        : sizeOptions[0] ?? "";
 
       const nextUnit = matchedItem
         ? matchedItem.primary_unit || matchedItem.unit || "NONE"
@@ -424,7 +373,6 @@ export function AddSale({ onSave, onShare, onClose, initialInvoice }: AddSalePro
         ...row,
         itemId,
         item: matchedItem?.name ?? "",
-        size: nextSize,
         unit: nextUnit,
         pricePerUnit: nextPricePerUnit,
       };
@@ -548,7 +496,6 @@ export function AddSale({ onSave, onShare, onClose, initialInvoice }: AddSalePro
             id: row.id,
             itemId: row.itemId,
             name: row.item,
-            size: row.size || null,
             quantity: Number(row.qty) || 0,
             unit: row.unit,
             price: Number(row.pricePerUnit) || 0,
@@ -610,7 +557,7 @@ export function AddSale({ onSave, onShare, onClose, initialInvoice }: AddSalePro
   };
 
   const updateRow = (rowId: number, field: keyof SaleRow, value: string) => {
-    let updatedRows = activeTab.rows.map((row) => {
+    const updatedRows = activeTab.rows.map((row) => {
       if (row.id !== rowId) return row;
 
       const updatedRow = { ...row, [field]: value };
@@ -939,7 +886,6 @@ export function AddSale({ onSave, onShare, onClose, initialInvoice }: AddSalePro
               <col style={{ width: widths[1] }} />
               <col style={{ width: widths[2] }} />
               <col style={{ width: widths[3] }} />
-              {showSizeColumn ? <col style={{ width: 120 }} /> : null}
               <col style={{ width: widths[4] }} />
               <col style={{ width: widths[5] }} />
               <col style={{ width: 36 }} />
@@ -962,11 +908,6 @@ export function AddSale({ onSave, onShare, onClose, initialInvoice }: AddSalePro
                 <th style={{ position: "relative", padding: "8px 10px", textAlign: "left", fontSize: 12, fontWeight: 600, color: "#6b7280", borderRight: "1px solid #e5e7eb", letterSpacing: "0.04em" }}>
                   UNIT<ResizeHandle col={3} />
                 </th>
-                {showSizeColumn ? (
-                  <th style={{ padding: "8px 10px", textAlign: "left", fontSize: 12, fontWeight: 600, color: "#6b7280", borderRight: "1px solid #e5e7eb", letterSpacing: "0.04em" }}>
-                    SIZE
-                  </th>
-                ) : null}
                 {/* PRICE/UNIT */}
                 <th style={{ position: "relative", padding: "8px 10px", textAlign: "right", fontSize: 12, fontWeight: 600, color: "#6b7280", borderRight: "1px solid #e5e7eb", letterSpacing: "0.04em" }}>
                   PRICE/UNIT<ResizeHandle col={4} />
@@ -1060,27 +1001,7 @@ export function AddSale({ onSave, onShare, onClose, initialInvoice }: AddSalePro
                         <span style={{ color: "#9ca3af", fontSize: 10, pointerEvents: "none" }}>▼</span>
                       </div>
                     </td>
-                    {showSizeColumn ? (
-                      <td style={{ borderRight: "1px solid #e5e7eb", padding: "4px 8px" }}>
-                        {(itemBatchSizesById[row.itemId]?.length ?? 0) > 0 ? (
-                          <div style={{ display: "flex", alignItems: "center" }}>
-                            <select
-                              style={{ flex: 1, border: "none", outline: "none", fontSize: 13, color: "#374151", background: "transparent", appearance: "none", cursor: "pointer" }}
-                              value={row.size}
-                              onChange={(e) => updateRow(row.id, "size", e.target.value)}
-                            >
-                              <option value="">Select Size</option>
-                              {(itemBatchSizesById[row.itemId] ?? []).map((sizeOption) => (
-                                <option key={sizeOption} value={sizeOption}>
-                                  {sizeOption}
-                                </option>
-                              ))}
-                            </select>
-                            <span style={{ color: "#9ca3af", fontSize: 10, pointerEvents: "none" }}>▾</span>
-                          </div>
-                        ) : null}
-                      </td>
-                    ) : null}
+
                     {/* PRICE/UNIT */}
                     <td style={{ borderRight: "1px solid #e5e7eb", padding: "4px 8px" }}>
                       <input type="number"
@@ -1113,7 +1034,7 @@ export function AddSale({ onSave, onShare, onClose, initialInvoice }: AddSalePro
                   <span style={{ float: "left" }}>TOTAL</span>
                   <span style={{ float: "right" }}>{totalQty > 0 ? totalQty : 0}</span>
                 </td>
-                {showSizeColumn ? <td style={{ borderRight: "1px solid #e5e7eb" }} /> : null}
+
                 <td style={{ borderRight: "1px solid #e5e7eb" }} />
                 <td style={{ padding: "8px 10px", textAlign: "right", fontSize: 13, fontWeight: 600, color: "#374151", borderRight: "1px solid #e5e7eb" }}>
                   {totalAmount > 0 ? fmt(totalAmount) : "0"}

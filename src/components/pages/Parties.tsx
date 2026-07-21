@@ -5,7 +5,6 @@ import {
   Edit2,
   Phone,
   Mail,
-  ChevronDown,
   Printer,
   Settings,
   MoreVertical,
@@ -122,6 +121,7 @@ export function Parties({ onOpenSettings }: PartiesProps = {}) {
   const [parties, setParties] = useState<Party[]>([]);
   const [selectedParty, setSelectedParty] = useState<Party | null>(null);
   const [showAddParty, setShowAddParty] = useState(false);
+  const [showCreditLimitError, setShowCreditLimitError] = useState(false);
   const [partyBeingEdited, setPartyBeingEdited] = useState<Party | null>(null);
   const [isSavingParty, setIsSavingParty] = useState(false);
   const [isDeletingParty, setIsDeletingParty] = useState(false);
@@ -343,19 +343,46 @@ export function Parties({ onOpenSettings }: PartiesProps = {}) {
     p.name.toLowerCase().includes(searchTerm.toLowerCase()),
   );
 
-  const partyTransactions = [...partyTransactionsFromApi].filter(
-    (transaction) => {
-      if (!selectedParty) {
-        return false;
-      }
+  const partyTransactions = (() => {
+    const baseTransactions = [...partyTransactionsFromApi].filter(
+      (transaction) => {
+        if (!selectedParty) {
+          return false;
+        }
 
-      if (transaction.partyId) {
-        return transaction.partyId === selectedParty.id;
-      }
+        if (transaction.partyId) {
+          return transaction.partyId === selectedParty.id;
+        }
 
-      return transaction.partyName.toLowerCase() === selectedParty.name.toLowerCase();
-    },
-  );
+        return transaction.partyName.toLowerCase() === selectedParty.name.toLowerCase();
+      },
+    );
+
+    if (selectedParty) {
+      const netTransactionsEffect = baseTransactions.reduce((acc, t) => {
+        if (t.type === "Sale" || t.type === "Payment-Out") return acc + t.amount;
+        if (t.type === "Purchase" || t.type === "Payment-In") return acc - t.amount;
+        return acc;
+      }, 0);
+
+      const initialOpeningBalance = selectedParty.balance - netTransactionsEffect;
+
+      if (Math.abs(initialOpeningBalance) > 0.01) {
+        baseTransactions.push({
+          id: "opening-balance-dynamic",
+          type: initialOpeningBalance > 0 ? "Receivable Opening Balance" : "Payable Opening Balance",
+          invoiceNo: "",
+          date: new Date().toLocaleDateString("en-IN"),
+          partyName: selectedParty.name,
+          amount: Math.abs(initialOpeningBalance),
+          balance: Math.abs(initialOpeningBalance),
+          partyId: selectedParty.id,
+        });
+      }
+    }
+
+    return baseTransactions;
+  })();
 
   const filteredPartyTransactions = partyTransactions.filter((t) => {
     if (!transactionSearchTerm) return true;
@@ -483,6 +510,15 @@ export function Parties({ onOpenSettings }: PartiesProps = {}) {
   ) => {
     if (!partyForm.name.trim() || isSavingParty) {
       return;
+    }
+
+    if (partyForm.creditLimit === 'custom' && partyForm.creditLimitAmount && partyForm.balanceType === 'to-receive') {
+      const openingBalance = Number(partyForm.openingBalance || 0);
+      const creditLimitAmount = Number(partyForm.creditLimitAmount || 0);
+      if (Math.abs(openingBalance) > creditLimitAmount) {
+        setShowCreditLimitError(true);
+        return;
+      }
     }
 
     const shouldCloseDialog = options?.closeDialog ?? true;
@@ -1210,7 +1246,8 @@ export function Parties({ onOpenSettings }: PartiesProps = {}) {
                         openingBalance: e.target.value,
                       })
                     }
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#E53935]"
+                    disabled={!!partyBeingEdited}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#E53935] disabled:bg-gray-100 disabled:text-gray-500"
                     placeholder="500"
                   />
                 </div>
@@ -1224,31 +1261,34 @@ export function Parties({ onOpenSettings }: PartiesProps = {}) {
                     onChange={(e) =>
                       setPartyForm({ ...partyForm, asOfDate: e.target.value })
                     }
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#E53935]"
+                    disabled={!!partyBeingEdited}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#E53935] disabled:bg-gray-100 disabled:text-gray-500"
                     placeholder="21/02/2026"
                   />
                 </div>
               </div>
 
               <div className="flex gap-6 my-4">
-                <label className="flex items-center gap-2 cursor-pointer">
+                <label className={`flex items-center gap-2 ${partyBeingEdited ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}>
                   <input
                     type="radio"
                     checked={partyForm.balanceType === "to-pay"}
                     onChange={() =>
                       setPartyForm({ ...partyForm, balanceType: "to-pay" })
                     }
+                    disabled={!!partyBeingEdited}
                     className="w-4 h-4"
                   />
                   <span className="text-sm text-gray-700">To Pay</span>
                 </label>
-                <label className="flex items-center gap-2 cursor-pointer">
+                <label className={`flex items-center gap-2 ${partyBeingEdited ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}>
                   <input
                     type="radio"
                     checked={partyForm.balanceType === "to-receive"}
                     onChange={() =>
                       setPartyForm({ ...partyForm, balanceType: "to-receive" })
                     }
+                    disabled={!!partyBeingEdited}
                     className="w-4 h-4"
                   />
                   <span className="text-sm text-gray-700">To Receive</span>
@@ -1386,6 +1426,26 @@ export function Parties({ onOpenSettings }: PartiesProps = {}) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Credit Limit Error Modal */}
+      <Dialog open={showCreditLimitError} onOpenChange={setShowCreditLimitError}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-red-600">Validation Error</DialogTitle>
+          </DialogHeader>
+          <div className="py-2 text-sm text-gray-700">
+            Credit amount cannot be greater than the credit limit.
+          </div>
+          <div className="flex justify-end pt-4">
+            <button
+              onClick={() => setShowCreditLimitError(false)}
+              className="px-4 py-2 bg-[#E53935] text-white rounded-lg hover:bg-red-700 font-medium text-sm"
+            >
+              OK
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

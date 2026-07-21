@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ChevronDown, Plus, Search, X, SlidersHorizontal, Printer, Package } from "lucide-react";
+import { ChevronDown, Plus, Search, X, SlidersHorizontal, Printer, Package, Calendar } from "lucide-react";
 
 // --- INLINE TYPES & MOCK DATA ---
 type Item = {
@@ -83,7 +83,7 @@ type ConversionRateRecord = {
 
 type ItemTransactionRow = {
   id: string;
-  type: "Sale" | "Purchase";
+  type: "Sale" | "Purchase" | "Add Stock" | "Reduce Stock";
   invoiceNo: string;
   partyName: string;
   date: string;
@@ -211,10 +211,11 @@ const resolveStockValueFromPrices = (
   atPrice: string,
   purchasePrice: number,
 ) => {
+  const parsedAtPrice = getInputNumberValue(atPrice);
   const resolvedUnitPrice =
-    atPrice.trim() !== ''
-      ? getInputNumberValue(atPrice)
-      : Number.isFinite(purchasePrice)
+    parsedAtPrice > 0
+      ? parsedAtPrice
+      : Number.isFinite(purchasePrice) && purchasePrice > 0
         ? purchasePrice
         : 0;
 
@@ -344,7 +345,7 @@ export function Items() {
   );
   const [itemList, setItemList] = useState<Item[]>([]);
   const [isItemsLoading, setIsItemsLoading] = useState(true);
-  
+
   // Cache to prevent flickering on load by predicting the layout
   const cachedHasItems = localStorage.getItem('items_hasItems') !== 'false';
   const [hasItemsCache, setHasItemsCache] = useState(cachedHasItems);
@@ -427,6 +428,152 @@ export function Items() {
 
   const selectedUnit = units.find((unit) => unit.id === selectedUnitId);
   const baseUnit = units.find((unit) => unit.id === baseUnitId);
+
+  const [showAdjustStockModal, setShowAdjustStockModal] = useState(false);
+  const [adjustStockForm, setAdjustStockForm] = useState({
+    type: "Add" as "Add" | "Reduce",
+    date: new Date().toISOString().split('T')[0],
+    qty: "",
+    unit: "",
+    atPrice: "",
+    details: ""
+  });
+  const [isSavingAdjustment, setIsSavingAdjustment] = useState(false);
+
+  const openAdjustStockDialog = (item: Item) => {
+    setAdjustStockForm({
+      type: "Add",
+      date: new Date().toISOString().split('T')[0],
+      qty: "",
+      unit: item.primaryUnit || item.unit || "Unit",
+      atPrice: "",
+      details: ""
+    });
+    setShowAdjustStockModal(true);
+  };
+
+  const handleSaveStockAdjustment = async () => {
+    if (!selectedItem || !adjustStockForm.qty || isSavingAdjustment) return;
+
+    setIsSavingAdjustment(true);
+    try {
+      const qty = Number(adjustStockForm.qty);
+      const atPrice = Number(adjustStockForm.atPrice) || 0;
+
+      let baseQtyChange = qty;
+      const isSecondary = adjustStockForm.unit === selectedItem.secondaryUnit;
+      if (isSecondary && selectedItem.conversionRate) {
+        baseQtyChange = qty / selectedItem.conversionRate;
+      }
+
+      const isAdd = adjustStockForm.type === "Add";
+      const stockChange = isAdd ? baseQtyChange : -baseQtyChange;
+      const newStockQuantity = selectedItem.stockQuantity + stockChange;
+
+      let newSecondaryStock = selectedItem.secondaryStock ?? 0;
+      if (selectedItem.conversionRate) {
+        newSecondaryStock = newStockQuantity * selectedItem.conversionRate;
+      }
+
+      const valueChange = qty * atPrice;
+      const newValueChange = isAdd ? valueChange : -valueChange;
+      const newStockValue = selectedItem.stockValue + newValueChange;
+
+      const finalStockValue = Math.max(0, newStockValue);
+
+      const payload = {
+        id: selectedItem.id,
+        name: selectedItem.name,
+        code: selectedItem.code,
+        category: selectedItem.category,
+        salePrice: selectedItem.salePrice,
+        wholesalePrice: selectedItem.wholesalePrice,
+        purchasePrice: selectedItem.purchasePrice,
+        stockQuantity: newStockQuantity,
+        unit: selectedItem.unit,
+        primaryUnit: selectedItem.primaryUnit,
+        secondaryUnit: selectedItem.secondaryUnit,
+        stockValue: finalStockValue,
+        minStock: selectedItem.minStock,
+        secondaryStock: newSecondaryStock,
+        conversionRate: selectedItem.conversionRate
+      };
+
+      const response = await fetch('/api/items', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to adjust stock');
+      }
+
+      const adjustPayload = {
+        itemId: selectedItem.id,
+        itemName: selectedItem.name,
+        adjustmentType: adjustStockForm.type + ' Stock',
+        date: adjustStockForm.date,
+        quantity: qty,
+        unit: adjustStockForm.unit,
+        atPrice: atPrice,
+        details: adjustStockForm.details
+      };
+
+      const adjustResponse = await fetch('/api/adjust_stock_transactions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(adjustPayload)
+      });
+
+      if (adjustResponse.ok) {
+        const createdAdjustTx = await adjustResponse.json() as any;
+        const newTransaction: ItemTransactionRow = {
+          id: `adj-${createdAdjustTx.id}`,
+          type: createdAdjustTx.adjustmentType as any,
+          invoiceNo: "",
+          partyName: "Stock Adjustment",
+          date: createdAdjustTx.date,
+          quantity: Number(createdAdjustTx.quantity || 0),
+          unit: createdAdjustTx.unit || "",
+          price: Number(createdAdjustTx.atPrice || 0),
+          amount: Number(createdAdjustTx.quantity || 0) * Number(createdAdjustTx.atPrice || 0),
+          balance: 0,
+          status: "Paid",
+          itemId: createdAdjustTx.itemId,
+          itemName: createdAdjustTx.itemName
+        };
+
+        setItemTransactions((prev) => {
+          const next = [newTransaction, ...prev];
+          return next.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        });
+      }
+
+      const createdItemPayload = await response.json() as any;
+      const updatedItem: Item = {
+        ...selectedItem,
+        stockQuantity: Number(createdItemPayload.stockQuantity ?? newStockQuantity),
+        stockValue: Number(createdItemPayload.stockValue ?? finalStockValue),
+        secondaryStock: createdItemPayload.secondaryStock != null ? Number(createdItemPayload.secondaryStock) : newSecondaryStock,
+        conversionRate: selectedItem.conversionRate
+      };
+
+      setItemList((previousItems) =>
+        previousItems.map((item) =>
+          item.id === updatedItem.id ? updatedItem : item
+        )
+      );
+      setSelectedItem(updatedItem);
+      setShowAdjustStockModal(false);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setIsSavingAdjustment(false);
+    }
+  };
   const secondaryUnit = units.find((unit) => unit.id === secondaryUnitId);
   const selectedUnitInTab = units.find((unit) => unit.id === selectedUnitInTabId);
   const filteredConversions = conversionRates.filter(
@@ -755,7 +902,7 @@ export function Items() {
         const itemRows = (await response.json()) as ItemApiRecord[];
         const mappedItems = itemRows.map(mapItemApiRecord);
         setItemList(mappedItems);
-        
+
         const hasItems = mappedItems.length > 0;
         setHasItemsCache(hasItems);
         localStorage.setItem('items_hasItems', hasItems ? 'true' : 'false');
@@ -805,9 +952,10 @@ export function Items() {
   useEffect(() => {
     const loadItemTransactions = async () => {
       try {
-        const [saleInvoicesResponse, purchaseBillsResponse] = await Promise.all([
+        const [saleInvoicesResponse, purchaseBillsResponse, adjustStockResponse] = await Promise.all([
           fetch('/api/sale_invoices'),
           fetch('/api/purchase_bills'),
+          fetch('/api/adjust_stock_transactions'),
         ]);
 
         const saleInvoices = saleInvoicesResponse.ok
@@ -815,6 +963,9 @@ export function Items() {
           : [];
         const purchaseBills = purchaseBillsResponse.ok
           ? ((await purchaseBillsResponse.json()) as ItemTransactionApiRecord[])
+          : [];
+        const adjustStockTx = adjustStockResponse.ok
+          ? ((await adjustStockResponse.json()) as any[])
           : [];
 
         const nextTransactions = [...saleInvoices, ...purchaseBills].flatMap(
@@ -845,7 +996,23 @@ export function Items() {
           },
         );
 
-        setItemTransactions(nextTransactions);
+        const adjustTransactions: ItemTransactionRow[] = adjustStockTx.map(adj => ({
+          id: `adj-${adj.id}`,
+          type: adj.adjustment_type,
+          invoiceNo: "",
+          partyName: "Stock Adjustment",
+          date: adj.date,
+          quantity: Number(adj.quantity ?? 0),
+          unit: adj.unit ?? "",
+          price: Number(adj.at_price ?? 0),
+          amount: Number(adj.quantity ?? 0) * Number(adj.at_price ?? 0),
+          balance: 0,
+          status: "Paid",
+          itemId: adj.item_id,
+          itemName: adj.item_name
+        }));
+
+        setItemTransactions([...nextTransactions, ...adjustTransactions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
       } catch (error) {
         console.error(error);
         setItemTransactions([]);
@@ -994,8 +1161,8 @@ export function Items() {
 
     if (currentBaseUnit && currentSecondaryUnit && conversionRate > 0) {
       const existingConv = conversionRates.find(c =>
-        c.base_unit === currentBaseUnit.fullName &&
-        c.secondary_unit === currentSecondaryUnit.fullName &&
+        c.base_unit === currentBaseUnit.shortName &&
+        c.secondary_unit === currentSecondaryUnit.shortName &&
         c.conversion_rate === conversionRate
       );
 
@@ -1177,6 +1344,10 @@ export function Items() {
         return nextCategories.sort((a, b) => a.name.localeCompare(b.name));
       });
       setSelectedCategoryId(createdCategory.id);
+      setAddItemForm((prev) => ({
+        ...prev,
+        categoryId: createdCategory.id,
+      }));
       setNewCategoryName('');
       setCategoryBeingEdited(null);
       setShowAddCategory(false);
@@ -1637,23 +1808,23 @@ export function Items() {
       {/* Top Header Card */}
       {!showEmptyState && (
         <div
-        className="p-0 bg-white rounded-none flex items-center justify-between shrink-0 w-full"
-        style={{ minHeight: "56px" }}
-      >
-        <div className="flex w-full">
-          {(["products", "category", "units"] as const).map((tab) => (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={`flex-1 text-sm font-medium pb-2 border-b-2 transition-colors ${activeTab === tab
-                ? "text-[#E53935] border-[#E53935]"
-                : "text-gray-500 border-transparent hover:text-gray-700"
-                }`}
-            >
-              {tab.toUpperCase()}
-            </button>
-          ))}
-        </div>
+          className="p-0 bg-white rounded-none flex items-center justify-between shrink-0 w-full"
+          style={{ minHeight: "56px" }}
+        >
+          <div className="flex w-full">
+            {(["products", "category", "units"] as const).map((tab) => (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                className={`flex-1 text-sm font-medium pb-2 border-b-2 transition-colors ${activeTab === tab
+                  ? "text-[#E53935] border-[#E53935]"
+                  : "text-gray-500 border-transparent hover:text-gray-700"
+                  }`}
+              >
+                {tab.toUpperCase()}
+              </button>
+            ))}
+          </div>
         </div>
       )}
 
@@ -1696,876 +1867,876 @@ export function Items() {
           {activeTab === "products" && (
             <>
               {/* Left Panel Card - Item List */}
-            <Card
-              className="w-80 bg-white rounded-md flex flex-col shrink-0 overflow-hidden shadow-sm"
-              style={{ marginLeft: "4px" }}
-            >
-              <CardHeader className="p-2 pb-0 border-none flex flex-col gap-2">
-                <div className="flex items-center justify-between mb-3">
-                  {isProductSearchActive ? (
-                    <div className="relative mr-3 flex-1 max-w-[220px]">
-                      <input
-                        ref={productSearchInputRef}
-                        type="text"
-                        value={productSearchTerm}
-                        onChange={(event) => setProductSearchTerm(event.target.value)}
-                        onBlur={() => {
-                          setProductSearchTerm('');
-                          setIsProductSearchActive(false);
-                        }}
-                        onKeyDown={(event) => {
-                          if (event.key === 'Escape') {
+              <Card
+                className="w-80 bg-white rounded-md flex flex-col shrink-0 overflow-hidden shadow-sm"
+                style={{ marginLeft: "4px" }}
+              >
+                <CardHeader className="p-2 pb-0 border-none flex flex-col gap-2">
+                  <div className="flex items-center justify-between mb-3">
+                    {isProductSearchActive ? (
+                      <div className="relative mr-3 flex-1 max-w-[220px]">
+                        <input
+                          ref={productSearchInputRef}
+                          type="text"
+                          value={productSearchTerm}
+                          onChange={(event) => setProductSearchTerm(event.target.value)}
+                          onBlur={() => {
                             setProductSearchTerm('');
                             setIsProductSearchActive(false);
-                          }
-                        }}
-                        placeholder="Search items"
-                        className="w-full border border-[#D1D5DB] rounded-lg px-3 py-2 text-sm"
-                      />
-                    </div>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => setIsProductSearchActive(true)}
-                      className="w-10 h-10 rounded-full bg-[#E5E7EB] flex items-center justify-center text-[#4B5563] hover:bg-[#D1D5DB] transition-colors mr-3"
-                      aria-label="Search products"
-                    >
-                      <Search className="w-5 h-5" />
-                    </button>
-                  )}
-                  <button
-                    onClick={openAddItemModal}
-                    className="flex items-center gap-2 bg-[#FFA726] hover:bg-[#FB8C00] text-white font-semibold rounded-lg px-5 py-2 shadow transition-all text-base relative"
-                  >
-                    <Plus className="w-5 h-5" />
-                    Add Item
-                    <ChevronDown className="w-4 h-4 ml-1" />
-                  </button>
-                </div>
-              </CardHeader>
-              <CardContent className="flex-1 overflow-y-auto p-0">
-                <table className="w-full text-sm">
-                  <thead className="bg-[#F7F9FB] sticky top-0 z-10">
-                    <tr>
-                      <th className="px-4 py-2 text-left font-semibold text-[#7B8A9A] text-xs tracking-wide align-middle">
-                        ITEM
-
-                      </th>
-                      <th className="px-4 py-2 text-right font-semibold text-[#7B8A9A] text-xs tracking-wide align-middle">
-                        QUANTITY
-
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredProductList.map((item) => (
-                      <tr
-                        key={item.id}
-                        onClick={() => setSelectedItem(item)}
-                        onContextMenu={(event) => {
-                          event.preventDefault();
-                          setSelectedItem(item);
-                          setItemContextMenu({
-                            item,
-                            x: event.clientX,
-                            y: event.clientY,
-                          });
-                        }}
-                        className={`cursor-pointer border-b border-[#E3EAF2] ${selectedItem?.id === item.id
-                          ? "bg-[#E3F0FF] border-l-4 border-l-[#1976D2]"
-                          : "hover:bg-[#F5F8FA]"
-                          }`}
+                          }}
+                          onKeyDown={(event) => {
+                            if (event.key === 'Escape') {
+                              setProductSearchTerm('');
+                              setIsProductSearchActive(false);
+                            }
+                          }}
+                          placeholder="Search items"
+                          className="w-full border border-[#D1D5DB] rounded-lg px-3 py-2 text-sm"
+                        />
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => setIsProductSearchActive(true)}
+                        className="w-10 h-10 rounded-full bg-[#E5E7EB] flex items-center justify-center text-[#4B5563] hover:bg-[#D1D5DB] transition-colors mr-3"
+                        aria-label="Search products"
                       >
-                        <td className="px-4 py-3 text-[#222B45] font-medium">
-                          {item.name}
-                        </td>
-                        <td
-                          className={`px-4 py-3 text-right font-semibold ${item.stockQuantity < 0
-                            ? "text-[#E53935]"
-                            : "text-[#43A047]"
+                        <Search className="w-5 h-5" />
+                      </button>
+                    )}
+                    <button
+                      onClick={openAddItemModal}
+                      className="flex items-center gap-2 bg-[#FFA726] hover:bg-[#FB8C00] text-white font-semibold rounded-lg px-5 py-2 shadow transition-all text-base relative"
+                    >
+                      <Plus className="w-5 h-5" />
+                      Add Item
+                      <ChevronDown className="w-4 h-4 ml-1" />
+                    </button>
+                  </div>
+                </CardHeader>
+                <CardContent className="flex-1 overflow-y-auto p-0">
+                  <table className="w-full text-sm">
+                    <thead className="bg-[#F7F9FB] sticky top-0 z-10">
+                      <tr>
+                        <th className="px-4 py-2 text-left font-semibold text-[#7B8A9A] text-xs tracking-wide align-middle">
+                          ITEM
+
+                        </th>
+                        <th className="px-4 py-2 text-right font-semibold text-[#7B8A9A] text-xs tracking-wide align-middle">
+                          QUANTITY
+
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredProductList.map((item) => (
+                        <tr
+                          key={item.id}
+                          onClick={() => setSelectedItem(item)}
+                          onContextMenu={(event) => {
+                            event.preventDefault();
+                            setSelectedItem(item);
+                            setItemContextMenu({
+                              item,
+                              x: event.clientX,
+                              y: event.clientY,
+                            });
+                          }}
+                          className={`cursor-pointer border-b border-[#E3EAF2] ${selectedItem?.id === item.id
+                            ? "bg-[#E3F0FF] border-l-4 border-l-[#1976D2]"
+                            : "hover:bg-[#F5F8FA]"
                             }`}
                         >
-                          {Math.trunc(Number(item.stockQuantity || 0))}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </CardContent>
-            </Card>
+                          <td className="px-4 py-3 text-[#222B45] font-medium">
+                            {item.name}
+                          </td>
+                          <td
+                            className={`px-4 py-3 text-right font-semibold ${item.stockQuantity < 0
+                              ? "text-[#E53935]"
+                              : "text-[#43A047]"
+                              }`}
+                          >
+                            {Math.trunc(Number(item.stockQuantity || 0))}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </CardContent>
+              </Card>
 
-            {itemContextMenu && (
-              <div
-                className="fixed z-50 min-w-40 rounded-md border bg-white p-1 shadow-md"
-                style={getContextMenuStyle(itemContextMenu.x, itemContextMenu.y)}
-                onClick={(event) => event.stopPropagation()}
-              >
-                <button
-                  onClick={() => {
-                    setSelectedItem(itemContextMenu.item);
-                    openEditItemDialog(itemContextMenu.item);
-                    setItemContextMenu(null);
-                  }}
-                  className="w-full rounded-sm px-2 py-1.5 text-left text-sm hover:bg-gray-100"
+              {itemContextMenu && (
+                <div
+                  className="fixed z-50 min-w-40 rounded-md border bg-white p-1 shadow-md"
+                  style={getContextMenuStyle(itemContextMenu.x, itemContextMenu.y)}
+                  onClick={(event) => event.stopPropagation()}
                 >
-                  View/Edit
-                </button>
-                <button
-                  onClick={() => {
-                    const item = itemContextMenu.item;
-                    setItemContextMenu(null);
-                    setItemPendingDelete(item);
-                  }}
-                  className="w-full rounded-sm px-2 py-1.5 text-left text-sm text-red-600 hover:bg-red-50"
-                >
-                  Delete
-                </button>
-              </div>
-            )}
-
-            {/* Right Panel Card - Item Details */}
-            <div
-              className="flex-1 flex flex-col"
-              style={{ marginRight: "4px" }}
-            >
-              {selectedItem && (
-                <>
-                  {/* Item Details Card */}
-                  <Card
-                    className="bg-white rounded-md shadow-sm px-0 py-0"
-                    style={{
-                      minHeight: "96px",
-                      marginBottom: "4px",
+                  <button
+                    onClick={() => {
+                      setSelectedItem(itemContextMenu.item);
+                      openEditItemDialog(itemContextMenu.item);
+                      setItemContextMenu(null);
                     }}
+                    className="w-full rounded-sm px-2 py-1.5 text-left text-sm hover:bg-gray-100"
                   >
-                    <div className="flex w-full h-full items-start justify-between">
-                      {/* Left: Name and icon */}
-                      <div className="flex flex-col justify-start pl-6 pt-5 pb-2 min-w-[220px]">
-                        <div className="flex items-center gap-2 mb-4">
-                          <h2 className="text-base font-bold text-[#151B26] tracking-wide uppercase">
-                            {selectedItem.name}
-                          </h2>
-                          <span className="inline-block align-middle text-[#151B26] cursor-pointer">
-                            <svg width="18" height="18" fill="none">
-                              <path
-                                d="M7.5 10.5L15 3M15 3H9M15 3V9"
-                                stroke="#151B26"
-                                strokeWidth="1.5"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                              />
-                            </svg>
-                          </span>
-                        </div>
-                        <div className="flex flex-col gap-2">
-                          <span className="text-sm font-medium text-[#151B26]">
-                            SALE PRICE:{" "}
-                            <span className="text-[#43A047]">
-                              Rs {selectedItem.salePrice.toFixed(2)}
-                            </span>
-                          </span>
-                          <span className="text-sm font-medium text-[#151B26]">
-                            PURCHASE PRICE:{" "}
-                            <span className="text-[#43A047]">
-                              Rs {selectedItem.purchasePrice.toFixed(2)}
-                            </span>
-                          </span>
+                    View/Edit
+                  </button>
+                  <button
+                    onClick={() => {
+                      const item = itemContextMenu.item;
+                      setItemContextMenu(null);
+                      setItemPendingDelete(item);
+                    }}
+                    className="w-full rounded-sm px-2 py-1.5 text-left text-sm text-red-600 hover:bg-red-50"
+                  >
+                    Delete
+                  </button>
+                </div>
+              )}
 
+              {/* Right Panel Card - Item Details */}
+              <div
+                className="flex-1 flex flex-col"
+                style={{ marginRight: "4px" }}
+              >
+                {selectedItem && (
+                  <>
+                    {/* Item Details Card */}
+                    <Card
+                      className="bg-white rounded-md shadow-sm px-0 py-0"
+                      style={{
+                        minHeight: "96px",
+                        marginBottom: "4px",
+                      }}
+                    >
+                      <div className="flex w-full h-full items-start justify-between">
+                        {/* Left: Name and icon */}
+                        <div className="flex flex-col justify-start pl-6 pt-5 pb-2 min-w-[220px]">
+                          <div className="flex items-center gap-2 mb-4">
+                            <h2 className="text-base font-bold text-[#151B26] tracking-wide uppercase">
+                              {selectedItem.name}
+                            </h2>
+                            <span className="inline-block align-middle text-[#151B26] cursor-pointer">
+                              <svg width="18" height="18" fill="none">
+                                <path
+                                  d="M7.5 10.5L15 3M15 3H9M15 3V9"
+                                  stroke="#151B26"
+                                  strokeWidth="1.5"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                />
+                              </svg>
+                            </span>
+                          </div>
+                          <div className="flex flex-col gap-2">
+                            <span className="text-sm font-medium text-[#151B26]">
+                              SALE PRICE:{" "}
+                              <span className="text-[#43A047]">
+                                Rs {selectedItem.salePrice.toFixed(2)}
+                              </span>
+                            </span>
+                            <span className="text-sm font-medium text-[#151B26]">
+                              PURCHASE PRICE:{" "}
+                              <span className="text-[#43A047]">
+                                Rs {selectedItem.purchasePrice.toFixed(2)}
+                              </span>
+                            </span>
+
+                          </div>
+                        </div>
+                        {/* Right: Button and stats */}
+                        <div className="flex flex-col items-end justify-between flex-1 pr-6 pt-5 pb-2">
+                          <div className="flex items-center gap-3 mb-6">
+                            <button
+                              onClick={() => setShowStockDetailsPopup(true)}
+                              className="bg-[#F0F4F8] hover:bg-[#E3EAF2] text-[#1976D2] px-4 py-2 rounded-lg text-sm font-bold flex items-center shadow-sm transition-all border border-[#1976D2]"
+                            >
+                              Stock Details
+                            </button>
+                            <button
+                              onClick={() => openAdjustStockDialog(selectedItem)}
+                              className="bg-[#1976D2] hover:bg-[#1251A3] text-white px-5 py-2 rounded-lg text-sm font-bold flex items-center gap-2 shadow transition-all"
+                              style={{ minWidth: "140px" }}
+                            >
+                              <SlidersHorizontal className="w-5 h-5" />
+                              ADJUST ITEM
+                            </button>
+                          </div>
+                          <div className="flex flex-col gap-2 items-end">
+                            <span className="text-sm font-medium text-[#151B26] flex items-center gap-2">
+                              STOCK QUANTITY:{" "}
+                              <span className="text-[#43A047]">
+                                {Math.floor(selectedItem.stockQuantity)}
+                              </span>
+                            </span>
+                            <span className="text-sm font-medium text-[#151B26]">
+                              STOCK VALUE:{" "}
+                              <span className="text-[#43A047]">
+                                Rs {selectedItem.stockValue?.toLocaleString()}
+                              </span>
+                            </span>
+                          </div>
                         </div>
                       </div>
-                      {/* Right: Button and stats */}
-                      <div className="flex flex-col items-end justify-between flex-1 pr-6 pt-5 pb-2">
-                        <div className="flex items-center gap-3 mb-6">
-                          <button
-                            onClick={() => setShowStockDetailsPopup(true)}
-                            className="bg-[#F0F4F8] hover:bg-[#E3EAF2] text-[#1976D2] px-4 py-2 rounded-lg text-sm font-bold flex items-center shadow-sm transition-all border border-[#1976D2]"
-                          >
-                            Stock Details
-                          </button>
-                          <button
-                            onClick={() => openEditItemDialog(selectedItem)}
-                            className="bg-[#1976D2] hover:bg-[#1251A3] text-white px-5 py-2 rounded-lg text-sm font-bold flex items-center gap-2 shadow transition-all"
-                            style={{ minWidth: "140px" }}
-                          >
-                            <SlidersHorizontal className="w-5 h-5" />
-                            ADJUST ITEM
-                          </button>
+                    </Card>
+                    {/* Transactions Card */}
+                    <Card className="bg-white rounded-md flex flex-col flex-1 overflow-hidden shadow-sm p-0">
+                      <CardContent className="p-0">
+                        <div className="flex items-center justify-between px-6 pt-4 pb-2">
+                          <h3 className="text-base font-bold text-[#222B45] tracking-wide">
+                            TRANSACTIONS
+                          </h3>
+                          <div className="flex gap-2 items-center">
+                            {showTransactionSearch && (
+                              <div className="flex items-center bg-[#F7F9FB] rounded-lg px-3 py-1.5 border border-[#E3EAF2] w-64 mr-2">
+                                <Search className="w-4 h-4 text-gray-400 mr-2 shrink-0" />
+                                <input
+                                  type="text"
+                                  placeholder="Search transactions..."
+                                  value={transactionSearchTerm}
+                                  onChange={(e) => setTransactionSearchTerm(e.target.value)}
+                                  onBlur={() => {
+                                    setTimeout(() => {
+                                      setShowTransactionSearch(false);
+                                      setTransactionSearchTerm("");
+                                    }, 150);
+                                  }}
+                                  className="w-full bg-transparent border-none outline-none text-sm"
+                                  autoFocus
+                                />
+                              </div>
+                            )}
+                            {!showTransactionSearch && (
+                              <button
+                                onClick={() => setShowTransactionSearch(true)}
+                                className="p-1.5 hover:bg-[#F7F9FB] rounded"
+                              >
+                                <Search className="w-4 h-4 text-[#7B8A9A]" />
+                              </button>
+                            )}
+                            <button
+                              onClick={handlePrintTransactions}
+                              className="p-1.5 hover:bg-[#F7F9FB] rounded"
+                            >
+                              <Printer className="w-4 h-4 text-[#7B8A9A]" />
+                            </button>
+                            <button
+                              onClick={handleExportExcel}
+                              className="p-1.5 hover:bg-[#F7F9FB] rounded relative"
+                            >
+                              <span className="bg-green-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
+                                xls
+                              </span>
+                            </button>
+                          </div>
                         </div>
-                        <div className="flex flex-col gap-2 items-end">
-                          <span className="text-sm font-medium text-[#151B26] flex items-center gap-2">
-                            STOCK QUANTITY:{" "}
-                            <span className="text-[#43A047]">
-                              {Math.floor(selectedItem.stockQuantity)}
-                            </span>
-                          </span>
-                          <span className="text-sm font-medium text-[#151B26]">
-                            STOCK VALUE:{" "}
-                            <span className="text-[#43A047]">
-                              Rs {selectedItem.stockValue?.toLocaleString()}
-                            </span>
-                          </span>
+                        <div className="border-t border-[#E3EAF2] rounded-b-lg overflow-x-auto">
+                          <table className="w-full text-sm">
+                            <thead className="bg-[#F7F9FB] sticky top-0 z-10">
+                              <tr>
+                                <th className="px-4 py-2 text-left font-semibold text-[#7B8A9A] text-xs tracking-wide align-middle">
+                                  TYPE{" "}
+
+                                </th>
+                                <th className="px-4 py-2 text-left font-semibold text-[#7B8A9A] text-xs tracking-wide align-middle">
+                                  INVOICE/#{" "}
+
+                                </th>
+                                <th className="px-4 py-2 text-left font-semibold text-[#7B8A9A] text-xs tracking-wide align-middle">
+                                  NAME{" "}
+
+                                </th>
+                                <th className="px-4 py-2 text-left font-semibold text-[#7B8A9A] text-xs tracking-wide align-middle">
+                                  DATE{" "}
+
+                                </th>
+                                <th className="px-4 py-2 text-right font-semibold text-[#7B8A9A] text-xs tracking-wide align-middle">
+                                  QUANTITY{" "}
+
+                                </th>
+                                <th className="px-4 py-2 text-right font-semibold text-[#7B8A9A] text-xs tracking-wide align-middle">
+                                  PRICE/U...{" "}
+
+                                </th>
+                                <th className="px-4 py-2 text-left font-semibold text-[#7B8A9A] text-xs tracking-wide align-middle">
+                                  STATUS{" "}
+
+                                </th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {filteredItemTransactions.length ? (
+                                filteredItemTransactions.map((transaction) => (
+                                  <tr
+                                    key={transaction.id}
+                                    className="border-b border-[#E3EAF2] hover:bg-[#F5F8FA]"
+                                  >
+                                    <td className="px-4 py-2">
+                                      <span
+                                        className={`inline-flex items-center gap-1.5 ${transaction.type === "Sale"
+                                          ? "text-[#43A047]"
+                                          : "text-[#E53935]"
+                                          }`}
+                                      >
+                                        <span
+                                          className={`w-2 h-2 rounded-full ${transaction.type === "Sale"
+                                            ? "bg-[#43A047]"
+                                            : "bg-[#E53935]"
+                                            }`}
+                                        ></span>
+                                        {transaction.type}
+                                      </span>
+                                    </td>
+                                    <td className="px-4 py-2">{transaction.invoiceNo}</td>
+                                    <td className="px-4 py-2">{transaction.partyName}</td>
+                                    <td className="px-4 py-2">{transaction.date}</td>
+                                    <td className="px-4 py-2 text-right">
+                                      {Number(transaction.quantity).toLocaleString()} {transaction.unit || ""}
+                                    </td>
+                                    <td className="px-4 py-2 text-right">
+                                      Rs {Number(transaction.price).toFixed(2)}
+                                    </td>
+                                    <td className="px-4 py-2">
+                                      <span
+                                        className={`text-xs px-2 py-1 rounded-full font-semibold ${transaction.status === "Paid"
+                                          ? "bg-[#E6F4EA] text-[#43A047]"
+                                          : transaction.status === "Unpaid"
+                                            ? "bg-[#FDEAEA] text-[#E53935]"
+                                            : "bg-[#F7F9FB] text-[#7B8A9A]"
+                                          }`}
+                                      >
+                                        {transaction.status}
+                                      </span>
+                                    </td>
+                                  </tr>
+                                ))
+                              ) : (
+                                <tr>
+                                  <td
+                                    colSpan={7}
+                                    className="px-4 py-8 text-center text-gray-500"
+                                  >
+                                    No transactions found for this item
+                                  </td>
+                                </tr>
+                              )}
+                            </tbody>
+                          </table>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </>
+                )}
+              </div>
+            </>
+          )}
+
+          {activeTab === "category" && (
+            <div className="flex-1 flex gap-1 overflow-hidden">
+              {/* Left Panel - Category List */}
+              <div
+                className="w-80 bg-white rounded-md flex flex-col shrink-0 overflow-hidden shadow-sm"
+                style={{ marginLeft: "4px" }}
+              >
+                <div className="p-2 pb-0 border-none flex flex-col gap-2">
+                  <div className="flex items-center justify-between mb-3">
+                    {isCategorySearchActive ? (
+                      <div className="relative mr-3 flex-1 max-w-[220px]">
+                        <input
+                          ref={categorySearchInputRef}
+                          type="text"
+                          value={categorySearchTerm}
+                          onChange={(event) => setCategorySearchTerm(event.target.value)}
+                          onBlur={() => {
+                            setCategorySearchTerm('');
+                            setIsCategorySearchActive(false);
+                          }}
+                          onKeyDown={(event) => {
+                            if (event.key === 'Escape') {
+                              setCategorySearchTerm('');
+                              setIsCategorySearchActive(false);
+                            }
+                          }}
+                          placeholder="Search categories"
+                          className="w-full border border-[#D1D5DB] rounded-lg px-3 py-2 text-sm"
+                        />
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => setIsCategorySearchActive(true)}
+                        className="w-10 h-10 rounded-full bg-[#E5E7EB] flex items-center justify-center text-[#4B5563] hover:bg-[#D1D5DB] transition-colors mr-3"
+                        aria-label="Search categories"
+                      >
+                        <Search className="w-5 h-5" />
+                      </button>
+                    )}
+                    <button
+                      onClick={() => {
+                        setCategoryBeingEdited(null);
+                        setNewCategoryName('');
+                        setShowAddCategory(true);
+                      }}
+                      className="flex items-center gap-2 bg-[#FFA726] hover:bg-[#FB8C00] text-white font-semibold rounded-lg px-5 py-2 shadow transition-all text-base relative"
+                    >
+                      <Plus className="w-5 h-5" />
+                      Add Category
+                    </button>
+                  </div>
+                </div>
+                <div className="flex-1 overflow-y-auto p-0">
+                  <table className="w-full text-sm">
+                    <thead className="bg-[#F7F9FB] sticky top-0 z-10">
+                      <tr>
+                        <th className="px-4 py-2 text-left font-semibold text-[#7B8A9A] text-xs tracking-wide align-middle">
+                          CATEGORY
+                        </th>
+                        <th className="px-4 py-2 text-right font-semibold text-[#7B8A9A] text-xs tracking-wide align-middle">
+                          ITEM
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr
+                        onClick={() => setSelectedCategoryId(null)}
+                        className={`border-b border-[#E3EAF2] hover:bg-[#F5F8FA] cursor-pointer ${selectedCategoryId === null ? "bg-[#E3F0FF]" : ""}`}
+                      >
+                        <td className="px-4 py-3 text-[#222B45] font-medium">
+                          Items not in any Category
+                        </td>
+                        <td className="px-4 py-3 text-right font-semibold text-[#7B8A9A]">
+                          0
+                        </td>
+                      </tr>
+                      {filteredCategoryList.map((cat) => (
+                        <tr
+                          key={cat.id}
+                          onClick={() => setSelectedCategoryId(cat.id)}
+                          onContextMenu={(event) => {
+                            event.preventDefault();
+                            setCategoryContextMenu({
+                              category: cat,
+                              x: event.clientX,
+                              y: event.clientY,
+                            });
+                          }}
+                          className={`border-b border-[#E3EAF2] hover:bg-[#F5F8FA] cursor-pointer ${selectedCategoryId === cat.id ? "bg-[#E3F0FF]" : ""}`}
+                        >
+                          <td className="px-4 py-3 text-[#222B45] font-medium">
+                            {cat.name}
+                          </td>
+                          <td className="px-4 py-3 text-right font-semibold text-[#7B8A9A]">
+                            {cat.itemCount}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {categoryContextMenu && (
+                <div
+                  className="fixed z-50 min-w-40 rounded-md border bg-white p-1 shadow-md"
+                  style={getContextMenuStyle(categoryContextMenu.x, categoryContextMenu.y)}
+                  onClick={(event) => event.stopPropagation()}
+                >
+                  <button
+                    onClick={() => {
+                      setSelectedCategoryId(categoryContextMenu.category.id);
+                      openEditCategoryDialog(categoryContextMenu.category);
+                      setCategoryContextMenu(null);
+                    }}
+                    className="w-full rounded-sm px-2 py-1.5 text-left text-sm hover:bg-gray-100"
+                  >
+                    View/Edit
+                  </button>
+                  <button
+                    onClick={() => {
+                      const category = categoryContextMenu.category;
+                      setCategoryContextMenu(null);
+                      setCategoryPendingDelete(category);
+                    }}
+                    className="w-full rounded-sm px-2 py-1.5 text-left text-sm text-red-600 hover:bg-red-50"
+                  >
+                    Delete
+                  </button>
+                </div>
+              )}
+
+              {/* Right Panel - Category Details and Items */}
+              <div
+                className="flex-1 flex flex-col"
+                style={{ marginRight: "4px" }}
+              >
+                {/* Category Details Card */}
+                <Card
+                  className="bg-white rounded-md shadow-sm px-0 py-0"
+                  style={{
+                    minHeight: "72px",
+                    marginBottom: "4px",
+                  }}
+                >
+                  <div className="flex w-full h-full items-start justify-between">
+                    <div className="flex flex-col justify-start pl-6 pt-5 pb-2 min-w-[220px]">
+                      <div className="flex items-center gap-2 mb-2">
+                        <h2 className="text-base font-bold text-[#151B26] tracking-wide uppercase">
+                          {selectedCategory?.name ?? "ITEMS NOT IN ANY CATEGORY"}
+                        </h2>
+                      </div>
+                      <span className="text-sm font-medium text-[#151B26]">
+                        {filteredCategoryItems.length}
+                      </span>
+                    </div>
+                    <div className="flex flex-col items-end justify-between flex-1 pr-6 pt-5 pb-2">
+                      <button
+                        onClick={openMoveItemsDialog}
+                        className="bg-[#1976D2] hover:bg-[#1251A3] text-white px-5 py-2 rounded-lg text-sm font-bold flex items-center gap-2 shadow transition-all mb-2"
+                        style={{ minWidth: "140px" }}
+                      >
+                        Move To This Category
+                      </button>
+                    </div>
+                  </div>
+                </Card>
+                {/* Items Table Card */}
+                <Card className="bg-white rounded-md flex flex-col flex-1 overflow-hidden shadow-sm p-0">
+                  <CardContent className="p-0">
+                    <div className="flex items-center justify-between px-6 pt-4 pb-2">
+                      <h3 className="text-base font-bold text-[#222B45] tracking-wide">
+                        ITEMS
+                      </h3>
+                      <div className="flex gap-2 items-center">
+                        <div className="relative">
+                          <input
+                            type="text"
+                            placeholder="Search items..."
+                            value={categoryItemSearchTerm}
+                            onChange={(e) => setCategoryItemSearchTerm(e.target.value)}
+                            className="bg-[#F7F9FB] border border-[#E3EAF2] rounded-lg px-8 py-1.5 text-sm text-[#222B45] focus:bg-white focus:border-[#1976D2]"
+                          />
+                          <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-[#AEB8C4]" />
                         </div>
                       </div>
                     </div>
-                  </Card>
-                  {/* Transactions Card */}
-                  <Card className="bg-white rounded-md flex flex-col flex-1 overflow-hidden shadow-sm p-0">
-                    <CardContent className="p-0">
-                      <div className="flex items-center justify-between px-6 pt-4 pb-2">
-                        <h3 className="text-base font-bold text-[#222B45] tracking-wide">
-                          TRANSACTIONS
-                        </h3>
-                        <div className="flex gap-2 items-center">
-                          {showTransactionSearch && (
-                            <div className="flex items-center bg-[#F7F9FB] rounded-lg px-3 py-1.5 border border-[#E3EAF2] w-64 mr-2">
-                              <Search className="w-4 h-4 text-gray-400 mr-2 shrink-0" />
-                              <input
-                                type="text"
-                                placeholder="Search transactions..."
-                                value={transactionSearchTerm}
-                                onChange={(e) => setTransactionSearchTerm(e.target.value)}
-                                onBlur={() => {
-                                  setTimeout(() => {
-                                    setShowTransactionSearch(false);
-                                    setTransactionSearchTerm("");
-                                  }, 150);
-                                }}
-                                className="w-full bg-transparent border-none outline-none text-sm"
-                                autoFocus
-                              />
-                            </div>
-                          )}
-                          {!showTransactionSearch && (
-                            <button
-                              onClick={() => setShowTransactionSearch(true)}
-                              className="p-1.5 hover:bg-[#F7F9FB] rounded"
-                            >
-                              <Search className="w-4 h-4 text-[#7B8A9A]" />
-                            </button>
-                          )}
-                          <button
-                            onClick={handlePrintTransactions}
-                            className="p-1.5 hover:bg-[#F7F9FB] rounded"
-                          >
-                            <Printer className="w-4 h-4 text-[#7B8A9A]" />
-                          </button>
-                          <button
-                            onClick={handleExportExcel}
-                            className="p-1.5 hover:bg-[#F7F9FB] rounded relative"
-                          >
-                            <span className="bg-green-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
-                              xls
-                            </span>
-                          </button>
-                        </div>
-                      </div>
-                      <div className="border-t border-[#E3EAF2] rounded-b-lg overflow-x-auto">
-                        <table className="w-full text-sm">
-                          <thead className="bg-[#F7F9FB] sticky top-0 z-10">
-                            <tr>
-                              <th className="px-4 py-2 text-left font-semibold text-[#7B8A9A] text-xs tracking-wide align-middle">
-                                TYPE{" "}
+                    <div className="border-t border-[#E3EAF2] rounded-b-lg overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead className="bg-[#F7F9FB] sticky top-0 z-10">
+                          <tr>
+                            <th className="px-4 py-2 text-left font-semibold text-[#7B8A9A] text-xs tracking-wide align-middle">
+                              NAME{" "}
 
-                              </th>
-                              <th className="px-4 py-2 text-left font-semibold text-[#7B8A9A] text-xs tracking-wide align-middle">
-                                INVOICE/#{" "}
+                            </th>
+                            <th className="px-4 py-2 text-right font-semibold text-[#7B8A9A] text-xs tracking-wide align-middle">
+                              QUANTITY{" "}
 
-                              </th>
-                              <th className="px-4 py-2 text-left font-semibold text-[#7B8A9A] text-xs tracking-wide align-middle">
-                                NAME{" "}
+                            </th>
+                            <th className="px-4 py-2 text-right font-semibold text-[#7B8A9A] text-xs tracking-wide align-middle">
+                              STOCK VALUE{" "}
 
-                              </th>
-                              <th className="px-4 py-2 text-left font-semibold text-[#7B8A9A] text-xs tracking-wide align-middle">
-                                DATE{" "}
-
-                              </th>
-                              <th className="px-4 py-2 text-right font-semibold text-[#7B8A9A] text-xs tracking-wide align-middle">
-                                QUANTITY{" "}
-
-                              </th>
-                              <th className="px-4 py-2 text-right font-semibold text-[#7B8A9A] text-xs tracking-wide align-middle">
-                                PRICE/U...{" "}
-
-                              </th>
-                              <th className="px-4 py-2 text-left font-semibold text-[#7B8A9A] text-xs tracking-wide align-middle">
-                                STATUS{" "}
-
-                              </th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {filteredItemTransactions.length ? (
-                              filteredItemTransactions.map((transaction) => (
-                                <tr
-                                  key={transaction.id}
-                                  className="border-b border-[#E3EAF2] hover:bg-[#F5F8FA]"
-                                >
-                                  <td className="px-4 py-2">
-                                    <span
-                                      className={`inline-flex items-center gap-1.5 ${transaction.type === "Sale"
-                                        ? "text-[#43A047]"
-                                        : "text-[#E53935]"
-                                        }`}
-                                    >
-                                      <span
-                                        className={`w-2 h-2 rounded-full ${transaction.type === "Sale"
-                                          ? "bg-[#43A047]"
-                                          : "bg-[#E53935]"
-                                          }`}
-                                      ></span>
-                                      {transaction.type}
-                                    </span>
-                                  </td>
-                                  <td className="px-4 py-2">{transaction.invoiceNo}</td>
-                                  <td className="px-4 py-2">{transaction.partyName}</td>
-                                  <td className="px-4 py-2">{transaction.date}</td>
-                                  <td className="px-4 py-2 text-right">
-                                    {Number(transaction.quantity).toLocaleString()} {transaction.unit || ""}
-                                  </td>
-                                  <td className="px-4 py-2 text-right">
-                                    Rs {Number(transaction.price).toFixed(2)}
-                                  </td>
-                                  <td className="px-4 py-2">
-                                    <span
-                                      className={`text-xs px-2 py-1 rounded-full font-semibold ${transaction.status === "Paid"
-                                        ? "bg-[#E6F4EA] text-[#43A047]"
-                                        : transaction.status === "Unpaid"
-                                          ? "bg-[#FDEAEA] text-[#E53935]"
-                                          : "bg-[#F7F9FB] text-[#7B8A9A]"
-                                        }`}
-                                    >
-                                      {transaction.status}
-                                    </span>
-                                  </td>
-                                </tr>
-                              ))
-                            ) : (
-                              <tr>
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {filteredCategoryItems.length ? (
+                            filteredCategoryItems.map((item) => (
+                              <tr
+                                key={item.id}
+                                className="border-b border-[#E3EAF2] hover:bg-[#F5F8FA]"
+                              >
+                                <td className="px-4 py-3 text-[#222B45] font-medium">
+                                  {item.name}
+                                </td>
                                 <td
-                                  colSpan={7}
-                                  className="px-4 py-8 text-center text-gray-500"
+                                  className={`px-4 py-3 text-right font-semibold ${item.stockQuantity < 0
+                                    ? "text-[#E53935]"
+                                    : "text-[#43A047]"
+                                    }`}
                                 >
-                                  No transactions found for this item
+                                  {item.stockQuantity}
+                                </td>
+                                <td className="px-4 py-3 text-right font-semibold text-[#43A047]">
+                                  Rs {Number(item.stockValue ?? 0).toLocaleString(undefined, {
+                                    minimumFractionDigits: 2,
+                                    maximumFractionDigits: 2,
+                                  })}
                                 </td>
                               </tr>
-                            )}
-                          </tbody>
-                        </table>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </>
-              )}
+                            ))
+                          ) : (
+                            <tr>
+                              <td
+                                colSpan={3}
+                                className="px-4 py-6 text-center text-sm text-[#7B8A9A]"
+                              >
+                                There are no items to show.
+                              </td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
             </div>
-          </>
-        )}
+          )}
 
-        {activeTab === "category" && (
-          <div className="flex-1 flex gap-1 overflow-hidden">
-            {/* Left Panel - Category List */}
-            <div
-              className="w-80 bg-white rounded-md flex flex-col shrink-0 overflow-hidden shadow-sm"
-              style={{ marginLeft: "4px" }}
-            >
-              <div className="p-2 pb-0 border-none flex flex-col gap-2">
-                <div className="flex items-center justify-between mb-3">
-                  {isCategorySearchActive ? (
-                    <div className="relative mr-3 flex-1 max-w-[220px]">
+          {activeTab === "units" && (
+            <div className="flex-1 flex gap-1 overflow-hidden">
+              {/* Left Panel - Unit List */}
+              <Card
+                className="w-80 bg-white rounded-md flex flex-col shrink-0 overflow-hidden shadow-sm"
+                style={{ marginLeft: "4px" }}
+              >
+                <div className="p-3 flex items-center justify-between border-b border-transparent">
+                  {isUnitSearchActive ? (
+                    <div className="relative flex-1 max-w-[220px]">
                       <input
-                        ref={categorySearchInputRef}
+                        ref={unitSearchInputRef}
                         type="text"
-                        value={categorySearchTerm}
-                        onChange={(event) => setCategorySearchTerm(event.target.value)}
+                        value={unitSearchTerm}
+                        onChange={(event) => setUnitSearchTerm(event.target.value)}
                         onBlur={() => {
-                          setCategorySearchTerm('');
-                          setIsCategorySearchActive(false);
+                          setUnitSearchTerm('');
+                          setIsUnitSearchActive(false);
                         }}
                         onKeyDown={(event) => {
                           if (event.key === 'Escape') {
-                            setCategorySearchTerm('');
-                            setIsCategorySearchActive(false);
+                            setUnitSearchTerm('');
+                            setIsUnitSearchActive(false);
                           }
                         }}
-                        placeholder="Search categories"
+                        placeholder="Search units"
                         className="w-full border border-[#D1D5DB] rounded-lg px-3 py-2 text-sm"
                       />
                     </div>
                   ) : (
                     <button
                       type="button"
-                      onClick={() => setIsCategorySearchActive(true)}
-                      className="w-10 h-10 rounded-full bg-[#E5E7EB] flex items-center justify-center text-[#4B5563] hover:bg-[#D1D5DB] transition-colors mr-3"
-                      aria-label="Search categories"
+                      onClick={() => setIsUnitSearchActive(true)}
+                      className="w-10 h-10 rounded-full bg-[#E5E7EB] flex items-center justify-center text-[#4B5563] hover:bg-[#D1D5DB] transition-colors"
+                      aria-label="Search units"
                     >
                       <Search className="w-5 h-5" />
                     </button>
                   )}
                   <button
                     onClick={() => {
-                      setCategoryBeingEdited(null);
-                      setNewCategoryName('');
-                      setShowAddCategory(true);
+                      setUnitBeingEdited(null);
+                      setAddUnitFullName('');
+                      setAddUnitShortName('');
+                      setShowAddUnit(true);
                     }}
-                    className="flex items-center gap-2 bg-[#FFA726] hover:bg-[#FB8C00] text-white font-semibold rounded-lg px-5 py-2 shadow transition-all text-base relative"
+                    className="flex items-center gap-1 bg-[#FFA726] hover:bg-[#FB8C00] text-white font-semibold rounded-lg px-4 py-2 shadow transition-all text-sm"
                   >
                     <Plus className="w-5 h-5" />
-                    Add Category
+                    Add Units
                   </button>
                 </div>
-              </div>
-              <div className="flex-1 overflow-y-auto p-0">
-                <table className="w-full text-sm">
-                  <thead className="bg-[#F7F9FB] sticky top-0 z-10">
-                    <tr>
-                      <th className="px-4 py-2 text-left font-semibold text-[#7B8A9A] text-xs tracking-wide align-middle">
-                        CATEGORY
-                      </th>
-                      <th className="px-4 py-2 text-right font-semibold text-[#7B8A9A] text-xs tracking-wide align-middle">
-                        ITEM
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr
-                      onClick={() => setSelectedCategoryId(null)}
-                      className={`border-b border-[#E3EAF2] hover:bg-[#F5F8FA] cursor-pointer ${selectedCategoryId === null ? "bg-[#E3F0FF]" : ""}`}
-                    >
-                      <td className="px-4 py-3 text-[#222B45] font-medium">
-                        Items not in any Category
-                      </td>
-                      <td className="px-4 py-3 text-right font-semibold text-[#7B8A9A]">
-                        0
-                      </td>
-                    </tr>
-                    {filteredCategoryList.map((cat) => (
-                      <tr
-                        key={cat.id}
-                        onClick={() => setSelectedCategoryId(cat.id)}
-                        onContextMenu={(event) => {
-                          event.preventDefault();
-                          setCategoryContextMenu({
-                            category: cat,
-                            x: event.clientX,
-                            y: event.clientY,
-                          });
-                        }}
-                        className={`border-b border-[#E3EAF2] hover:bg-[#F5F8FA] cursor-pointer ${selectedCategoryId === cat.id ? "bg-[#E3F0FF]" : ""}`}
-                      >
-                        <td className="px-4 py-3 text-[#222B45] font-medium">
-                          {cat.name}
-                        </td>
-                        <td className="px-4 py-3 text-right font-semibold text-[#7B8A9A]">
-                          {cat.itemCount}
-                        </td>
+                <div className="flex-1 overflow-y-auto p-0">
+                  <table className="w-full text-sm">
+                    <thead className="bg-white sticky top-0 z-10 border-b border-[#E3EAF2]">
+                      <tr>
+                        <th className="px-4 py-3 text-left font-semibold text-[#7B8A9A] text-xs tracking-wide">
+                          FULLNAME
+                        </th>
+                        <th className="px-4 py-3 text-right font-semibold text-[#7B8A9A] text-xs tracking-wide pr-8">
+                          SHORTNAME
+                        </th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            {categoryContextMenu && (
-              <div
-                className="fixed z-50 min-w-40 rounded-md border bg-white p-1 shadow-md"
-                style={getContextMenuStyle(categoryContextMenu.x, categoryContextMenu.y)}
-                onClick={(event) => event.stopPropagation()}
-              >
-                <button
-                  onClick={() => {
-                    setSelectedCategoryId(categoryContextMenu.category.id);
-                    openEditCategoryDialog(categoryContextMenu.category);
-                    setCategoryContextMenu(null);
-                  }}
-                  className="w-full rounded-sm px-2 py-1.5 text-left text-sm hover:bg-gray-100"
-                >
-                  View/Edit
-                </button>
-                <button
-                  onClick={() => {
-                    const category = categoryContextMenu.category;
-                    setCategoryContextMenu(null);
-                    setCategoryPendingDelete(category);
-                  }}
-                  className="w-full rounded-sm px-2 py-1.5 text-left text-sm text-red-600 hover:bg-red-50"
-                >
-                  Delete
-                </button>
-              </div>
-            )}
-
-            {/* Right Panel - Category Details and Items */}
-            <div
-              className="flex-1 flex flex-col"
-              style={{ marginRight: "4px" }}
-            >
-              {/* Category Details Card */}
-              <Card
-                className="bg-white rounded-md shadow-sm px-0 py-0"
-                style={{
-                  minHeight: "72px",
-                  marginBottom: "4px",
-                }}
-              >
-                <div className="flex w-full h-full items-start justify-between">
-                  <div className="flex flex-col justify-start pl-6 pt-5 pb-2 min-w-[220px]">
-                    <div className="flex items-center gap-2 mb-2">
-                      <h2 className="text-base font-bold text-[#151B26] tracking-wide uppercase">
-                        {selectedCategory?.name ?? "ITEMS NOT IN ANY CATEGORY"}
-                      </h2>
-                    </div>
-                    <span className="text-sm font-medium text-[#151B26]">
-                      {filteredCategoryItems.length}
-                    </span>
-                  </div>
-                  <div className="flex flex-col items-end justify-between flex-1 pr-6 pt-5 pb-2">
-                    <button
-                      onClick={openMoveItemsDialog}
-                      className="bg-[#1976D2] hover:bg-[#1251A3] text-white px-5 py-2 rounded-lg text-sm font-bold flex items-center gap-2 shadow transition-all mb-2"
-                      style={{ minWidth: "140px" }}
-                    >
-                      Move To This Category
-                    </button>
-                  </div>
+                    </thead>
+                    <tbody>
+                      {filteredUnitList.map((unit) => {
+                        const isSelected = unit.id === selectedUnitInTabId;
+                        return (
+                          <tr
+                            key={unit.id}
+                            onClick={() => setSelectedUnitInTabId(unit.id)}
+                            onContextMenu={(event) => {
+                              event.preventDefault();
+                              setSelectedUnitInTabId(unit.id);
+                              setUnitContextMenu({
+                                unit,
+                                x: event.clientX,
+                                y: event.clientY,
+                              });
+                            }}
+                            className={`cursor-pointer border-b border-[#E3EAF2] ${isSelected ? "bg-[#DDEBFA]" : "hover:bg-[#F5F8FA]"
+                              }`}
+                          >
+                            <td className="px-4 py-3 text-[#222B45] font-medium uppercase">
+                              {unit.fullName}
+                            </td>
+                            <td className="px-4 py-3 text-right text-[#4B5563]">
+                              <div className="flex items-center justify-end gap-3">
+                                <span className="capitalize">
+                                  {unit.shortName}
+                                </span>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
                 </div>
               </Card>
-              {/* Items Table Card */}
-              <Card className="bg-white rounded-md flex flex-col flex-1 overflow-hidden shadow-sm p-0">
-                <CardContent className="p-0">
-                  <div className="flex items-center justify-between px-6 pt-4 pb-2">
-                    <h3 className="text-base font-bold text-[#222B45] tracking-wide">
-                      ITEMS
-                    </h3>
-                    <div className="flex gap-2 items-center">
-                      <div className="relative">
-                        <input
-                          type="text"
-                          placeholder="Search items..."
-                          value={categoryItemSearchTerm}
-                          onChange={(e) => setCategoryItemSearchTerm(e.target.value)}
-                          className="bg-[#F7F9FB] border border-[#E3EAF2] rounded-lg px-8 py-1.5 text-sm text-[#222B45] focus:bg-white focus:border-[#1976D2]"
-                        />
-                        <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-[#AEB8C4]" />
-                      </div>
-                    </div>
-                  </div>
-                  <div className="border-t border-[#E3EAF2] rounded-b-lg overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead className="bg-[#F7F9FB] sticky top-0 z-10">
-                        <tr>
-                          <th className="px-4 py-2 text-left font-semibold text-[#7B8A9A] text-xs tracking-wide align-middle">
-                            NAME{" "}
 
-                          </th>
-                          <th className="px-4 py-2 text-right font-semibold text-[#7B8A9A] text-xs tracking-wide align-middle">
-                            QUANTITY{" "}
-
-                          </th>
-                          <th className="px-4 py-2 text-right font-semibold text-[#7B8A9A] text-xs tracking-wide align-middle">
-                            STOCK VALUE{" "}
-
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {filteredCategoryItems.length ? (
-                          filteredCategoryItems.map((item) => (
-                            <tr
-                              key={item.id}
-                              className="border-b border-[#E3EAF2] hover:bg-[#F5F8FA]"
-                            >
-                              <td className="px-4 py-3 text-[#222B45] font-medium">
-                                {item.name}
-                              </td>
-                              <td
-                                className={`px-4 py-3 text-right font-semibold ${item.stockQuantity < 0
-                                  ? "text-[#E53935]"
-                                  : "text-[#43A047]"
-                                  }`}
-                              >
-                                {item.stockQuantity}
-                              </td>
-                              <td className="px-4 py-3 text-right font-semibold text-[#43A047]">
-                                Rs {Number(item.stockValue ?? 0).toLocaleString(undefined, {
-                                  minimumFractionDigits: 2,
-                                  maximumFractionDigits: 2,
-                                })}
-                              </td>
-                            </tr>
-                          ))
-                        ) : (
-                          <tr>
-                            <td
-                              colSpan={3}
-                              className="px-4 py-6 text-center text-sm text-[#7B8A9A]"
-                            >
-                              There are no items to show.
-                            </td>
-                          </tr>
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-        )}
-
-        {activeTab === "units" && (
-          <div className="flex-1 flex gap-1 overflow-hidden">
-            {/* Left Panel - Unit List */}
-            <Card
-              className="w-80 bg-white rounded-md flex flex-col shrink-0 overflow-hidden shadow-sm"
-              style={{ marginLeft: "4px" }}
-            >
-              <div className="p-3 flex items-center justify-between border-b border-transparent">
-                {isUnitSearchActive ? (
-                  <div className="relative flex-1 max-w-[220px]">
-                    <input
-                      ref={unitSearchInputRef}
-                      type="text"
-                      value={unitSearchTerm}
-                      onChange={(event) => setUnitSearchTerm(event.target.value)}
-                      onBlur={() => {
-                        setUnitSearchTerm('');
-                        setIsUnitSearchActive(false);
-                      }}
-                      onKeyDown={(event) => {
-                        if (event.key === 'Escape') {
-                          setUnitSearchTerm('');
-                          setIsUnitSearchActive(false);
-                        }
-                      }}
-                      placeholder="Search units"
-                      className="w-full border border-[#D1D5DB] rounded-lg px-3 py-2 text-sm"
-                    />
-                  </div>
-                ) : (
+              {unitContextMenu && (
+                <div
+                  className="fixed z-50 min-w-40 rounded-md border bg-white p-1 shadow-md"
+                  style={getContextMenuStyle(unitContextMenu.x, unitContextMenu.y)}
+                  onClick={(event) => event.stopPropagation()}
+                >
                   <button
-                    type="button"
-                    onClick={() => setIsUnitSearchActive(true)}
-                    className="w-10 h-10 rounded-full bg-[#E5E7EB] flex items-center justify-center text-[#4B5563] hover:bg-[#D1D5DB] transition-colors"
-                    aria-label="Search units"
+                    onClick={() => {
+                      setSelectedUnitInTabId(unitContextMenu.unit.id);
+                      openEditUnitDialog(unitContextMenu.unit);
+                      setUnitContextMenu(null);
+                    }}
+                    className="w-full rounded-sm px-2 py-1.5 text-left text-sm hover:bg-gray-100"
                   >
-                    <Search className="w-5 h-5" />
+                    View/Edit
                   </button>
-                )}
-                <button
-                  onClick={() => {
-                    setUnitBeingEdited(null);
-                    setAddUnitFullName('');
-                    setAddUnitShortName('');
-                    setShowAddUnit(true);
-                  }}
-                  className="flex items-center gap-1 bg-[#FFA726] hover:bg-[#FB8C00] text-white font-semibold rounded-lg px-4 py-2 shadow transition-all text-sm"
-                >
-                  <Plus className="w-5 h-5" />
-                  Add Units
-                </button>
-              </div>
-              <div className="flex-1 overflow-y-auto p-0">
-                <table className="w-full text-sm">
-                  <thead className="bg-white sticky top-0 z-10 border-b border-[#E3EAF2]">
-                    <tr>
-                      <th className="px-4 py-3 text-left font-semibold text-[#7B8A9A] text-xs tracking-wide">
-                        FULLNAME
-                      </th>
-                      <th className="px-4 py-3 text-right font-semibold text-[#7B8A9A] text-xs tracking-wide pr-8">
-                        SHORTNAME
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredUnitList.map((unit) => {
-                      const isSelected = unit.id === selectedUnitInTabId;
-                      return (
-                        <tr
-                          key={unit.id}
-                          onClick={() => setSelectedUnitInTabId(unit.id)}
-                          onContextMenu={(event) => {
-                            event.preventDefault();
-                            setSelectedUnitInTabId(unit.id);
-                            setUnitContextMenu({
-                              unit,
-                              x: event.clientX,
-                              y: event.clientY,
-                            });
-                          }}
-                          className={`cursor-pointer border-b border-[#E3EAF2] ${isSelected ? "bg-[#DDEBFA]" : "hover:bg-[#F5F8FA]"
-                            }`}
-                        >
-                          <td className="px-4 py-3 text-[#222B45] font-medium uppercase">
-                            {unit.fullName}
-                          </td>
-                          <td className="px-4 py-3 text-right text-[#4B5563]">
-                            <div className="flex items-center justify-end gap-3">
-                              <span className="capitalize">
-                                {unit.shortName}
-                              </span>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </Card>
+                  <button
+                    onClick={() => {
+                      const unit = unitContextMenu.unit;
+                      setUnitContextMenu(null);
+                      setUnitPendingDelete(unit);
+                    }}
+                    className="w-full rounded-sm px-2 py-1.5 text-left text-sm text-red-600 hover:bg-red-50"
+                  >
+                    Delete
+                  </button>
+                </div>
+              )}
 
-            {unitContextMenu && (
+              {conversionContextMenu && (
+                <div
+                  className="fixed z-50 min-w-40 rounded-md border bg-white p-1 shadow-md"
+                  style={getContextMenuStyle(conversionContextMenu.x, conversionContextMenu.y)}
+                  onClick={(event) => event.stopPropagation()}
+                >
+                  <button
+                    onClick={() => {
+                      setConversionBeingEdited(conversionContextMenu.conversion);
+                      setConversionBaseUnit(conversionContextMenu.conversion.base_unit);
+                      setConversionSecondaryUnit(conversionContextMenu.conversion.secondary_unit);
+                      setConversionRateValue(conversionContextMenu.conversion.conversion_rate);
+                      setShowAddConversion(true);
+                      setConversionContextMenu(null);
+                    }}
+                    className="w-full rounded-sm px-2 py-1.5 text-left text-sm hover:bg-gray-100"
+                  >
+                    Edit
+                  </button>
+                  <button
+                    onClick={() => {
+                      setConversionContextMenu(null);
+                      setConversionPendingDelete(conversionContextMenu.conversion);
+                    }}
+                    className="w-full rounded-sm px-2 py-1.5 text-left text-sm text-red-600 hover:bg-red-50"
+                  >
+                    Delete
+                  </button>
+                </div>
+              )}
+
+              {/* Right Panel - Unit Details */}
               <div
-                className="fixed z-50 min-w-40 rounded-md border bg-white p-1 shadow-md"
-                style={getContextMenuStyle(unitContextMenu.x, unitContextMenu.y)}
-                onClick={(event) => event.stopPropagation()}
+                className="flex-1 flex flex-col overflow-y-auto"
+                style={{ marginRight: "4px" }}
               >
-                <button
-                  onClick={() => {
-                    setSelectedUnitInTabId(unitContextMenu.unit.id);
-                    openEditUnitDialog(unitContextMenu.unit);
-                    setUnitContextMenu(null);
-                  }}
-                  className="w-full rounded-sm px-2 py-1.5 text-left text-sm hover:bg-gray-100"
+                {/* Top Card: Unit Selection Header */}
+                <Card
+                  className="bg-white rounded-md shadow-sm flex items-center justify-between px-6 py-3"
+                  style={{ minHeight: "64px", marginBottom: "4px" }}
                 >
-                  View/Edit
-                </button>
-                <button
-                  onClick={() => {
-                    const unit = unitContextMenu.unit;
-                    setUnitContextMenu(null);
-                    setUnitPendingDelete(unit);
-                  }}
-                  className="w-full rounded-sm px-2 py-1.5 text-left text-sm text-red-600 hover:bg-red-50"
-                >
-                  Delete
-                </button>
-              </div>
-            )}
+                  <h2 className="text-base font-bold text-[#151B26] tracking-wide uppercase">
+                    {selectedUnitInTab?.fullName ?? "NO UNIT SELECTED"}
+                  </h2>
+                  <button
+                    className="bg-[#1976D2] hover:bg-[#1251A3] text-white px-5 py-2 rounded-lg text-sm font-bold shadow transition-all"
+                    onClick={() => setShowAddConversion(true)}
+                  >
+                    Add Conversion
+                  </button>
+                  {/* Add Conversion Modal is rendered at the root of the component, not here */}
+                </Card>
 
-            {conversionContextMenu && (
-              <div
-                className="fixed z-50 min-w-40 rounded-md border bg-white p-1 shadow-md"
-                style={getContextMenuStyle(conversionContextMenu.x, conversionContextMenu.y)}
-                onClick={(event) => event.stopPropagation()}
-              >
-                <button
-                  onClick={() => {
-                    setConversionBeingEdited(conversionContextMenu.conversion);
-                    setConversionBaseUnit(conversionContextMenu.conversion.base_unit);
-                    setConversionSecondaryUnit(conversionContextMenu.conversion.secondary_unit);
-                    setConversionRateValue(conversionContextMenu.conversion.conversion_rate);
-                    setShowAddConversion(true);
-                    setConversionContextMenu(null);
-                  }}
-                  className="w-full rounded-sm px-2 py-1.5 text-left text-sm hover:bg-gray-100"
-                >
-                  Edit
-                </button>
-                <button
-                  onClick={() => {
-                    setConversionContextMenu(null);
-                    setConversionPendingDelete(conversionContextMenu.conversion);
-                  }}
-                  className="w-full rounded-sm px-2 py-1.5 text-left text-sm text-red-600 hover:bg-red-50"
-                >
-                  Delete
-                </button>
-              </div>
-            )}
-
-            {/* Right Panel - Unit Details */}
-            <div
-              className="flex-1 flex flex-col overflow-y-auto"
-              style={{ marginRight: "4px" }}
-            >
-              {/* Top Card: Unit Selection Header */}
-              <Card
-                className="bg-white rounded-md shadow-sm flex items-center justify-between px-6 py-3"
-                style={{ minHeight: "64px", marginBottom: "4px" }}
-              >
-                <h2 className="text-base font-bold text-[#151B26] tracking-wide uppercase">
-                  {selectedUnitInTab?.fullName ?? "NO UNIT SELECTED"}
-                </h2>
-                <button
-                  className="bg-[#1976D2] hover:bg-[#1251A3] text-white px-5 py-2 rounded-lg text-sm font-bold shadow transition-all"
-                  onClick={() => setShowAddConversion(true)}
-                >
-                  Add Conversion
-                </button>
-                {/* Add Conversion Modal is rendered at the root of the component, not here */}
-              </Card>
-
-              {/* Bottom Card: Conversions Table Area */}
-              <Card className="bg-white rounded-md flex flex-col flex-1 overflow-hidden shadow-sm p-0">
-                <CardContent className="p-0">
-                  <div className="flex items-center justify-between px-6 pt-4 pb-2">
-                    <h3 className="text-base font-bold text-[#222B45] tracking-wide">
-                      CONVERSIONS
-                    </h3>
-                    <div className="flex gap-2 items-center">
-                      <div className="relative">
-                        <input
-                          type="text"
-                          placeholder="Search..."
-                          value={conversionSearchTerm}
-                          onChange={(e) => setConversionSearchTerm(e.target.value)}
-                          className="bg-[#F7F9FB] border border-[#E3EAF2] rounded-lg px-8 py-1.5 text-sm text-[#222B45] focus:bg-white focus:border-[#1976D2]"
-                        />
-                        <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-[#AEB8C4]" />
+                {/* Bottom Card: Conversions Table Area */}
+                <Card className="bg-white rounded-md flex flex-col flex-1 overflow-hidden shadow-sm p-0">
+                  <CardContent className="p-0">
+                    <div className="flex items-center justify-between px-6 pt-4 pb-2">
+                      <h3 className="text-base font-bold text-[#222B45] tracking-wide">
+                        CONVERSIONS
+                      </h3>
+                      <div className="flex gap-2 items-center">
+                        <div className="relative">
+                          <input
+                            type="text"
+                            placeholder="Search..."
+                            value={conversionSearchTerm}
+                            onChange={(e) => setConversionSearchTerm(e.target.value)}
+                            className="bg-[#F7F9FB] border border-[#E3EAF2] rounded-lg px-8 py-1.5 text-sm text-[#222B45] focus:bg-white focus:border-[#1976D2]"
+                          />
+                          <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-[#AEB8C4]" />
+                        </div>
                       </div>
                     </div>
-                  </div>
-                  <div className="border-t border-[#E3EAF2] rounded-b-lg overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead className="bg-[#F7F9FB] sticky top-0 z-10">
-                        <tr>
-                          <th className="px-4 py-2 text-left font-semibold text-[#7B8A9A] text-xs tracking-wide align-middle w-16">
-                            #
-                          </th>
-                          <th className="px-4 py-2 text-left font-semibold text-[#7B8A9A] text-xs tracking-wide align-middle"></th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {filteredConversions.length ? (
-                          filteredConversions.map((conversion, index) => (
-                            <tr
-                              key={conversion.id}
-                              onContextMenu={(event) => {
-                                event.preventDefault();
-                                setConversionContextMenu({
-                                  conversion,
-                                  x: event.clientX,
-                                  y: event.clientY,
-                                });
-                              }}
-                              className="border-b border-[#E3EAF2] hover:bg-[#F5F8FA] cursor-pointer"
-                            >
-                              <td className="px-4 py-3 text-[#4B5563] font-medium">
-                                {index + 1}
-                              </td>
-                              <td className="px-4 py-3 text-[#222B45] uppercase">
-                                {`1 ${conversion.base_unit} = ${Number(conversion.conversion_rate)} ${conversion.secondary_unit}`}
+                    <div className="border-t border-[#E3EAF2] rounded-b-lg overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead className="bg-[#F7F9FB] sticky top-0 z-10">
+                          <tr>
+                            <th className="px-4 py-2 text-left font-semibold text-[#7B8A9A] text-xs tracking-wide align-middle w-16">
+                              #
+                            </th>
+                            <th className="px-4 py-2 text-left font-semibold text-[#7B8A9A] text-xs tracking-wide align-middle"></th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {filteredConversions.length ? (
+                            filteredConversions.map((conversion, index) => (
+                              <tr
+                                key={conversion.id}
+                                onContextMenu={(event) => {
+                                  event.preventDefault();
+                                  setConversionContextMenu({
+                                    conversion,
+                                    x: event.clientX,
+                                    y: event.clientY,
+                                  });
+                                }}
+                                className="border-b border-[#E3EAF2] hover:bg-[#F5F8FA] cursor-pointer"
+                              >
+                                <td className="px-4 py-3 text-[#4B5563] font-medium">
+                                  {index + 1}
+                                </td>
+                                <td className="px-4 py-3 text-[#222B45] uppercase">
+                                  {`1 ${conversion.base_unit} = ${Number(conversion.conversion_rate)} ${conversion.secondary_unit}`}
+                                </td>
+                              </tr>
+                            ))
+                          ) : (
+                            <tr>
+                              <td
+                                colSpan={2}
+                                className="px-4 py-6 text-center text-sm text-[#7B8A9A]"
+                              >
+                                There are no conversions to show.
                               </td>
                             </tr>
-                          ))
-                        ) : (
-                          <tr>
-                            <td
-                              colSpan={2}
-                              className="px-4 py-6 text-center text-sm text-[#7B8A9A]"
-                            >
-                              There are no conversions to show.
-                            </td>
-                          </tr>
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-                </CardContent>
-              </Card>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
             </div>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
       )}
 
       {/* Modals & Popups */}
@@ -2728,15 +2899,23 @@ export function Items() {
                 </label>
                 <select
                   value={addItemForm.categoryId}
-                  onChange={(event) =>
-                    setAddItemForm((previousValue) => ({
-                      ...previousValue,
-                      categoryId: event.target.value,
-                    }))
-                  }
+                  onChange={(event) => {
+                    const value = event.target.value;
+                    if (value === "add_new_category") {
+                      setShowAddCategory(true);
+                      setNewCategoryName("");
+                      setCategoryBeingEdited(null);
+                    } else {
+                      setAddItemForm((previousValue) => ({
+                        ...previousValue,
+                        categoryId: value,
+                      }));
+                    }
+                  }}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
                 >
                   <option value="">Select Category</option>
+                  <option value="add_new_category" className="text-[#E53935] font-medium">+ Create New Category</option>
                   {categoryList.map((c) => (
                     <option key={c.id} value={c.id}>
                       {c.name}
@@ -3359,7 +3538,17 @@ export function Items() {
       <Dialog open={showUnitSelector} onOpenChange={setShowUnitSelector}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Select Unit</DialogTitle>
+            <DialogTitle className="flex items-center justify-between">
+              <span>Select Unit</span>
+              <button
+                type="button"
+                onClick={() => setShowUnitSelector(false)}
+                className="rounded p-1 text-gray-500 hover:bg-gray-100 hover:text-gray-700"
+                aria-label="Close unit selector popup"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
@@ -3609,6 +3798,114 @@ export function Items() {
                 {isDeletingConversion ? 'Deleting...' : 'Delete'}
               </button>
             </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Adjust Stock Modal */}
+      <Dialog open={showAdjustStockModal} onOpenChange={setShowAdjustStockModal}>
+        <DialogContent className="w-full sm:max-w-[900px] !max-w-[900px] p-6 bg-white rounded-lg shadow-2xl overflow-visible">
+          {/* Header */}
+          <div className="flex items-center justify-between mb-8">
+            <div className="flex items-center gap-8">
+              <h2 className="text-[20px] font-semibold text-[#1A202C]">Stock Adjustment</h2>
+
+              <div className="flex items-center gap-3">
+                <span className={`text-sm font-medium ${adjustStockForm.type === 'Add' ? 'text-[#1976D2]' : 'text-gray-400'}`}>Add Stock</span>
+                <button
+                  onClick={() => setAdjustStockForm(prev => ({ ...prev, type: prev.type === 'Add' ? 'Reduce' : 'Add' }))}
+                  className="relative inline-flex h-[22px] w-11 items-center rounded-full bg-[#1976D2] transition-colors focus:outline-none"
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${adjustStockForm.type === 'Add' ? 'translate-x-[4px]' : 'translate-x-[24px]'
+                      }`}
+                  />
+                </button>
+                <span className={`text-sm font-medium ${adjustStockForm.type === 'Reduce' ? 'text-gray-400' : 'text-gray-400'}`}>Reduce Stock</span>
+              </div>
+            </div>
+
+            <button
+              onClick={() => setShowAdjustStockModal(false)}
+              className="text-gray-400 hover:text-gray-600 transition-colors"
+            >
+              <X className="w-6 h-6" strokeWidth={1.5} />
+            </button>
+          </div>
+
+          {/* Info Section */}
+          <div className="flex justify-between items-end pb-4 border-b border-[#E5E7EB] mb-6">
+            <div>
+              <p className="text-[13px] text-gray-500 mb-1 font-medium">Item Name</p>
+              <p className="text-[14px] font-bold text-[#1A202C]">{selectedItem?.name}</p>
+            </div>
+
+            <div>
+              <div className="relative border border-[#D1D5DB] rounded-[4px] px-3 py-[6px] flex items-center bg-white w-[200px]">
+                <span className="text-[11px] text-gray-500 absolute -top-[8px] left-3 bg-white px-1 leading-none">Adjustment Date</span>
+                <input
+                  type="date"
+                  value={adjustStockForm.date}
+                  onChange={e => setAdjustStockForm(prev => ({ ...prev, date: e.target.value }))}
+                  className="w-full text-[14px] outline-none text-[#4B5563] bg-transparent font-medium"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Form Row */}
+          <div className="flex gap-4 mb-8 items-center">
+            <div className="w-[180px]">
+              <input
+                type="number"
+                placeholder="Total Qty"
+                value={adjustStockForm.qty}
+                onChange={e => setAdjustStockForm(prev => ({ ...prev, qty: e.target.value }))}
+                className="w-full border border-[#D1D5DB] rounded-[4px] px-3 py-[8px] text-[14px] outline-none placeholder:text-[#9CA3AF] text-[#1A202C]"
+              />
+            </div>
+
+            <div className="w-[80px]">
+              <select
+                value={adjustStockForm.unit}
+                onChange={e => setAdjustStockForm(prev => ({ ...prev, unit: e.target.value }))}
+                className="w-full text-[14px] outline-none bg-transparent text-[#4B5563] font-medium cursor-pointer"
+              >
+                {selectedItem?.primaryUnit || selectedItem?.unit ? <option value={(selectedItem?.primaryUnit || selectedItem?.unit) || ""}>{selectedItem?.primaryUnit || selectedItem?.unit}</option> : null}
+                {selectedItem?.secondaryUnit && <option value={selectedItem.secondaryUnit || ""}>{selectedItem.secondaryUnit}</option>}
+              </select>
+            </div>
+
+            <div className="w-[200px]">
+              <input
+                type="number"
+                placeholder="At Price"
+                value={adjustStockForm.atPrice}
+                onChange={e => setAdjustStockForm(prev => ({ ...prev, atPrice: e.target.value }))}
+                className="w-full border border-[#D1D5DB] rounded-[4px] px-3 py-[8px] text-[14px] outline-none placeholder:text-[#9CA3AF] text-[#1A202C]"
+              />
+            </div>
+
+            <div className="flex-1">
+              <input
+                type="text"
+                placeholder="Details"
+                value={adjustStockForm.details}
+                onChange={e => setAdjustStockForm(prev => ({ ...prev, details: e.target.value }))}
+                className="w-full border border-[#D1D5DB] rounded-[4px] px-3 py-[8px] text-[14px] outline-none placeholder:text-[#9CA3AF] text-[#1A202C]"
+              />
+            </div>
+          </div>
+
+          {/* Footer Action */}
+          <div className="flex justify-end pt-2">
+            <button
+              onClick={handleSaveStockAdjustment}
+              disabled={isSavingAdjustment || !adjustStockForm.qty}
+              className="bg-[#1A73E8] hover:bg-[#1557B0] text-white px-8 py-[8px] rounded-[4px] font-semibold text-[14px] transition-colors disabled:opacity-60"
+            >
+              Save
+            </button>
           </div>
         </DialogContent>
       </Dialog>

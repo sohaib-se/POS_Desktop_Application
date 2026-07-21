@@ -27,6 +27,9 @@ interface PurchaseTab {
   imageFileName: string;
   documentDataUrl: string;
   documentFileName: string;
+  paid: string;
+  paidAll: boolean;
+  paymentType: string;
 }
 
 interface PartyOption {
@@ -42,8 +45,18 @@ interface ItemOption {
   name: string;
   purchase_price?: number;
   unit: string;
+  primary_unit?: string | null;
+  secondary_unit?: string | null;
+  conversion_rate?: number | null;
   mfg_date?: string | null;
   exp_date?: string | null;
+}
+
+interface BankOption {
+  id: number;
+  display_name: string;
+  bank_name?: string;
+  balance: number;
 }
 
 interface AddPurchaseProps {
@@ -83,6 +96,9 @@ function createDefaultTab(id: number): PurchaseTab {
     imageFileName: "",
     documentDataUrl: "",
     documentFileName: "",
+    paid: "",
+    paidAll: false,
+    paymentType: "Cash",
   };
 }
 
@@ -188,6 +204,7 @@ export function AddPurchase({ onSave, onShare, onClose, initialInvoice }: AddPur
   const [isOpenAnimated, setIsOpenAnimated] = useState(false);
   const [parties, setParties] = useState<PartyOption[]>([]);
   const [items, setItems] = useState<ItemOption[]>([]);
+  const [banks, setBanks] = useState<BankOption[]>([]);
   const [nextInvoiceNo, setNextInvoiceNo] = useState("1");
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
@@ -243,6 +260,9 @@ export function AddPurchase({ onSave, onShare, onClose, initialInvoice }: AddPur
         imageFileName: "",
         documentDataUrl: "",
         documentFileName: "",
+        paid: initialInvoice.balance !== undefined && initialInvoice.amount !== undefined ? String(Number(initialInvoice.amount) - Number(initialInvoice.balance)) : "",
+        paidAll: initialInvoice.balance === 0,
+        paymentType: String(initialInvoice.paymentMode || "Cash"),
       },
     ]);
     setActiveTabId(1);
@@ -254,19 +274,21 @@ export function AddPurchase({ onSave, onShare, onClose, initialInvoice }: AddPur
 
     const loadLookupData = async () => {
       try {
-        const [partiesResponse, itemsResponse, saleInvoicesResponse] = await Promise.all([
+        const [partiesResponse, itemsResponse, saleInvoicesResponse, banksResponse] = await Promise.all([
           fetch("/api/parties"),
           fetch("/api/items"),
           fetch("/api/purchase_bills"),
+          fetch("/api/bank_accounts")
         ]);
 
-        if (!partiesResponse.ok || !itemsResponse.ok || !saleInvoicesResponse.ok) {
+        if (!partiesResponse.ok || !itemsResponse.ok || !saleInvoicesResponse.ok || !banksResponse.ok) {
           throw new Error("Failed to load purchase lookup data");
         }
 
         const loadedParties = (await partiesResponse.json()) as PartyOption[];
         const loadedItems = (await itemsResponse.json()) as ItemOption[];
         const purchaseBills = (await saleInvoicesResponse.json()) as Array<{ invoice_no?: string | null }>;
+        const loadedBanks = (await banksResponse.json()) as BankOption[];
 
         if (cancelled) {
           return;
@@ -275,6 +297,7 @@ export function AddPurchase({ onSave, onShare, onClose, initialInvoice }: AddPur
         const sortedParties = [...loadedParties].sort((left, right) => left.name.localeCompare(right.name));
         setParties(sortedParties);
         setItems(loadedItems);
+        setBanks(loadedBanks);
         setNextInvoiceNo(
           String(
             purchaseBills.reduce((highest, invoice) => {
@@ -312,8 +335,8 @@ export function AddPurchase({ onSave, onShare, onClose, initialInvoice }: AddPur
     };
   }, []);
 
-  // col widths: [#, ITEM, QTY, UNIT, SIZE, PRICE/UNIT, AMOUNT]
-  const { widths, startResize } = useColumnResize([42, 340, 90, 110, 90, 130, 120]);
+  // col widths: [#, ITEM, QTY, UNIT, PRICE/UNIT, AMOUNT]
+  const { widths, startResize } = useColumnResize([42, 340, 90, 110, 130, 120]);
 
   const activeTab = tabs.find((t) => t.id === activeTabId)!;
   const displayedInvoiceNo = initialInvoice?.invoiceNo ?? nextInvoiceNo;
@@ -344,7 +367,7 @@ export function AddPurchase({ onSave, onShare, onClose, initialInvoice }: AddPur
         ...row,
         itemId,
         item: matchedItem?.name ?? "",
-        unit: matchedItem?.unit ?? row.unit,
+        unit: matchedItem?.primary_unit || matchedItem?.unit || row.unit,
         pricePerUnit:
           matchedItem && Number.isFinite(Number(matchedItem.purchase_price))
             ? String(Number(matchedItem.purchase_price ?? 0))
@@ -433,6 +456,9 @@ export function AddPurchase({ onSave, onShare, onClose, initialInvoice }: AddPur
     const roundedValue = activeTab.roundOff ? Math.round(grandTotalValue) : grandTotalValue;
     const roundOffAmountValue = roundedValue - grandTotalValue;
 
+    const paidAmountValue = Number(activeTab.paid || 0);
+    const balanceValue = roundedValue - paidAmountValue;
+
     setSaveError("");
     setIsSaving(true);
 
@@ -449,8 +475,8 @@ export function AddPurchase({ onSave, onShare, onClose, initialInvoice }: AddPur
           partyId: String(selectedParty.id),
           partyName: selectedParty.name,
           partyPhone: activeTab.phoneNo,
-          paymentType: activeTab.paymentMode === "cash" ? "Cash" : "Credit",
-          paymentMode: activeTab.paymentMode,
+          paymentType: activeTab.paymentType,
+          paymentMode: paidAmountValue === 0 ? "credit" : (activeTab.paymentType === "Cash" ? "cash" : activeTab.paymentType),
           subtotal,
           discountPercent: Number(activeTab.discountPercent || 0),
           discountAmount: discountAmountValue,
@@ -460,7 +486,7 @@ export function AddPurchase({ onSave, onShare, onClose, initialInvoice }: AddPur
           roundOff: activeTab.roundOff,
           roundOffAmount: roundOffAmountValue,
           amount: roundedValue,
-          balance: activeTab.paymentMode === "cash" ? 0 : roundedValue,
+          balance: balanceValue,
           description: activeTab.description,
           lineItems: validRows.map((row) => ({
             id: row.id,
@@ -527,9 +553,28 @@ export function AddPurchase({ onSave, onShare, onClose, initialInvoice }: AddPur
   };
 
   const updateRow = (rowId: number, field: keyof PurchaseRow, value: string) => {
-    const updatedRows = activeTab.rows.map((row) =>
-      row.id === rowId ? { ...row, [field]: value } : row
-    );
+    const updatedRows = activeTab.rows.map((row) => {
+      if (row.id !== rowId) return row;
+
+      const updatedRow = { ...row, [field]: value };
+
+      if (field === "unit" && updatedRow.itemId) {
+        const matchedItem = items.find((item) => item.id === updatedRow.itemId);
+        if (matchedItem && Number.isFinite(Number(matchedItem.purchase_price))) {
+          const isSecondary = updatedRow.unit === matchedItem.secondary_unit;
+          const convRate = Number(matchedItem.conversion_rate) || 1;
+          const basePrice = Number(matchedItem.purchase_price);
+
+          if (isSecondary && convRate > 0) {
+            updatedRow.pricePerUnit = String(basePrice / convRate);
+          } else {
+            updatedRow.pricePerUnit = String(basePrice);
+          }
+        }
+      }
+
+      return updatedRow;
+    });
 
     // Helper to check if a row is empty
     const isEmpty = (row: PurchaseRow) => !row.itemId && !row.item && !row.qty && !row.pricePerUnit;
@@ -578,7 +623,7 @@ export function AddPurchase({ onSave, onShare, onClose, initialInvoice }: AddPur
 
   const fmt = (n: number) => n.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-  const showSizeColumn = false;
+  const computedBalance = roundedTotal - (Number(activeTab.paid) || 0);
 
   // Resize handle between columns
   const ResizeHandle = ({ col }: { col: number }) => (
@@ -727,33 +772,6 @@ export function AddPurchase({ onSave, onShare, onClose, initialInvoice }: AddPur
       {/* ── TOP BAR (Sale / Credit+Cash / Lite Mode) ── */}
       <div style={{ background: "#fff", flexShrink: 0, padding: "8px 20px", display: "flex", alignItems: "center", gap: 20, borderBottom: "1px solid #e5e7eb" }}>
         <span style={{ fontSize: 15, fontWeight: 600, color: "#1f2937" }}>Purchase</span>
-
-        {/* Credit ← toggle → Cash */}
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <span
-            onClick={() => updateTab({ paymentMode: "credit" })}
-            style={{ fontSize: 13, fontWeight: 500, cursor: "pointer", userSelect: "none", color: activeTab.paymentMode === "credit" ? "#2563eb" : "#9ca3af" }}
-          >Credit</span>
-          <button
-            onClick={() => updateTab({ paymentMode: activeTab.paymentMode === "credit" ? "cash" : "credit" })}
-            style={{
-              width: 38, height: 20, borderRadius: 10, border: "none", cursor: "pointer",
-              background: "#2563eb", position: "relative", padding: 0, flexShrink: 0,
-            }}
-          >
-            <span style={{
-              position: "absolute", top: 2, width: 16, height: 16, borderRadius: "50%",
-              background: "#fff", boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
-              transition: "left 0.15s",
-              left: activeTab.paymentMode === "cash" ? 20 : 2,
-            }} />
-          </button>
-          <span
-            onClick={() => updateTab({ paymentMode: "cash" })}
-            style={{ fontSize: 13, fontWeight: 500, cursor: "pointer", userSelect: "none", color: activeTab.paymentMode === "cash" ? "#2563eb" : "#9ca3af" }}
-          >Cash</span>
-        </div>
-
       </div>
 
       {/* ── SCROLLABLE CONTENT ── */}
@@ -824,7 +842,6 @@ export function AddPurchase({ onSave, onShare, onClose, initialInvoice }: AddPur
               <col style={{ width: widths[3] }} />
               <col style={{ width: widths[4] }} />
               <col style={{ width: widths[5] }} />
-              <col style={{ width: widths[6] }} />
               <col style={{ width: 36 }} />
             </colgroup>
             <thead>
@@ -845,16 +862,13 @@ export function AddPurchase({ onSave, onShare, onClose, initialInvoice }: AddPur
                 <th style={{ position: "relative", padding: "8px 10px", textAlign: "left", fontSize: 12, fontWeight: 600, color: "#6b7280", borderRight: "1px solid #e5e7eb", letterSpacing: "0.04em" }}>
                   UNIT<ResizeHandle col={3} />
                 </th>
-                <th style={{ position: "relative", padding: "8px 10px", textAlign: "left", fontSize: 12, fontWeight: 600, color: "#6b7280", borderRight: "1px solid #e5e7eb", letterSpacing: "0.04em" }}>
-                  {showSizeColumn ? "SIZE" : ""}<ResizeHandle col={4} />
-                </th>
                 {/* PRICE/UNIT */}
                 <th style={{ position: "relative", padding: "8px 10px", textAlign: "right", fontSize: 12, fontWeight: 600, color: "#6b7280", borderRight: "1px solid #e5e7eb", letterSpacing: "0.04em" }}>
-                  PRICE/UNIT<ResizeHandle col={5} />
+                  PRICE/UNIT<ResizeHandle col={4} />
                 </th>
                 {/* AMOUNT */}
                 <th style={{ position: "relative", padding: "8px 10px", textAlign: "right", fontSize: 12, fontWeight: 600, color: "#6b7280", borderRight: "1px solid #e5e7eb", letterSpacing: "0.04em" }}>
-                  AMOUNT<ResizeHandle col={6} />
+                  AMOUNT<ResizeHandle col={5} />
                 </th>
                 {/* + col */}
                 <th style={{ padding: "8px 6px", textAlign: "center", background: "#f3f6f9" }}>
@@ -907,7 +921,16 @@ export function AddPurchase({ onSave, onShare, onClose, initialInvoice }: AddPur
                           value={row.unit}
                           onChange={(e) => updateRow(row.id, "unit", e.target.value)}
                         >
-                          {unitOptions.map((u) => <option key={u} value={u}>{u}</option>)}
+                          {(() => {
+                            const item = items.find(i => i.id === row.itemId);
+                            if (!item) return unitOptions.map(u => <option key={u} value={u}>{u}</option>);
+                            const options = [];
+                            if (item.primary_unit) options.push(<option key={item.primary_unit} value={item.primary_unit}>{item.primary_unit}</option>);
+                            if (item.secondary_unit) options.push(<option key={item.secondary_unit} value={item.secondary_unit}>{item.secondary_unit}</option>);
+                            if (options.length === 0 && item.unit) options.push(<option key={item.unit} value={item.unit}>{item.unit}</option>);
+                            if (options.length === 0) return unitOptions.map(u => <option key={u} value={u}>{u}</option>);
+                            return options;
+                          })()}
                         </select>
                         <span style={{ color: "#9ca3af", fontSize: 10, pointerEvents: "none" }}>▾</span>
                       </div>
@@ -941,7 +964,7 @@ export function AddPurchase({ onSave, onShare, onClose, initialInvoice }: AddPur
                     ADD ROW
                   </button>
                 </td>
-                <td colSpan={3} style={{ padding: "8px 10px", fontSize: 12, fontWeight: 700, color: "#6b7280", borderRight: "1px solid #e5e7eb", letterSpacing: "0.04em" }}>
+                <td colSpan={2} style={{ padding: "8px 10px", fontSize: 12, fontWeight: 700, color: "#6b7280", borderRight: "1px solid #e5e7eb", letterSpacing: "0.04em" }}>
                   <span style={{ float: "left" }}>TOTAL</span>
                   <span style={{ float: "right" }}>{totalQty > 0 ? totalQty : 0}</span>
                 </td>
@@ -1047,12 +1070,59 @@ export function AddPurchase({ onSave, onShare, onClose, initialInvoice }: AddPur
                 />
               </div>
 
+              {/* Payment Type */}
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 8 }}>
+                <span style={{ color: "#6b7280", width: 90, textAlign: "right" }}>Payment Type</span>
+                <select
+                  style={{ border: "1px solid #d1d5db", borderRadius: 4, padding: "5px 8px", width: 210, fontSize: 13, color: "#374151", background: "#fff", outline: "none", cursor: "pointer" }}
+                  value={activeTab.paymentType}
+                  onChange={(e) => updateTab({ paymentType: e.target.value })}
+                >
+                  <option value="Cash">Cash</option>
+                  {banks.map((b) => (
+                    <option key={b.id} value={b.display_name}>{b.display_name}</option>
+                  ))}
+                </select>
+              </div>
+
               {/* Total */}
               <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 8 }}>
                 <span style={{ color: "#374151", fontWeight: 600, width: 68, textAlign: "right" }}>Total</span>
                 <input type="text" readOnly
-                  style={{ border: "1px solid #d1d5db", borderRadius: 4, padding: "5px 10px", width: 210, textAlign: "right", fontSize: 13, fontWeight: 600, color: "#1f2937", background: "#fff", outline: "none" }}
+                  style={{ border: "1px solid #d1d5db", borderRadius: 4, padding: "5px 10px", width: 210, textAlign: "right", fontSize: 13, fontWeight: 600, color: "#1f2937", background: "#f9fafb", outline: "none" }}
                   value={roundedTotal > 0 ? fmt(roundedTotal) : ""}
+                />
+              </div>
+
+              {/* Paid & Balance */}
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 8 }}>
+                <label style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer", marginRight: "auto" }}>
+                  <input type="checkbox" checked={activeTab.paidAll}
+                    onChange={(e) => {
+                      const checked = e.target.checked;
+                      updateTab({ paidAll: checked, paid: checked ? String(roundedTotal) : activeTab.paid });
+                    }}
+                    style={{ width: 15, height: 15, accentColor: "#3b82f6", cursor: "pointer" }}
+                  />
+                  <span style={{ color: "#6b7280" }}>Paid All</span>
+                </label>
+                <span style={{ color: "#6b7280", width: 68, textAlign: "right" }}>Paid</span>
+                <input type="number"
+                  style={{ border: "1px solid #d1d5db", borderRadius: 4, padding: "5px 10px", width: 210, textAlign: "right", fontSize: 13, color: "#1f2937", background: "#fff", outline: "none" }}
+                  value={activeTab.paid}
+                  onChange={(e) => {
+                    updateTab({ paid: e.target.value, paidAll: false });
+                  }}
+                />
+              </div>
+
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 8 }}>
+                <span style={{ color: computedBalance < 0 ? "#b91c1c" : "#374151", fontWeight: 600, width: 120, textAlign: "right" }}>
+                  {computedBalance < 0 ? "Change To Return" : "Balance"}
+                </span>
+                <input type="text" readOnly
+                  style={{ border: "1px solid #e5e7eb", borderRadius: 4, padding: "5px 10px", width: 210, textAlign: "right", fontSize: 13, fontWeight: 600, color: computedBalance < 0 ? "#b91c1c" : "#1f2937", background: "#f9fafb" }}
+                  value={fmt(Math.abs(computedBalance))}
                 />
               </div>
             </div>

@@ -298,3 +298,17 @@ CREATE INDEX IF NOT EXISTS idx_sale_invoices_date ON sale_invoices(date);
 CREATE INDEX IF NOT EXISTS idx_purchase_bills_date ON purchase_bills(date);
 CREATE INDEX IF NOT EXISTS idx_items_name ON items(name);
 CREATE INDEX IF NOT EXISTS idx_parties_name ON parties(name);
+
+CREATE TABLE IF NOT EXISTS adjust_stock_transactions (
+  id TEXT PRIMARY KEY,
+  item_id TEXT NOT NULL,
+  item_name TEXT NOT NULL,
+  adjustment_type TEXT NOT NULL,
+  date TEXT NOT NULL,
+  quantity REAL NOT NULL,
+  unit TEXT,
+  at_price REAL,
+  details TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);

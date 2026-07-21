@@ -444,6 +444,7 @@ export function openDatabase() {
   ensureUnitsAndConversionRatesTables(db);
   ensureBankAccountColumns(db);
   ensureBankAccountTransactionsTable(db);
+  ensureAdjustStockTransactionsTable(db);
   return db;
 }
 
@@ -460,6 +461,30 @@ function ensureBankAccountTransactionsTable(db) {
       updated_at TEXT NOT NULL DEFAULT (datetime('now'))
     )
   `);
+}
+
+function ensureAdjustStockTransactionsTable(db) {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS adjust_stock_transactions (
+      id TEXT PRIMARY KEY,
+      item_id TEXT NOT NULL,
+      item_name TEXT NOT NULL,
+      adjustment_type TEXT NOT NULL,
+      date TEXT NOT NULL,
+      quantity REAL NOT NULL,
+      unit TEXT,
+      at_price REAL,
+      details TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    )
+  `);
+
+  const rows = db.prepare('PRAGMA table_info(adjust_stock_transactions)').all();
+  const existingColumns = new Set(rows.map((row) => row.name));
+  if (!existingColumns.has('updated_at')) {
+    db.exec("ALTER TABLE adjust_stock_transactions ADD COLUMN updated_at TEXT NOT NULL DEFAULT (datetime('now'))");
+  }
 }
 
 export { dbPath };

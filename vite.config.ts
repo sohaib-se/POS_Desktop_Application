@@ -171,6 +171,7 @@ function sqliteApiPlugin() {
       });
 
       // Ensure DB migrations run as soon as dev server starts.
+      // @ts-expect-error Runtime-only Node module used in Vite middleware.
       void import('./database/sqlite/client.mjs')
         .then((client) => {
           const db = client.openDatabase();
@@ -179,6 +180,38 @@ function sqliteApiPlugin() {
         .catch((error) => {
           console.error(error);
         });
+
+      server.middlewares.use('/api/adjust_stock_transactions', async (req, res) => {
+        try {
+          // @ts-expect-error Runtime-only Node module used in Vite middleware.
+          const repository = await import('./database/sqlite/repository.mjs');
+
+          if (req.method === 'GET') {
+            const adjustments = repository.getStockAdjustments();
+            res.statusCode = 200;
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify(adjustments));
+            return;
+          }
+
+          if (req.method === 'POST') {
+            const payload = await parseJsonBody(req);
+            const id = repository.addStockAdjustment(payload);
+            res.statusCode = 201;
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({ ...payload, id }));
+            return;
+          }
+
+          res.statusCode = 405;
+          res.end('Method Not Allowed');
+        } catch (error) {
+          console.error(error);
+          res.statusCode = 500;
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify({ message: 'Internal server error.' }));
+        }
+      });
 
       server.middlewares.use('/api/bank_accounts', async (req, res) => {
         try {
@@ -235,7 +268,7 @@ function sqliteApiPlugin() {
               try {
                 const raw = Buffer.concat(chunks).toString('utf8');
                 const payload = raw ? JSON.parse(raw) : {};
-                
+
                 repository.updateBankAccount(id, payload);
                 res.statusCode = 200;
                 res.setHeader('Content-Type', 'application/json');
@@ -252,14 +285,14 @@ function sqliteApiPlugin() {
           if (req.method === 'DELETE') {
             const pathSegments = requestUrl.pathname.split('/').filter(Boolean);
             const id = requestUrl.searchParams.get('id') || pathSegments[0];
-            
+
             if (!id) {
               res.statusCode = 400;
               res.setHeader('Content-Type', 'application/json');
               res.end(JSON.stringify({ message: 'ID is required.' }));
               return;
             }
-            
+
             repository.deleteBankAccount(id);
             res.statusCode = 200;
             res.setHeader('Content-Type', 'application/json');
@@ -280,11 +313,15 @@ function sqliteApiPlugin() {
         try {
           // @ts-expect-error Runtime-only Node module used in Vite middleware.
           const repository = await import('./database/sqlite/repository.mjs');
-          
+
           const requestUrl = new URL(req.url ?? '/', 'http://localhost');
-          
+
           if (req.method === 'GET') {
-            const records = repository.getPaymentInRecords();
+            const records = repository.getPaymentInRecords().filter((r: any) =>
+              r.payment_type !== 'Opening Balance' &&
+              r.payment_type !== 'Payable Opening Balance' &&
+              r.payment_type !== 'Receivable Opening Balance'
+            );
             const mapped = records.map((r: any) => ({
               ...r,
               receiptNo: r.receipt_no,
@@ -301,7 +338,7 @@ function sqliteApiPlugin() {
             try {
               const payload = await parseJsonBody(req);
               let createdImagePath = null;
-              
+
               if (payload.imageDataUrl) {
                 const imageFile = saveDataUrlToAppData({
                   dataUrl: payload.imageDataUrl,
@@ -326,18 +363,18 @@ function sqliteApiPlugin() {
                 attachmentDocumentPath: null,
                 attachmentDocumentName: null,
               };
-              
+
               repository.addPaymentInRecord(record);
-              
+
               if (record.partyId) {
                 const allParties = repository.getParties();
                 const party = allParties.find((p: any) => String(p.id) === String(record.partyId));
                 if (party) {
-                   party.balance = Number(party.balance || 0) - Number(record.amount || 0);
-                   repository.upsertParty(party);
+                  party.balance = Number(party.balance || 0) - Number(record.amount || 0);
+                  repository.upsertParty(party);
                 }
               }
-              
+
               if (String(record.paymentType).toLowerCase() === 'cash') {
                 repository.addCashInHandTransaction({
                   id: 'cash_payment_in_' + record.id,
@@ -374,6 +411,33 @@ function sqliteApiPlugin() {
             const id = (pathId || queryId || '').trim();
 
             if (id) {
+              const existingRecord = repository.getPaymentInRecordById(id);
+              if (existingRecord) {
+                if (existingRecord.party_id) {
+                  try {
+                    const allParties = repository.getParties();
+                    const party = allParties.find((p: any) => String(p.id) === String(existingRecord.party_id));
+                    if (party) {
+                      party.balance = Number(party.balance || 0) + Number(existingRecord.amount || 0);
+                      repository.upsertParty(party);
+                    }
+                  } catch (balanceError) {
+                    console.error('Failed to restore party balance:', balanceError);
+                  }
+                }
+
+                try {
+                  const pMode = String(existingRecord.payment_type).toLowerCase();
+                  if (pMode === 'cash') {
+                    repository.deleteCashInHandTransaction('cash_payment_in_' + id);
+                  } else if (pMode) {
+                    repository.deleteBankAccountTransaction('bank_payment_in_' + id);
+                  }
+                } catch (txError) {
+                  console.error('Failed to delete cash/bank transaction:', txError);
+                }
+              }
+
               repository.deletePaymentInRecord(id);
               res.statusCode = 204;
               res.end();
@@ -395,11 +459,15 @@ function sqliteApiPlugin() {
         try {
           // @ts-expect-error Runtime-only Node module used in Vite middleware.
           const repository = await import('./database/sqlite/repository.mjs');
-          
+
           const requestUrl = new URL(req.url ?? '/', 'http://localhost');
-          
+
           if (req.method === 'GET') {
-            const records = repository.getPaymentOutRecordsReal();
+            const records = repository.getPaymentOutRecordsReal().filter((r: any) =>
+              r.payment_type !== 'Opening Balance' &&
+              r.payment_type !== 'Payable Opening Balance' &&
+              r.payment_type !== 'Receivable Opening Balance'
+            );
             const mapped = records.map((r: any) => ({
               ...r,
               paymentNo: r.payment_no,
@@ -416,7 +484,7 @@ function sqliteApiPlugin() {
             try {
               const payload = await parseJsonBody(req);
               let createdImagePath = null;
-              
+
               if (payload.imageDataUrl) {
                 const imageFile = saveDataUrlToAppData({
                   dataUrl: payload.imageDataUrl,
@@ -431,24 +499,25 @@ function sqliteApiPlugin() {
                 paymentNo: payload.paymentNo ?? '',
                 date: payload.date ?? new Date().toLocaleDateString('en-GB'),
                 partyName: payload.partyName ?? 'Cash Purchase',
+                partyId: payload.partyId ? String(payload.partyId) : null,
                 amount: Number(payload.amount ?? 0),
                 paymentType: payload.paymentType ?? 'Cash',
                 reference: payload.reference ?? null,
                 description: payload.description ?? null,
                 attachmentImagePath: createdImagePath,
               };
-              
+
               repository.addPaymentOutRecord(record);
-              
+
               if (payload.partyId) {
                 const allParties = repository.getParties();
                 const party = allParties.find((p: any) => String(p.id) === String(payload.partyId));
                 if (party) {
-                   party.balance = Number(party.balance || 0) + Number(record.amount || 0);
-                   repository.upsertParty(party);
+                  party.balance = Number(party.balance || 0) + Number(record.amount || 0);
+                  repository.upsertParty(party);
                 }
               }
-              
+
               if (String(record.paymentType).toLowerCase() === 'cash') {
                 repository.addCashInHandTransaction({
                   id: 'cash_payment_out_' + record.id,
@@ -485,6 +554,33 @@ function sqliteApiPlugin() {
             const id = (pathId || queryId || '').trim();
 
             if (id) {
+              const existingRecord = repository.getPaymentOutRecordById(id);
+              if (existingRecord) {
+                if (existingRecord.party_id) {
+                  try {
+                    const allParties = repository.getParties();
+                    const party = allParties.find((p: any) => String(p.id) === String(existingRecord.party_id));
+                    if (party) {
+                      party.balance = Number(party.balance || 0) - Number(existingRecord.amount || 0);
+                      repository.upsertParty(party);
+                    }
+                  } catch (balanceError) {
+                    console.error('Failed to restore party balance:', balanceError);
+                  }
+                }
+
+                try {
+                  const pMode = String(existingRecord.payment_type).toLowerCase();
+                  if (pMode === 'cash') {
+                    repository.deleteCashInHandTransaction('cash_payment_out_' + id);
+                  } else if (pMode) {
+                    repository.deleteBankAccountTransaction('bank_payment_out_' + id);
+                  }
+                } catch (txError) {
+                  console.error('Failed to delete cash/bank transaction:', txError);
+                }
+              }
+
               repository.deletePaymentOutRecord(id);
               res.statusCode = 204;
               res.end();
@@ -591,13 +687,6 @@ function sqliteApiPlugin() {
 
                 repository.upsertParty(party);
 
-                if (isNew && Math.abs(party.balance) > 0) {
-                  repository.saveOpeningBalanceTransaction(
-                    party.name,
-                    party.balance,
-                    payload.asOfDate || new Date().toLocaleDateString('en-GB')
-                  );
-                }
                 res.statusCode = 201;
                 res.setHeader('Content-Type', 'application/json');
                 res.end(JSON.stringify(party));
@@ -884,8 +973,8 @@ function sqliteApiPlugin() {
                     : null;
                 const existingItem = payload.id
                   ? repository
-                      .getItems()
-                      .find((itemRow: { id: string; img_path?: string | null }) => String(itemRow.id) === String(payload.id))
+                    .getItems()
+                    .find((itemRow: { id: string; img_path?: string | null }) => String(itemRow.id) === String(payload.id))
                   : null;
                 const previousImgPath = existingItem?.img_path ?? null;
 
@@ -1622,7 +1711,7 @@ function sqliteApiPlugin() {
                     party.balance = Number(party.balance || 0) + Number(invoice.balance || 0);
                     repository.upsertParty(party);
                   }
-                  
+
                   const receivedAmount = Number(invoice.amount || 0) - Number(invoice.balance || 0);
                   if (receivedAmount > 0) {
                     repository.addCashInHandTransaction({
@@ -1644,11 +1733,11 @@ function sqliteApiPlugin() {
                   if (!lineItem.itemId || !lineItem.quantity) continue;
                   const dbItem = allItems.find((i: any) => i.id === lineItem.itemId);
                   if (!dbItem) continue;
-                  
+
                   const isSecondary = lineItem.unit === dbItem.secondary_unit;
                   repository.deductItemStock(
-                    lineItem.itemId, 
-                    lineItem.quantity, 
+                    lineItem.itemId,
+                    lineItem.quantity,
                     isSecondary,
                     dbItem.conversion_rate
                   );
@@ -1708,19 +1797,19 @@ function sqliteApiPlugin() {
 
               const imageFile = payload.imageDataUrl
                 ? saveDataUrlToAppData({
-                    dataUrl: payload.imageDataUrl,
-                    prefix: 'sale_invoice_image',
-                    targetRoot: saleAttachmentsRoot,
-                  })
+                  dataUrl: payload.imageDataUrl,
+                  prefix: 'sale_invoice_image',
+                  targetRoot: saleAttachmentsRoot,
+                })
                 : null;
               createdImagePath = imageFile?.filePath ?? null;
 
               const documentFile = payload.documentDataUrl
                 ? saveDataUrlToAppData({
-                    dataUrl: payload.documentDataUrl,
-                    prefix: 'sale_invoice_document',
-                    targetRoot: saleAttachmentsRoot,
-                  })
+                  dataUrl: payload.documentDataUrl,
+                  prefix: 'sale_invoice_document',
+                  targetRoot: saleAttachmentsRoot,
+                })
                 : null;
               createdDocumentPath = documentFile?.filePath ?? null;
 
@@ -1810,6 +1899,51 @@ function sqliteApiPlugin() {
             }
 
             const existingInvoice = repository.getSaleInvoiceById(id);
+            if (existingInvoice) {
+              try {
+                const lineItems = JSON.parse(existingInvoice.line_items_json || '[]');
+                const allItems = repository.getItems();
+                for (const lineItem of lineItems) {
+                  if (!lineItem.itemId || !lineItem.quantity) continue;
+                  const dbItem = allItems.find((i: any) => String(i.id) === String(lineItem.itemId));
+                  if (!dbItem) continue;
+
+                  const isSecondary = lineItem.unit === dbItem.secondary_unit;
+                  repository.deductItemStock(
+                    lineItem.itemId,
+                    -Number(lineItem.quantity),
+                    isSecondary,
+                    dbItem.conversion_rate
+                  );
+                }
+              } catch (stockError) {
+                console.error('Failed to restore stock:', stockError);
+              }
+
+              if (String(existingInvoice.payment_mode).toLowerCase() === 'credit' && existingInvoice.party_id) {
+                try {
+                  const allParties = repository.getParties();
+                  const party = allParties.find((p: any) => String(p.id) === String(existingInvoice.party_id));
+                  if (party) {
+                    party.balance = Number(party.balance || 0) - Number(existingInvoice.balance || 0);
+                    repository.upsertParty(party);
+                  }
+                } catch (balanceError) {
+                  console.error('Failed to restore party balance:', balanceError);
+                }
+              }
+
+              try {
+                if (String(existingInvoice.payment_mode).toLowerCase() === 'cash') {
+                  repository.deleteCashInHandTransaction('cash_' + id);
+                } else if (String(existingInvoice.payment_mode).toLowerCase() === 'credit') {
+                  repository.deleteCashInHandTransaction('cash_' + id + '_received');
+                }
+              } catch (txError) {
+                console.error('Failed to delete cash transaction:', txError);
+              }
+            }
+
             const deleted = repository.deleteSaleInvoice(id);
             if (!deleted) {
               res.statusCode = 404;
@@ -1928,6 +2062,60 @@ function sqliteApiPlugin() {
 
               repository.addPurchaseBill(invoice);
 
+              try {
+                const paidAmount = Number(invoice.amount || 0) - Number(invoice.balance || 0);
+                if (paidAmount > 0) {
+                  if (String(invoice.paymentMode).toLowerCase() === 'cash') {
+                    repository.addCashInHandTransaction({
+                      id: 'cash_purchase_' + invoice.id,
+                      date: invoice.date,
+                      name: invoice.partyName || 'Cash Purchase',
+                      type: 'POS Purchase',
+                      amount: -paidAmount
+                    });
+                  } else if (String(invoice.paymentMode).toLowerCase() !== 'credit') {
+                    repository.addBankAccountTransaction({
+                      id: 'bank_purchase_' + invoice.id,
+                      date: invoice.date,
+                      name: invoice.partyName || 'Bank Purchase',
+                      type: 'POS Purchase',
+                      amount: -paidAmount,
+                      paymentType: invoice.paymentMode
+                    });
+                  }
+                }
+
+                if (invoice.partyId) {
+                  const allParties = repository.getParties();
+                  const party = allParties.find((p: any) => String(p.id) === String(invoice.partyId));
+                  if (party) {
+                    party.balance = Number(party.balance || 0) + Number(invoice.balance || 0); // Owe supplier more
+                    repository.upsertParty(party);
+                  }
+                }
+              } catch (txError) {
+                console.error("Failed to update cash/bank/credit balance for purchase:", txError);
+              }
+
+              try {
+                const allItems = repository.getItems();
+                for (const lineItem of lineItems) {
+                  if (!lineItem.itemId || !lineItem.quantity) continue;
+                  const dbItem = allItems.find((i: any) => i.id === lineItem.itemId);
+                  if (!dbItem) continue;
+
+                  const isSecondary = lineItem.unit === dbItem.secondary_unit;
+                  repository.deductItemStock(
+                    lineItem.itemId,
+                    -lineItem.quantity,
+                    isSecondary,
+                    dbItem.conversion_rate
+                  );
+                }
+              } catch (stockError) {
+                console.error("Failed to add stock for purchase:", stockError);
+              }
+
               res.statusCode = 201;
               res.setHeader('Content-Type', 'application/json');
               res.end(JSON.stringify(invoice));
@@ -1979,19 +2167,19 @@ function sqliteApiPlugin() {
 
               const imageFile = payload.imageDataUrl
                 ? saveDataUrlToAppData({
-                    dataUrl: payload.imageDataUrl,
-                    prefix: 'purchase_bill_image',
-                    targetRoot: saleAttachmentsRoot,
-                  })
+                  dataUrl: payload.imageDataUrl,
+                  prefix: 'purchase_bill_image',
+                  targetRoot: saleAttachmentsRoot,
+                })
                 : null;
               createdImagePath = imageFile?.filePath ?? null;
 
               const documentFile = payload.documentDataUrl
                 ? saveDataUrlToAppData({
-                    dataUrl: payload.documentDataUrl,
-                    prefix: 'purchase_bill_document',
-                    targetRoot: saleAttachmentsRoot,
-                  })
+                  dataUrl: payload.documentDataUrl,
+                  prefix: 'purchase_bill_document',
+                  targetRoot: saleAttachmentsRoot,
+                })
                 : null;
               createdDocumentPath = documentFile?.filePath ?? null;
 
@@ -2084,6 +2272,52 @@ function sqliteApiPlugin() {
             }
 
             const existingInvoice = repository.getPurchaseBillById(id);
+            if (existingInvoice) {
+              try {
+                const lineItems = JSON.parse(existingInvoice.line_items_json || '[]');
+                const allItems = repository.getItems();
+                for (const lineItem of lineItems) {
+                  if (!lineItem.itemId || !lineItem.quantity) continue;
+                  const dbItem = allItems.find((i: any) => String(i.id) === String(lineItem.itemId));
+                  if (!dbItem) continue;
+
+                  const isSecondary = lineItem.unit === dbItem.secondary_unit;
+                  repository.deductItemStock(
+                    lineItem.itemId,
+                    Number(lineItem.quantity),
+                    isSecondary,
+                    dbItem.conversion_rate
+                  );
+                }
+              } catch (stockError) {
+                console.error('Failed to restore stock:', stockError);
+              }
+
+              if (existingInvoice.party_id) {
+                try {
+                  const allParties = repository.getParties();
+                  const party = allParties.find((p: any) => String(p.id) === String(existingInvoice.party_id));
+                  if (party) {
+                    party.balance = Number(party.balance || 0) - Number(existingInvoice.balance || 0);
+                    repository.upsertParty(party);
+                  }
+                } catch (balanceError) {
+                  console.error('Failed to restore party balance:', balanceError);
+                }
+              }
+
+              try {
+                const pMode = String(existingInvoice.payment_mode).toLowerCase();
+                if (pMode === 'cash') {
+                  repository.deleteCashInHandTransaction('cash_purchase_' + id);
+                } else if (pMode !== 'credit') {
+                  repository.deleteBankAccountTransaction('bank_purchase_' + id);
+                }
+              } catch (txError) {
+                console.error('Failed to delete cash/bank transaction:', txError);
+              }
+            }
+
             const deleted = repository.deletePurchaseBill(id);
             if (!deleted) {
               res.statusCode = 404;

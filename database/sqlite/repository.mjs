@@ -144,6 +144,13 @@ export function addPaymentInRecord(record) {
   db.close();
 }
 
+export function getPaymentInRecordById(id) {
+  const db = openDatabase();
+  const row = db.prepare('SELECT * FROM payment_in_records WHERE id = ?').get(String(id));
+  db.close();
+  return row;
+}
+
 export function deletePaymentInRecord(id) {
   const db = openDatabase();
   const result = db.prepare('DELETE FROM payment_in_records WHERE id = ?').run(String(id));
@@ -232,7 +239,8 @@ export function deductItemStock(itemId, quantity, isSecondary, conversionRate) {
     UPDATE items 
     SET 
       stock_quantity = COALESCE(stock_quantity, 0) - @primaryQty,
-      secondary_stock = COALESCE(secondary_stock, 0) - @secondaryQty
+      secondary_stock = CASE WHEN secondary_unit IS NOT NULL AND secondary_unit != '' THEN COALESCE(secondary_stock, 0) - @secondaryQty ELSE secondary_stock END,
+      stock_value = (COALESCE(stock_quantity, 0) - @primaryQty) * COALESCE(purchase_price, 0)
     WHERE id = @id
   `);
 
@@ -717,16 +725,19 @@ export function getPaymentOutRecords() {
   return getExpenseRecords();
 }
 
-export function getPaymentOutRecordById(id) {
-  return getExpenseRecordById(id);
-}
-
 export function getNextPaymentOutNo() {
   return getNextExpenseNo();
 }
 
 export function updatePaymentOutRecord(id, record) {
   return updateExpenseRecord(id, record);
+}
+
+export function getPaymentOutRecordById(id) {
+  const db = openDatabase();
+  const row = db.prepare('SELECT * FROM payment_out_records WHERE id = ?').get(String(id));
+  db.close();
+  return row;
 }
 
 export function deletePaymentOutRecord(id) {
@@ -1018,6 +1029,28 @@ export function deleteBankAccount(id) {
   return result.changes > 0;
 }
 
+export function deleteBankAccountTransaction(id) {
+  const db = openDatabase();
+  const tx = db.prepare('SELECT amount, bank_account_name FROM bank_account_transactions WHERE id = ?').get(String(id));
+  if (!tx) {
+    db.close();
+    return false;
+  }
+  
+  db.prepare(`
+    UPDATE bank_accounts SET balance = balance - @amount WHERE name = @paymentType
+  `).run({
+    amount: tx.amount,
+    paymentType: tx.bank_account_name
+  });
+
+  const result = db.prepare('DELETE FROM bank_account_transactions WHERE id = ?').run(String(id));
+  db.prepare('DELETE FROM transactions WHERE id = ?').run(String(id));
+  
+  db.close();
+  return result.changes > 0;
+}
+
 export function addBankAccountTransaction(entry) {
   const db = openDatabase();
   const txId = entry.id || Date.now().toString();
@@ -1064,6 +1097,39 @@ export function getBankAccountTransactions(bankName) {
     WHERE bank_account_name = ?
     ORDER BY date DESC, created_at DESC
   `).all(bankName);
+  db.close();
+  return rows;
+}
+
+export function addStockAdjustment(data) {
+  const db = openDatabase();
+  const txId = data.id || Date.now().toString();
+
+  db.prepare(`
+    INSERT INTO adjust_stock_transactions (
+      id, item_id, item_name, adjustment_type, date, quantity, unit, at_price, details, created_at, updated_at
+    ) VALUES (
+      @id, @itemId, @itemName, @adjustmentType, @date, @quantity, @unit, @atPrice, @details, datetime('now'), datetime('now')
+    )
+  `).run({
+    id: txId,
+    itemId: data.itemId,
+    itemName: data.itemName,
+    adjustmentType: data.adjustmentType,
+    date: data.date,
+    quantity: Number(data.quantity),
+    unit: data.unit || null,
+    atPrice: data.atPrice ? Number(data.atPrice) : null,
+    details: data.details || null
+  });
+
+  db.close();
+  return txId;
+}
+
+export function getStockAdjustments() {
+  const db = openDatabase();
+  const rows = db.prepare('SELECT * FROM adjust_stock_transactions ORDER BY created_at DESC, date DESC').all();
   db.close();
   return rows;
 }

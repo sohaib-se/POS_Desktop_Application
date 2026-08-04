@@ -14,7 +14,7 @@ import {
   X,
 } from "lucide-react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { AddEstimate } from "@/components/pages/AddEstimate";
+import { AddEstimate } from "@/pages/AddEstimate";
 
 export function Estimates() {
   const [showAddEstimate, setShowAddEstimate] = useState(false);

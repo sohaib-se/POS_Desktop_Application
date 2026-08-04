@@ -1,51 +1,10 @@
 import { useEffect, useState, useCallback } from "react";
-import {
-  Search,
-  Plus,
-  Edit2,
-  Phone,
-  Mail,
-  Printer,
-  Settings,
-  MoreVertical,
-} from "lucide-react";
-import type { Party } from "@/types";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import type { Transaction } from "@/types";
-
-type PartyContextMenuState = {
-  party: Party;
-  x: number;
-  y: number;
-};
-
-type PartyTransactionRow = {
-  id: string;
-  type: Transaction["type"];
-  invoiceNo?: string;
-  date: string;
-  partyName: string;
-  amount: number;
-  balance: number;
-  paymentType?: string;
-  status?: Transaction["status"];
-  partyId?: number;
-};
+import type { Party, Transaction } from "@/types";
+import { PartiesHeader } from "@/components/pagescomponents/parties/PartiesHeader";
+import { PartiesEmptyState } from "@/components/pagescomponents/parties/PartiesEmptyState";
+import { PartyList } from "@/components/pagescomponents/parties/PartyList";
+import { PartyDetails, type PartyTransactionRow } from "@/components/pagescomponents/parties/PartyDetails";
+import { AddPartyDialog } from "@/components/pagescomponents/parties/AddPartyDialog";
 
 type TransactionApiRow = {
   id: string;
@@ -126,8 +85,7 @@ export function Parties({ onOpenSettings }: PartiesProps = {}) {
   const [isSavingParty, setIsSavingParty] = useState(false);
   const [isDeletingParty, setIsDeletingParty] = useState(false);
   const [partyPendingDelete, setPartyPendingDelete] = useState<Party | null>(null);
-  const [partyContextMenu, setPartyContextMenu] =
-    useState<PartyContextMenuState | null>(null);
+
   const [searchTerm, setSearchTerm] = useState("");
   const [transactionSearchTerm, setTransactionSearchTerm] = useState("");
   const [showTransactionSearch, setShowTransactionSearch] = useState(false);
@@ -321,23 +279,7 @@ export function Parties({ onOpenSettings }: PartiesProps = {}) {
     loadPartiesAndTransactions();
   }, [loadPartiesAndTransactions]);
 
-  useEffect(() => {
-    if (!partyContextMenu) {
-      return;
-    }
 
-    const closeMenu = () => setPartyContextMenu(null);
-
-    window.addEventListener('click', closeMenu);
-    window.addEventListener('resize', closeMenu);
-    window.addEventListener('scroll', closeMenu, true);
-
-    return () => {
-      window.removeEventListener('click', closeMenu);
-      window.removeEventListener('resize', closeMenu);
-      window.removeEventListener('scroll', closeMenu, true);
-    };
-  }, [partyContextMenu]);
 
   const filteredParties = parties.filter((p) =>
     p.name.toLowerCase().includes(searchTerm.toLowerCase()),
@@ -491,16 +433,7 @@ export function Parties({ onOpenSettings }: PartiesProps = {}) {
     document.body.removeChild(link);
   };
 
-  const selectedPartyBalanceLabel =
-    selectedParty && selectedParty.balance > 0
-      ? "Amount to Receive"
-      : selectedParty && selectedParty.balance < 0
-        ? "Amount to Pay"
-        : "Balance Settled";
 
-  const selectedPartyBalanceAmount = selectedParty
-    ? Math.abs(selectedParty.balance).toFixed(2)
-    : "0.00";
 
   const handleSaveParty = async (
     options?: {
@@ -661,791 +594,64 @@ export function Parties({ onOpenSettings }: PartiesProps = {}) {
 
   return (
     <div className="h-full flex flex-col [background-color:#D0DCE7] p-0 gap-1">
-      {/* Top Header Card */}
       {!showEmptyState && (
-        <div className="p-4 bg-white rounded-none flex items-center justify-between shrink-0 w-full">
-          <div className="flex items-center gap-2">
-            <h2 className="text-xl font-bold text-gray-900">Parties</h2>
-          </div>
-          <div className="flex items-center gap-3">
-            <button
-              onClick={openAddPartyDialog}
-              disabled={isLoading}
-              className="bg-[#E53935] hover:bg-red-600 text-white px-4 py-2 rounded-full text-sm font-medium flex items-center gap-1.5 disabled:opacity-50"
-            >
-              <Plus className="w-4 h-4" />
-              Add Party
-            </button>
-            <button
-              className="p-2 hover:bg-gray-100 rounded-lg disabled:opacity-50"
-              disabled={isLoading}
-              onClick={() => onOpenSettings?.("party")}
-            >
-              <Settings className="w-5 h-5 text-gray-500" />
-            </button>
-          </div>
-        </div>
+        <PartiesHeader
+          isLoading={isLoading}
+          onAddParty={openAddPartyDialog}
+          onOpenSettings={onOpenSettings}
+        />
       )}
 
-      {/* Main Content Area */}
       {showEmptyState ? (
-        <div className="flex-1 flex flex-col items-center justify-center w-full h-full text-center py-12 px-4 bg-white m-1 rounded-md shadow-sm">
-          <div className="w-32 h-32 mx-auto mb-6 relative">
-            <div className="absolute inset-0 bg-gradient-to-br from-blue-100 to-blue-200 rounded-2xl transform rotate-6" />
-            <div className="absolute inset-0 bg-white rounded-2xl shadow-lg flex items-center justify-center">
-              <Phone className="w-16 h-16 text-gray-400" />
-            </div>
-            <div className="absolute -top-2 -right-2 w-8 h-8 bg-blue-400 rounded-full flex items-center justify-center">
-              <span className="text-blue-800 text-lg font-bold">P</span>
-            </div>
-            <div className="absolute -bottom-2 -left-2 w-6 h-6 bg-blue-300 rounded-full flex items-center justify-center">
-              <span className="text-blue-800 text-sm font-bold">p</span>
-            </div>
-          </div>
-          <h2 className="text-2xl font-semibold text-gray-900 mb-2">
-            Manage Your Parties
-          </h2>
-          <p className="text-gray-500 mb-8 max-w-md mx-auto">
-            With Vyapar, you can organize all your customers and suppliers in one place, track their balances, and manage transactions easily.
-          </p>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-3xl mx-auto mb-8 w-full">
-            <div className="bg-blue-50 rounded-xl p-4 text-left">
-              <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center mb-3">
-                <Phone className="w-5 h-5 text-blue-600" />
-              </div>
-              <h3 className="font-medium text-gray-900 mb-1">
-                Contact Details
-              </h3>
-              <p className="text-xs text-gray-500">
-                Keep track of phone numbers, emails, and addresses for all your parties.
-              </p>
-            </div>
-            <div className="bg-purple-50 rounded-xl p-4 text-left">
-              <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center mb-3">
-                <Settings className="w-5 h-5 text-purple-600" />
-              </div>
-              <h3 className="font-medium text-gray-900 mb-1">
-                Credit Limits
-              </h3>
-              <p className="text-xs text-gray-500">
-                Set custom credit limits and manage opening balances for each party.
-              </p>
-            </div>
-            <div className="bg-green-50 rounded-xl p-4 text-left">
-              <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center mb-3">
-                <Printer className="w-5 h-5 text-green-600" />
-              </div>
-              <h3 className="font-medium text-gray-900 mb-1">
-                Transaction History
-              </h3>
-              <p className="text-xs text-gray-500">
-                View, print, and export complete transaction history for any party.
-              </p>
-            </div>
-          </div>
-
-          <button
-            onClick={openAddPartyDialog}
-            className="bg-[#E53935] hover:bg-red-600 text-white px-6 py-3 rounded-lg text-sm font-medium flex items-center gap-2 mx-auto"
-          >
-            <Plus className="w-4 h-4" />
-            Add Party
-          </button>
-        </div>
+        <PartiesEmptyState onAddParty={openAddPartyDialog} />
       ) : (
         <div className="flex-1 flex gap-1 overflow-hidden">
-          {/* Left Panel Card - Party List */}
-          <div className="w-80 bg-white rounded-md flex flex-col shrink-0 overflow-hidden">
-            {/* Search */}
-            <div className="p-3 border-b border-gray-200">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                <input
-                  type="text"
-                  placeholder="Search Party Name"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#E53935]"
-                />
-              </div>
-            </div>
-
-            {/* Party List Table */}
-            <div className="flex-1 overflow-y-auto">
-              {isLoading ? (
-                <div className="flex justify-center p-8">
-                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#E53935]"></div>
-                </div>
-              ) : (
-                <table className="w-full text-sm">
-                  <thead className="bg-gray-50 sticky top-0">
-                    <tr>
-                      <th className="px-4 py-2 text-left font-medium text-gray-600">
-                        <div className="flex items-center gap-2">
-                          <span>Party Name</span>
-                        </div>
-                      </th>
-                      <th className="px-4 py-2 text-right font-medium text-gray-600">
-                        Amount
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredParties.map((party) => (
-                      <tr
-                        key={party.id}
-                        onClick={() => setSelectedParty(party)}
-                        onContextMenu={(event) => {
-                          event.preventDefault();
-                          setPartyContextMenu({
-                            party,
-                            x: event.clientX,
-                            y: event.clientY,
-                          });
-                        }}
-                        className={`cursor-pointer border-b border-gray-100 ${selectedParty?.id === party.id
-                          ? "bg-blue-50 border-l-4 border-l-blue-500"
-                          : "hover:bg-gray-50"
-                          }`}
-                      >
-                        <td className="px-4 py-3">
-                          <span className="text-gray-900">{party.name}</span>
-                        </td>
-                        <td
-                          className={`px-4 py-3 text-right font-medium ${party.balance > 0
-                            ? "text-green-500"
-                            : party.balance < 0
-                              ? "text-red-500"
-                              : "text-gray-900"
-                            }`}
-                        >
-                          {party.balance.toFixed(2)}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
-            </div>
-          </div>
-
-          {partyContextMenu && (
-            <div
-              className="fixed z-50 min-w-40 rounded-md border bg-white p-1 shadow-md"
-              style={{
-                top: partyContextMenu.y,
-                left: partyContextMenu.x,
-              }}
-              onClick={(event) => event.stopPropagation()}
-            >
-              <button
-                onClick={() => {
-                  setSelectedParty(partyContextMenu.party);
-                  openEditPartyDialog(partyContextMenu.party);
-                  setPartyContextMenu(null);
-                }}
-                className="w-full rounded-sm px-2 py-1.5 text-left text-sm hover:bg-gray-100"
-              >
-                View/Edit
-              </button>
-              <button
-                onClick={() => {
-                  setPartyContextMenu(null);
-                  setPartyPendingDelete(partyContextMenu.party);
-                }}
-                className="w-full rounded-sm px-2 py-1.5 text-left text-sm text-red-600 hover:bg-red-50"
-              >
-                Delete
-              </button>
-            </div>
-          )}
-
-          {/* Right Panel Card - Party Details */}
-          <div className="flex-1 flex flex-col overflow-hidden">
-            {isLoading ? (
-              <div className="flex-1 flex items-center justify-center bg-white rounded-md mb-1 shadow-sm">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#E53935]"></div>
-              </div>
-            ) : selectedParty ? (
-              <>
-                {/* Party Details Card */}
-                <div className="bg-white rounded-md shadow-sm mb-1">
-                  <div className="p-5 border-b border-gray-200 shrink-0">
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center gap-2">
-                        <h2 className="text-lg font-semibold text-gray-900">
-                          {selectedParty.name}
-                        </h2>
-                        <Edit2
-                          onClick={() => openEditPartyDialog(selectedParty)}
-                          className="w-4 h-4 text-blue-500 cursor-pointer"
-                        />
-                      </div>
-                      <div className="flex gap-2 items-center">
-                        <button
-                          className="w-9 h-9 rounded-full bg-green-500 flex items-center justify-center hover:bg-green-600"
-                          onClick={() => {
-                            if (selectedParty?.phone) {
-                              const formattedPhone = selectedParty.phone.replace(/[^0-9+]/g, '');
-                              window.open(`https://wa.me/${formattedPhone}`, '_blank');
-                            }
-                          }}
-                        >
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            viewBox="0 0 24 24"
-                            fill="currentColor"
-                            className="w-4 h-4 text-white"
-                          >
-                            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z" />
-                          </svg>
-                        </button>
-                        <button
-                          className="w-9 h-9 rounded-full bg-orange-400 flex items-center justify-center hover:bg-orange-500"
-                          onClick={() => {
-                            if (selectedParty?.email) {
-                              window.open(`https://mail.google.com/mail/?view=cm&fs=1&to=${selectedParty.email}`, '_blank');
-                            }
-                          }}
-                        >
-                          <Mail className="w-4 h-4 text-white" />
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Party Info */}
-                    <div className="flex gap-10">
-                      <div>
-                        <p className="text-xs text-gray-500 mb-0.5">
-                          Phone Number
-                        </p>
-                        <p className="text-sm text-gray-900">
-                          {selectedParty.phone}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-gray-500 mb-0.5">Email</p>
-                        <p className="text-sm text-gray-900">
-                          {selectedParty.email || "-"}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-gray-500 mb-0.5">
-                          Credit / Balance
-                        </p>
-                        <p className="text-sm text-gray-900">
-                          {selectedPartyBalanceLabel}
-                        </p>
-                        <p
-                          className={`text-sm font-semibold ${selectedParty.balance > 0
-                            ? "text-green-600"
-                            : selectedParty.balance < 0
-                              ? "text-red-600"
-                              : "text-gray-900"
-                            }`}
-                        >
-                          Rs {selectedPartyBalanceAmount}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Transactions */}
-                <div className="flex-1 bg-white rounded-md flex flex-col overflow-hidden">
-                  <div className="flex items-center justify-between px-5 py-3 border-b border-gray-200 shrink-0">
-                    <h3 className="text-base font-semibold text-gray-900">
-                      Transactions
-                    </h3>
-                    <div className="flex gap-2 items-center">
-                      {showTransactionSearch && (
-                        <div className="flex items-center bg-gray-50 rounded px-3 py-1.5 border border-gray-200 w-64 mr-2">
-                          <Search className="w-4 h-4 text-gray-400 mr-2 shrink-0" />
-                          <input
-                            type="text"
-                            placeholder="Search transactions..."
-                            value={transactionSearchTerm}
-                            onChange={(e) => setTransactionSearchTerm(e.target.value)}
-                            onBlur={() => {
-                              setTimeout(() => {
-                                setShowTransactionSearch(false);
-                                setTransactionSearchTerm("");
-                              }, 150);
-                            }}
-                            className="w-full bg-transparent border-none outline-none text-sm"
-                            autoFocus
-                          />
-                        </div>
-                      )}
-                      {!showTransactionSearch && (
-                        <button
-                          onClick={() => setShowTransactionSearch(true)}
-                          className="p-1.5 hover:bg-gray-100 rounded"
-                        >
-                          <Search className="w-4 h-4 text-gray-500" />
-                        </button>
-                      )}
-                      <button
-                        onClick={handlePrintTransactions}
-                        className="p-1.5 hover:bg-gray-100 rounded"
-                      >
-                        <Printer className="w-4 h-4 text-gray-500" />
-                      </button>
-                      <button
-                        onClick={handleExportExcel}
-                        className="p-1.5 hover:bg-gray-100 rounded relative"
-                      >
-                        <span className="bg-green-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
-                          xls
-                        </span>
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="flex-1 overflow-y-auto">
-                    <table className="w-full text-sm">
-                      <thead className="bg-gray-50 sticky top-0">
-                        <tr>
-                          <th className="px-4 py-3 text-left font-medium text-gray-500">
-                            <div className="flex items-center gap-2">
-                              <span>Type</span>
-                            </div>
-                          </th>
-                          <th className="px-4 py-3 text-left font-medium text-gray-500">
-                            <div className="flex items-center gap-2">
-                              <span>Number</span>
-                            </div>
-                          </th>
-                          <th className="px-4 py-3 text-left font-medium text-gray-500">
-                            <div className="flex items-center gap-2">
-                              <span>Date</span>
-                            </div>
-                          </th>
-                          <th className="px-4 py-3 text-right font-medium text-gray-500">
-                            <div className="flex items-center justify-end gap-2">
-                              <span>Total</span>
-                            </div>
-                          </th>
-                          <th className="px-4 py-3 text-right font-medium text-gray-500">
-                            <div className="flex items-center justify-end gap-2">
-                              <span>Balance</span>
-                            </div>
-                          </th>
-                          <th className="px-2 py-3 w-8"></th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {filteredPartyTransactions.length > 0 ? (
-                          filteredPartyTransactions.map((t) => (
-                            <tr
-                              key={t.id}
-                              className="border-b border-gray-100 hover:bg-gray-50"
-                            >
-                              <td className="px-4 py-3">
-                                <span
-                                  className={`${t.type === "Sale"
-                                    ? "text-green-600"
-                                    : t.type === "Purchase"
-                                      ? "text-red-600"
-                                      : "text-blue-600"
-                                    }`}
-                                >
-                                  {t.type}
-                                </span>
-                              </td>
-                              <td className="px-4 py-3 text-gray-700">
-                                {t.invoiceNo}
-                              </td>
-                              <td className="px-4 py-3 text-gray-700">
-                                {t.date}
-                              </td>
-                              <td className="px-4 py-3 text-right text-gray-700">
-                                Rs {t.amount.toFixed(2)}
-                              </td>
-                              <td className="px-4 py-3 text-right text-gray-700">
-                                Rs {t.balance.toFixed(2)}
-                              </td>
-                              <td className="px-2 py-3 text-center">
-                                <MoreVertical className="w-4 h-4 text-gray-400 mx-auto cursor-pointer" />
-                              </td>
-                            </tr>
-                          ))
-                        ) : (
-                          <tr>
-                            <td
-                              colSpan={6}
-                              className="px-4 py-8 text-center text-gray-500"
-                            >
-                              No transactions found
-                            </td>
-                          </tr>
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              </>
-            ) : (
-              <div className="flex-1 flex items-center justify-center text-gray-500">
-                Select a party to view details
-              </div>
-            )}
-          </div>
+          <PartyList
+            isLoading={isLoading}
+            searchTerm={searchTerm}
+            setSearchTerm={setSearchTerm}
+            filteredParties={filteredParties}
+            selectedParty={selectedParty}
+            setSelectedParty={setSelectedParty}
+            openEditPartyDialog={openEditPartyDialog}
+            setPartyPendingDelete={setPartyPendingDelete}
+          />
+          <PartyDetails
+            isLoading={isLoading}
+            selectedParty={selectedParty}
+            filteredPartyTransactions={filteredPartyTransactions}
+            showTransactionSearch={showTransactionSearch}
+            setShowTransactionSearch={setShowTransactionSearch}
+            transactionSearchTerm={transactionSearchTerm}
+            setTransactionSearchTerm={setTransactionSearchTerm}
+            handlePrintTransactions={handlePrintTransactions}
+            handleExportExcel={handleExportExcel}
+            openEditPartyDialog={openEditPartyDialog}
+          />
         </div>
       )}
 
-      {/* Add Party Modal */}
-      <Dialog
-        open={showAddParty}
-        onOpenChange={(isOpen) => {
-          setShowAddParty(isOpen);
-          if (!isOpen) {
-            setPartyBeingEdited(null);
-            resetPartyForm();
-          }
-        }}
-      >
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader className="flex items-center justify-between">
-            <DialogTitle>{partyBeingEdited ? "Edit Party" : "Add Party"}</DialogTitle>
-          </DialogHeader>
-
-          {/* Top Fields */}
-          <div className="grid grid-cols-2 gap-4 mb-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Party Name *
-              </label>
-              <input
-                type="text"
-                value={partyForm.name}
-                onChange={(e) =>
-                  setPartyForm({ ...partyForm, name: e.target.value })
-                }
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#E53935]"
-                placeholder="Party Name *"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Phone Number
-              </label>
-              <input
-                type="text"
-                value={partyForm.phoneNumber}
-                onChange={(e) =>
-                  setPartyForm({ ...partyForm, phoneNumber: e.target.value })
-                }
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#E53935]"
-                placeholder="Phone Number"
-              />
-            </div>
-          </div>
-
-          {/* Tabs */}
-          <div className="flex border-b border-gray-200 mb-4">
-            <button
-              onClick={() => setActiveTab("address")}
-              className={`px-4 py-2 text-sm font-medium border-b-2 ${activeTab === "address"
-                ? "border-blue-500 text-gray-900"
-                : "border-transparent text-gray-500 hover:text-gray-700"
-                }`}
-            >
-              Address
-            </button>
-            <button
-              onClick={() => setActiveTab("credit")}
-              className={`px-4 py-2 text-sm font-medium border-b-2 ${activeTab === "credit"
-                ? "border-blue-500 text-gray-900"
-                : "border-transparent text-gray-500 hover:text-gray-700"
-                }`}
-            >
-              Credit & Balance
-            </button>
-          </div>
-
-          {/* Tab Content */}
-          {activeTab === "address" && (
-            <div className="space-y-4 mb-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Email ID
-                </label>
-                <input
-                  type="email"
-                  value={partyForm.email}
-                  onChange={(e) =>
-                    setPartyForm({ ...partyForm, email: e.target.value })
-                  }
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#E53935]"
-                  placeholder="Email ID"
-                />
-              </div>
-              <div>
-                <h3 className="text-sm font-medium text-gray-900 mb-3">
-                  Billing Address
-                </h3>
-                <textarea
-                  value={partyForm.billingAddress}
-                  onChange={(e) =>
-                    setPartyForm({
-                      ...partyForm,
-                      billingAddress: e.target.value,
-                    })
-                  }
-                  placeholder="Billing Address"
-                  rows={4}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#E53935]"
-                />
-              </div>
-              <div>
-                {!showShippingAddress ? (
-                  <button
-                    onClick={() => setShowShippingAddress(true)}
-                    className="text-blue-500 text-sm font-medium hover:text-blue-600"
-                  >
-                    + Enable Shipping Address
-                  </button>
-                ) : (
-                  <>
-                    <h3 className="text-sm font-medium text-gray-900 mb-3">
-                      Shipping Address
-                    </h3>
-                    <textarea
-                      value={partyForm.shippingAddress}
-                      onChange={(e) =>
-                        setPartyForm({
-                          ...partyForm,
-                          shippingAddress: e.target.value,
-                        })
-                      }
-                      placeholder="Shipping Address"
-                      rows={4}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#E53935]"
-                    />
-                  </>
-                )}
-              </div>
-            </div>
-          )}
-
-          {activeTab === "credit" && (
-            <div className="space-y-4 mb-6">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs text-gray-500 mb-1">
-                    Opening Balance
-                  </label>
-                  <input
-                    type="text"
-                    value={partyForm.openingBalance}
-                    onChange={(e) =>
-                      setPartyForm({
-                        ...partyForm,
-                        openingBalance: e.target.value,
-                      })
-                    }
-                    disabled={!!partyBeingEdited}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#E53935] disabled:bg-gray-100 disabled:text-gray-500"
-                    placeholder="500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs text-gray-500 mb-1">
-                    As Of Date
-                  </label>
-                  <input
-                    type="text"
-                    value={partyForm.asOfDate}
-                    onChange={(e) =>
-                      setPartyForm({ ...partyForm, asOfDate: e.target.value })
-                    }
-                    disabled={!!partyBeingEdited}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#E53935] disabled:bg-gray-100 disabled:text-gray-500"
-                    placeholder="21/02/2026"
-                  />
-                </div>
-              </div>
-
-              <div className="flex gap-6 my-4">
-                <label className={`flex items-center gap-2 ${partyBeingEdited ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}>
-                  <input
-                    type="radio"
-                    checked={partyForm.balanceType === "to-pay"}
-                    onChange={() =>
-                      setPartyForm({ ...partyForm, balanceType: "to-pay" })
-                    }
-                    disabled={!!partyBeingEdited}
-                    className="w-4 h-4"
-                  />
-                  <span className="text-sm text-gray-700">To Pay</span>
-                </label>
-                <label className={`flex items-center gap-2 ${partyBeingEdited ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}>
-                  <input
-                    type="radio"
-                    checked={partyForm.balanceType === "to-receive"}
-                    onChange={() =>
-                      setPartyForm({ ...partyForm, balanceType: "to-receive" })
-                    }
-                    disabled={!!partyBeingEdited}
-                    className="w-4 h-4"
-                  />
-                  <span className="text-sm text-gray-700">To Receive</span>
-                </label>
-              </div>
-
-              <div className="border-t pt-4">
-                <h3 className="text-sm font-medium text-gray-900 mb-3">
-                  Credit Limit
-                </h3>
-                <div className="flex gap-4">
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="radio"
-                      checked={partyForm.creditLimit === "no-limit"}
-                      onChange={() =>
-                        setPartyForm({ ...partyForm, creditLimit: "no-limit" })
-                      }
-                      className="w-4 h-4"
-                    />
-                    <span className="text-sm text-blue-500 font-medium">
-                      No Limit
-                    </span>
-                  </label>
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="radio"
-                      checked={partyForm.creditLimit === "custom"}
-                      onChange={() =>
-                        setPartyForm({ ...partyForm, creditLimit: "custom" })
-                      }
-                      className="w-4 h-4"
-                    />
-                    <span className="text-sm text-gray-700">Custom Limit</span>
-                  </label>
-                </div>
-                {partyForm.creditLimit === "custom" && (
-                  <div className="mt-3">
-                    <input
-                      type="number"
-                      value={partyForm.creditLimitAmount}
-                      onChange={(e) =>
-                        setPartyForm({
-                          ...partyForm,
-                          creditLimitAmount: e.target.value,
-                        })
-                      }
-                      placeholder="Enter amount"
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#E53935]"
-                    />
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-          {/* Action Buttons */}
-          <div className="flex gap-3 pt-6 border-t border-gray-200 justify-end">
-            <button
-              onClick={() => {
-                setShowAddParty(false);
-                setPartyBeingEdited(null);
-                resetPartyForm();
-              }}
-              className="px-6 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50"
-            >
-              Cancel
-            </button>
-            {!partyBeingEdited && (
-              <button
-                onClick={() =>
-                  void handleSaveParty({ closeDialog: false, resetForm: true })
-                }
-                disabled={isSavingParty || !partyForm.name.trim()}
-                className="px-6 py-2 border border-blue-500 rounded-lg text-sm font-medium text-blue-500 hover:bg-blue-50"
-              >
-                Save & New
-              </button>
-            )}
-            <button
-              onClick={() =>
-                void handleSaveParty({ closeDialog: true, resetForm: true })
-              }
-              disabled={isSavingParty || !partyForm.name.trim()}
-              className="px-6 py-2 bg-blue-500 text-white rounded-lg text-sm font-medium hover:bg-blue-600"
-            >
-              {isSavingParty
-                ? partyBeingEdited
-                  ? "Updating..."
-                  : "Saving..."
-                : partyBeingEdited
-                  ? "Update"
-                  : "Save"}
-            </button>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      <AlertDialog
-        open={Boolean(partyPendingDelete)}
-        onOpenChange={(isOpen) => {
-          if (!isOpen && !isDeletingParty) {
-            setPartyPendingDelete(null);
-          }
-        }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Party</AlertDialogTitle>
-            <AlertDialogDescription>
-              {partyPendingDelete
-                ? `Are you sure you want to delete ${partyPendingDelete.name}? This action cannot be undone.`
-                : "Are you sure you want to delete this party?"}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeletingParty}>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              asChild
-              className="bg-red-600 hover:bg-red-700 focus-visible:ring-red-500"
-            >
-              <button
-                type="button"
-                disabled={isDeletingParty || !partyPendingDelete}
-                onClick={() => {
-                  if (!partyPendingDelete) {
-                    return;
-                  }
-
-                  void handleDeleteParty(partyPendingDelete);
-                }}
-              >
-                {isDeletingParty ? "Deleting..." : "Delete"}
-              </button>
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* Credit Limit Error Modal */}
-      <Dialog open={showCreditLimitError} onOpenChange={setShowCreditLimitError}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle className="text-red-600">Validation Error</DialogTitle>
-          </DialogHeader>
-          <div className="py-2 text-sm text-gray-700">
-            Credit amount cannot be greater than the credit limit.
-          </div>
-          <div className="flex justify-end pt-4">
-            <button
-              onClick={() => setShowCreditLimitError(false)}
-              className="px-4 py-2 bg-[#E53935] text-white rounded-lg hover:bg-red-700 font-medium text-sm"
-            >
-              OK
-            </button>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <AddPartyDialog
+        showAddParty={showAddParty}
+        setShowAddParty={setShowAddParty}
+        partyBeingEdited={partyBeingEdited}
+        setPartyBeingEdited={setPartyBeingEdited}
+        resetPartyForm={resetPartyForm}
+        partyForm={partyForm}
+        setPartyForm={setPartyForm}
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        showShippingAddress={showShippingAddress}
+        setShowShippingAddress={setShowShippingAddress}
+        handleSaveParty={handleSaveParty}
+        isSavingParty={isSavingParty}
+        partyPendingDelete={partyPendingDelete}
+        setPartyPendingDelete={setPartyPendingDelete}
+        isDeletingParty={isDeletingParty}
+        handleDeleteParty={handleDeleteParty}
+        showCreditLimitError={showCreditLimitError}
+        setShowCreditLimitError={setShowCreditLimitError}
+      />
     </div>
   );
 }

@@ -1,3 +1,4 @@
+
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { expenseCategories } from "@/data/mockData";
 import type { ExpenseCategory } from "@/types";
@@ -9,6 +10,13 @@ interface ExpenseRow {
   note: string;
   paymentType: string;
   amount: string;
+}
+
+interface ExpenseItem {
+  id: string;
+  name: string;
+  price: number;
+  category_id?: string;
 }
 
 interface ExpenseTab {
@@ -114,6 +122,16 @@ export function AddExpense({ onSave, onShare, onClose }: AddExpenseProps) {
       }, {}),
   );
 
+  const [showAddCategoryPopup, setShowAddCategoryPopup] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState("");
+  const [newCategoryType, setNewCategoryType] = useState("Indirect Expense");
+
+  const [expenseItemList, setExpenseItemList] = useState<ExpenseItem[]>([]);
+  const [showAddItemPopup, setShowAddItemPopup] = useState(false);
+  const [newItemName, setNewItemName] = useState("");
+  const [newItemPrice, setNewItemPrice] = useState("");
+  const [activeRowIdForNewItem, setActiveRowIdForNewItem] = useState<number | null>(null);
+
   useEffect(() => {
     const frame = requestAnimationFrame(() => setIsOpenAnimated(true));
     return () => cancelAnimationFrame(frame);
@@ -161,7 +179,19 @@ export function AddExpense({ onSave, onShare, onClose }: AddExpenseProps) {
       }
     };
 
+    const loadExpenseItems = async () => {
+      try {
+        const response = await fetch("/api/expense_items");
+        if (!response.ok) return;
+        const items = await response.json();
+        if (!cancelled) setExpenseItemList(items);
+      } catch (error) {
+        console.error(error);
+      }
+    };
+
     void loadExpenseCategories();
+    void loadExpenseItems();
 
     return () => {
       cancelled = true;
@@ -309,7 +339,6 @@ export function AddExpense({ onSave, onShare, onClose }: AddExpenseProps) {
             itemId: row.categoryId || String(index + 1),
             name: row.category,
             quantity,
-            unit: "PCS",
             price,
             amount,
           };
@@ -328,9 +357,8 @@ export function AddExpense({ onSave, onShare, onClose }: AddExpenseProps) {
           id: crypto.randomUUID(),
           paymentNo: displayedExpenseNo,
           date: displayedExpenseDate,
-          partyName: expenseCategoryName || "Expense",
-          expenseCategoryId: activeTab.expenseCategoryId,
-          expenseCategoryName,
+          categoryId: activeTab.expenseCategoryId,
+          categoryName: expenseCategoryName,
           amount: computedAmount,
           paymentType: activeTab.paymentType,
           description: activeTab.description || null,
@@ -521,8 +549,15 @@ export function AddExpense({ onSave, onShare, onClose }: AddExpenseProps) {
               <select
                 style={{ appearance: "none", border: "1px solid #d1d5db", borderRadius: 4, fontSize: 13, color: "#374151", background: "#fff", padding: "7px 32px 7px 12px", minWidth: 225, cursor: "pointer", textTransform: "lowercase" }}
                 value={activeTab.expenseCategoryId}
-                onChange={(event) => setActiveTabCategory(event.target.value)}
+                onChange={(event) => {
+                  if (event.target.value === "ADD_NEW_CATEGORY") {
+                    setShowAddCategoryPopup(true);
+                  } else {
+                    setActiveTabCategory(event.target.value);
+                  }
+                }}
               >
+                <option value="ADD_NEW_CATEGORY" style={{ color: "#3b82f6", fontWeight: "bold" }}>+ Add Expense Category</option>
                 {expenseCategoryList.map((category) => (
                   <option key={category.id} value={category.id}>
                     {category.name}
@@ -585,7 +620,7 @@ export function AddExpense({ onSave, onShare, onClose }: AddExpenseProps) {
                   QTY<ResizeHandle col={2} />
                 </th>
                 <th style={{ position: "relative", padding: "8px 10px", textAlign: "left", fontSize: 12, fontWeight: 600, color: "#6b7280", borderRight: "1px solid #e5e7eb", letterSpacing: "0.04em" }}>
-                  PRICE/UNIT<ResizeHandle col={3} />
+                  PRICE<ResizeHandle col={3} />
                 </th>
                 <th style={{ position: "relative", padding: "8px 10px", textAlign: "right", fontSize: 12, fontWeight: 600, color: "#6b7280", borderRight: "1px solid #e5e7eb", letterSpacing: "0.04em" }}>
                   AMOUNT<ResizeHandle col={4} />
@@ -613,13 +648,31 @@ export function AddExpense({ onSave, onShare, onClose }: AddExpenseProps) {
                       {index + 1}
                     </td>
                     <td style={{ borderRight: "1px solid #e5e7eb", padding: "4px 8px" }}>
-                      <input
-                        type="text"
-                        style={{ width: "100%", border: "none", outline: "none", fontSize: 13, color: "#374151", background: "transparent" }}
-                        value={row.category}
-                        onChange={(event) => updateRow(row.id, "category", event.target.value)}
-                        placeholder="Item"
-                      />
+                      <select
+                        style={{ width: "100%", border: "none", outline: "none", fontSize: 13, color: "#374151", background: "transparent", appearance: "none", cursor: "pointer" }}
+                        value={row.category || ""}
+                        onChange={(event) => {
+                          const val = event.target.value;
+                          if (val === "ADD_NEW_ITEM") {
+                            setActiveRowIdForNewItem(row.id);
+                            setShowAddItemPopup(true);
+                          } else {
+                            const selectedItem = expenseItemList.find(i => i.name === val);
+                            updateRow(row.id, "category", val);
+                            if (selectedItem) {
+                              updateRow(row.id, "paymentType", String(selectedItem.price));
+                              const qty = Number(row.note) || 0;
+                              updateRow(row.id, "amount", String(qty * selectedItem.price));
+                            }
+                          }
+                        }}
+                      >
+                        <option value="" disabled hidden>Item</option>
+                        <option value="ADD_NEW_ITEM" style={{ color: "#3b82f6", fontWeight: "bold" }}>+ Add Expense Item</option>
+                        {expenseItemList.map(item => (
+                          <option key={item.id} value={item.name}>{item.name}</option>
+                        ))}
+                      </select>
                     </td>
                     <td style={{ borderRight: "1px solid #e5e7eb", padding: "4px 8px" }}>
                       <input
@@ -636,7 +689,7 @@ export function AddExpense({ onSave, onShare, onClose }: AddExpenseProps) {
                         style={{ width: "100%", border: "none", outline: "none", fontSize: 13, color: "#374151", background: "transparent", textAlign: "right" }}
                         value={row.paymentType}
                         onChange={(event) => updateRow(row.id, "paymentType", event.target.value)}
-                        placeholder="Price/Unit"
+                        placeholder="Price"
                       />
                     </td>
                     <td style={{ borderRight: "1px solid #e5e7eb", padding: "4px 8px" }}>
@@ -812,6 +865,174 @@ export function AddExpense({ onSave, onShare, onClose }: AddExpenseProps) {
           {isSaving ? "Saving..." : "Save"}
         </button>
       </div>
+
+      {showAddCategoryPopup && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,0.5)" }}>
+          <div style={{ position: "absolute", inset: 0 }} onClick={() => setShowAddCategoryPopup(false)}></div>
+          <div style={{ position: "relative", zIndex: 10, background: "#fff", borderRadius: 8, padding: 24, width: "100%", maxWidth: 400, boxShadow: "0 20px 25px -5px rgba(0,0,0,0.1)" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+              <h2 style={{ fontSize: 18, fontWeight: 600, color: "#1f2937", margin: 0 }}>Add Expense Category</h2>
+              <button
+                onClick={() => setShowAddCategoryPopup(false)}
+                style={{ background: "none", border: "none", cursor: "pointer", color: "#9ca3af", padding: 0 }}
+              >
+                ✕
+              </button>
+            </div>
+            
+            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+              <div style={{ position: "relative" }}>
+                <label style={{ position: "absolute", top: -8, left: 10, background: "#fff", padding: "0 4px", color: "#3b82f6", fontSize: 12 }}>
+                  Expense Category
+                </label>
+                <input
+                  autoFocus
+                  type="text"
+                  value={newCategoryName}
+                  onChange={(e) => setNewCategoryName(e.target.value)}
+                  style={{ width: "100%", border: "2px solid #3b82f6", borderRadius: 6, padding: "10px 12px", fontSize: 14, color: "#1f2937", outline: "none", boxSizing: "border-box" }}
+                  placeholder="e.g. Petrol"
+                />
+              </div>
+
+              <div style={{ position: "relative" }}>
+                <label style={{ position: "absolute", top: -8, left: 10, background: "#fff", padding: "0 4px", color: "#9ca3af", fontSize: 12 }}>
+                  Expense Type
+                </label>
+                <select
+                  value={newCategoryType}
+                  onChange={(e) => setNewCategoryType(e.target.value)}
+                  style={{ width: "100%", appearance: "none", border: "1px solid #d1d5db", borderRadius: 6, padding: "10px 12px", fontSize: 14, color: "#1f2937", outline: "none", cursor: "pointer", boxSizing: "border-box" }}
+                >
+                  <option value="Direct Expense">Direct Expense</option>
+                  <option value="Indirect Expense">Indirect Expense</option>
+                </select>
+                <span style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", pointerEvents: "none", color: "#6b7280" }}>
+                  ▾
+                </span>
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: 12, marginTop: 8 }}>
+                <button
+                  onClick={() => setShowAddCategoryPopup(false)}
+                  style={{ padding: "8px 24px", border: "1px solid #d1d5db", borderRadius: 4, background: "#fff", color: "#3b82f6", fontWeight: 500, cursor: "pointer" }}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={async () => {
+                    const normalizedName = newCategoryName.trim();
+                    if (!normalizedName) return;
+                    try {
+                      const response = await fetch("/api/expense_categories", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ name: normalizedName, type: newCategoryType, amount: 0 }),
+                      });
+                      if (!response.ok) throw new Error("Failed to save expense category");
+                      const createdCategory = (await response.json()) as ExpenseCategory;
+                      
+                      setExpenseCategoryList((previous) => {
+                        const next = [...previous, createdCategory];
+                        next.sort((a, b) => a.name.localeCompare(b.name));
+                        return next;
+                      });
+                      setExpenseCategoryMap((prev) => ({ ...prev, [createdCategory.id]: createdCategory }));
+                      setActiveTabCategory(createdCategory.id);
+                      
+                      setNewCategoryName("");
+                      setNewCategoryType("Indirect Expense");
+                      setShowAddCategoryPopup(false);
+                    } catch (error) {
+                      console.error(error);
+                    }
+                  }}
+                  style={{ padding: "8px 32px", border: "none", borderRadius: 4, background: "#007bff", color: "#fff", fontWeight: 500, cursor: "pointer" }}
+                >
+                  Save
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showAddItemPopup && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,0.5)" }}>
+          <div style={{ position: "absolute", inset: 0 }} onClick={() => setShowAddItemPopup(false)}></div>
+          <div style={{ position: "relative", zIndex: 10, background: "#fff", borderRadius: 8, padding: 24, width: "100%", maxWidth: 400, boxShadow: "0 20px 25px -5px rgba(0,0,0,0.1)" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+              <h2 style={{ fontSize: 18, fontWeight: 600, color: "#1f2937", margin: 0 }}>Add Expense Item</h2>
+              <button onClick={() => setShowAddItemPopup(false)} style={{ background: "none", border: "none", cursor: "pointer", color: "#9ca3af", padding: 0 }}>✕</button>
+            </div>
+            
+            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+              <div style={{ position: "relative" }}>
+                <label style={{ position: "absolute", top: -8, left: 10, background: "#fff", padding: "0 4px", color: "#3b82f6", fontSize: 12 }}>Item Name *</label>
+                <input
+                  autoFocus
+                  type="text"
+                  value={newItemName}
+                  onChange={(e) => setNewItemName(e.target.value)}
+                  style={{ width: "100%", border: "2px solid #3b82f6", borderRadius: 6, padding: "10px 12px", fontSize: 14, color: "#1f2937", outline: "none", boxSizing: "border-box" }}
+                />
+              </div>
+
+              <div style={{ fontSize: 14, color: "#3b82f6", borderBottom: "2px solid #3b82f6", width: "max-content", paddingBottom: 4 }}>Pricing</div>
+              <div style={{ position: "relative" }}>
+                <input
+                  type="number"
+                  placeholder="Price"
+                  value={newItemPrice}
+                  onChange={(e) => setNewItemPrice(e.target.value)}
+                  style={{ width: "100%", border: "1px solid #d1d5db", borderRadius: 6, padding: "10px 12px", fontSize: 14, color: "#1f2937", outline: "none", boxSizing: "border-box" }}
+                />
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: 12, marginTop: 8 }}>
+                <button
+                  onClick={async () => {
+                    const normalizedName = newItemName.trim();
+                    if (!normalizedName) return;
+                    try {
+                      const response = await fetch("/api/expense_items", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ name: normalizedName, price: Number(newItemPrice) || 0 }),
+                      });
+                      if (!response.ok) throw new Error("Failed to save expense item");
+                      const createdItem = await response.json();
+                      
+                      setExpenseItemList((previous) => {
+                        const next = [...previous, createdItem];
+                        next.sort((a, b) => a.name.localeCompare(b.name));
+                        return next;
+                      });
+                      
+                      if (activeRowIdForNewItem !== null) {
+                        updateRow(activeRowIdForNewItem, "category", createdItem.name);
+                        updateRow(activeRowIdForNewItem, "paymentType", String(createdItem.price));
+                        const activeRow = activeTab.rows.find(r => r.id === activeRowIdForNewItem);
+                        if (activeRow) {
+                          const qty = Number(activeRow.note) || 0;
+                          updateRow(activeRowIdForNewItem, "amount", String(qty * createdItem.price));
+                        }
+                      }
+                      
+                      setNewItemName("");
+                      setNewItemPrice("");
+                      setShowAddItemPopup(false);
+                    } catch (error) { console.error(error); }
+                  }}
+                  style={{ padding: "8px 32px", border: "none", borderRadius: 4, background: "#007bff", color: "#fff", fontWeight: 500, cursor: "pointer" }}
+                >
+                  Save
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

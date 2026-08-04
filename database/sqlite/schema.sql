@@ -169,13 +169,8 @@ CREATE TABLE IF NOT EXISTS expense_records (
   category_name TEXT,
   payment_no TEXT,
   date TEXT NOT NULL,
-  party_name TEXT NOT NULL,
-  expense_category_id TEXT,
-  expense_category_name TEXT,
   amount REAL NOT NULL,
   payment_type TEXT NOT NULL,
-  subtotal REAL NOT NULL DEFAULT 0,
-  balance REAL NOT NULL DEFAULT 0,
   description TEXT,
   line_items_json TEXT,
   attachment_image_path TEXT,
@@ -191,7 +186,16 @@ CREATE TABLE IF NOT EXISTS expense_records (
 CREATE TABLE IF NOT EXISTS expense_categories (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
+  type TEXT NOT NULL DEFAULT 'Indirect Expense',
   amount REAL NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS expense_items (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  price REAL NOT NULL DEFAULT 0,
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );

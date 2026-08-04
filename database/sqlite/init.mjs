@@ -205,6 +205,15 @@ function ensureBankAccountColumns(db) {
   addColumn('print_details', 'INTEGER NOT NULL DEFAULT 0');
 }
 
+function ensureExpenseCategoryColumns(db) {
+  const columns = db.prepare(`PRAGMA table_info(expense_categories)`).all();
+  const existingColumnNames = new Set(columns.map((column) => column.name));
+
+  if (!existingColumnNames.has('type')) {
+    db.exec(`ALTER TABLE expense_categories ADD COLUMN type TEXT NOT NULL DEFAULT 'Indirect Expense'`);
+  }
+}
+
 function migratePaymentOutRecordsToExpenseRecords(db) {
   const tables = db.prepare("SELECT name FROM sqlite_master WHERE type = 'table'").all();
   const tableNames = new Set(tables.map((row) => row.name));
@@ -276,6 +285,7 @@ export function initDatabase() {
   ensurePurchaseBillColumns(db);
   ensurePaymentOutRecordColumns(db);
   ensureExpenseRecordColumns(db);
+  ensureExpenseCategoryColumns(db);
   migratePaymentOutRecordsToExpenseRecords(db);
   ensureBankAccountColumns(db);
   db.close();

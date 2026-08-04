@@ -599,13 +599,8 @@ export function addExpenseRecord(record) {
       category_name,
       payment_no,
       date,
-      party_name,
-      expense_category_id,
-      expense_category_name,
       amount,
       payment_type,
-      subtotal,
-      balance,
       description,
       line_items_json,
       attachment_image_path,
@@ -624,13 +619,8 @@ export function addExpenseRecord(record) {
       @categoryName,
       @paymentNo,
       @date,
-      @partyName,
-      @expenseCategoryId,
-      @expenseCategoryName,
       @amount,
       @paymentType,
-      @subtotal,
-      @balance,
       @description,
       @lineItemsJson,
       @attachmentImagePath,
@@ -643,23 +633,22 @@ export function addExpenseRecord(record) {
       datetime('now')
     )
   `).run({
-    ...record,
-    expenseNo: record.expenseNo ?? record.paymentNo ?? null,
-    categoryId: record.categoryId ?? record.expenseCategoryId ?? null,
-    categoryName: record.categoryName ?? record.expenseCategoryName ?? null,
-    paymentNo: record.paymentNo ?? null,
-    expenseCategoryId: record.expenseCategoryId ?? null,
-    expenseCategoryName: record.expenseCategoryName ?? null,
-    subtotal: record.subtotal ?? record.amount ?? 0,
-    balance: record.balance ?? 0,
-    description: record.description ?? null,
-    lineItemsJson: record.lineItemsJson ?? null,
-    attachmentImagePath: record.attachmentImagePath ?? null,
-    attachmentImageName: record.attachmentImageName ?? null,
-    attachmentDocumentPath: record.attachmentDocumentPath ?? null,
-    attachmentDocumentName: record.attachmentDocumentName ?? null,
-    roundOff: record.roundOff ?? 0,
-    roundOffAmount: record.roundOffAmount ?? 0,
+    id: record.id || Date.now().toString(),
+    expenseNo: record.expense_no || null,
+    categoryId: record.category_id || null,
+    categoryName: record.category_name || null,
+    paymentNo: record.payment_no || null,
+    date: record.date || new Date().toISOString(),
+    amount: Number(record.amount) || 0,
+    paymentType: record.payment_type || 'Cash',
+    description: record.description || null,
+    lineItemsJson: record.line_items_json || null,
+    attachmentImagePath: record.attachment_image_path || null,
+    attachmentImageName: record.attachment_image_name || null,
+    attachmentDocumentPath: record.attachment_document_path || null,
+    attachmentDocumentName: record.attachment_document_name || null,
+    roundOff: record.round_off ? 1 : 0,
+    roundOffAmount: Number(record.round_off_amount) || 0
   });
   db.close();
 }
@@ -674,13 +663,8 @@ export function updateExpenseRecord(id, record) {
       category_name = @categoryName,
       payment_no = @paymentNo,
       date = @date,
-      party_name = @partyName,
-      expense_category_id = @expenseCategoryId,
-      expense_category_name = @expenseCategoryName,
       amount = @amount,
       payment_type = @paymentType,
-      subtotal = @subtotal,
-      balance = @balance,
       description = @description,
       line_items_json = @lineItemsJson,
       attachment_image_path = @attachmentImagePath,
@@ -693,23 +677,21 @@ export function updateExpenseRecord(id, record) {
     WHERE id = @id
   `).run({
     id: String(id),
-    ...record,
-    expenseNo: record.expenseNo ?? record.paymentNo ?? null,
-    categoryId: record.categoryId ?? record.expenseCategoryId ?? null,
-    categoryName: record.categoryName ?? record.expenseCategoryName ?? null,
-    paymentNo: record.paymentNo ?? null,
-    expenseCategoryId: record.expenseCategoryId ?? null,
-    expenseCategoryName: record.expenseCategoryName ?? null,
-    subtotal: record.subtotal ?? record.amount ?? 0,
-    balance: record.balance ?? 0,
-    description: record.description ?? null,
-    lineItemsJson: record.lineItemsJson ?? null,
-    attachmentImagePath: record.attachmentImagePath ?? null,
-    attachmentImageName: record.attachmentImageName ?? null,
-    attachmentDocumentPath: record.attachmentDocumentPath ?? null,
-    attachmentDocumentName: record.attachmentDocumentName ?? null,
-    roundOff: record.roundOff ?? 0,
-    roundOffAmount: record.roundOffAmount ?? 0,
+    expenseNo: record.expense_no || null,
+    categoryId: record.category_id || null,
+    categoryName: record.category_name || null,
+    paymentNo: record.payment_no || null,
+    date: record.date || new Date().toISOString(),
+    amount: Number(record.amount) || 0,
+    paymentType: record.payment_type || 'Cash',
+    description: record.description || null,
+    lineItemsJson: record.line_items_json || null,
+    attachmentImagePath: record.attachment_image_path || null,
+    attachmentImageName: record.attachment_image_name || null,
+    attachmentDocumentPath: record.attachment_document_path || null,
+    attachmentDocumentName: record.attachment_document_name || null,
+    roundOff: record.round_off ? 1 : 0,
+    roundOffAmount: Number(record.round_off_amount) || 0
   });
   db.close();
 }
@@ -1036,7 +1018,7 @@ export function deleteBankAccountTransaction(id) {
     db.close();
     return false;
   }
-  
+
   db.prepare(`
     UPDATE bank_accounts SET balance = balance - @amount WHERE name = @paymentType
   `).run({
@@ -1046,7 +1028,7 @@ export function deleteBankAccountTransaction(id) {
 
   const result = db.prepare('DELETE FROM bank_account_transactions WHERE id = ?').run(String(id));
   db.prepare('DELETE FROM transactions WHERE id = ?').run(String(id));
-  
+
   db.close();
   return result.changes > 0;
 }
@@ -1133,3 +1115,74 @@ export function getStockAdjustments() {
   db.close();
   return rows;
 }
+
+export function getExpenseCategories() {
+  const db = openDatabase();
+  const rows = db.prepare('SELECT * FROM expense_categories ORDER BY name ASC').all();
+  db.close();
+  return rows;
+}
+
+export function upsertExpenseCategory(category) {
+  const db = openDatabase();
+  const id = category.id || Date.now().toString();
+  db.prepare(`
+    INSERT INTO expense_categories (id, name, type, amount, updated_at)
+    VALUES (@id, @name, @type, @amount, datetime('now'))
+    ON CONFLICT(id) DO UPDATE SET
+      name = excluded.name,
+      type = excluded.type,
+      amount = excluded.amount,
+      updated_at = datetime('now')
+  `).run({
+    id,
+    name: category.name,
+    type: category.type || 'Indirect Expense',
+    amount: Number(category.amount) || 0
+  });
+  db.close();
+  return id;
+}
+
+export function deleteExpenseCategory(id) {
+  const db = openDatabase();
+  const result = db.prepare('DELETE FROM expense_categories WHERE id = ?').run(String(id));
+  db.close();
+  return result.changes > 0;
+}
+
+export function getExpenseItems() {
+  const db = openDatabase();
+  const rows = db.prepare('SELECT * FROM expense_items ORDER BY name ASC').all();
+  db.close();
+  return rows;
+}
+
+export function upsertExpenseItem(item) {
+  const db = openDatabase();
+  const id = item.id || Date.now().toString();
+  db.prepare(`
+    INSERT INTO expense_items (id, category_id, name, price, updated_at)
+    VALUES (@id, @category_id, @name, @price, datetime('now'))
+    ON CONFLICT(id) DO UPDATE SET
+      category_id = excluded.category_id,
+      name = excluded.name,
+      price = excluded.price,
+      updated_at = datetime('now')
+  `).run({
+    id,
+    category_id: item.category_id || 'default',
+    name: item.name,
+    price: Number(item.price) || 0
+  });
+  db.close();
+  return id;
+}
+
+export function deleteExpenseItem(id) {
+  const db = openDatabase();
+  const result = db.prepare('DELETE FROM expense_items WHERE id = ?').run(String(id));
+  db.close();
+  return result.changes > 0;
+}
+

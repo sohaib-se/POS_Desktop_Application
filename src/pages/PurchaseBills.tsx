@@ -18,7 +18,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { AddPurchase } from "@/components/pages/AddPurchase";
+import { AddPurchase } from "@/pages/AddPurchase";
 import type { PurchaseBillEditData } from "@/types";
 type PurchaseBillApiRow = {
   id: string;

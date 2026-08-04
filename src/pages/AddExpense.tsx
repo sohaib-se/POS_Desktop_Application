@@ -1,39 +1,15 @@
-
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { expenseCategories } from "@/data/mockData";
 import type { ExpenseCategory } from "@/types";
 
-interface ExpenseRow {
-  id: number;
-  categoryId: string;
-  category: string;
-  note: string;
-  paymentType: string;
-  amount: string;
-}
-
-interface ExpenseItem {
-  id: string;
-  name: string;
-  price: number;
-  category_id?: string;
-}
-
-interface ExpenseTab {
-  id: number;
-  label: string;
-  expenseCategoryId: string;
-  expenseDate: string;
-  paymentType: string;
-  roundOff: boolean;
-  rows: ExpenseRow[];
-  description: string;
-  showDescriptionInput: boolean;
-  imageDataUrl: string;
-  imageFileName: string;
-  documentDataUrl: string;
-  documentFileName: string;
-}
+import type { ExpenseTab, ExpenseRow, ExpenseItem } from "../components/pagescomponents/addexpense/types";
+import { ExpenseTabs } from "../components/pagescomponents/addexpense/ExpenseTabs";
+import { ExpenseHeader } from "../components/pagescomponents/addexpense/ExpenseHeader";
+import { ExpenseTable } from "../components/pagescomponents/addexpense/ExpenseTable";
+import { ExpenseSummary } from "../components/pagescomponents/addexpense/ExpenseSummary";
+import { ExpenseFooter } from "../components/pagescomponents/addexpense/ExpenseFooter";
+import { AddCategoryModal } from "../components/pagescomponents/addexpense/AddCategoryModal";
+import { AddItemModal } from "../components/pagescomponents/addexpense/AddItemModal";
 
 interface AddExpenseProps {
   onSave?: () => void;
@@ -73,38 +49,6 @@ function createDefaultTab(id: number): ExpenseTab {
   };
 }
 
-function useColumnResize(initial: number[]) {
-  const [widths, setWidths] = useState(initial);
-  const resizing = useRef<{ col: number; startX: number; startW: number } | null>(null);
-
-  const startResize = useCallback((col: number, e: React.MouseEvent) => {
-    e.preventDefault();
-    resizing.current = { col, startX: e.clientX, startW: widths[col] };
-
-    const onMove = (ev: MouseEvent) => {
-      if (!resizing.current) return;
-      const delta = ev.clientX - resizing.current.startX;
-      const newW = Math.max(70, resizing.current.startW + delta);
-      setWidths((previousWidths) => {
-        const nextWidths = [...previousWidths];
-        nextWidths[resizing.current!.col] = newW;
-        return nextWidths;
-      });
-    };
-
-    const onUp = () => {
-      resizing.current = null;
-      window.removeEventListener("mousemove", onMove);
-      window.removeEventListener("mouseup", onUp);
-    };
-
-    window.addEventListener("mousemove", onMove);
-    window.addEventListener("mouseup", onUp);
-  }, [widths]);
-
-  return { widths, startResize };
-}
-
 export function AddExpense({ onSave, onShare, onClose }: AddExpenseProps) {
   const [tabs, setTabs] = useState<ExpenseTab[]>([createDefaultTab(1)]);
   const [activeTabId, setActiveTabId] = useState(1);
@@ -123,13 +67,8 @@ export function AddExpense({ onSave, onShare, onClose }: AddExpenseProps) {
   );
 
   const [showAddCategoryPopup, setShowAddCategoryPopup] = useState(false);
-  const [newCategoryName, setNewCategoryName] = useState("");
-  const [newCategoryType, setNewCategoryType] = useState("Indirect Expense");
-
   const [expenseItemList, setExpenseItemList] = useState<ExpenseItem[]>([]);
   const [showAddItemPopup, setShowAddItemPopup] = useState(false);
-  const [newItemName, setNewItemName] = useState("");
-  const [newItemPrice, setNewItemPrice] = useState("");
   const [activeRowIdForNewItem, setActiveRowIdForNewItem] = useState<number | null>(null);
 
   useEffect(() => {
@@ -234,8 +173,6 @@ export function AddExpense({ onSave, onShare, onClose }: AddExpenseProps) {
   const activeTab = tabs.find((tab) => tab.id === activeTabId) ?? tabs[0];
   const displayedExpenseNo = nextExpenseNo;
   const displayedExpenseDate = activeTab.expenseDate;
-
-  const { widths, startResize } = useColumnResize([42, 220, 260, 150, 150]);
 
   const totalAmount = useMemo(() => {
     return activeTab.rows.reduce((sum, row) => sum + (Number(row.amount) || 0), 0);
@@ -396,25 +333,33 @@ export function AddExpense({ onSave, onShare, onClose }: AddExpenseProps) {
     }
   };
 
-  const ResizeHandle = ({ col }: { col: number }) => (
-    <div
-      onMouseDown={(event) => startResize(col, event)}
-      style={{
-        position: "absolute",
-        right: 0,
-        top: 0,
-        width: 6,
-        height: "100%",
-        cursor: "col-resize",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        zIndex: 10,
-      }}
-    >
-      <div style={{ width: 1, height: "60%", background: "#d1d5db" }} />
-    </div>
-  );
+  const handleCategorySuccess = (createdCategory: ExpenseCategory) => {
+    setExpenseCategoryList((previous) => {
+      const next = [...previous, createdCategory];
+      next.sort((a, b) => a.name.localeCompare(b.name));
+      return next;
+    });
+    setExpenseCategoryMap((prev) => ({ ...prev, [createdCategory.id]: createdCategory }));
+    setActiveTabCategory(createdCategory.id);
+  };
+
+  const handleItemSuccess = (createdItem: ExpenseItem) => {
+    setExpenseItemList((previous) => {
+      const next = [...previous, createdItem];
+      next.sort((a, b) => a.name.localeCompare(b.name));
+      return next;
+    });
+    
+    if (activeRowIdForNewItem !== null) {
+      updateRow(activeRowIdForNewItem, "category", createdItem.name);
+      updateRow(activeRowIdForNewItem, "paymentType", String(createdItem.price));
+      const activeRow = activeTab.rows.find(r => r.id === activeRowIdForNewItem);
+      if (activeRow) {
+        const qty = Number(activeRow.note) || 0;
+        updateRow(activeRowIdForNewItem, "amount", String(qty * createdItem.price));
+      }
+    }
+  };
 
   return (
     <div
@@ -428,610 +373,63 @@ export function AddExpense({ onSave, onShare, onClose }: AddExpenseProps) {
         transition: "opacity 120ms ease-out, transform 170ms cubic-bezier(0.2, 0.8, 0.2, 1)",
       }}
     >
-      <div style={{ background: "#c4d3de", display: "flex", alignItems: "flex-end", padding: "2px 10px 0 10px", gap: 4, flexShrink: 0 }}>
-        {tabs.map((tab) => {
-          const active = tab.id === activeTabId;
-          return (
-            <div
-              key={tab.id}
-              onClick={() => setActiveTabId(tab.id)}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-                padding: "7px 20px",
-                background: active ? "#fff" : "#d4dfe9",
-                color: active ? "#1f2937" : "#6b7280",
-                fontWeight: active ? 500 : 400,
-                fontSize: 13,
-                borderTopLeftRadius: 8,
-                borderTopRightRadius: 8,
-                cursor: "pointer",
-                borderBottom: active ? "2px solid #fff" : "none",
-                userSelect: "none",
-                boxShadow: active ? "0 -1px 3px rgba(0,0,0,0.06)" : "none",
-                minWidth: 225,
-                position: "relative",
-                overflow: "visible",
-              }}
-            >
-              {active && (
-                <>
-                  <span style={{ position: "absolute", left: -10, bottom: 0, width: 10, height: 10, borderBottomRightRadius: 10, boxShadow: "5px 5px 0 5px #fff", pointerEvents: "none" }} />
-                  <span style={{ position: "absolute", right: -10, bottom: 0, width: 10, height: 10, borderBottomLeftRadius: 10, boxShadow: "-5px 5px 0 5px #fff", pointerEvents: "none" }} />
-                </>
-              )}
-              <span>{tab.label}</span>
-              {tabs.length > 1 && (
-                <button
-                  onClick={(event) => closeTab(tab.id, event)}
-                  style={{
-                    background: "none",
-                    border: "none",
-                    cursor: "pointer",
-                    padding: "2px 6px",
-                    borderRadius: 4,
-                    color: "#9ca3af",
-                    fontSize: 12,
-                    lineHeight: 1,
-                    display: "flex",
-                    alignItems: "center",
-                    marginLeft: "auto",
-                    marginRight: -10,
-                  }}
-                >
-                  ✕
-                </button>
-              )}
-            </div>
-          );
-        })}
-        <button
-          onClick={addTab}
-          title="New Expense"
-          style={{
-            marginBottom: 0,
-            marginLeft: 4,
-            width: 26,
-            height: 26,
-            borderRadius: "50%",
-            background: "#3b82f6",
-            color: "#fff",
-            border: "none",
-            cursor: "pointer",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            fontSize: 18,
-            fontWeight: 300,
-            alignSelf: "center",
-            flexShrink: 0,
-            boxShadow: "0 1px 4px rgba(59,130,246,0.4)",
-          }}
-        >
-          +
-        </button>
-        {onClose && (
-          <button
-            onClick={onClose}
-            aria-label="Close add expense"
-            style={{
-              marginLeft: "auto",
-              marginBottom: 0,
-              width: 24,
-              height: 24,
-              background: "#374151",
-              border: "none",
-              cursor: "pointer",
-              color: "#ffffff",
-              padding: 0,
-              borderRadius: "50%",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              alignSelf: "center",
-            }}
-          >
-            <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-              <path d="M18 6L6 18M6 6l12 12" />
-            </svg>
-          </button>
-        )}
-      </div>
+      <ExpenseTabs
+        tabs={tabs}
+        activeTabId={activeTabId}
+        setActiveTabId={setActiveTabId}
+        closeTab={closeTab}
+        addTab={addTab}
+        onClose={onClose}
+      />
 
       <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: 0 }}>
-        <div style={{ background: "#fff", padding: "25px 20px 40px 20px" }}>
-          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16 }}>
-            <div style={{ position: "relative" }}>
-              <label style={{ position: "absolute", top: -11, left: 10, background: "#fff", padding: "0 4px", color: "#94a3b8", fontSize: 12 }}>
-                Expense Category<span style={{ color: "#ef4444" }}>*</span>
-              </label>
-              <select
-                style={{ appearance: "none", border: "1px solid #d1d5db", borderRadius: 4, fontSize: 13, color: "#374151", background: "#fff", padding: "7px 32px 7px 12px", minWidth: 225, cursor: "pointer", textTransform: "lowercase" }}
-                value={activeTab.expenseCategoryId}
-                onChange={(event) => {
-                  if (event.target.value === "ADD_NEW_CATEGORY") {
-                    setShowAddCategoryPopup(true);
-                  } else {
-                    setActiveTabCategory(event.target.value);
-                  }
-                }}
-              >
-                <option value="ADD_NEW_CATEGORY" style={{ color: "#3b82f6", fontWeight: "bold" }}>+ Add Expense Category</option>
-                {expenseCategoryList.map((category) => (
-                  <option key={category.id} value={category.id}>
-                    {category.name}
-                  </option>
-                ))}
-              </select>
-              <span style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", pointerEvents: "none", color: "#0f172a" }}>
-                ▾
-              </span>
-            </div>
+        <ExpenseHeader
+          activeTab={activeTab}
+          expenseCategoryList={expenseCategoryList}
+          setActiveTabCategory={setActiveTabCategory}
+          setShowAddCategoryPopup={setShowAddCategoryPopup}
+          displayedExpenseNo={displayedExpenseNo}
+          displayedExpenseDate={displayedExpenseDate}
+          updateTab={updateTab}
+        />
 
-            <div style={{ fontSize: 13, textAlign: "right", flexShrink: 0, minWidth: 280 }}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 12, marginBottom: 12 }}>
-                <span style={{ color: "#94a3b8", width: 88, textAlign: "right" }}>Expense No</span>
-                <input
-                  type="text"
-                  readOnly
-                  value={displayedExpenseNo}
-                  style={{ border: "none", borderBottom: "1px solid #d1d5db", outline: "none", background: "transparent", width: 170, textAlign: "center", color: "#1f2937", paddingBottom: 4 }}
-                />
-              </div>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 12 }}>
-                <span style={{ color: "#94a3b8", width: 88, textAlign: "right" }}>Date</span>
-                <input
-                  type="text"
-                  value={displayedExpenseDate}
-                  onChange={(event) => updateTab({ expenseDate: event.target.value })}
-                  style={{ border: "none", outline: "none", background: "transparent", width: 120, textAlign: "center", color: "#111827" }}
-                />
-                <button style={{ background: "none", border: "none", cursor: "pointer", color: "#1976d2", padding: 0 }}>
-                  <svg width="17" height="17" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                    <rect x="3" y="4" width="18" height="18" rx="2" />
-                    <path d="M16 2v4M8 2v4M3 10h18" />
-                  </svg>
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
+        <ExpenseTable
+          activeTab={activeTab}
+          expenseItemList={expenseItemList}
+          setShowAddItemPopup={setShowAddItemPopup}
+          setActiveRowIdForNewItem={setActiveRowIdForNewItem}
+          updateRow={updateRow}
+          addRow={addRow}
+          totalAmount={totalAmount}
+        />
 
-        <div style={{ background: "#fff", paddingBottom: 80 }}>
-          <table style={{ width: "100%", borderCollapse: "collapse", tableLayout: "fixed" }}>
-            <colgroup>
-              <col style={{ width: widths[0] }} />
-              <col style={{ width: widths[1] }} />
-              <col style={{ width: widths[2] }} />
-              <col style={{ width: widths[3] }} />
-              <col style={{ width: widths[4] }} />
-              <col style={{ width: 36 }} />
-            </colgroup>
-            <thead>
-              <tr style={{ background: "#f3f6f9", borderTop: "1px solid #e5e7eb", borderBottom: "1px solid #e5e7eb" }}>
-                <th style={{ position: "relative", padding: "8px 0", textAlign: "center", fontSize: 12, fontWeight: 600, color: "#6b7280", borderRight: "1px solid #e5e7eb", letterSpacing: "0.04em" }}>
-                  #<ResizeHandle col={0} />
-                </th>
-                <th style={{ position: "relative", padding: "8px 10px", textAlign: "left", fontSize: 12, fontWeight: 600, color: "#6b7280", borderRight: "1px solid #e5e7eb", letterSpacing: "0.04em" }}>
-                  ITEM<ResizeHandle col={1} />
-                </th>
-                <th style={{ position: "relative", padding: "8px 10px", textAlign: "left", fontSize: 12, fontWeight: 600, color: "#6b7280", borderRight: "1px solid #e5e7eb", letterSpacing: "0.04em" }}>
-                  QTY<ResizeHandle col={2} />
-                </th>
-                <th style={{ position: "relative", padding: "8px 10px", textAlign: "left", fontSize: 12, fontWeight: 600, color: "#6b7280", borderRight: "1px solid #e5e7eb", letterSpacing: "0.04em" }}>
-                  PRICE<ResizeHandle col={3} />
-                </th>
-                <th style={{ position: "relative", padding: "8px 10px", textAlign: "right", fontSize: 12, fontWeight: 600, color: "#6b7280", borderRight: "1px solid #e5e7eb", letterSpacing: "0.04em" }}>
-                  AMOUNT<ResizeHandle col={4} />
-                </th>
-                <th style={{ padding: "8px 6px", textAlign: "center", background: "#f3f6f9" }}>
-                  <button style={{ background: "none", border: "none", cursor: "pointer", color: "#3b82f6", padding: 0, display: "flex", alignItems: "center" }}>
-                    <svg width="17" height="17" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                      <circle cx="12" cy="12" r="10" />
-                      <path d="M12 8v8M8 12h8" />
-                    </svg>
-                  </button>
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {activeTab.rows.map((row, index) => {
-                return (
-                  <tr
-                    key={row.id}
-                    style={{ borderBottom: "1px solid #f0f0f0" }}
-                    onMouseEnter={(event) => (event.currentTarget.style.background = "#f8fbff")}
-                    onMouseLeave={(event) => (event.currentTarget.style.background = "")}
-                  >
-                    <td style={{ textAlign: "center", color: "#9ca3af", fontSize: 13, padding: "5px 0", borderRight: "1px solid #e5e7eb" }}>
-                      {index + 1}
-                    </td>
-                    <td style={{ borderRight: "1px solid #e5e7eb", padding: "4px 8px" }}>
-                      <select
-                        style={{ width: "100%", border: "none", outline: "none", fontSize: 13, color: "#374151", background: "transparent", appearance: "none", cursor: "pointer" }}
-                        value={row.category || ""}
-                        onChange={(event) => {
-                          const val = event.target.value;
-                          if (val === "ADD_NEW_ITEM") {
-                            setActiveRowIdForNewItem(row.id);
-                            setShowAddItemPopup(true);
-                          } else {
-                            const selectedItem = expenseItemList.find(i => i.name === val);
-                            updateRow(row.id, "category", val);
-                            if (selectedItem) {
-                              updateRow(row.id, "paymentType", String(selectedItem.price));
-                              const qty = Number(row.note) || 0;
-                              updateRow(row.id, "amount", String(qty * selectedItem.price));
-                            }
-                          }
-                        }}
-                      >
-                        <option value="" disabled hidden>Item</option>
-                        <option value="ADD_NEW_ITEM" style={{ color: "#3b82f6", fontWeight: "bold" }}>+ Add Expense Item</option>
-                        {expenseItemList.map(item => (
-                          <option key={item.id} value={item.name}>{item.name}</option>
-                        ))}
-                      </select>
-                    </td>
-                    <td style={{ borderRight: "1px solid #e5e7eb", padding: "4px 8px" }}>
-                      <input
-                        type="number"
-                        style={{ width: "100%", border: "none", outline: "none", fontSize: 13, color: "#374151", background: "transparent", textAlign: "right" }}
-                        value={row.note}
-                        onChange={(event) => updateRow(row.id, "note", event.target.value)}
-                        placeholder="Qty"
-                      />
-                    </td>
-                    <td style={{ borderRight: "1px solid #e5e7eb", padding: "4px 8px" }}>
-                      <input
-                        type="number"
-                        style={{ width: "100%", border: "none", outline: "none", fontSize: 13, color: "#374151", background: "transparent", textAlign: "right" }}
-                        value={row.paymentType}
-                        onChange={(event) => updateRow(row.id, "paymentType", event.target.value)}
-                        placeholder="Price"
-                      />
-                    </td>
-                    <td style={{ borderRight: "1px solid #e5e7eb", padding: "4px 8px" }}>
-                      <input
-                        type="number"
-                        style={{ width: "100%", border: "none", outline: "none", fontSize: 13, color: "#374151", background: "transparent", textAlign: "right" }}
-                        value={row.amount}
-                        onChange={(event) => updateRow(row.id, "amount", event.target.value)}
-                      />
-                    </td>
-                    <td />
-                  </tr>
-                );
-              })}
-
-              <tr style={{ borderTop: "2px solid #e5e7eb", background: "#fafafa" }}>
-                <td style={{ borderRight: "1px solid #e5e7eb" }} />
-                <td style={{ padding: "8px 8px", borderRight: "1px solid #e5e7eb" }}>
-                  <button
-                    onClick={addRow}
-                    style={{ fontSize: 11, fontWeight: 700, color: "#3b82f6", border: "1px solid #93c5fd", borderRadius: 4, padding: "3px 10px", background: "#fff", cursor: "pointer", letterSpacing: "0.05em" }}
-                  >
-                    ADD ROW
-                  </button>
-                </td>
-                <td colSpan={2} style={{ padding: "8px 10px", fontSize: 12, fontWeight: 700, color: "#6b7280", borderRight: "1px solid #e5e7eb", letterSpacing: "0.04em" }}>
-                  <span style={{ float: "left" }}>TOTAL</span>
-                </td>
-                <td style={{ padding: "8px 10px", textAlign: "right", fontSize: 13, fontWeight: 600, color: "#374151", borderRight: "1px solid #e5e7eb" }}>
-                  {totalAmount > 0 ? totalAmount.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0"}
-                </td>
-                <td />
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
-        <div style={{ background: "#fff", padding: "20px 20px 24px 20px" }}>
-          <div style={{ display: "flex", gap: 24 }}>
-            <div style={{ display: "flex", flexDirection: "column", gap: 14, minWidth: 170 }}>
-              <div style={{ position: "relative", width: 160 }}>
-                <label style={{ position: "absolute", top: -11, left: 10, background: "#fff", padding: "0 4px", color: "#94a3b8", fontSize: 12 }}>
-                  Payment Type
-                </label>
-                <select
-                  value={activeTab.paymentType}
-                  onChange={(event) => updateTab({ paymentType: event.target.value })}
-                  style={{ appearance: "none", border: "1px solid #d1d5db", borderRadius: 4, fontSize: 13, color: "#374151", background: "#fff", padding: "7px 30px 7px 12px", width: "100%", cursor: "pointer" }}
-                >
-                  <option>Cash</option>
-                  <option>Bank Transfer</option>
-                  <option>Cheque</option>
-                </select>
-                <span style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", pointerEvents: "none", color: "#6b7280" }}>▾</span>
-              </div>
-              <button
-                type="button"
-                style={{ background: "none", border: "none", color: "#1976d2", fontSize: 13, padding: 0, display: "flex", alignItems: "center", gap: 4, cursor: "pointer" }}
-              >
-                <span style={{ fontSize: 18, lineHeight: 1 }}>+</span>
-                Add Payment type
-              </button>
-              {activeTab.showDescriptionInput ? (
-                <textarea
-                  autoFocus
-                  rows={3}
-                  placeholder="Add description..."
-                  style={{ border: "1px solid #d1d5db", borderRadius: 4, fontSize: 13, padding: "8px 10px", resize: "none", width: "100%", outline: "none" }}
-                  value={activeTab.description}
-                  onChange={(event) => updateTab({ description: event.target.value })}
-                />
-              ) : (
-                <button
-                  onClick={() => updateTab({ showDescriptionInput: true })}
-                  style={{ background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 8, color: "#9ca3af", fontSize: 12, fontWeight: 600, letterSpacing: "0.05em", padding: 0 }}
-                >
-                  <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                    <polyline points="14 2 14 8 20 8" />
-                    <line x1="16" y1="13" x2="8" y2="13" />
-                    <line x1="16" y1="17" x2="8" y2="17" />
-                  </svg>
-                  ADD DESCRIPTION
-                </button>
-              )}
-              <button
-                onClick={() => document.getElementById(`expense-image-${activeTab.id}`)?.click()}
-                style={{ background: "none", border: "1px solid #e5e7eb", borderRadius: 4, color: "#a3a3a3", fontSize: 12, fontWeight: 600, letterSpacing: "0.05em", padding: "10px 12px", display: "flex", alignItems: "center", gap: 8, cursor: "pointer", width: 120, justifyContent: "center" }}
-              >
-                <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" /><circle cx="12" cy="13" r="4" /></svg>
-                ADD IMAGE
-              </button>
-              <button
-                onClick={() => document.getElementById(`expense-document-${activeTab.id}`)?.click()}
-                style={{ background: "none", border: "1px solid #e5e7eb", borderRadius: 4, color: "#a3a3a3", fontSize: 12, fontWeight: 600, letterSpacing: "0.05em", padding: "10px 12px", display: "flex", alignItems: "center", gap: 8, cursor: "pointer", width: 120, justifyContent: "center" }}
-              >
-                <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /></svg>
-                ADD DOCUMENT
-              </button>
-              <div style={{ fontSize: 12, color: "#6b7280" }}>{activeTab.imageFileName ? `Image: ${activeTab.imageFileName}` : ""}</div>
-              <div style={{ fontSize: 12, color: "#6b7280" }}>{activeTab.documentFileName ? `Document: ${activeTab.documentFileName}` : ""}</div>
-            </div>
-
-            <div style={{ marginLeft: "auto", display: "flex", flexDirection: "column", gap: 12, fontSize: 13, minWidth: 370 }}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 8 }}>
-                <label style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer" }}>
-                  <input
-                    type="checkbox"
-                    checked={activeTab.roundOff}
-                    onChange={(event) => updateTab({ roundOff: event.target.checked })}
-                    style={{ width: 15, height: 15, accentColor: "#1976d2", cursor: "pointer" }}
-                  />
-                  <span style={{ color: "#6b7280" }}>Round Off</span>
-                </label>
-                <input
-                  type="text"
-                  readOnly
-                  style={{ border: "1px solid #d1d5db", borderRadius: 4, padding: "5px 8px", width: 62, textAlign: "right", fontSize: 13, color: "#6b7280", background: "#fff" }}
-                  value={activeTab.roundOff ? Math.round(totalAmount) - totalAmount : 0}
-                />
-              </div>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 8 }}>
-                <span style={{ color: "#374151", fontWeight: 600, width: 68, textAlign: "right" }}>Total</span>
-                <input
-                  type="text"
-                  readOnly
-                  style={{ border: "1px solid #d1d5db", borderRadius: 4, padding: "5px 10px", width: 210, textAlign: "right", fontSize: 13, fontWeight: 600, color: "#1f2937", background: "#fff", outline: "none" }}
-                  value={totalAmount > 0 ? totalAmount.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : ""}
-                />
-              </div>
-            </div>
-          </div>
-
-          <input
-            id={`expense-image-${activeTab.id}`}
-            type="file"
-            accept="image/*"
-            hidden
-            onChange={(event) => handleAttachmentSelection(event, "image")}
-          />
-          <input
-            id={`expense-document-${activeTab.id}`}
-            type="file"
-            accept=".pdf,.doc,.docx,.xls,.xlsx,.txt,.csv,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/plain"
-            hidden
-            onChange={(event) => handleAttachmentSelection(event, "document")}
-          />
-        </div>
+        <ExpenseSummary
+          activeTab={activeTab}
+          updateTab={updateTab}
+          totalAmount={totalAmount}
+          handleAttachmentSelection={handleAttachmentSelection}
+        />
       </div>
 
-      <div style={{ background: "#fff", flexShrink: 0, padding: "10px 20px", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, borderTop: "1px solid #e5e7eb" }}>
-        <div style={{ fontSize: 12, color: "#b91c1c", minHeight: 16 }}>
-          {saveError}
-        </div>
-        <div style={{ display: "flex", border: "1px solid #d1d5db", borderRadius: 4, overflow: "hidden" }}>
-          <button
-            onClick={onShare}
-            style={{ padding: "7px 20px", fontSize: 13, fontWeight: 500, color: "#374151", background: "#fff", border: "none", cursor: "pointer" }}
-          >
-            Share
-          </button>
-          <button style={{ padding: "7px 8px", fontSize: 13, color: "#6b7280", background: "#fff", border: "none", borderLeft: "1px solid #d1d5db", cursor: "pointer" }}>
-            <svg width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-              <path d="M6 9l6 6 6-6" />
-            </svg>
-          </button>
-        </div>
-        <button
-          onClick={handleSaveExpense}
-          disabled={isSaving}
-          style={{ padding: "7px 32px", fontSize: 13, fontWeight: 700, color: "#fff", background: isSaving ? "#93c5fd" : "#2563eb", border: "none", borderRadius: 4, cursor: isSaving ? "not-allowed" : "pointer", boxShadow: "0 1px 4px rgba(37,99,235,0.3)" }}
-        >
-          {isSaving ? "Saving..." : "Save"}
-        </button>
-      </div>
+      <ExpenseFooter
+        saveError={saveError}
+        isSaving={isSaving}
+        onShare={onShare}
+        handleSaveExpense={handleSaveExpense}
+      />
 
       {showAddCategoryPopup && (
-        <div style={{ position: "fixed", inset: 0, zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,0.5)" }}>
-          <div style={{ position: "absolute", inset: 0 }} onClick={() => setShowAddCategoryPopup(false)}></div>
-          <div style={{ position: "relative", zIndex: 10, background: "#fff", borderRadius: 8, padding: 24, width: "100%", maxWidth: 400, boxShadow: "0 20px 25px -5px rgba(0,0,0,0.1)" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-              <h2 style={{ fontSize: 18, fontWeight: 600, color: "#1f2937", margin: 0 }}>Add Expense Category</h2>
-              <button
-                onClick={() => setShowAddCategoryPopup(false)}
-                style={{ background: "none", border: "none", cursor: "pointer", color: "#9ca3af", padding: 0 }}
-              >
-                ✕
-              </button>
-            </div>
-            
-            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-              <div style={{ position: "relative" }}>
-                <label style={{ position: "absolute", top: -8, left: 10, background: "#fff", padding: "0 4px", color: "#3b82f6", fontSize: 12 }}>
-                  Expense Category
-                </label>
-                <input
-                  autoFocus
-                  type="text"
-                  value={newCategoryName}
-                  onChange={(e) => setNewCategoryName(e.target.value)}
-                  style={{ width: "100%", border: "2px solid #3b82f6", borderRadius: 6, padding: "10px 12px", fontSize: 14, color: "#1f2937", outline: "none", boxSizing: "border-box" }}
-                  placeholder="e.g. Petrol"
-                />
-              </div>
-
-              <div style={{ position: "relative" }}>
-                <label style={{ position: "absolute", top: -8, left: 10, background: "#fff", padding: "0 4px", color: "#9ca3af", fontSize: 12 }}>
-                  Expense Type
-                </label>
-                <select
-                  value={newCategoryType}
-                  onChange={(e) => setNewCategoryType(e.target.value)}
-                  style={{ width: "100%", appearance: "none", border: "1px solid #d1d5db", borderRadius: 6, padding: "10px 12px", fontSize: 14, color: "#1f2937", outline: "none", cursor: "pointer", boxSizing: "border-box" }}
-                >
-                  <option value="Direct Expense">Direct Expense</option>
-                  <option value="Indirect Expense">Indirect Expense</option>
-                </select>
-                <span style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", pointerEvents: "none", color: "#6b7280" }}>
-                  ▾
-                </span>
-              </div>
-
-              <div style={{ display: "flex", justifyContent: "flex-end", gap: 12, marginTop: 8 }}>
-                <button
-                  onClick={() => setShowAddCategoryPopup(false)}
-                  style={{ padding: "8px 24px", border: "1px solid #d1d5db", borderRadius: 4, background: "#fff", color: "#3b82f6", fontWeight: 500, cursor: "pointer" }}
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={async () => {
-                    const normalizedName = newCategoryName.trim();
-                    if (!normalizedName) return;
-                    try {
-                      const response = await fetch("/api/expense_categories", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ name: normalizedName, type: newCategoryType, amount: 0 }),
-                      });
-                      if (!response.ok) throw new Error("Failed to save expense category");
-                      const createdCategory = (await response.json()) as ExpenseCategory;
-                      
-                      setExpenseCategoryList((previous) => {
-                        const next = [...previous, createdCategory];
-                        next.sort((a, b) => a.name.localeCompare(b.name));
-                        return next;
-                      });
-                      setExpenseCategoryMap((prev) => ({ ...prev, [createdCategory.id]: createdCategory }));
-                      setActiveTabCategory(createdCategory.id);
-                      
-                      setNewCategoryName("");
-                      setNewCategoryType("Indirect Expense");
-                      setShowAddCategoryPopup(false);
-                    } catch (error) {
-                      console.error(error);
-                    }
-                  }}
-                  style={{ padding: "8px 32px", border: "none", borderRadius: 4, background: "#007bff", color: "#fff", fontWeight: 500, cursor: "pointer" }}
-                >
-                  Save
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
+        <AddCategoryModal
+          onClose={() => setShowAddCategoryPopup(false)}
+          onSuccess={handleCategorySuccess}
+        />
       )}
 
       {showAddItemPopup && (
-        <div style={{ position: "fixed", inset: 0, zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,0.5)" }}>
-          <div style={{ position: "absolute", inset: 0 }} onClick={() => setShowAddItemPopup(false)}></div>
-          <div style={{ position: "relative", zIndex: 10, background: "#fff", borderRadius: 8, padding: 24, width: "100%", maxWidth: 400, boxShadow: "0 20px 25px -5px rgba(0,0,0,0.1)" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-              <h2 style={{ fontSize: 18, fontWeight: 600, color: "#1f2937", margin: 0 }}>Add Expense Item</h2>
-              <button onClick={() => setShowAddItemPopup(false)} style={{ background: "none", border: "none", cursor: "pointer", color: "#9ca3af", padding: 0 }}>✕</button>
-            </div>
-            
-            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-              <div style={{ position: "relative" }}>
-                <label style={{ position: "absolute", top: -8, left: 10, background: "#fff", padding: "0 4px", color: "#3b82f6", fontSize: 12 }}>Item Name *</label>
-                <input
-                  autoFocus
-                  type="text"
-                  value={newItemName}
-                  onChange={(e) => setNewItemName(e.target.value)}
-                  style={{ width: "100%", border: "2px solid #3b82f6", borderRadius: 6, padding: "10px 12px", fontSize: 14, color: "#1f2937", outline: "none", boxSizing: "border-box" }}
-                />
-              </div>
-
-              <div style={{ fontSize: 14, color: "#3b82f6", borderBottom: "2px solid #3b82f6", width: "max-content", paddingBottom: 4 }}>Pricing</div>
-              <div style={{ position: "relative" }}>
-                <input
-                  type="number"
-                  placeholder="Price"
-                  value={newItemPrice}
-                  onChange={(e) => setNewItemPrice(e.target.value)}
-                  style={{ width: "100%", border: "1px solid #d1d5db", borderRadius: 6, padding: "10px 12px", fontSize: 14, color: "#1f2937", outline: "none", boxSizing: "border-box" }}
-                />
-              </div>
-
-              <div style={{ display: "flex", justifyContent: "flex-end", gap: 12, marginTop: 8 }}>
-                <button
-                  onClick={async () => {
-                    const normalizedName = newItemName.trim();
-                    if (!normalizedName) return;
-                    try {
-                      const response = await fetch("/api/expense_items", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ name: normalizedName, price: Number(newItemPrice) || 0 }),
-                      });
-                      if (!response.ok) throw new Error("Failed to save expense item");
-                      const createdItem = await response.json();
-                      
-                      setExpenseItemList((previous) => {
-                        const next = [...previous, createdItem];
-                        next.sort((a, b) => a.name.localeCompare(b.name));
-                        return next;
-                      });
-                      
-                      if (activeRowIdForNewItem !== null) {
-                        updateRow(activeRowIdForNewItem, "category", createdItem.name);
-                        updateRow(activeRowIdForNewItem, "paymentType", String(createdItem.price));
-                        const activeRow = activeTab.rows.find(r => r.id === activeRowIdForNewItem);
-                        if (activeRow) {
-                          const qty = Number(activeRow.note) || 0;
-                          updateRow(activeRowIdForNewItem, "amount", String(qty * createdItem.price));
-                        }
-                      }
-                      
-                      setNewItemName("");
-                      setNewItemPrice("");
-                      setShowAddItemPopup(false);
-                    } catch (error) { console.error(error); }
-                  }}
-                  style={{ padding: "8px 32px", border: "none", borderRadius: 4, background: "#007bff", color: "#fff", fontWeight: 500, cursor: "pointer" }}
-                >
-                  Save
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
+        <AddItemModal
+          onClose={() => setShowAddItemPopup(false)}
+          onSuccess={handleItemSuccess}
+        />
       )}
     </div>
   );

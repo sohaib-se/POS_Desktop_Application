@@ -433,6 +433,17 @@ export function openDatabase() {
   const db = new Database(dbPath);
   db.pragma('journal_mode = WAL');
   db.pragma('foreign_keys = ON');
+
+  // Auto-initialize schema if database is completely empty
+  const hasTables = db.prepare("SELECT name FROM sqlite_master WHERE type='table'").get();
+  if (!hasTables) {
+    const schemaPath = path.join(currentDir, 'schema.sql');
+    if (fs.existsSync(schemaPath)) {
+      const schemaSql = fs.readFileSync(schemaPath, 'utf8');
+      db.exec(schemaSql);
+    }
+  }
+
   ensurePartiesColumns(db);
   ensureItemsTableColumns(db);
   ensureSaleInvoiceColumns(db);

@@ -316,3 +316,12 @@ CREATE TABLE IF NOT EXISTS adjust_stock_transactions (
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
+
+INSERT OR IGNORE INTO units (id, full_name, short_name) VALUES 
+('unit_1', 'Piece', 'pcs'),
+('unit_2', 'Box', 'box'),
+('unit_3', 'Kilogram', 'kg'),
+('unit_4', 'Gram', 'g'),
+('unit_5', 'Liter', 'L'),
+('unit_6', 'Meter', 'm');
+

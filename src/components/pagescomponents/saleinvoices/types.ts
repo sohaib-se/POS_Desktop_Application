@@ -1,0 +1,58 @@
+export type SaleInvoiceApiRow = {
+  id: string;
+  invoice_no: string;
+  date: string;
+  party_name: string;
+  party_id?: string | null;
+  party_phone?: string | null;
+  transaction_type: string;
+  payment_type?: string | null;
+  payment_mode?: string | null;
+  subtotal?: number | null;
+  discount_percent?: number | null;
+  discount_amount?: number | null;
+  tax_label?: string | null;
+  tax_rate?: number | null;
+  tax_amount?: number | null;
+  round_off?: number | null;
+  round_off_amount?: number | null;
+  amount: number;
+  balance: number;
+  description?: string | null;
+  line_items_json?: string | null;
+};
+
+export type SaleInvoiceViewRow = {
+  id: string;
+  invoiceNo: string;
+  date: string;
+  partyId?: string;
+  partyName: string;
+  partyPhone?: string;
+  transaction: string;
+  paymentType: string;
+  paymentMode?: string;
+  amount: number;
+  balance: number;
+  monthKey: string;
+  subtotal?: number;
+  discountPercent?: number;
+  discountAmount?: number;
+  taxLabel?: string;
+  taxRate?: number;
+  taxAmount?: number;
+  roundOff?: boolean;
+  roundOffAmount?: number;
+  description?: string;
+  lineItemsJson?: string | null;
+};
+
+export type SaleInvoiceLineItem = {
+  id?: number;
+  itemId?: string;
+  name?: string;
+  quantity?: number;
+  unit?: string;
+  price?: number;
+  amount?: number;
+};

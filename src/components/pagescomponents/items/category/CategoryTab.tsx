@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import type { CategoryRecord } from "@/components/pagescomponents/items/products/types";
 import type { CategoryContextMenuState, ItemRecord } from "./types";
 import { CategoryList } from "./CategoryList";

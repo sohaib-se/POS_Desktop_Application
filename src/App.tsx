@@ -24,7 +24,7 @@ import { UpdateItemsInBulk } from "@/pages/updateitemsinbulk";
 import { ImportParties } from "@/pages/importparties";
 import { ExportItems } from "@/pages/exportitems";
 import { RecycleBin } from "@/pages/recyclebin";
-import { SyncShare } from "@/pages/SyncShare";
+
 import { EditProfile } from "@/pages/EditProfile";
 import { AutoBackup } from "@/pages/autobackup";
 import { BackupToComputer } from "@/pages/backuptocomputer";

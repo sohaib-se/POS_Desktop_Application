@@ -2,14 +2,9 @@ import { useEffect, useRef, useState } from "react";
 import { Plus, Search, X } from "lucide-react";
 import { ProductsTab } from "@/components/pagescomponents/items/products/ProductsTab";
 import type { CategoryRecord, UnitRecord, ConversionRateRecord } from "@/components/pagescomponents/items/products/types";
+import { CategoryTab } from "@/components/pagescomponents/items/category/CategoryTab";
 
-// --- LOCAL TYPES (used only in Category and Units tabs) ---
-
-type CategoryContextMenuState = {
-  category: CategoryRecord;
-  x: number;
-  y: number;
-};
+// --- LOCAL TYPES (used only in Units tab) ---
 
 type UnitContextMenuState = {
   unit: UnitRecord;
@@ -17,7 +12,7 @@ type UnitContextMenuState = {
   y: number;
 };
 
-// --- INLINE UI COMPONENTS (for Category & Units tabs) ---
+// --- INLINE UI COMPONENTS (for Units tab only) ---
 const Card = ({
   children,
   className,
@@ -176,29 +171,11 @@ export function Items() {
   const [categoryList, setCategoryList] = useState<CategoryRecord[]>([]);
   const [units, setUnits] = useState<UnitRecord[]>([]);
 
-  // Category tab state
+  // Category tab state (shared with CategoryTab via props)
   const [newCategoryName, setNewCategoryName] = useState("");
   const [categoryBeingEdited, setCategoryBeingEdited] =
     useState<CategoryRecord | null>(null);
-  const [isDeletingCategory, setIsDeletingCategory] = useState(false);
-  const [categoryPendingDelete, setCategoryPendingDelete] =
-    useState<CategoryRecord | null>(null);
-  const [categoryContextMenu, setCategoryContextMenu] =
-    useState<CategoryContextMenuState | null>(null);
-  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(
-    null
-  );
-  const [showMoveItemsDialog, setShowMoveItemsDialog] = useState(false);
-  const [selectedMoveItemIds, setSelectedMoveItemIds] = useState<string[]>([]);
-  const [moveItemsFilterCategoryId, setMoveItemsFilterCategoryId] =
-    useState<string>("all");
-  const [moveItemsSearchTerm, setMoveItemsSearchTerm] = useState("");
-  const [isCategorySearchActive, setIsCategorySearchActive] = useState(false);
-  const [categorySearchTerm, setCategorySearchTerm] = useState("");
-  const [categoryItemSearchTerm, setCategoryItemSearchTerm] = useState("");
-  const [isMovingItems, setIsMovingItems] = useState(false);
   const [showAddCategory, setShowAddCategory] = useState(false);
-  const categorySearchInputRef = useRef<HTMLInputElement | null>(null);
 
   // Units tab state
   const [isUnitSearchActive, setIsUnitSearchActive] = useState(false);
@@ -241,45 +218,8 @@ export function Items() {
 
   const unitSearchInputRef = useRef<HTMLInputElement | null>(null);
 
-  // ---- Derived for Category & Units tabs ----
-  const selectedCategory = categoryList.find((c) => c.id === selectedCategoryId);
-
-  // Items list held in Items for category tab (loaded here since category needs it for move items)
-  const [allItems, setAllItems] = useState<
-    {
-      id: string;
-      name: string;
-      code?: string | null;
-      category?: string | null;
-    }[]
-  >([]);
-
-  const filteredCategoryItems = allItems.filter((item) => {
-    let matchesCategory = false;
-    if (selectedCategoryId === null) {
-      matchesCategory = !item.category;
-    } else if (!selectedCategory?.name) {
-      matchesCategory = false;
-    } else {
-      matchesCategory = item.category === selectedCategory.name;
-    }
-    if (!matchesCategory) return false;
-    if (categoryItemSearchTerm.trim()) {
-      const searchStr = categoryItemSearchTerm.trim().toLowerCase();
-      const matchName = item.name.toLowerCase().includes(searchStr);
-      const matchCode = item.code && item.code.toLowerCase().includes(searchStr);
-      if (!matchName && !matchCode) return false;
-    }
-    return true;
-  });
-
-  const normalizedCategorySearchTerm = categorySearchTerm.trim().toLowerCase();
+  // ---- Derived for Units tab ----
   const normalizedUnitSearchTerm = unitSearchTerm.trim().toLowerCase();
-
-  const filteredCategoryList = categoryList.filter((category) => {
-    if (!normalizedCategorySearchTerm) return true;
-    return category.name.toLowerCase().includes(normalizedCategorySearchTerm);
-  });
   const filteredUnitList = units.filter((unit) => {
     if (!normalizedUnitSearchTerm) return true;
     return [unit.fullName, unit.shortName]
@@ -287,25 +227,6 @@ export function Items() {
       .toLowerCase()
       .includes(normalizedUnitSearchTerm);
   });
-
-  const normalizedMoveItemsSearchTerm = moveItemsSearchTerm.trim().toLowerCase();
-  const moveItemsFilteredList = allItems.filter((item) => {
-    if (moveItemsFilterCategoryId === "uncategorized") {
-      if (item.category) return false;
-    } else if (moveItemsFilterCategoryId !== "all") {
-      const filterCategory = categoryList.find(
-        (c) => c.id === moveItemsFilterCategoryId
-      );
-      if (!filterCategory || item.category !== filterCategory.name) return false;
-    }
-    if (!normalizedMoveItemsSearchTerm) return true;
-    return [item.name, item.code ?? "", item.category ?? ""]
-      .join(" ")
-      .toLowerCase()
-      .includes(normalizedMoveItemsSearchTerm);
-  });
-
-  const moveTargetCategoryName = selectedCategory?.name ?? null;
 
   const selectedUnitInTab = units.find((u) => u.id === selectedUnitInTabId);
   const filteredConversions = conversionRates.filter((conversion) => {
@@ -368,71 +289,12 @@ export function Items() {
   }, []);
 
   useEffect(() => {
-    const loadCategories = async () => {
-      try {
-        const response = await fetch("/api/categories");
-        if (!response.ok) throw new Error("Failed to load categories");
-        const categories = (await response.json()) as CategoryRecord[];
-        setCategoryList(categories);
-        setSelectedCategoryId((prev) => {
-          if (!categories.length) return null;
-          if (prev && categories.some((c) => c.id === prev)) return prev;
-          return categories[0].id;
-        });
-      } catch (error) {
-        console.error(error);
-      }
-    };
-    void loadCategories();
-  }, []);
-
-  // Load a lightweight version of items for the category tab (move items dialog, category item list)
-  useEffect(() => {
-    const loadAllItems = async () => {
-      try {
-        const response = await fetch("/api/items");
-        if (!response.ok) return;
-        const itemRows = (await response.json()) as {
-          id: string;
-          name: string;
-          code: string | null;
-          category: string | null;
-        }[];
-        setAllItems(
-          itemRows.map((r) => ({
-            id: String(r.id),
-            name: String(r.name),
-            code: r.code,
-            category: r.category,
-          }))
-        );
-      } catch (error) {
-        console.error(error);
-      }
-    };
-    void loadAllItems();
-  }, []);
-
-  useEffect(() => {
     setSelectedUnitInTabId((prev) => {
       if (!units.length) return null;
       if (prev && units.some((u) => u.id === prev)) return prev;
       return units[0].id;
     });
   }, [units]);
-
-  useEffect(() => {
-    if (!categoryContextMenu) return;
-    const closeMenu = () => setCategoryContextMenu(null);
-    window.addEventListener("click", closeMenu);
-    window.addEventListener("resize", closeMenu);
-    window.addEventListener("scroll", closeMenu, true);
-    return () => {
-      window.removeEventListener("click", closeMenu);
-      window.removeEventListener("resize", closeMenu);
-      window.removeEventListener("scroll", closeMenu, true);
-    };
-  }, [categoryContextMenu]);
 
   useEffect(() => {
     if (!unitContextMenu) return;
@@ -459,12 +321,6 @@ export function Items() {
       window.removeEventListener("scroll", closeMenu, true);
     };
   }, [conversionContextMenu]);
-
-  useEffect(() => {
-    if (isCategorySearchActive) {
-      categorySearchInputRef.current?.focus();
-    }
-  }, [isCategorySearchActive]);
 
   useEffect(() => {
     if (isUnitSearchActive) {
@@ -585,102 +441,6 @@ export function Items() {
     }
   };
 
-
-
-  const openEditCategoryDialog = (category: CategoryRecord) => {
-    setCategoryBeingEdited(category);
-    setNewCategoryName(category.name);
-    setShowAddCategory(true);
-  };
-
-  const openMoveItemsDialog = () => {
-    setSelectedMoveItemIds([]);
-    setMoveItemsFilterCategoryId("all");
-    setMoveItemsSearchTerm("");
-    setShowMoveItemsDialog(true);
-  };
-
-  const toggleMoveItemSelection = (itemId: string) => {
-    setSelectedMoveItemIds((prev) =>
-      prev.includes(itemId)
-        ? prev.filter((id) => id !== itemId)
-        : [...prev, itemId]
-    );
-  };
-
-  const handleMoveItemsToCategory = async () => {
-    if (!selectedMoveItemIds.length || isMovingItems) return;
-    setIsMovingItems(true);
-    try {
-      const itemsToMove = allItems.filter((item) =>
-        selectedMoveItemIds.includes(item.id)
-      );
-      await Promise.all(
-        itemsToMove.map(async (item) => {
-          const response = await fetch("/api/items", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              id: item.id,
-              name: item.name,
-              code: item.code ?? null,
-              category: moveTargetCategoryName,
-            }),
-          });
-          if (!response.ok) throw new Error("Failed to move items");
-        })
-      );
-      setAllItems((prev) =>
-        prev.map((item) =>
-          selectedMoveItemIds.includes(item.id)
-            ? { ...item, category: moveTargetCategoryName }
-            : item
-        )
-      );
-      try {
-        const categoriesResponse = await fetch("/api/categories");
-        if (categoriesResponse.ok) {
-          const categories = (await categoriesResponse.json()) as CategoryRecord[];
-          setCategoryList(categories);
-        }
-      } catch (error) {
-        console.error(error);
-      }
-      setSelectedMoveItemIds([]);
-      setMoveItemsFilterCategoryId("all");
-      setMoveItemsSearchTerm("");
-      setShowMoveItemsDialog(false);
-    } catch (error) {
-      console.error(error);
-    } finally {
-      setIsMovingItems(false);
-    }
-  };
-
-  const handleDeleteCategory = async (category: CategoryRecord) => {
-    if (isDeletingCategory) return;
-    setIsDeletingCategory(true);
-    try {
-      const response = await fetch(`/api/categories/${category.id}`, {
-        method: "DELETE",
-      });
-      if (!response.ok) throw new Error("Failed to delete category");
-      setCategoryList((prev) => {
-        const next = prev.filter((entry) => entry.id !== category.id);
-        setSelectedCategoryId((prevId) => {
-          if (prevId !== category.id) return prevId;
-          return next[0]?.id ?? null;
-        });
-        return next;
-      });
-    } catch (error) {
-      console.error(error);
-    } finally {
-      setIsDeletingCategory(false);
-      setCategoryPendingDelete(null);
-    }
-  };
-
   // ---- Render ----
   return (
     <div className="h-full flex flex-col bg-[#D0DCE7] p-0 gap-1">
@@ -732,245 +492,17 @@ export function Items() {
         )}
 
         {activeTab === "category" && (
-          <div className="flex-1 flex gap-1 overflow-hidden">
-            {/* Left Panel - Category List */}
-            <div
-              className="w-80 bg-white rounded-md flex flex-col shrink-0 overflow-hidden shadow-sm"
-              style={{ marginLeft: "4px" }}
-            >
-              <div className="p-2 pb-0 border-none flex flex-col gap-2">
-                <div className="flex items-center justify-between mb-3">
-                  {isCategorySearchActive ? (
-                    <div className="relative mr-3 flex-1 max-w-[220px]">
-                      <input
-                        ref={categorySearchInputRef}
-                        type="text"
-                        value={categorySearchTerm}
-                        onChange={(event) =>
-                          setCategorySearchTerm(event.target.value)
-                        }
-                        onBlur={() => {
-                          setCategorySearchTerm("");
-                          setIsCategorySearchActive(false);
-                        }}
-                        onKeyDown={(event) => {
-                          if (event.key === "Escape") {
-                            setCategorySearchTerm("");
-                            setIsCategorySearchActive(false);
-                          }
-                        }}
-                        placeholder="Search categories"
-                        className="w-full border border-[#D1D5DB] rounded-lg px-3 py-2 text-sm"
-                      />
-                    </div>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => setIsCategorySearchActive(true)}
-                      className="w-10 h-10 rounded-full bg-[#E5E7EB] flex items-center justify-center text-[#4B5563] hover:bg-[#D1D5DB] transition-colors mr-3"
-                      aria-label="Search categories"
-                    >
-                      <Search className="w-5 h-5" />
-                    </button>
-                  )}
-                  <button
-                    onClick={() => {
-                      setCategoryBeingEdited(null);
-                      setNewCategoryName("");
-                      setShowAddCategory(true);
-                    }}
-                    className="flex items-center gap-2 bg-[#FFA726] hover:bg-[#FB8C00] text-white font-semibold rounded-lg px-5 py-2 shadow transition-all text-base relative"
-                  >
-                    <Plus className="w-5 h-5" />
-                    Add Category
-                  </button>
-                </div>
-              </div>
-              <div className="flex-1 overflow-y-auto p-0">
-                <table className="w-full text-sm">
-                  <thead className="bg-[#F7F9FB] sticky top-0 z-10">
-                    <tr>
-                      <th className="px-4 py-2 text-left font-semibold text-[#7B8A9A] text-xs tracking-wide align-middle">
-                        CATEGORY
-                      </th>
-                      <th className="px-4 py-2 text-right font-semibold text-[#7B8A9A] text-xs tracking-wide align-middle">
-                        ITEM
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr
-                      onClick={() => setSelectedCategoryId(null)}
-                      className={`border-b border-[#E3EAF2] hover:bg-[#F5F8FA] cursor-pointer ${selectedCategoryId === null ? "bg-[#E3F0FF]" : ""}`}
-                    >
-                      <td className="px-4 py-3 text-[#222B45] font-medium">
-                        Items not in any Category
-                      </td>
-                      <td className="px-4 py-3 text-right font-semibold text-[#7B8A9A]">
-                        0
-                      </td>
-                    </tr>
-                    {filteredCategoryList.map((cat) => (
-                      <tr
-                        key={cat.id}
-                        onClick={() => setSelectedCategoryId(cat.id)}
-                        onContextMenu={(event) => {
-                          event.preventDefault();
-                          setCategoryContextMenu({
-                            category: cat,
-                            x: event.clientX,
-                            y: event.clientY,
-                          });
-                        }}
-                        className={`border-b border-[#E3EAF2] hover:bg-[#F5F8FA] cursor-pointer ${selectedCategoryId === cat.id ? "bg-[#E3F0FF]" : ""}`}
-                      >
-                        <td className="px-4 py-3 text-[#222B45] font-medium">
-                          {cat.name}
-                        </td>
-                        <td className="px-4 py-3 text-right font-semibold text-[#7B8A9A]">
-                          {cat.itemCount}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            {categoryContextMenu && (
-              <div
-                className="fixed z-50 min-w-40 rounded-md border bg-white p-1 shadow-md"
-                style={getContextMenuStyle(
-                  categoryContextMenu.x,
-                  categoryContextMenu.y
-                )}
-                onClick={(event) => event.stopPropagation()}
-              >
-                <button
-                  onClick={() => {
-                    setSelectedCategoryId(categoryContextMenu.category.id);
-                    openEditCategoryDialog(categoryContextMenu.category);
-                    setCategoryContextMenu(null);
-                  }}
-                  className="w-full rounded-sm px-2 py-1.5 text-left text-sm hover:bg-gray-100"
-                >
-                  View/Edit
-                </button>
-                <button
-                  onClick={() => {
-                    const category = categoryContextMenu.category;
-                    setCategoryContextMenu(null);
-                    setCategoryPendingDelete(category);
-                  }}
-                  className="w-full rounded-sm px-2 py-1.5 text-left text-sm text-red-600 hover:bg-red-50"
-                >
-                  Delete
-                </button>
-              </div>
-            )}
-
-            {/* Right Panel - Category Details */}
-            <div
-              className="flex-1 flex flex-col"
-              style={{ marginRight: "4px" }}
-            >
-              <Card
-                className="bg-white rounded-md shadow-sm px-0 py-0"
-                style={{ minHeight: "72px", marginBottom: "4px" }}
-              >
-                <div className="flex w-full h-full items-start justify-between">
-                  <div className="flex flex-col justify-start pl-6 pt-5 pb-2 min-w-[220px]">
-                    <div className="flex items-center gap-2 mb-2">
-                      <h2 className="text-base font-bold text-[#151B26] tracking-wide uppercase">
-                        {selectedCategory?.name ?? "ITEMS NOT IN ANY CATEGORY"}
-                      </h2>
-                    </div>
-                    <span className="text-sm font-medium text-[#151B26]">
-                      {filteredCategoryItems.length}
-                    </span>
-                  </div>
-                  <div className="flex flex-col items-end justify-between flex-1 pr-6 pt-5 pb-2">
-                    <button
-                      onClick={openMoveItemsDialog}
-                      className="bg-[#1976D2] hover:bg-[#1251A3] text-white px-5 py-2 rounded-lg text-sm font-bold flex items-center gap-2 shadow transition-all mb-2"
-                      style={{ minWidth: "140px" }}
-                    >
-                      Move To This Category
-                    </button>
-                  </div>
-                </div>
-              </Card>
-              <Card className="bg-white rounded-md flex flex-col flex-1 overflow-hidden shadow-sm p-0">
-                <CardContent className="p-0">
-                  <div className="flex items-center justify-between px-6 pt-4 pb-2">
-                    <h3 className="text-base font-bold text-[#222B45] tracking-wide">
-                      ITEMS
-                    </h3>
-                    <div className="flex gap-2 items-center">
-                      <div className="relative">
-                        <input
-                          type="text"
-                          placeholder="Search items..."
-                          value={categoryItemSearchTerm}
-                          onChange={(e) =>
-                            setCategoryItemSearchTerm(e.target.value)
-                          }
-                          className="bg-[#F7F9FB] border border-[#E3EAF2] rounded-lg px-8 py-1.5 text-sm text-[#222B45] focus:bg-white focus:border-[#1976D2]"
-                        />
-                        <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-[#AEB8C4]" />
-                      </div>
-                    </div>
-                  </div>
-                  <div className="border-t border-[#E3EAF2] rounded-b-lg overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead className="bg-[#F7F9FB] sticky top-0 z-10">
-                        <tr>
-                          <th className="px-4 py-2 text-left font-semibold text-[#7B8A9A] text-xs tracking-wide align-middle">
-                            NAME{" "}
-                          </th>
-                          <th className="px-4 py-2 text-right font-semibold text-[#7B8A9A] text-xs tracking-wide align-middle">
-                            QUANTITY{" "}
-                          </th>
-                          <th className="px-4 py-2 text-right font-semibold text-[#7B8A9A] text-xs tracking-wide align-middle">
-                            STOCK VALUE{" "}
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {filteredCategoryItems.length ? (
-                          filteredCategoryItems.map((item) => (
-                            <tr
-                              key={item.id}
-                              className="border-b border-[#E3EAF2] hover:bg-[#F5F8FA]"
-                            >
-                              <td className="px-4 py-3 text-[#222B45] font-medium">
-                                {item.name}
-                              </td>
-                              <td className="px-4 py-3 text-right font-semibold text-[#43A047]">
-                                —
-                              </td>
-                              <td className="px-4 py-3 text-right font-semibold text-[#43A047]">
-                                —
-                              </td>
-                            </tr>
-                          ))
-                        ) : (
-                          <tr>
-                            <td
-                              colSpan={3}
-                              className="px-4 py-6 text-center text-sm text-[#7B8A9A]"
-                            >
-                              There are no items to show.
-                            </td>
-                          </tr>
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
+          <CategoryTab
+            categoryList={categoryList}
+            setCategoryList={setCategoryList}
+            addCategoryCallbackRef={addCategoryCallbackRef}
+            showAddCategory={showAddCategory}
+            setShowAddCategory={setShowAddCategory}
+            newCategoryName={newCategoryName}
+            setNewCategoryName={setNewCategoryName}
+            categoryBeingEdited={categoryBeingEdited}
+            setCategoryBeingEdited={setCategoryBeingEdited}
+          />
         )}
 
         {activeTab === "units" && (
@@ -1241,7 +773,7 @@ export function Items() {
         )}
       </div>
 
-      {/* === SHARED MODALS (Category & Units tabs) === */}
+      {/* === SHARED MODALS (Units tab) === */}
 
       {/* Add Conversion Modal */}
       <Dialog
@@ -1339,261 +871,6 @@ export function Items() {
             >
               {conversionSaving ? "Saving..." : "SAVE"}
             </button>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Add Category Modal */}
-      <Dialog
-        open={showAddCategory}
-        onOpenChange={(isOpen: boolean) => {
-          setShowAddCategory(isOpen);
-          if (!isOpen) {
-            setNewCategoryName("");
-            setCategoryBeingEdited(null);
-            addCategoryCallbackRef.current = null;
-          }
-        }}
-      >
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle className="flex items-center justify-between">
-              <span>
-                {categoryBeingEdited ? "Edit Category" : "Add Category"}
-              </span>
-              <button
-                type="button"
-                onClick={() => {
-                  setShowAddCategory(false);
-                  setNewCategoryName("");
-                  setCategoryBeingEdited(null);
-                  addCategoryCallbackRef.current = null;
-                }}
-                className="rounded p-1 text-gray-500 hover:bg-gray-100 hover:text-gray-700"
-                aria-label="Close add category popup"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Category Name
-              </label>
-              <input
-                type="text"
-                value={newCategoryName}
-                onChange={(event) => setNewCategoryName(event.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
-                placeholder="e.g. Grocery"
-              />
-            </div>
-            <button
-              onClick={() => { void handleCreateCategoryWithCallback(); }}
-              disabled={!newCategoryName.trim()}
-              className="w-full bg-[#E53935] text-white py-2 rounded-lg text-sm font-medium"
-            >
-              {categoryBeingEdited ? "Update" : "Create"}
-            </button>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Delete Category Modal */}
-      <Dialog
-        open={Boolean(categoryPendingDelete)}
-        onOpenChange={(isOpen: boolean) => {
-          if (!isOpen && !isDeletingCategory) setCategoryPendingDelete(null);
-        }}
-      >
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle>Delete Category</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <p className="text-sm text-gray-600">
-              {categoryPendingDelete
-                ? `Are you sure you want to delete ${categoryPendingDelete.name}? This action cannot be undone.`
-                : "Are you sure you want to delete this category?"}
-            </p>
-            <div className="flex justify-end gap-2">
-              <button
-                type="button"
-                disabled={isDeletingCategory}
-                onClick={() => setCategoryPendingDelete(null)}
-                className="px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                disabled={isDeletingCategory || !categoryPendingDelete}
-                onClick={() => {
-                  if (!categoryPendingDelete) return;
-                  void handleDeleteCategory(categoryPendingDelete);
-                }}
-                className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 disabled:opacity-60"
-              >
-                {isDeletingCategory ? "Deleting..." : "Delete"}
-              </button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Move Items Dialog */}
-      <Dialog
-        open={showMoveItemsDialog}
-        onOpenChange={(isOpen: boolean) => {
-          setShowMoveItemsDialog(isOpen);
-          if (!isOpen && !isMovingItems) {
-            setSelectedMoveItemIds([]);
-            setMoveItemsFilterCategoryId("all");
-            setMoveItemsSearchTerm("");
-          }
-        }}
-      >
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center justify-between">
-              <span>
-                Move Items To{" "}
-                {moveTargetCategoryName ?? "Items Not In Any Category"}
-              </span>
-              <button
-                type="button"
-                onClick={() => setShowMoveItemsDialog(false)}
-                className="rounded p-1 text-gray-500 hover:bg-gray-100 hover:text-gray-700"
-                aria-label="Close move items popup"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="mb-1 block text-sm font-medium text-gray-700">
-                  Search Items
-                </label>
-                <div className="relative">
-                  <input
-                    type="text"
-                    value={moveItemsSearchTerm}
-                    onChange={(event) =>
-                      setMoveItemsSearchTerm(event.target.value)
-                    }
-                    placeholder="Search by item name, code, or category"
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 pl-9 text-sm"
-                  />
-                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#AEB8C4]" />
-                </div>
-              </div>
-              <div>
-                <label className="mb-1 block text-sm font-medium text-gray-700">
-                  Filter By Category
-                </label>
-                <select
-                  value={moveItemsFilterCategoryId}
-                  onChange={(event) =>
-                    setMoveItemsFilterCategoryId(event.target.value)
-                  }
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
-                >
-                  <option value="all">All Items</option>
-                  <option value="uncategorized">
-                    Items not in any Category
-                  </option>
-                  {categoryList.map((category) => (
-                    <option key={category.id} value={category.id}>
-                      {category.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-            <div className="max-h-96 overflow-y-auto rounded-lg border border-[#E3EAF2]">
-              <table className="w-full text-sm">
-                <thead className="sticky top-0 z-10 bg-[#F7F9FB]">
-                  <tr>
-                    <th className="w-12 px-4 py-3 text-left"></th>
-                    <th className="px-4 py-3 text-left font-semibold text-[#7B8A9A] text-xs tracking-wide">
-                      ITEM
-                    </th>
-                    <th className="px-4 py-3 text-left font-semibold text-[#7B8A9A] text-xs tracking-wide">
-                      CURRENT CATEGORY
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {moveItemsFilteredList.length ? (
-                    moveItemsFilteredList.map((item) => {
-                      const isSelected = selectedMoveItemIds.includes(item.id);
-                      const isAlreadyInTargetCategory =
-                        item.category === moveTargetCategoryName;
-                      return (
-                        <tr
-                          key={item.id}
-                          onClick={() => {
-                            if (!isAlreadyInTargetCategory)
-                              toggleMoveItemSelection(item.id);
-                          }}
-                          className={`border-b border-[#E3EAF2] ${
-                            isAlreadyInTargetCategory
-                              ? "bg-gray-50 text-gray-400"
-                              : "cursor-pointer hover:bg-[#F5F8FA]"
-                          } ${isSelected ? "bg-[#E3F0FF]" : ""}`}
-                        >
-                          <td className="px-4 py-3">
-                            <input
-                              type="checkbox"
-                              checked={isSelected}
-                              disabled={isAlreadyInTargetCategory}
-                              onChange={() => toggleMoveItemSelection(item.id)}
-                              onClick={(event) => event.stopPropagation()}
-                              className="h-4 w-4"
-                            />
-                          </td>
-                          <td className="px-4 py-3 font-medium text-[#222B45]">
-                            {item.name}
-                          </td>
-                          <td className="px-4 py-3 text-[#4B5563]">
-                            {item.category ?? "Items not in any Category"}
-                          </td>
-                        </tr>
-                      );
-                    })
-                  ) : (
-                    <tr>
-                      <td
-                        colSpan={3}
-                        className="px-4 py-6 text-center text-sm text-[#7B8A9A]"
-                      >
-                        There are no items to show.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-            <div className="flex justify-end gap-3 pt-2">
-              <button
-                type="button"
-                onClick={() => setShowMoveItemsDialog(false)}
-                className="px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={() => { void handleMoveItemsToCategory(); }}
-                disabled={isMovingItems || !selectedMoveItemIds.length}
-                className="px-4 py-2 bg-[#1976D2] text-white rounded-lg text-sm font-medium hover:bg-blue-600 disabled:opacity-60"
-              >
-                {isMovingItems ? "Moving..." : "Move Selected Items"}
-              </button>
-            </div>
           </div>
         </DialogContent>
       </Dialog>
@@ -1894,52 +1171,6 @@ export function Items() {
       </Dialog>
     </div>
   );
-
-  // ---- Helper: create category and forward ID back to caller ----
-  async function handleCreateCategoryWithCallback() {
-    const normalizedName = newCategoryName.trim();
-    if (!normalizedName) return;
-    const alreadyExists = categoryList.some(
-      (c) =>
-        c.name.toLowerCase() === normalizedName.toLowerCase() &&
-        c.id !== categoryBeingEdited?.id
-    );
-    if (alreadyExists) return;
-
-    try {
-      const response = await fetch("/api/categories", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          id: categoryBeingEdited?.id,
-          name: normalizedName,
-          itemCount: 0,
-        }),
-      });
-      if (!response.ok) throw new Error("Failed to create category");
-      const createdCategory = (await response.json()) as CategoryRecord;
-      setCategoryList((prev) => {
-        const hasExisting = prev.some((c) => c.id === createdCategory.id);
-        const next = hasExisting
-          ? prev.map((c) => (c.id === createdCategory.id ? createdCategory : c))
-          : [...prev, createdCategory];
-        return next.sort((a, b) => a.name.localeCompare(b.name));
-      });
-      setSelectedCategoryId(createdCategory.id);
-
-      // If opened from AddItemModal inside ProductsTab, forward the ID
-      if (addCategoryCallbackRef.current) {
-        addCategoryCallbackRef.current(createdCategory.id);
-        addCategoryCallbackRef.current = null;
-      }
-
-      setNewCategoryName("");
-      setCategoryBeingEdited(null);
-      setShowAddCategory(false);
-    } catch (error) {
-      console.error(error);
-    }
-  }
 }
 
 // Ref to store the optional callback from ProductsTab's AddItemModal

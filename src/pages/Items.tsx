@@ -1,111 +1,12 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { ChevronDown, Plus, Search, X, SlidersHorizontal, Printer, Package, Calendar } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Plus, Search, X } from "lucide-react";
+import { ProductsTab } from "@/components/pagescomponents/items/products/ProductsTab";
+import type { CategoryRecord, UnitRecord, ConversionRateRecord } from "@/components/pagescomponents/items/products/types";
 
-// --- INLINE TYPES & MOCK DATA ---
-type Item = {
-  id: string;
-  name: string;
-  code?: string | null;
-  category?: string | null;
-  imgPath?: string | null;
-  unit?: string | null;
-  primaryUnit?: string | null;
-  secondaryUnit?: string | null;
-  secondaryStock?: number | null;
-  conversionRate?: number | null;
-  minStock?: number | null;
-  stockQuantity: number;
-  salePrice: number;
-  wholesalePrice: number;
-  purchasePrice: number;
-  stockValue: number;
-  mfgDate?: string | null;
-  expDate?: string | null;
-  atPrice?: number;
-};
-
-type ItemApiRecord = {
-  id: string;
-  name: string;
-  code: string | null;
-  category: string | null;
-  img_path: string | null;
-  unit: string;
-  primary_unit: string | null;
-  secondary_unit: string | null;
-  secondary_stock: number | null;
-  conversion_rate: number | null;
-  min_stock: number | null;
-  sale_price: number;
-  wholesale_price: number;
-  purchase_price: number;
-  stock_quantity: number;
-  stock_value: number | null;
-  mfg_date?: string | null;
-  exp_date?: string | null;
-  at_price?: number | null;
-};
-
-type AddItemFormState = {
-  itemName: string;
-  categoryId: string;
-  itemCode: string;
-  salePrice: string;
-  wholesalePrice: string;
-  purchasePrice: string;
-  minWholesaleQty: string;
-  openingStock: string;
-  atPrice: string;
-  asOfDate: string;
-  mfgDate: string;
-  expDate: string;
-};
-
-type CategoryRecord = {
-  id: string;
-  name: string;
-  itemCount: number;
-};
-
-type UnitRecord = {
-  id: string;
-  fullName: string;
-  shortName: string;
-};
-
-type ConversionRateRecord = {
-  id: number;
-  base_unit: string;
-  secondary_unit: string;
-  conversion_rate: number;
-  created_at?: string;
-};
-
-type ItemTransactionRow = {
-  id: string;
-  type: "Sale" | "Purchase" | "Add Stock" | "Reduce Stock";
-  invoiceNo: string;
-  partyName: string;
-  date: string;
-  quantity: number;
-  unit: string;
-  price: number;
-  amount: number;
-  balance: number;
-  status: "Paid" | "Unpaid" | "Open" | "Cancelled";
-  itemId?: string;
-  itemName: string;
-};
-
+// --- LOCAL TYPES (used only in Category and Units tabs) ---
 
 type CategoryContextMenuState = {
   category: CategoryRecord;
-  x: number;
-  y: number;
-};
-
-type ItemContextMenuState = {
-  item: Item;
   x: number;
   y: number;
 };
@@ -116,115 +17,16 @@ type UnitContextMenuState = {
   y: number;
 };
 
-type ItemTransactionLine = {
-  id?: string;
-  quantity?: number;
-  unit?: string;
-  price?: number;
-  amount?: number;
-  itemId?: string;
-  name?: string;
-};
-
-type ItemTransactionApiRecord = {
-  id: string;
-  transaction_type?: string;
-  invoice_no: string;
-  party_name: string;
-  date: string;
-  balance?: number;
-  status?: string;
-  line_items_json?: string;
-};
-
-const getInitialAddItemFormState = (): AddItemFormState => ({
-  itemName: "",
-  categoryId: "",
-  itemCode: "",
-  salePrice: "",
-  wholesalePrice: "",
-  purchasePrice: "",
-  minWholesaleQty: "",
-  openingStock: "",
-  atPrice: "",
-  asOfDate: "",
-  mfgDate: "",
-  expDate: "",
-});
-
-const mapItemApiRecord = (record: ItemApiRecord): Item => ({
-  id: String(record.id),
-  name: String(record.name),
-  code: record.code,
-  category: record.category,
-  imgPath: record.img_path,
-  unit: record.unit,
-  primaryUnit: record.primary_unit,
-  secondaryUnit: record.secondary_unit,
-  secondaryStock: record.secondary_stock,
-  conversionRate: record.conversion_rate,
-  minStock: record.min_stock,
-  salePrice: Number(record.sale_price ?? 0),
-  wholesalePrice: Number(record.wholesale_price ?? 0),
-  purchasePrice: Number(record.purchase_price ?? 0),
-  atPrice: record.at_price != null ? Number(record.at_price) : undefined,
-  stockQuantity: Number(record.stock_quantity ?? 0),
-  stockValue: Number(record.stock_value ?? 0),
-  mfgDate: record.mfg_date ?? null,
-  expDate: record.exp_date ?? null,
-});
-
-const getUnitIdFromLabel = (
-  unitLabel: string | null | undefined,
-  units: UnitRecord[],
-) => {
-  if (!unitLabel) {
-    return "";
-  }
-
-  const normalizedLabel = unitLabel.trim().toLowerCase();
-  const matchedUnit = units.find((unit) => {
-    const fullLabel = `${unit.fullName} (${unit.shortName})`.toLowerCase();
-    return (
-      fullLabel === normalizedLabel ||
-      unit.fullName.toLowerCase() === normalizedLabel ||
-      unit.shortName.toLowerCase() === normalizedLabel
-    );
-  });
-
-  return matchedUnit?.id ?? "";
-};
-
-
-const getInputNumberValue = (value: string) => {
-  const trimmedValue = value.trim();
-  if (!trimmedValue) {
-    return 0;
-  }
-
-  const parsedValue = Number(trimmedValue);
-  return Number.isFinite(parsedValue) ? parsedValue : 0;
-};
-
-const resolveStockValueFromPrices = (
-  quantity: number,
-  atPrice: string,
-  purchasePrice: number,
-) => {
-  const parsedAtPrice = getInputNumberValue(atPrice);
-  const resolvedUnitPrice =
-    parsedAtPrice > 0
-      ? parsedAtPrice
-      : Number.isFinite(purchasePrice) && purchasePrice > 0
-        ? purchasePrice
-        : 0;
-
-  return quantity * resolvedUnitPrice;
-};
-
-
-// --- INLINE UI COMPONENTS ---
-const Card = ({ children, className, style }: { children?: React.ReactNode; className?: string; style?: React.CSSProperties }) => (
+// --- INLINE UI COMPONENTS (for Category & Units tabs) ---
+const Card = ({
+  children,
+  className,
+  style,
+}: {
+  children?: React.ReactNode;
+  className?: string;
+  style?: React.CSSProperties;
+}) => (
   <div
     className={`bg-white rounded-lg border shadow-sm ${className || ""}`}
     style={style}
@@ -232,28 +34,40 @@ const Card = ({ children, className, style }: { children?: React.ReactNode; clas
     {children}
   </div>
 );
-const CardHeader = ({ children, className }: { children?: React.ReactNode; className?: string }) => (
-  <div className={`${className || ""}`}>{children}</div>
-);
-const CardContent = ({ children, className }: { children?: React.ReactNode; className?: string }) => (
-  <div className={`${className || ""}`}>{children}</div>
-);
-const Dialog = ({ open, onOpenChange, children }: { open?: boolean; onOpenChange: (open: boolean) => void; children?: React.ReactNode }) => {
+const CardContent = ({
+  children,
+  className,
+}: {
+  children?: React.ReactNode;
+  className?: string;
+}) => <div className={`${className || ""}`}>{children}</div>;
+
+const Dialog = ({
+  open,
+  onOpenChange,
+  children,
+}: {
+  open?: boolean;
+  onOpenChange: (open: boolean) => void;
+  children?: React.ReactNode;
+}) => {
   if (!open) return null;
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 overflow-y-auto">
-      {/* Background overlay click to close (optional): */}
-      <div
-        className="absolute inset-0"
-        onClick={() => onOpenChange(false)}
-      ></div>
+      <div className="absolute inset-0" onClick={() => onOpenChange(false)}></div>
       <div className="relative z-10 w-full flex justify-center p-4">
         {children}
       </div>
     </div>
   );
 };
-const DialogContent = ({ children, className }: { children?: React.ReactNode; className?: string }) => (
+const DialogContent = ({
+  children,
+  className,
+}: {
+  children?: React.ReactNode;
+  className?: string;
+}) => (
   <div
     className={`bg-white rounded-lg p-6 w-full max-w-lg relative shadow-xl ${className || ""}`}
   >
@@ -263,7 +77,13 @@ const DialogContent = ({ children, className }: { children?: React.ReactNode; cl
 const DialogHeader = ({ children }: { children?: React.ReactNode }) => (
   <div className="mb-4">{children}</div>
 );
-const DialogTitle = ({ children, className }: { children?: React.ReactNode; className?: string }) => (
+const DialogTitle = ({
+  children,
+  className,
+}: {
+  children?: React.ReactNode;
+  className?: string;
+}) => (
   <h2 className={`text-lg font-semibold ${className || ""}`}>{children}</h2>
 );
 
@@ -305,7 +125,9 @@ export function Items() {
       const savedConversion = (await res.json()) as ConversionRateRecord;
 
       if (isEditing) {
-        setConversionRates(prev => prev.map(c => c.id === savedConversion.id ? savedConversion : c));
+        setConversionRates((prev) =>
+          prev.map((c) => (c.id === savedConversion.id ? savedConversion : c))
+        );
       } else {
         setConversionRates((previousConversions) => [
           savedConversion,
@@ -324,15 +146,20 @@ export function Items() {
     }
   }
 
-  const handleDeleteConversion = async (conversionToDelete: ConversionRateRecord) => {
+  const handleDeleteConversion = async (
+    conversionToDelete: ConversionRateRecord
+  ) => {
     if (isDeletingConversion) return;
     setIsDeletingConversion(true);
     try {
-      const response = await fetch(`/api/conversion_rates/${conversionToDelete.id}`, {
-        method: "DELETE",
-      });
+      const response = await fetch(
+        `/api/conversion_rates/${conversionToDelete.id}`,
+        { method: "DELETE" }
+      );
       if (!response.ok) throw new Error("Failed to delete conversion");
-      setConversionRates(prev => prev.filter(c => c.id !== conversionToDelete.id));
+      setConversionRates((prev) =>
+        prev.filter((c) => c.id !== conversionToDelete.id)
+      );
     } catch (error) {
       console.error(error);
     } finally {
@@ -340,30 +167,16 @@ export function Items() {
       setConversionPendingDelete(null);
     }
   };
+
   const [activeTab, setActiveTab] = useState<"products" | "category" | "units">(
-    "products",
+    "products"
   );
-  const [itemList, setItemList] = useState<Item[]>([]);
-  const [isItemsLoading, setIsItemsLoading] = useState(true);
 
-  // Cache to prevent flickering on load by predicting the layout
-  const cachedHasItems = localStorage.getItem('items_hasItems') !== 'false';
-  const [hasItemsCache, setHasItemsCache] = useState(cachedHasItems);
-
-  const [selectedItem, setSelectedItem] = useState<Item | null>(null);
-  const [showAddItem, setShowAddItem] = useState(false);
-  const [isSavingItem, setIsSavingItem] = useState(false);
-  const [itemBeingEdited, setItemBeingEdited] = useState<Item | null>(null);
-  const [isDeletingItem, setIsDeletingItem] = useState(false);
-  const [itemPendingDelete, setItemPendingDelete] = useState<Item | null>(null);
-  const [itemContextMenu, setItemContextMenu] =
-    useState<ItemContextMenuState | null>(null);
-  const [addItemForm, setAddItemForm] = useState<AddItemFormState>(
-    getInitialAddItemFormState(),
-  );
-  const [showAddCategory, setShowAddCategory] = useState(false);
-  const [showUnitSelector, setShowUnitSelector] = useState(false);
+  // Shared state used by Category and Units tabs
   const [categoryList, setCategoryList] = useState<CategoryRecord[]>([]);
+  const [units, setUnits] = useState<UnitRecord[]>([]);
+
+  // Category tab state
   const [newCategoryName, setNewCategoryName] = useState("");
   const [categoryBeingEdited, setCategoryBeingEdited] =
     useState<CategoryRecord | null>(null);
@@ -373,232 +186,75 @@ export function Items() {
   const [categoryContextMenu, setCategoryContextMenu] =
     useState<CategoryContextMenuState | null>(null);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(
-    null,
+    null
   );
   const [showMoveItemsDialog, setShowMoveItemsDialog] = useState(false);
   const [selectedMoveItemIds, setSelectedMoveItemIds] = useState<string[]>([]);
   const [moveItemsFilterCategoryId, setMoveItemsFilterCategoryId] =
-    useState<string>('all');
-  const [moveItemsSearchTerm, setMoveItemsSearchTerm] = useState('');
-  const [isProductSearchActive, setIsProductSearchActive] = useState(false);
+    useState<string>("all");
+  const [moveItemsSearchTerm, setMoveItemsSearchTerm] = useState("");
   const [isCategorySearchActive, setIsCategorySearchActive] = useState(false);
-  const [isUnitSearchActive, setIsUnitSearchActive] = useState(false);
-  const [productSearchTerm, setProductSearchTerm] = useState('');
-  const [categorySearchTerm, setCategorySearchTerm] = useState('');
-  const [unitSearchTerm, setUnitSearchTerm] = useState('');
-  const [categoryItemSearchTerm, setCategoryItemSearchTerm] = useState('');
-  const [conversionSearchTerm, setConversionSearchTerm] = useState('');
-  const [transactionSearchTerm, setTransactionSearchTerm] = useState("");
-  const [showTransactionSearch, setShowTransactionSearch] = useState(false);
-  const [showStockDetailsPopup, setShowStockDetailsPopup] = useState(false);
+  const [categorySearchTerm, setCategorySearchTerm] = useState("");
+  const [categoryItemSearchTerm, setCategoryItemSearchTerm] = useState("");
   const [isMovingItems, setIsMovingItems] = useState(false);
-  const [addItemTab, setAddItemTab] = useState<"pricing" | "stock">("pricing");
-  const [addItemImageDataUrl, setAddItemImageDataUrl] = useState<string | null>(null);
-  const [addItemImageFileName, setAddItemImageFileName] = useState('');
-  const [addItemExistingImagePath, setAddItemExistingImagePath] = useState<string | null>(null);
-  const [selectedUnitId, setSelectedUnitId] = useState<string>("");
-  const [baseUnitId, setBaseUnitId] = useState<string>("");
-  const [secondaryUnitId, setSecondaryUnitId] = useState<string>("");
-  const [conversionRate, setConversionRate] = useState<number>(0);
+  const [showAddCategory, setShowAddCategory] = useState(false);
+  const categorySearchInputRef = useRef<HTMLInputElement | null>(null);
 
-  const [units, setUnits] = useState<UnitRecord[]>([]);
-  const [itemTransactions, setItemTransactions] = useState<ItemTransactionRow[]>([]);
+  // Units tab state
+  const [isUnitSearchActive, setIsUnitSearchActive] = useState(false);
+  const [unitSearchTerm, setUnitSearchTerm] = useState("");
+  const [conversionSearchTerm, setConversionSearchTerm] = useState("");
   const [showAddUnit, setShowAddUnit] = useState(false);
-  const [addUnitFullName, setAddUnitFullName] = useState('');
-  const [addUnitShortName, setAddUnitShortName] = useState('');
+  const [addUnitFullName, setAddUnitFullName] = useState("");
+  const [addUnitShortName, setAddUnitShortName] = useState("");
   const [isSavingUnit, setIsSavingUnit] = useState(false);
   const [isDeletingUnit, setIsDeletingUnit] = useState(false);
-  const [unitBeingEdited, setUnitBeingEdited] =
-    useState<UnitRecord | null>(null);
-  const [unitPendingDelete, setUnitPendingDelete] = useState<UnitRecord | null>(
-    null,
-  );
-  const [unitContextMenu, setUnitContextMenu] =
-    useState<UnitContextMenuState | null>(null);
-  const [conversionContextMenu, setConversionContextMenu] = useState<{ conversion: ConversionRateRecord; x: number; y: number; } | null>(null);
-  const [conversionBeingEdited, setConversionBeingEdited] = useState<ConversionRateRecord | null>(null);
+  const [unitBeingEdited, setUnitBeingEdited] = useState<UnitRecord | null>(null);
+  const [unitPendingDelete, setUnitPendingDelete] = useState<UnitRecord | null>(null);
+  const [unitContextMenu, setUnitContextMenu] = useState<UnitContextMenuState | null>(null);
+  const [conversionContextMenu, setConversionContextMenu] = useState<{
+    conversion: ConversionRateRecord;
+    x: number;
+    y: number;
+  } | null>(null);
+  const [conversionBeingEdited, setConversionBeingEdited] =
+    useState<ConversionRateRecord | null>(null);
   const [isDeletingConversion, setIsDeletingConversion] = useState(false);
-  const [conversionPendingDelete, setConversionPendingDelete] = useState<ConversionRateRecord | null>(null);
-  const [selectedUnitInTabId, setSelectedUnitInTabId] = useState<string | null>(
-    null,
-  );
-  const productSearchInputRef = useRef<HTMLInputElement | null>(null);
-  const categorySearchInputRef = useRef<HTMLInputElement | null>(null);
+  const [conversionPendingDelete, setConversionPendingDelete] =
+    useState<ConversionRateRecord | null>(null);
+  const [selectedUnitInTabId, setSelectedUnitInTabId] = useState<string | null>(null);
+
+  // Unit selector modal state (used by ProductsTab via prop callback)
+  const [showUnitSelector, setShowUnitSelector] = useState(false);
+  const [unitSelectorBaseUnitId, setUnitSelectorBaseUnitId] = useState("");
+  const [unitSelectorSecondaryUnitId, setUnitSelectorSecondaryUnitId] = useState("");
+  const [unitSelectorConversionRate, setUnitSelectorConversionRate] = useState(0);
+  const [unitSelectorOnSave, setUnitSelectorOnSave] = useState<
+    | ((result: {
+        selectedUnitId: string;
+        baseUnitId: string;
+        secondaryUnitId: string;
+        conversionRate: number;
+      }) => void)
+    | null
+  >(null);
+
   const unitSearchInputRef = useRef<HTMLInputElement | null>(null);
 
-  const selectedUnit = units.find((unit) => unit.id === selectedUnitId);
-  const baseUnit = units.find((unit) => unit.id === baseUnitId);
+  // ---- Derived for Category & Units tabs ----
+  const selectedCategory = categoryList.find((c) => c.id === selectedCategoryId);
 
-  const [showAdjustStockModal, setShowAdjustStockModal] = useState(false);
-  const [adjustStockForm, setAdjustStockForm] = useState({
-    type: "Add" as "Add" | "Reduce",
-    date: new Date().toISOString().split('T')[0],
-    qty: "",
-    unit: "",
-    atPrice: "",
-    details: ""
-  });
-  const [isSavingAdjustment, setIsSavingAdjustment] = useState(false);
+  // Items list held in Items for category tab (loaded here since category needs it for move items)
+  const [allItems, setAllItems] = useState<
+    {
+      id: string;
+      name: string;
+      code?: string | null;
+      category?: string | null;
+    }[]
+  >([]);
 
-  const openAdjustStockDialog = (item: Item) => {
-    setAdjustStockForm({
-      type: "Add",
-      date: new Date().toISOString().split('T')[0],
-      qty: "",
-      unit: item.primaryUnit || item.unit || "Unit",
-      atPrice: "",
-      details: ""
-    });
-    setShowAdjustStockModal(true);
-  };
-
-  const handleSaveStockAdjustment = async () => {
-    if (!selectedItem || !adjustStockForm.qty || isSavingAdjustment) return;
-
-    setIsSavingAdjustment(true);
-    try {
-      const qty = Number(adjustStockForm.qty);
-      const atPrice = Number(adjustStockForm.atPrice) || 0;
-
-      let baseQtyChange = qty;
-      const isSecondary = adjustStockForm.unit === selectedItem.secondaryUnit;
-      if (isSecondary && selectedItem.conversionRate) {
-        baseQtyChange = qty / selectedItem.conversionRate;
-      }
-
-      const isAdd = adjustStockForm.type === "Add";
-      const stockChange = isAdd ? baseQtyChange : -baseQtyChange;
-      const newStockQuantity = selectedItem.stockQuantity + stockChange;
-
-      let newSecondaryStock = selectedItem.secondaryStock ?? 0;
-      if (selectedItem.conversionRate) {
-        newSecondaryStock = newStockQuantity * selectedItem.conversionRate;
-      }
-
-      const valueChange = qty * atPrice;
-      const newValueChange = isAdd ? valueChange : -valueChange;
-      const newStockValue = selectedItem.stockValue + newValueChange;
-
-      const finalStockValue = Math.max(0, newStockValue);
-
-      const payload = {
-        id: selectedItem.id,
-        name: selectedItem.name,
-        code: selectedItem.code,
-        category: selectedItem.category,
-        salePrice: selectedItem.salePrice,
-        wholesalePrice: selectedItem.wholesalePrice,
-        purchasePrice: selectedItem.purchasePrice,
-        stockQuantity: newStockQuantity,
-        unit: selectedItem.unit,
-        primaryUnit: selectedItem.primaryUnit,
-        secondaryUnit: selectedItem.secondaryUnit,
-        stockValue: finalStockValue,
-        minStock: selectedItem.minStock,
-        secondaryStock: newSecondaryStock,
-        conversionRate: selectedItem.conversionRate
-      };
-
-      const response = await fetch('/api/items', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to adjust stock');
-      }
-
-      const adjustPayload = {
-        itemId: selectedItem.id,
-        itemName: selectedItem.name,
-        adjustmentType: adjustStockForm.type + ' Stock',
-        date: adjustStockForm.date,
-        quantity: qty,
-        unit: adjustStockForm.unit,
-        atPrice: atPrice,
-        details: adjustStockForm.details
-      };
-
-      const adjustResponse = await fetch('/api/adjust_stock_transactions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(adjustPayload)
-      });
-
-      if (adjustResponse.ok) {
-        const createdAdjustTx = await adjustResponse.json() as any;
-        const newTransaction: ItemTransactionRow = {
-          id: `adj-${createdAdjustTx.id}`,
-          type: createdAdjustTx.adjustmentType as any,
-          invoiceNo: "",
-          partyName: "Stock Adjustment",
-          date: createdAdjustTx.date,
-          quantity: Number(createdAdjustTx.quantity || 0),
-          unit: createdAdjustTx.unit || "",
-          price: Number(createdAdjustTx.atPrice || 0),
-          amount: Number(createdAdjustTx.quantity || 0) * Number(createdAdjustTx.atPrice || 0),
-          balance: 0,
-          status: "Paid",
-          itemId: createdAdjustTx.itemId,
-          itemName: createdAdjustTx.itemName
-        };
-
-        setItemTransactions((prev) => {
-          const next = [newTransaction, ...prev];
-          return next.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-        });
-      }
-
-      const createdItemPayload = await response.json() as any;
-      const updatedItem: Item = {
-        ...selectedItem,
-        stockQuantity: Number(createdItemPayload.stockQuantity ?? newStockQuantity),
-        stockValue: Number(createdItemPayload.stockValue ?? finalStockValue),
-        secondaryStock: createdItemPayload.secondaryStock != null ? Number(createdItemPayload.secondaryStock) : newSecondaryStock,
-        conversionRate: selectedItem.conversionRate
-      };
-
-      setItemList((previousItems) =>
-        previousItems.map((item) =>
-          item.id === updatedItem.id ? updatedItem : item
-        )
-      );
-      setSelectedItem(updatedItem);
-      setShowAdjustStockModal(false);
-    } catch (error) {
-      console.error(error);
-    } finally {
-      setIsSavingAdjustment(false);
-    }
-  };
-  const secondaryUnit = units.find((unit) => unit.id === secondaryUnitId);
-  const selectedUnitInTab = units.find((unit) => unit.id === selectedUnitInTabId);
-  const filteredConversions = conversionRates.filter(
-    (conversion) => {
-      const isBaseUnitMatch = conversion.base_unit.toLowerCase() ===
-        (selectedUnitInTab?.shortName ?? '').trim().toLowerCase();
-
-      if (!isBaseUnitMatch) {
-        return false;
-      }
-
-      if (conversionSearchTerm.trim()) {
-        const searchStr = `1 ${conversion.base_unit} = ${Number(conversion.conversion_rate)} ${conversion.secondary_unit}`.toLowerCase();
-        if (!searchStr.includes(conversionSearchTerm.trim().toLowerCase())) {
-          return false;
-        }
-      }
-
-      return true;
-    }
-  );
-  const selectedCategory = categoryList.find(
-    (category) => category.id === selectedCategoryId,
-  );
-  const filteredCategoryItems = itemList.filter((item) => {
+  const filteredCategoryItems = allItems.filter((item) => {
     let matchesCategory = false;
     if (selectedCategoryId === null) {
       matchesCategory = !item.category;
@@ -607,535 +263,202 @@ export function Items() {
     } else {
       matchesCategory = item.category === selectedCategory.name;
     }
-
     if (!matchesCategory) return false;
-
     if (categoryItemSearchTerm.trim()) {
       const searchStr = categoryItemSearchTerm.trim().toLowerCase();
       const matchName = item.name.toLowerCase().includes(searchStr);
       const matchCode = item.code && item.code.toLowerCase().includes(searchStr);
-      if (!matchName && !matchCode) {
-        return false;
-      }
+      if (!matchName && !matchCode) return false;
     }
-
     return true;
   });
-  const normalizedProductSearchTerm = productSearchTerm.trim().toLowerCase();
+
   const normalizedCategorySearchTerm = categorySearchTerm.trim().toLowerCase();
   const normalizedUnitSearchTerm = unitSearchTerm.trim().toLowerCase();
-  const filteredProductList = itemList.filter((item) => {
-    if (!normalizedProductSearchTerm) {
-      return true;
-    }
 
-    return [item.name, item.code ?? '', item.category ?? '']
-      .join(' ')
-      .toLowerCase()
-      .includes(normalizedProductSearchTerm);
-  });
   const filteredCategoryList = categoryList.filter((category) => {
-    if (!normalizedCategorySearchTerm) {
-      return true;
-    }
-
+    if (!normalizedCategorySearchTerm) return true;
     return category.name.toLowerCase().includes(normalizedCategorySearchTerm);
   });
   const filteredUnitList = units.filter((unit) => {
-    if (!normalizedUnitSearchTerm) {
-      return true;
-    }
-
+    if (!normalizedUnitSearchTerm) return true;
     return [unit.fullName, unit.shortName]
-      .join(' ')
+      .join(" ")
       .toLowerCase()
       .includes(normalizedUnitSearchTerm);
   });
+
   const normalizedMoveItemsSearchTerm = moveItemsSearchTerm.trim().toLowerCase();
-  const moveItemsFilteredList = itemList.filter((item) => {
-    if (moveItemsFilterCategoryId === 'uncategorized') {
-      if (item.category) {
-        return false;
-      }
-    } else if (moveItemsFilterCategoryId !== 'all') {
+  const moveItemsFilteredList = allItems.filter((item) => {
+    if (moveItemsFilterCategoryId === "uncategorized") {
+      if (item.category) return false;
+    } else if (moveItemsFilterCategoryId !== "all") {
       const filterCategory = categoryList.find(
-        (category) => category.id === moveItemsFilterCategoryId,
+        (c) => c.id === moveItemsFilterCategoryId
       );
-
-      if (!filterCategory || item.category !== filterCategory.name) {
-        return false;
-      }
+      if (!filterCategory || item.category !== filterCategory.name) return false;
     }
-
-    if (!normalizedMoveItemsSearchTerm) {
-      return true;
-    }
-
-    return [item.name, item.code ?? '', item.category ?? '']
-      .join(' ')
+    if (!normalizedMoveItemsSearchTerm) return true;
+    return [item.name, item.code ?? "", item.category ?? ""]
+      .join(" ")
       .toLowerCase()
       .includes(normalizedMoveItemsSearchTerm);
   });
+
   const moveTargetCategoryName = selectedCategory?.name ?? null;
 
-
-  const parseLineItems = (lineItemsJson?: string | null) => {
-    if (!lineItemsJson) {
-      return [] as ItemTransactionLine[];
+  const selectedUnitInTab = units.find((u) => u.id === selectedUnitInTabId);
+  const filteredConversions = conversionRates.filter((conversion) => {
+    const isBaseUnitMatch =
+      conversion.base_unit.toLowerCase() ===
+      (selectedUnitInTab?.shortName ?? "").trim().toLowerCase();
+    if (!isBaseUnitMatch) return false;
+    if (conversionSearchTerm.trim()) {
+      const searchStr = `1 ${conversion.base_unit} = ${Number(conversion.conversion_rate)} ${conversion.secondary_unit}`.toLowerCase();
+      if (!searchStr.includes(conversionSearchTerm.trim().toLowerCase()))
+        return false;
     }
-
-    try {
-      const parsedValue = JSON.parse(lineItemsJson) as unknown;
-      return Array.isArray(parsedValue) ? (parsedValue as ItemTransactionLine[]) : [];
-    } catch {
-      return [] as ItemTransactionLine[];
-    }
-  };
-
-  const normalizeTransactionType = (
-    transactionType?: string | null,
-  ): ItemTransactionRow["type"] => {
-    const normalizedType = String(transactionType ?? "").toLowerCase();
-    return normalizedType.includes("purchase") ? "Purchase" : "Sale";
-  };
-
-  const normalizeTransactionStatus = (
-    status?: string | null,
-    balance = 0,
-  ): ItemTransactionRow["status"] => {
-    if (status === "Paid" || status === "Unpaid" || status === "Open" || status === "Cancelled") {
-      return status;
-    }
-
-    return balance === 0 ? "Paid" : "Unpaid";
-  };
-
-  const selectedItemTransactions = useMemo(() => {
-    if (!selectedItem) {
-      return [] as ItemTransactionRow[];
-    }
-
-    const normalizedSelectedName = selectedItem.name.trim().toLowerCase();
-    return itemTransactions.filter(
-      (transaction) =>
-        transaction.itemId === selectedItem.id ||
-        transaction.itemName.trim().toLowerCase() === normalizedSelectedName,
-    );
-  }, [itemTransactions, selectedItem]);
-
-  const filteredItemTransactions = selectedItemTransactions.filter((t) => {
-    if (!transactionSearchTerm) return true;
-    const term = transactionSearchTerm.toLowerCase();
-    return (
-      (t.invoiceNo && t.invoiceNo.toLowerCase().includes(term)) ||
-      (t.date && t.date.toLowerCase().includes(term)) ||
-      (t.type && t.type.toLowerCase().includes(term)) ||
-      (t.amount.toString().includes(term)) ||
-      (t.balance.toString().includes(term))
-    );
+    return true;
   });
 
-  const handlePrintTransactions = () => {
-    if (!selectedItem) return;
-
-    const iframe = document.createElement('iframe');
-    iframe.style.position = 'fixed';
-    iframe.style.right = '0';
-    iframe.style.bottom = '0';
-    iframe.style.width = '0';
-    iframe.style.height = '0';
-    iframe.style.border = '0';
-    document.body.appendChild(iframe);
-
-    const html = `
-      <html>
-        <head>
-          <title>Transactions - ${selectedItem.name}</title>
-          <style>
-            body { font-family: sans-serif; padding: 20px; }
-            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-            th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-            th { background-color: #f2f2f2; }
-          </style>
-        </head>
-        <body>
-          <h2>Transactions - ${selectedItem.name}</h2>
-          <table>
-            <thead>
-              <tr>
-                <th>Type</th>
-                <th>Number</th>
-                <th>Date</th>
-                <th>Total</th>
-                <th>Balance</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${filteredItemTransactions.map(t => `
-                <tr>
-                  <td>${t.type}</td>
-                  <td>${t.invoiceNo || ''}</td>
-                  <td>${t.date}</td>
-                  <td>Rs ${t.amount.toFixed(2)}</td>
-                  <td>Rs ${t.balance.toFixed(2)}</td>
-                </tr>
-              `).join('')}
-            </tbody>
-          </table>
-        </body>
-      </html>
-    `;
-    const iframeDoc = iframe.contentWindow?.document;
-    if (iframeDoc) {
-      iframeDoc.open();
-      iframeDoc.write(html);
-      iframeDoc.close();
-
-      setTimeout(() => {
-        iframe.contentWindow?.focus();
-        iframe.contentWindow?.print();
-        setTimeout(() => {
-          document.body.removeChild(iframe);
-        }, 1000);
-      }, 250);
-    } else {
-      document.body.removeChild(iframe);
-    }
-  };
-
-  const handleExportExcel = () => {
-    if (!selectedItem) return;
-
-    const headers = ["Type", "Number", "Date", "Total", "Balance"];
-    const rows = filteredItemTransactions.map(t => [
-      t.type,
-      t.invoiceNo || "",
-      t.date,
-      t.amount.toFixed(2),
-      t.balance.toFixed(2)
-    ]);
-
-    const csvContent = [
-      headers.join(","),
-      ...rows.map(row => row.join(","))
-    ].join("\n");
-
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.setAttribute("download", `${selectedItem.name}_transactions.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
-
-
-  const getContextMenuStyle = (x: number, y: number) => {
-    if (typeof window === 'undefined') {
-      return { left: x, top: y };
-    }
-
+  const getContextMenuStyle = (x: number, y: number): React.CSSProperties => {
+    if (typeof window === "undefined") return { left: x, top: y };
     const menuWidth = 160;
     const menuHeight = 80;
     const viewportPadding = 8;
-
     let left = x;
     let top = y;
-
     if (left + menuWidth > window.innerWidth - viewportPadding) {
       left = Math.max(viewportPadding, window.innerWidth - menuWidth - viewportPadding);
     }
-
     if (top + menuHeight > window.innerHeight - viewportPadding) {
       top = Math.max(viewportPadding, y - menuHeight);
     }
-
     return { left, top };
   };
+
+  // ---- Effects ----
 
   useEffect(() => {
     const loadUnits = async () => {
       try {
-        const response = await fetch('/api/units');
-        if (!response.ok) {
-          throw new Error('Failed to load units');
-        }
+        const response = await fetch("/api/units");
+        if (!response.ok) throw new Error("Failed to load units");
         const unitRows = (await response.json()) as UnitRecord[];
         setUnits(unitRows);
       } catch (error) {
         console.error(error);
       }
     };
-
     void loadUnits();
   }, []);
 
   useEffect(() => {
     const loadConversionRates = async () => {
       try {
-        const response = await fetch('/api/conversion_rates');
-        if (!response.ok) {
-          throw new Error('Failed to load conversion rates');
-        }
-
+        const response = await fetch("/api/conversion_rates");
+        if (!response.ok) throw new Error("Failed to load conversion rates");
         const conversionRows = (await response.json()) as ConversionRateRecord[];
         setConversionRates(conversionRows);
       } catch (error) {
         console.error(error);
       }
     };
-
     void loadConversionRates();
-  }, []);
-
-  useEffect(() => {
-    const loadItems = async () => {
-      setIsItemsLoading(true);
-      try {
-        const response = await fetch('/api/items');
-        if (!response.ok) {
-          throw new Error('Failed to load items');
-        }
-
-        const itemRows = (await response.json()) as ItemApiRecord[];
-        const mappedItems = itemRows.map(mapItemApiRecord);
-        setItemList(mappedItems);
-
-        const hasItems = mappedItems.length > 0;
-        setHasItemsCache(hasItems);
-        localStorage.setItem('items_hasItems', hasItems ? 'true' : 'false');
-      } catch (error) {
-        console.error(error);
-      } finally {
-        setIsItemsLoading(false);
-      }
-    };
-
-    void loadItems();
   }, []);
 
   useEffect(() => {
     const loadCategories = async () => {
       try {
-        const response = await fetch('/api/categories');
-        if (!response.ok) {
-          throw new Error('Failed to load categories');
-        }
-
+        const response = await fetch("/api/categories");
+        if (!response.ok) throw new Error("Failed to load categories");
         const categories = (await response.json()) as CategoryRecord[];
         setCategoryList(categories);
-
-        setSelectedCategoryId((previousSelectedCategoryId) => {
-          if (!categories.length) {
-            return null;
-          }
-
-          if (
-            previousSelectedCategoryId &&
-            categories.some((category) => category.id === previousSelectedCategoryId)
-          ) {
-            return previousSelectedCategoryId;
-          }
-
+        setSelectedCategoryId((prev) => {
+          if (!categories.length) return null;
+          if (prev && categories.some((c) => c.id === prev)) return prev;
           return categories[0].id;
         });
       } catch (error) {
         console.error(error);
       }
     };
-
     void loadCategories();
   }, []);
 
+  // Load a lightweight version of items for the category tab (move items dialog, category item list)
   useEffect(() => {
-    const loadItemTransactions = async () => {
+    const loadAllItems = async () => {
       try {
-        const [saleInvoicesResponse, purchaseBillsResponse, adjustStockResponse] = await Promise.all([
-          fetch('/api/sale_invoices'),
-          fetch('/api/purchase_bills'),
-          fetch('/api/adjust_stock_transactions'),
-        ]);
-
-        const saleInvoices = saleInvoicesResponse.ok
-          ? ((await saleInvoicesResponse.json()) as ItemTransactionApiRecord[])
-          : [];
-        const purchaseBills = purchaseBillsResponse.ok
-          ? ((await purchaseBillsResponse.json()) as ItemTransactionApiRecord[])
-          : [];
-        const adjustStockTx = adjustStockResponse.ok
-          ? ((await adjustStockResponse.json()) as any[])
-          : [];
-
-        const nextTransactions = [...saleInvoices, ...purchaseBills].flatMap(
-          (invoice): ItemTransactionRow[] => {
-            const lineItems = parseLineItems(invoice.line_items_json);
-            const transactionType = normalizeTransactionType(invoice.transaction_type);
-            const balance = Number(invoice.balance ?? 0);
-            const status = normalizeTransactionStatus(invoice.status, balance);
-
-            return lineItems.map((lineItem, index) => ({
-              id: `${invoice.id}-${lineItem.id ?? index}`,
-              type: transactionType,
-              invoiceNo: invoice.invoice_no,
-              partyName: invoice.party_name,
-              date: invoice.date,
-              quantity: Number(lineItem.quantity ?? 0),
-              unit: lineItem.unit ?? "",
-              price: Number(lineItem.price ?? 0),
-              amount: Number(
-                lineItem.amount ??
-                Number(lineItem.quantity ?? 0) * Number(lineItem.price ?? 0),
-              ),
-              balance,
-              status,
-              itemId: lineItem.itemId ?? undefined,
-              itemName: lineItem.name ?? "",
-            }));
-          },
+        const response = await fetch("/api/items");
+        if (!response.ok) return;
+        const itemRows = (await response.json()) as {
+          id: string;
+          name: string;
+          code: string | null;
+          category: string | null;
+        }[];
+        setAllItems(
+          itemRows.map((r) => ({
+            id: String(r.id),
+            name: String(r.name),
+            code: r.code,
+            category: r.category,
+          }))
         );
-
-        const adjustTransactions: ItemTransactionRow[] = adjustStockTx.map(adj => ({
-          id: `adj-${adj.id}`,
-          type: adj.adjustment_type,
-          invoiceNo: "",
-          partyName: "Stock Adjustment",
-          date: adj.date,
-          quantity: Number(adj.quantity ?? 0),
-          unit: adj.unit ?? "",
-          price: Number(adj.at_price ?? 0),
-          amount: Number(adj.quantity ?? 0) * Number(adj.at_price ?? 0),
-          balance: 0,
-          status: "Paid",
-          itemId: adj.item_id,
-          itemName: adj.item_name
-        }));
-
-        setItemTransactions([...nextTransactions, ...adjustTransactions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
       } catch (error) {
         console.error(error);
-        setItemTransactions([]);
       }
     };
-
-    void loadItemTransactions();
+    void loadAllItems();
   }, []);
 
   useEffect(() => {
-    setSelectedItem((previousSelectedItem) => {
-      if (!itemList.length) {
-        return null;
-      }
-
-      if (previousSelectedItem) {
-        const updatedSelectedItem = itemList.find(
-          (item) => item.id === previousSelectedItem.id,
-        );
-
-        if (updatedSelectedItem) {
-          return updatedSelectedItem;
-        }
-      }
-
-      return itemList[0];
-    });
-  }, [itemList]);
-
-  useEffect(() => {
-    setSelectedUnitInTabId((previousSelectedUnitId) => {
-      if (!units.length) {
-        return null;
-      }
-
-      if (
-        previousSelectedUnitId &&
-        units.some((unit) => unit.id === previousSelectedUnitId)
-      ) {
-        return previousSelectedUnitId;
-      }
-
+    setSelectedUnitInTabId((prev) => {
+      if (!units.length) return null;
+      if (prev && units.some((u) => u.id === prev)) return prev;
       return units[0].id;
     });
   }, [units]);
 
   useEffect(() => {
-    if (!itemContextMenu) {
-      return;
-    }
-
-    const closeMenu = () => setItemContextMenu(null);
-
-    window.addEventListener('click', closeMenu);
-    window.addEventListener('resize', closeMenu);
-    window.addEventListener('scroll', closeMenu, true);
-
-    return () => {
-      window.removeEventListener('click', closeMenu);
-      window.removeEventListener('resize', closeMenu);
-      window.removeEventListener('scroll', closeMenu, true);
-    };
-  }, [itemContextMenu]);
-
-  useEffect(() => {
-    if (!categoryContextMenu) {
-      return;
-    }
-
+    if (!categoryContextMenu) return;
     const closeMenu = () => setCategoryContextMenu(null);
-
-    window.addEventListener('click', closeMenu);
-    window.addEventListener('resize', closeMenu);
-    window.addEventListener('scroll', closeMenu, true);
-
+    window.addEventListener("click", closeMenu);
+    window.addEventListener("resize", closeMenu);
+    window.addEventListener("scroll", closeMenu, true);
     return () => {
-      window.removeEventListener('click', closeMenu);
-      window.removeEventListener('resize', closeMenu);
-      window.removeEventListener('scroll', closeMenu, true);
+      window.removeEventListener("click", closeMenu);
+      window.removeEventListener("resize", closeMenu);
+      window.removeEventListener("scroll", closeMenu, true);
     };
   }, [categoryContextMenu]);
 
   useEffect(() => {
-    if (!unitContextMenu) {
-      return;
-    }
-
+    if (!unitContextMenu) return;
     const closeMenu = () => setUnitContextMenu(null);
-
-    window.addEventListener('click', closeMenu);
-    window.addEventListener('resize', closeMenu);
-    window.addEventListener('scroll', closeMenu, true);
-
+    window.addEventListener("click", closeMenu);
+    window.addEventListener("resize", closeMenu);
+    window.addEventListener("scroll", closeMenu, true);
     return () => {
-      window.removeEventListener('click', closeMenu);
-      window.removeEventListener('resize', closeMenu);
-      window.removeEventListener('scroll', closeMenu, true);
+      window.removeEventListener("click", closeMenu);
+      window.removeEventListener("resize", closeMenu);
+      window.removeEventListener("scroll", closeMenu, true);
     };
   }, [unitContextMenu]);
 
   useEffect(() => {
-    if (!conversionContextMenu) {
-      return;
-    }
-
+    if (!conversionContextMenu) return;
     const closeMenu = () => setConversionContextMenu(null);
-
-    window.addEventListener('click', closeMenu);
-    window.addEventListener('resize', closeMenu);
-    window.addEventListener('scroll', closeMenu, true);
-
+    window.addEventListener("click", closeMenu);
+    window.addEventListener("resize", closeMenu);
+    window.addEventListener("scroll", closeMenu, true);
     return () => {
-      window.removeEventListener('click', closeMenu);
-      window.removeEventListener('resize', closeMenu);
-      window.removeEventListener('scroll', closeMenu, true);
+      window.removeEventListener("click", closeMenu);
+      window.removeEventListener("resize", closeMenu);
+      window.removeEventListener("scroll", closeMenu, true);
     };
   }, [conversionContextMenu]);
-
-  useEffect(() => {
-    if (isProductSearchActive) {
-      productSearchInputRef.current?.focus();
-    }
-  }, [isProductSearchActive]);
 
   useEffect(() => {
     if (isCategorySearchActive) {
@@ -1149,37 +472,33 @@ export function Items() {
     }
   }, [isUnitSearchActive]);
 
-
+  // ---- Handlers ----
 
   const handleUnitSave = async () => {
-    if (baseUnitId) {
-      setSelectedUnitId(baseUnitId);
-    }
+    const baseUnit = units.find((u) => u.id === unitSelectorBaseUnitId);
+    const secondaryUnit = units.find((u) => u.id === unitSelectorSecondaryUnitId);
 
-    const currentBaseUnit = units.find(u => u.id === baseUnitId);
-    const currentSecondaryUnit = units.find(u => u.id === secondaryUnitId);
-
-    if (currentBaseUnit && currentSecondaryUnit && conversionRate > 0) {
-      const existingConv = conversionRates.find(c =>
-        c.base_unit === currentBaseUnit.shortName &&
-        c.secondary_unit === currentSecondaryUnit.shortName &&
-        c.conversion_rate === conversionRate
+    if (baseUnit && secondaryUnit && unitSelectorConversionRate > 0) {
+      const existingConv = conversionRates.find(
+        (c) =>
+          c.base_unit === baseUnit.shortName &&
+          c.secondary_unit === secondaryUnit.shortName &&
+          c.conversion_rate === unitSelectorConversionRate
       );
-
       if (!existingConv) {
         try {
-          const res = await fetch('/api/conversion_rates', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+          const res = await fetch("/api/conversion_rates", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-              baseUnit: currentBaseUnit.shortName,
-              secondaryUnit: currentSecondaryUnit.shortName,
-              conversionRate: conversionRate,
+              baseUnit: baseUnit.shortName,
+              secondaryUnit: secondaryUnit.shortName,
+              conversionRate: unitSelectorConversionRate,
             }),
           });
           if (res.ok) {
             const savedConversion = (await res.json()) as ConversionRateRecord;
-            setConversionRates(prev => [savedConversion, ...prev]);
+            setConversionRates((prev) => [savedConversion, ...prev]);
           }
         } catch (error) {
           console.error("Failed to save conversion rate globally", error);
@@ -1187,59 +506,52 @@ export function Items() {
       }
     }
 
+    if (unitSelectorOnSave) {
+      unitSelectorOnSave({
+        selectedUnitId: unitSelectorBaseUnitId,
+        baseUnitId: unitSelectorBaseUnitId,
+        secondaryUnitId: unitSelectorSecondaryUnitId,
+        conversionRate: unitSelectorConversionRate,
+      });
+    }
     setShowUnitSelector(false);
   };
 
   const handleCreateUnit = async () => {
     const normalizedFullName = addUnitFullName.trim();
     const normalizedShortName = addUnitShortName.trim();
-    if (!normalizedFullName || !normalizedShortName || isSavingUnit) {
-      return;
-    }
+    if (!normalizedFullName || !normalizedShortName || isSavingUnit) return;
 
     const duplicateUnit = units.some(
       (unit) =>
         unit.id !== unitBeingEdited?.id &&
-        unit.fullName.trim().toLowerCase() === normalizedFullName.toLowerCase(),
+        unit.fullName.trim().toLowerCase() === normalizedFullName.toLowerCase()
     );
-
-    if (duplicateUnit) {
-      return;
-    }
+    if (duplicateUnit) return;
 
     setIsSavingUnit(true);
     try {
-      const response = await fetch('/api/units', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch("/api/units", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           id: unitBeingEdited?.id,
           fullName: normalizedFullName,
           shortName: normalizedShortName,
         }),
       });
-
-      if (!response.ok) {
-        throw new Error('Failed to create unit');
-      }
-
+      if (!response.ok) throw new Error("Failed to create unit");
       const createdUnit = (await response.json()) as UnitRecord;
-      setUnits((previousUnits) => {
-        const hasExistingUnit = previousUnits.some(
-          (unit) => unit.id === createdUnit.id,
-        );
-
-        const nextUnits = hasExistingUnit
-          ? previousUnits.map((unit) =>
-            unit.id === createdUnit.id ? createdUnit : unit,
-          )
-          : [...previousUnits, createdUnit];
-
-        return nextUnits.sort((a, b) => a.fullName.localeCompare(b.fullName));
+      setUnits((prev) => {
+        const hasExisting = prev.some((u) => u.id === createdUnit.id);
+        const next = hasExisting
+          ? prev.map((u) => (u.id === createdUnit.id ? createdUnit : u))
+          : [...prev, createdUnit];
+        return next.sort((a, b) => a.fullName.localeCompare(b.fullName));
       });
       setSelectedUnitInTabId(createdUnit.id);
-      setAddUnitFullName('');
-      setAddUnitShortName('');
+      setAddUnitFullName("");
+      setAddUnitShortName("");
       setUnitBeingEdited(null);
       setShowAddUnit(false);
     } catch (error) {
@@ -1257,36 +569,14 @@ export function Items() {
   };
 
   const handleDeleteUnit = async (unit: UnitRecord) => {
-    if (isDeletingUnit) {
-      return;
-    }
-
+    if (isDeletingUnit) return;
     setIsDeletingUnit(true);
-
     try {
       const response = await fetch(`/api/units/${unit.id}`, {
-        method: 'DELETE',
+        method: "DELETE",
       });
-
-      if (!response.ok) {
-        throw new Error('Failed to delete unit');
-      }
-
-      setUnits((previousUnits) =>
-        previousUnits.filter((entry) => entry.id !== unit.id),
-      );
-
-      if (selectedUnitId === unit.id) {
-        setSelectedUnitId('');
-      }
-
-      if (baseUnitId === unit.id) {
-        setBaseUnitId('');
-      }
-
-      if (secondaryUnitId === unit.id) {
-        setSecondaryUnitId('');
-      }
+      if (!response.ok) throw new Error("Failed to delete unit");
+      setUnits((prev) => prev.filter((entry) => entry.id !== unit.id));
     } catch (error) {
       console.error(error);
     } finally {
@@ -1295,66 +585,7 @@ export function Items() {
     }
   };
 
-  const handleCreateCategory = async () => {
-    const normalizedName = newCategoryName.trim();
-    if (!normalizedName) {
-      return;
-    }
 
-    const alreadyExists = categoryList.some(
-      (category) =>
-        category.name.toLowerCase() === normalizedName.toLowerCase() &&
-        category.id !== categoryBeingEdited?.id,
-    );
-
-    if (alreadyExists) {
-      return;
-    }
-
-    try {
-      const response = await fetch('/api/categories', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          id: categoryBeingEdited?.id,
-          name: normalizedName,
-          itemCount: 0,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to create category');
-      }
-
-      const createdCategory = (await response.json()) as CategoryRecord;
-
-      setCategoryList((previousCategories) => {
-        const hasExistingCategory = previousCategories.some(
-          (category) => category.id === createdCategory.id,
-        );
-
-        const nextCategories = hasExistingCategory
-          ? previousCategories.map((category) =>
-            category.id === createdCategory.id ? createdCategory : category,
-          )
-          : [...previousCategories, createdCategory];
-
-        return nextCategories.sort((a, b) => a.name.localeCompare(b.name));
-      });
-      setSelectedCategoryId(createdCategory.id);
-      setAddItemForm((prev) => ({
-        ...prev,
-        categoryId: createdCategory.id,
-      }));
-      setNewCategoryName('');
-      setCategoryBeingEdited(null);
-      setShowAddCategory(false);
-    } catch (error) {
-      console.error(error);
-    }
-  };
 
   const openEditCategoryDialog = (category: CategoryRecord) => {
     setCategoryBeingEdited(category);
@@ -1364,69 +595,50 @@ export function Items() {
 
   const openMoveItemsDialog = () => {
     setSelectedMoveItemIds([]);
-    setMoveItemsFilterCategoryId('all');
-    setMoveItemsSearchTerm('');
+    setMoveItemsFilterCategoryId("all");
+    setMoveItemsSearchTerm("");
     setShowMoveItemsDialog(true);
   };
 
   const toggleMoveItemSelection = (itemId: string) => {
-    setSelectedMoveItemIds((previousSelectedItemIds) =>
-      previousSelectedItemIds.includes(itemId)
-        ? previousSelectedItemIds.filter((selectedItemId) => selectedItemId !== itemId)
-        : [...previousSelectedItemIds, itemId],
+    setSelectedMoveItemIds((prev) =>
+      prev.includes(itemId)
+        ? prev.filter((id) => id !== itemId)
+        : [...prev, itemId]
     );
   };
 
   const handleMoveItemsToCategory = async () => {
-    if (!selectedMoveItemIds.length || isMovingItems) {
-      return;
-    }
-
+    if (!selectedMoveItemIds.length || isMovingItems) return;
     setIsMovingItems(true);
-
     try {
-      const itemsToMove = itemList.filter((item) => selectedMoveItemIds.includes(item.id));
-
+      const itemsToMove = allItems.filter((item) =>
+        selectedMoveItemIds.includes(item.id)
+      );
       await Promise.all(
         itemsToMove.map(async (item) => {
-          const response = await fetch('/api/items', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
+          const response = await fetch("/api/items", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               id: item.id,
               name: item.name,
               code: item.code ?? null,
               category: moveTargetCategoryName,
-              salePrice: item.salePrice,
-              wholesalePrice: item.wholesalePrice,
-              purchasePrice: item.purchasePrice,
-              stockQuantity: item.stockQuantity,
-              unit: item.unit,
-              primaryUnit: item.primaryUnit ?? null,
-              secondaryUnit: item.secondaryUnit ?? null,
-              stockValue: item.stockValue,
-              minStock: item.minStock ?? null,
             }),
           });
-
-          if (!response.ok) {
-            throw new Error('Failed to move items to category');
-          }
-        }),
+          if (!response.ok) throw new Error("Failed to move items");
+        })
       );
-
-      setItemList((previousItems) =>
-        previousItems.map((item) =>
+      setAllItems((prev) =>
+        prev.map((item) =>
           selectedMoveItemIds.includes(item.id)
             ? { ...item, category: moveTargetCategoryName }
-            : item,
-        ),
+            : item
+        )
       );
-
       try {
-        const categoriesResponse = await fetch('/api/categories');
+        const categoriesResponse = await fetch("/api/categories");
         if (categoriesResponse.ok) {
           const categories = (await categoriesResponse.json()) as CategoryRecord[];
           setCategoryList(categories);
@@ -1434,10 +646,9 @@ export function Items() {
       } catch (error) {
         console.error(error);
       }
-
       setSelectedMoveItemIds([]);
-      setMoveItemsFilterCategoryId('all');
-      setMoveItemsSearchTerm('');
+      setMoveItemsFilterCategoryId("all");
+      setMoveItemsSearchTerm("");
       setShowMoveItemsDialog(false);
     } catch (error) {
       console.error(error);
@@ -1447,35 +658,20 @@ export function Items() {
   };
 
   const handleDeleteCategory = async (category: CategoryRecord) => {
-    if (isDeletingCategory) {
-      return;
-    }
-
+    if (isDeletingCategory) return;
     setIsDeletingCategory(true);
-
     try {
       const response = await fetch(`/api/categories/${category.id}`, {
-        method: 'DELETE',
+        method: "DELETE",
       });
-
-      if (!response.ok) {
-        throw new Error('Failed to delete category');
-      }
-
-      setCategoryList((previousCategories) => {
-        const nextCategories = previousCategories.filter(
-          (entry) => entry.id !== category.id,
-        );
-
-        setSelectedCategoryId((previousCategoryId) => {
-          if (previousCategoryId !== category.id) {
-            return previousCategoryId;
-          }
-
-          return nextCategories[0]?.id ?? null;
+      if (!response.ok) throw new Error("Failed to delete category");
+      setCategoryList((prev) => {
+        const next = prev.filter((entry) => entry.id !== category.id);
+        setSelectedCategoryId((prevId) => {
+          if (prevId !== category.id) return prevId;
+          return next[0]?.id ?? null;
         });
-
-        return nextCategories;
+        return next;
       });
     } catch (error) {
       console.error(error);
@@ -1485,1270 +681,578 @@ export function Items() {
     }
   };
 
-  const openAddItemModal = () => {
-    setAddItemTab('pricing');
-    setAddItemForm(getInitialAddItemFormState());
-    setItemBeingEdited(null);
-
-    setSelectedUnitId('');
-    setBaseUnitId('');
-    setSecondaryUnitId('');
-    setConversionRate(0);
-    setAddItemImageDataUrl(null);
-    setAddItemImageFileName('');
-    setAddItemExistingImagePath(null);
-    setShowAddItem(true);
-  };
-
-  const openEditItemDialog = (item: Item) => {
-    const matchedCategory = categoryList.find(
-      (category) => category.name === item.category,
-    );
-    const matchedUnitId = getUnitIdFromLabel(item.unit, units);
-    const matchedPrimaryUnitId = getUnitIdFromLabel(
-      item.primaryUnit ?? item.unit,
-      units,
-    );
-    const matchedSecondaryUnitId = getUnitIdFromLabel(item.secondaryUnit, units);
-
-    setItemBeingEdited(item);
-    setAddItemTab('pricing');
-
-    setAddItemForm({
-      itemName: item.name,
-      categoryId: matchedCategory?.id ?? '',
-      itemCode: item.code ?? '',
-      salePrice: String(item.salePrice ?? ''),
-      wholesalePrice: String(item.wholesalePrice ?? ''),
-      purchasePrice: String(item.purchasePrice ?? ''),
-      minWholesaleQty:
-        item.minStock === null || item.minStock === undefined
-          ? ''
-          : String(item.minStock),
-      openingStock: String(item.stockQuantity ?? ''),
-      atPrice: item.atPrice != null ? String(item.atPrice) : '',
-      asOfDate: '',
-      mfgDate: item.mfgDate ?? '',
-      expDate: item.expDate ?? '',
-    });
-
-    setSelectedUnitId(matchedPrimaryUnitId || matchedUnitId);
-    setBaseUnitId(matchedPrimaryUnitId || matchedUnitId);
-    setSecondaryUnitId(matchedSecondaryUnitId);
-    setConversionRate(item.conversionRate ?? 0);
-    setAddItemImageDataUrl(null);
-    setAddItemImageFileName('');
-    setAddItemExistingImagePath(item.imgPath ?? null);
-    setShowAddItem(true);
-  };
-
-  const handleAddItemImageSelection = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) {
-      setAddItemImageDataUrl(null);
-      setAddItemImageFileName('');
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = () => {
-      const result = typeof reader.result === 'string' ? reader.result : null;
-      setAddItemImageDataUrl(result);
-      setAddItemImageFileName(file.name);
-    };
-    reader.onerror = () => {
-      setAddItemImageDataUrl(null);
-      setAddItemImageFileName('');
-    };
-    reader.readAsDataURL(file);
-  };
-
-  const handleDeleteItem = async (item: Item) => {
-    if (isDeletingItem) {
-      return;
-    }
-
-    setIsDeletingItem(true);
-
-    try {
-      const response = await fetch(`/api/items/${item.id}`, {
-        method: 'DELETE',
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to delete item');
-      }
-
-      setItemList((previousItems) =>
-        previousItems.filter((entry) => entry.id !== item.id),
-      );
-
-      if (item.category) {
-        setCategoryList((previousCategories) =>
-          previousCategories.map((category) =>
-            category.name === item.category
-              ? {
-                ...category,
-                itemCount: Math.max(0, category.itemCount - 1),
-              }
-              : category,
-          ),
-        );
-      }
-    } catch (error) {
-      console.error(error);
-    } finally {
-      setIsDeletingItem(false);
-      setItemPendingDelete(null);
-    }
-  };
-
-  const handleSaveItem = async (closeAfterSave: boolean) => {
-    if (isSavingItem) {
-      return;
-    }
-
-    const normalizedName = addItemForm.itemName.trim();
-    if (!normalizedName || !selectedUnit) {
-      return;
-    }
-
-    const openingStock = Number(addItemForm.openingStock) || 0;
-    const salePrice = Number(addItemForm.salePrice) || 0;
-    const purchasePrice = Number(addItemForm.purchasePrice) || 0;
-    const minWholesaleQty = Number(addItemForm.minWholesaleQty) || 0;
-    const openingStockValue = resolveStockValueFromPrices(
-      openingStock,
-      addItemForm.atPrice,
-      purchasePrice,
-    );
-    const selectedItemCategory = categoryList.find(
-      (category) => category.id === addItemForm.categoryId,
-    );
-    const previousCategoryName = itemBeingEdited?.category ?? null;
-    const currentCategoryName = selectedItemCategory?.name ?? null;
-    const mfgDate = addItemForm.mfgDate ? addItemForm.mfgDate : null;
-    const expDate = addItemForm.expDate ? addItemForm.expDate : null;
-
-    const payload = {
-      id: itemBeingEdited?.id,
-      name: normalizedName,
-      code: addItemForm.itemCode.trim() || null,
-      category: currentCategoryName,
-      salePrice,
-      wholesalePrice: Number(addItemForm.wholesalePrice) || 0,
-      purchasePrice,
-      atPrice: addItemForm.atPrice !== '' ? Number(addItemForm.atPrice) : null,
-      stockQuantity: openingStock,
-      unit: `${selectedUnit.fullName} (${selectedUnit.shortName})`,
-      primaryUnit: baseUnit ? `${baseUnit.fullName} (${baseUnit.shortName})` : null,
-      secondaryUnit: secondaryUnit
-        ? `${secondaryUnit.fullName} (${secondaryUnit.shortName})`
-        : null,
-      conversionRate: Number(conversionRate) || 0,
-      imgPath: addItemExistingImagePath,
-      imageDataUrl: addItemImageDataUrl,
-      imageFileName: addItemImageFileName,
-      mfgDate,
-      expDate,
-      stockValue: openingStockValue,
-      minStock: minWholesaleQty,
-    };
-
-    setIsSavingItem(true);
-
-    try {
-      const response = await fetch('/api/items', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to create item');
-      }
-
-      const createdItemPayload = (await response.json()) as {
-        id: string;
-        name: string;
-        code?: string | null;
-        category?: string | null;
-        unit?: string | null;
-        primaryUnit?: string | null;
-        secondaryUnit?: string | null;
-        conversionRate?: number | null;
-        imgPath?: string | null;
-        minStock?: number | null;
-        salePrice: number;
-        wholesalePrice?: number;
-        purchasePrice: number;
-        stockQuantity: number;
-        stockValue: number;
-        batchJson?: string | null;
-        secondaryStock?: number | null;
-        mfgDate?: string | null;
-        expDate?: string | null;
-      };
-
-      const createdItem: Item = {
-        id: String(createdItemPayload.id),
-        name: String(createdItemPayload.name),
-        code: createdItemPayload.code ?? (addItemForm.itemCode.trim() || null),
-        category: createdItemPayload.category ?? currentCategoryName,
-        unit:
-          createdItemPayload.unit ??
-          `${selectedUnit.fullName} (${selectedUnit.shortName})`,
-        primaryUnit:
-          createdItemPayload.primaryUnit ??
-          (baseUnit ? `${baseUnit.fullName} (${baseUnit.shortName})` : null),
-        secondaryUnit:
-          createdItemPayload.secondaryUnit ??
-          (secondaryUnit
-            ? `${secondaryUnit.fullName} (${secondaryUnit.shortName})`
-            : null),
-        conversionRate:
-          createdItemPayload.conversionRate ??
-          (Number(conversionRate) || null),
-        imgPath: createdItemPayload.imgPath ?? addItemExistingImagePath,
-        mfgDate: createdItemPayload.mfgDate ?? mfgDate,
-        expDate: createdItemPayload.expDate ?? expDate,
-        minStock:
-          createdItemPayload.minStock ??
-          (minWholesaleQty === 0 ? null : minWholesaleQty),
-        salePrice: Number(createdItemPayload.salePrice ?? salePrice),
-        wholesalePrice: Number(
-          createdItemPayload.wholesalePrice ??
-          (Number(addItemForm.wholesalePrice) || 0),
-        ),
-        purchasePrice: Number(createdItemPayload.purchasePrice ?? purchasePrice),
-        stockQuantity: Number(createdItemPayload.stockQuantity ?? openingStock),
-        stockValue: Number(createdItemPayload.stockValue ?? openingStockValue),
-        secondaryStock: createdItemPayload.secondaryStock ?? (Number(createdItemPayload.stockQuantity ?? openingStock) * (Number(conversionRate) || 0)),
-      };
-
-      setItemList((previousItems) => {
-        const hasExistingItem = previousItems.some(
-          (item) => item.id === createdItem.id,
-        );
-
-        const nextItems = hasExistingItem
-          ? previousItems.map((item) =>
-            item.id === createdItem.id ? createdItem : item,
-          )
-          : [...previousItems, createdItem];
-
-        nextItems.sort((first, second) => first.name.localeCompare(second.name));
-        return nextItems;
-      });
-      setSelectedItem(createdItem);
-
-      if (!itemBeingEdited && selectedItemCategory) {
-        setCategoryList((previousCategories) =>
-          previousCategories.map((category) =>
-            category.id === selectedItemCategory.id
-              ? { ...category, itemCount: category.itemCount + 1 }
-              : category,
-          ),
-        );
-      }
-
-      if (
-        itemBeingEdited &&
-        previousCategoryName !== currentCategoryName
-      ) {
-        setCategoryList((previousCategories) =>
-          previousCategories.map((category) => {
-            if (previousCategoryName && category.name === previousCategoryName) {
-              return {
-                ...category,
-                itemCount: Math.max(0, category.itemCount - 1),
-              };
-            }
-
-            if (currentCategoryName && category.name === currentCategoryName) {
-              return {
-                ...category,
-                itemCount: category.itemCount + 1,
-              };
-            }
-
-            return category;
-          }),
-        );
-      }
-
-      setAddItemForm(getInitialAddItemFormState());
-      setItemBeingEdited(null);
-      setSelectedUnitId('');
-      setBaseUnitId('');
-      setSecondaryUnitId('');
-      setConversionRate(0);
-      setAddItemImageDataUrl(null);
-      setAddItemImageFileName('');
-      setAddItemExistingImagePath(null);
-      setAddItemTab('pricing');
-
-      if (closeAfterSave) {
-        setShowAddItem(false);
-
-      }
-    } catch (error) {
-      console.error(error);
-    } finally {
-      setIsSavingItem(false);
-    }
-  };
-
-  const showEmptyState = activeTab === 'products' && (!isItemsLoading ? itemList.length === 0 : !hasItemsCache);
-
+  // ---- Render ----
   return (
     <div className="h-full flex flex-col bg-[#D0DCE7] p-0 gap-1">
       {/* Top Header Card */}
-      {!showEmptyState && (
-        <div
-          className="p-0 bg-white rounded-none flex items-center justify-between shrink-0 w-full"
-          style={{ minHeight: "56px" }}
-        >
-          <div className="flex w-full">
-            {(["products", "category", "units"] as const).map((tab) => (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                className={`flex-1 text-sm font-medium pb-2 border-b-2 transition-colors ${activeTab === tab
+      <div
+        className="p-0 bg-white rounded-none flex items-center justify-between shrink-0 w-full"
+        style={{ minHeight: "56px" }}
+      >
+        <div className="flex w-full">
+          {(["products", "category", "units"] as const).map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              className={`flex-1 text-sm font-medium pb-2 border-b-2 transition-colors ${
+                activeTab === tab
                   ? "text-[#E53935] border-[#E53935]"
                   : "text-gray-500 border-transparent hover:text-gray-700"
-                  }`}
-              >
-                {tab.toUpperCase()}
-              </button>
-            ))}
-          </div>
+              }`}
+            >
+              {tab.toUpperCase()}
+            </button>
+          ))}
         </div>
-      )}
+      </div>
 
       {/* Main Content Area */}
-      {showEmptyState ? (
-        <div className="flex-1 flex flex-col items-center justify-center w-full h-full text-center py-12 px-4 bg-white m-1 rounded-md shadow-sm">
-          <div className="w-32 h-32 mx-auto mb-6 relative">
-            <div className="absolute inset-0 bg-gradient-to-br from-blue-100 to-blue-200 rounded-2xl transform rotate-6" />
-            <div className="absolute inset-0 bg-white rounded-2xl shadow-lg flex items-center justify-center">
-              <Package className="w-16 h-16 text-gray-400" />
-            </div>
-            <div className="absolute -top-2 -right-2 w-8 h-8 bg-blue-400 rounded-full flex items-center justify-center">
-              <span className="text-blue-800 text-lg font-bold">I</span>
-            </div>
-            <div className="absolute -bottom-2 -left-2 w-6 h-6 bg-blue-300 rounded-full flex items-center justify-center">
-              <span className="text-blue-800 text-sm font-bold">i</span>
-            </div>
-          </div>
-          <h2 className="text-2xl font-semibold text-gray-900 mb-2">
-            Manage Your Items
-          </h2>
-          <p className="text-gray-500 mb-8 max-w-md mx-auto">
-            Keep track of all your products, services, and inventory in one place. Add your first item to get started.
-          </p>
+      <div className="flex-1 flex gap-1 overflow-hidden">
+        {activeTab === "products" && (
+          <ProductsTab
+            units={units}
+            categoryList={categoryList}
+            setCategoryList={setCategoryList}
+            onOpenAddCategory={(onCreated) => {
+              setNewCategoryName("");
+              setCategoryBeingEdited(null);
+              if (onCreated) {
+                addCategoryCallbackRef.current = onCreated;
+              }
+              setShowAddCategory(true);
+            }}
+            onOpenUnitSelector={(opts) => {
+              setUnitSelectorBaseUnitId(opts.baseUnitId);
+              setUnitSelectorSecondaryUnitId(opts.secondaryUnitId);
+              setUnitSelectorConversionRate(opts.conversionRate);
+              setUnitSelectorOnSave(() => opts.onSave);
+              setShowUnitSelector(true);
+            }}
+          />
+        )}
 
-          <button
-            onClick={() => setShowAddItem(true)}
-            className="bg-[#E53935] hover:bg-red-600 text-white px-8 py-3 rounded-full text-base font-medium inline-flex items-center gap-2 transition-colors shadow-sm hover:shadow"
-          >
-            <Plus className="w-5 h-5" />
-            Add First Item
-          </button>
-        </div>
-      ) : isItemsLoading && activeTab === 'products' ? (
-        <div className="flex-1 flex items-center justify-center bg-white m-1 rounded-md shadow-sm">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#E53935]"></div>
-        </div>
-      ) : (
-        <div className="flex-1 flex gap-1 overflow-hidden">
-          {activeTab === "products" && (
-            <>
-              {/* Left Panel Card - Item List */}
-              <Card
-                className="w-80 bg-white rounded-md flex flex-col shrink-0 overflow-hidden shadow-sm"
-                style={{ marginLeft: "4px" }}
-              >
-                <CardHeader className="p-2 pb-0 border-none flex flex-col gap-2">
-                  <div className="flex items-center justify-between mb-3">
-                    {isProductSearchActive ? (
-                      <div className="relative mr-3 flex-1 max-w-[220px]">
-                        <input
-                          ref={productSearchInputRef}
-                          type="text"
-                          value={productSearchTerm}
-                          onChange={(event) => setProductSearchTerm(event.target.value)}
-                          onBlur={() => {
-                            setProductSearchTerm('');
-                            setIsProductSearchActive(false);
-                          }}
-                          onKeyDown={(event) => {
-                            if (event.key === 'Escape') {
-                              setProductSearchTerm('');
-                              setIsProductSearchActive(false);
-                            }
-                          }}
-                          placeholder="Search items"
-                          className="w-full border border-[#D1D5DB] rounded-lg px-3 py-2 text-sm"
-                        />
-                      </div>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => setIsProductSearchActive(true)}
-                        className="w-10 h-10 rounded-full bg-[#E5E7EB] flex items-center justify-center text-[#4B5563] hover:bg-[#D1D5DB] transition-colors mr-3"
-                        aria-label="Search products"
-                      >
-                        <Search className="w-5 h-5" />
-                      </button>
-                    )}
-                    <button
-                      onClick={openAddItemModal}
-                      className="flex items-center gap-2 bg-[#FFA726] hover:bg-[#FB8C00] text-white font-semibold rounded-lg px-5 py-2 shadow transition-all text-base relative"
-                    >
-                      <Plus className="w-5 h-5" />
-                      Add Item
-                      <ChevronDown className="w-4 h-4 ml-1" />
-                    </button>
-                  </div>
-                </CardHeader>
-                <CardContent className="flex-1 overflow-y-auto p-0">
-                  <table className="w-full text-sm">
-                    <thead className="bg-[#F7F9FB] sticky top-0 z-10">
-                      <tr>
-                        <th className="px-4 py-2 text-left font-semibold text-[#7B8A9A] text-xs tracking-wide align-middle">
-                          ITEM
-
-                        </th>
-                        <th className="px-4 py-2 text-right font-semibold text-[#7B8A9A] text-xs tracking-wide align-middle">
-                          QUANTITY
-
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {filteredProductList.map((item) => (
-                        <tr
-                          key={item.id}
-                          onClick={() => setSelectedItem(item)}
-                          onContextMenu={(event) => {
-                            event.preventDefault();
-                            setSelectedItem(item);
-                            setItemContextMenu({
-                              item,
-                              x: event.clientX,
-                              y: event.clientY,
-                            });
-                          }}
-                          className={`cursor-pointer border-b border-[#E3EAF2] ${selectedItem?.id === item.id
-                            ? "bg-[#E3F0FF] border-l-4 border-l-[#1976D2]"
-                            : "hover:bg-[#F5F8FA]"
-                            }`}
-                        >
-                          <td className="px-4 py-3 text-[#222B45] font-medium">
-                            {item.name}
-                          </td>
-                          <td
-                            className={`px-4 py-3 text-right font-semibold ${item.stockQuantity < 0
-                              ? "text-[#E53935]"
-                              : "text-[#43A047]"
-                              }`}
-                          >
-                            {Math.trunc(Number(item.stockQuantity || 0))}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </CardContent>
-              </Card>
-
-              {itemContextMenu && (
-                <div
-                  className="fixed z-50 min-w-40 rounded-md border bg-white p-1 shadow-md"
-                  style={getContextMenuStyle(itemContextMenu.x, itemContextMenu.y)}
-                  onClick={(event) => event.stopPropagation()}
-                >
-                  <button
-                    onClick={() => {
-                      setSelectedItem(itemContextMenu.item);
-                      openEditItemDialog(itemContextMenu.item);
-                      setItemContextMenu(null);
-                    }}
-                    className="w-full rounded-sm px-2 py-1.5 text-left text-sm hover:bg-gray-100"
-                  >
-                    View/Edit
-                  </button>
-                  <button
-                    onClick={() => {
-                      const item = itemContextMenu.item;
-                      setItemContextMenu(null);
-                      setItemPendingDelete(item);
-                    }}
-                    className="w-full rounded-sm px-2 py-1.5 text-left text-sm text-red-600 hover:bg-red-50"
-                  >
-                    Delete
-                  </button>
-                </div>
-              )}
-
-              {/* Right Panel Card - Item Details */}
-              <div
-                className="flex-1 flex flex-col"
-                style={{ marginRight: "4px" }}
-              >
-                {selectedItem && (
-                  <>
-                    {/* Item Details Card */}
-                    <Card
-                      className="bg-white rounded-md shadow-sm px-0 py-0"
-                      style={{
-                        minHeight: "96px",
-                        marginBottom: "4px",
-                      }}
-                    >
-                      <div className="flex w-full h-full items-start justify-between">
-                        {/* Left: Name and icon */}
-                        <div className="flex flex-col justify-start pl-6 pt-5 pb-2 min-w-[220px]">
-                          <div className="flex items-center gap-2 mb-4">
-                            <h2 className="text-base font-bold text-[#151B26] tracking-wide uppercase">
-                              {selectedItem.name}
-                            </h2>
-                            <span className="inline-block align-middle text-[#151B26] cursor-pointer">
-                              <svg width="18" height="18" fill="none">
-                                <path
-                                  d="M7.5 10.5L15 3M15 3H9M15 3V9"
-                                  stroke="#151B26"
-                                  strokeWidth="1.5"
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                />
-                              </svg>
-                            </span>
-                          </div>
-                          <div className="flex flex-col gap-2">
-                            <span className="text-sm font-medium text-[#151B26]">
-                              SALE PRICE:{" "}
-                              <span className="text-[#43A047]">
-                                Rs {selectedItem.salePrice.toFixed(2)}
-                              </span>
-                            </span>
-                            <span className="text-sm font-medium text-[#151B26]">
-                              PURCHASE PRICE:{" "}
-                              <span className="text-[#43A047]">
-                                Rs {selectedItem.purchasePrice.toFixed(2)}
-                              </span>
-                            </span>
-
-                          </div>
-                        </div>
-                        {/* Right: Button and stats */}
-                        <div className="flex flex-col items-end justify-between flex-1 pr-6 pt-5 pb-2">
-                          <div className="flex items-center gap-3 mb-6">
-                            <button
-                              onClick={() => setShowStockDetailsPopup(true)}
-                              className="bg-[#F0F4F8] hover:bg-[#E3EAF2] text-[#1976D2] px-4 py-2 rounded-lg text-sm font-bold flex items-center shadow-sm transition-all border border-[#1976D2]"
-                            >
-                              Stock Details
-                            </button>
-                            <button
-                              onClick={() => openAdjustStockDialog(selectedItem)}
-                              className="bg-[#1976D2] hover:bg-[#1251A3] text-white px-5 py-2 rounded-lg text-sm font-bold flex items-center gap-2 shadow transition-all"
-                              style={{ minWidth: "140px" }}
-                            >
-                              <SlidersHorizontal className="w-5 h-5" />
-                              ADJUST ITEM
-                            </button>
-                          </div>
-                          <div className="flex flex-col gap-2 items-end">
-                            <span className="text-sm font-medium text-[#151B26] flex items-center gap-2">
-                              STOCK QUANTITY:{" "}
-                              <span className="text-[#43A047]">
-                                {Math.floor(selectedItem.stockQuantity)}
-                              </span>
-                            </span>
-                            <span className="text-sm font-medium text-[#151B26]">
-                              STOCK VALUE:{" "}
-                              <span className="text-[#43A047]">
-                                Rs {selectedItem.stockValue?.toLocaleString()}
-                              </span>
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    </Card>
-                    {/* Transactions Card */}
-                    <Card className="bg-white rounded-md flex flex-col flex-1 overflow-hidden shadow-sm p-0">
-                      <CardContent className="p-0">
-                        <div className="flex items-center justify-between px-6 pt-4 pb-2">
-                          <h3 className="text-base font-bold text-[#222B45] tracking-wide">
-                            TRANSACTIONS
-                          </h3>
-                          <div className="flex gap-2 items-center">
-                            {showTransactionSearch && (
-                              <div className="flex items-center bg-[#F7F9FB] rounded-lg px-3 py-1.5 border border-[#E3EAF2] w-64 mr-2">
-                                <Search className="w-4 h-4 text-gray-400 mr-2 shrink-0" />
-                                <input
-                                  type="text"
-                                  placeholder="Search transactions..."
-                                  value={transactionSearchTerm}
-                                  onChange={(e) => setTransactionSearchTerm(e.target.value)}
-                                  onBlur={() => {
-                                    setTimeout(() => {
-                                      setShowTransactionSearch(false);
-                                      setTransactionSearchTerm("");
-                                    }, 150);
-                                  }}
-                                  className="w-full bg-transparent border-none outline-none text-sm"
-                                  autoFocus
-                                />
-                              </div>
-                            )}
-                            {!showTransactionSearch && (
-                              <button
-                                onClick={() => setShowTransactionSearch(true)}
-                                className="p-1.5 hover:bg-[#F7F9FB] rounded"
-                              >
-                                <Search className="w-4 h-4 text-[#7B8A9A]" />
-                              </button>
-                            )}
-                            <button
-                              onClick={handlePrintTransactions}
-                              className="p-1.5 hover:bg-[#F7F9FB] rounded"
-                            >
-                              <Printer className="w-4 h-4 text-[#7B8A9A]" />
-                            </button>
-                            <button
-                              onClick={handleExportExcel}
-                              className="p-1.5 hover:bg-[#F7F9FB] rounded relative"
-                            >
-                              <span className="bg-green-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
-                                xls
-                              </span>
-                            </button>
-                          </div>
-                        </div>
-                        <div className="border-t border-[#E3EAF2] rounded-b-lg overflow-x-auto">
-                          <table className="w-full text-sm">
-                            <thead className="bg-[#F7F9FB] sticky top-0 z-10">
-                              <tr>
-                                <th className="px-4 py-2 text-left font-semibold text-[#7B8A9A] text-xs tracking-wide align-middle">
-                                  TYPE{" "}
-
-                                </th>
-                                <th className="px-4 py-2 text-left font-semibold text-[#7B8A9A] text-xs tracking-wide align-middle">
-                                  INVOICE/#{" "}
-
-                                </th>
-                                <th className="px-4 py-2 text-left font-semibold text-[#7B8A9A] text-xs tracking-wide align-middle">
-                                  NAME{" "}
-
-                                </th>
-                                <th className="px-4 py-2 text-left font-semibold text-[#7B8A9A] text-xs tracking-wide align-middle">
-                                  DATE{" "}
-
-                                </th>
-                                <th className="px-4 py-2 text-right font-semibold text-[#7B8A9A] text-xs tracking-wide align-middle">
-                                  QUANTITY{" "}
-
-                                </th>
-                                <th className="px-4 py-2 text-right font-semibold text-[#7B8A9A] text-xs tracking-wide align-middle">
-                                  PRICE/U...{" "}
-
-                                </th>
-                                <th className="px-4 py-2 text-left font-semibold text-[#7B8A9A] text-xs tracking-wide align-middle">
-                                  STATUS{" "}
-
-                                </th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {filteredItemTransactions.length ? (
-                                filteredItemTransactions.map((transaction) => (
-                                  <tr
-                                    key={transaction.id}
-                                    className="border-b border-[#E3EAF2] hover:bg-[#F5F8FA]"
-                                  >
-                                    <td className="px-4 py-2">
-                                      <span
-                                        className={`inline-flex items-center gap-1.5 ${transaction.type === "Sale"
-                                          ? "text-[#43A047]"
-                                          : "text-[#E53935]"
-                                          }`}
-                                      >
-                                        <span
-                                          className={`w-2 h-2 rounded-full ${transaction.type === "Sale"
-                                            ? "bg-[#43A047]"
-                                            : "bg-[#E53935]"
-                                            }`}
-                                        ></span>
-                                        {transaction.type}
-                                      </span>
-                                    </td>
-                                    <td className="px-4 py-2">{transaction.invoiceNo}</td>
-                                    <td className="px-4 py-2">{transaction.partyName}</td>
-                                    <td className="px-4 py-2">{transaction.date}</td>
-                                    <td className="px-4 py-2 text-right">
-                                      {Number(transaction.quantity).toLocaleString()} {transaction.unit || ""}
-                                    </td>
-                                    <td className="px-4 py-2 text-right">
-                                      Rs {Number(transaction.price).toFixed(2)}
-                                    </td>
-                                    <td className="px-4 py-2">
-                                      <span
-                                        className={`text-xs px-2 py-1 rounded-full font-semibold ${transaction.status === "Paid"
-                                          ? "bg-[#E6F4EA] text-[#43A047]"
-                                          : transaction.status === "Unpaid"
-                                            ? "bg-[#FDEAEA] text-[#E53935]"
-                                            : "bg-[#F7F9FB] text-[#7B8A9A]"
-                                          }`}
-                                      >
-                                        {transaction.status}
-                                      </span>
-                                    </td>
-                                  </tr>
-                                ))
-                              ) : (
-                                <tr>
-                                  <td
-                                    colSpan={7}
-                                    className="px-4 py-8 text-center text-gray-500"
-                                  >
-                                    No transactions found for this item
-                                  </td>
-                                </tr>
-                              )}
-                            </tbody>
-                          </table>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </>
-                )}
-              </div>
-            </>
-          )}
-
-          {activeTab === "category" && (
-            <div className="flex-1 flex gap-1 overflow-hidden">
-              {/* Left Panel - Category List */}
-              <div
-                className="w-80 bg-white rounded-md flex flex-col shrink-0 overflow-hidden shadow-sm"
-                style={{ marginLeft: "4px" }}
-              >
-                <div className="p-2 pb-0 border-none flex flex-col gap-2">
-                  <div className="flex items-center justify-between mb-3">
-                    {isCategorySearchActive ? (
-                      <div className="relative mr-3 flex-1 max-w-[220px]">
-                        <input
-                          ref={categorySearchInputRef}
-                          type="text"
-                          value={categorySearchTerm}
-                          onChange={(event) => setCategorySearchTerm(event.target.value)}
-                          onBlur={() => {
-                            setCategorySearchTerm('');
-                            setIsCategorySearchActive(false);
-                          }}
-                          onKeyDown={(event) => {
-                            if (event.key === 'Escape') {
-                              setCategorySearchTerm('');
-                              setIsCategorySearchActive(false);
-                            }
-                          }}
-                          placeholder="Search categories"
-                          className="w-full border border-[#D1D5DB] rounded-lg px-3 py-2 text-sm"
-                        />
-                      </div>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => setIsCategorySearchActive(true)}
-                        className="w-10 h-10 rounded-full bg-[#E5E7EB] flex items-center justify-center text-[#4B5563] hover:bg-[#D1D5DB] transition-colors mr-3"
-                        aria-label="Search categories"
-                      >
-                        <Search className="w-5 h-5" />
-                      </button>
-                    )}
-                    <button
-                      onClick={() => {
-                        setCategoryBeingEdited(null);
-                        setNewCategoryName('');
-                        setShowAddCategory(true);
-                      }}
-                      className="flex items-center gap-2 bg-[#FFA726] hover:bg-[#FB8C00] text-white font-semibold rounded-lg px-5 py-2 shadow transition-all text-base relative"
-                    >
-                      <Plus className="w-5 h-5" />
-                      Add Category
-                    </button>
-                  </div>
-                </div>
-                <div className="flex-1 overflow-y-auto p-0">
-                  <table className="w-full text-sm">
-                    <thead className="bg-[#F7F9FB] sticky top-0 z-10">
-                      <tr>
-                        <th className="px-4 py-2 text-left font-semibold text-[#7B8A9A] text-xs tracking-wide align-middle">
-                          CATEGORY
-                        </th>
-                        <th className="px-4 py-2 text-right font-semibold text-[#7B8A9A] text-xs tracking-wide align-middle">
-                          ITEM
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr
-                        onClick={() => setSelectedCategoryId(null)}
-                        className={`border-b border-[#E3EAF2] hover:bg-[#F5F8FA] cursor-pointer ${selectedCategoryId === null ? "bg-[#E3F0FF]" : ""}`}
-                      >
-                        <td className="px-4 py-3 text-[#222B45] font-medium">
-                          Items not in any Category
-                        </td>
-                        <td className="px-4 py-3 text-right font-semibold text-[#7B8A9A]">
-                          0
-                        </td>
-                      </tr>
-                      {filteredCategoryList.map((cat) => (
-                        <tr
-                          key={cat.id}
-                          onClick={() => setSelectedCategoryId(cat.id)}
-                          onContextMenu={(event) => {
-                            event.preventDefault();
-                            setCategoryContextMenu({
-                              category: cat,
-                              x: event.clientX,
-                              y: event.clientY,
-                            });
-                          }}
-                          className={`border-b border-[#E3EAF2] hover:bg-[#F5F8FA] cursor-pointer ${selectedCategoryId === cat.id ? "bg-[#E3F0FF]" : ""}`}
-                        >
-                          <td className="px-4 py-3 text-[#222B45] font-medium">
-                            {cat.name}
-                          </td>
-                          <td className="px-4 py-3 text-right font-semibold text-[#7B8A9A]">
-                            {cat.itemCount}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              {categoryContextMenu && (
-                <div
-                  className="fixed z-50 min-w-40 rounded-md border bg-white p-1 shadow-md"
-                  style={getContextMenuStyle(categoryContextMenu.x, categoryContextMenu.y)}
-                  onClick={(event) => event.stopPropagation()}
-                >
-                  <button
-                    onClick={() => {
-                      setSelectedCategoryId(categoryContextMenu.category.id);
-                      openEditCategoryDialog(categoryContextMenu.category);
-                      setCategoryContextMenu(null);
-                    }}
-                    className="w-full rounded-sm px-2 py-1.5 text-left text-sm hover:bg-gray-100"
-                  >
-                    View/Edit
-                  </button>
-                  <button
-                    onClick={() => {
-                      const category = categoryContextMenu.category;
-                      setCategoryContextMenu(null);
-                      setCategoryPendingDelete(category);
-                    }}
-                    className="w-full rounded-sm px-2 py-1.5 text-left text-sm text-red-600 hover:bg-red-50"
-                  >
-                    Delete
-                  </button>
-                </div>
-              )}
-
-              {/* Right Panel - Category Details and Items */}
-              <div
-                className="flex-1 flex flex-col"
-                style={{ marginRight: "4px" }}
-              >
-                {/* Category Details Card */}
-                <Card
-                  className="bg-white rounded-md shadow-sm px-0 py-0"
-                  style={{
-                    minHeight: "72px",
-                    marginBottom: "4px",
-                  }}
-                >
-                  <div className="flex w-full h-full items-start justify-between">
-                    <div className="flex flex-col justify-start pl-6 pt-5 pb-2 min-w-[220px]">
-                      <div className="flex items-center gap-2 mb-2">
-                        <h2 className="text-base font-bold text-[#151B26] tracking-wide uppercase">
-                          {selectedCategory?.name ?? "ITEMS NOT IN ANY CATEGORY"}
-                        </h2>
-                      </div>
-                      <span className="text-sm font-medium text-[#151B26]">
-                        {filteredCategoryItems.length}
-                      </span>
-                    </div>
-                    <div className="flex flex-col items-end justify-between flex-1 pr-6 pt-5 pb-2">
-                      <button
-                        onClick={openMoveItemsDialog}
-                        className="bg-[#1976D2] hover:bg-[#1251A3] text-white px-5 py-2 rounded-lg text-sm font-bold flex items-center gap-2 shadow transition-all mb-2"
-                        style={{ minWidth: "140px" }}
-                      >
-                        Move To This Category
-                      </button>
-                    </div>
-                  </div>
-                </Card>
-                {/* Items Table Card */}
-                <Card className="bg-white rounded-md flex flex-col flex-1 overflow-hidden shadow-sm p-0">
-                  <CardContent className="p-0">
-                    <div className="flex items-center justify-between px-6 pt-4 pb-2">
-                      <h3 className="text-base font-bold text-[#222B45] tracking-wide">
-                        ITEMS
-                      </h3>
-                      <div className="flex gap-2 items-center">
-                        <div className="relative">
-                          <input
-                            type="text"
-                            placeholder="Search items..."
-                            value={categoryItemSearchTerm}
-                            onChange={(e) => setCategoryItemSearchTerm(e.target.value)}
-                            className="bg-[#F7F9FB] border border-[#E3EAF2] rounded-lg px-8 py-1.5 text-sm text-[#222B45] focus:bg-white focus:border-[#1976D2]"
-                          />
-                          <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-[#AEB8C4]" />
-                        </div>
-                      </div>
-                    </div>
-                    <div className="border-t border-[#E3EAF2] rounded-b-lg overflow-x-auto">
-                      <table className="w-full text-sm">
-                        <thead className="bg-[#F7F9FB] sticky top-0 z-10">
-                          <tr>
-                            <th className="px-4 py-2 text-left font-semibold text-[#7B8A9A] text-xs tracking-wide align-middle">
-                              NAME{" "}
-
-                            </th>
-                            <th className="px-4 py-2 text-right font-semibold text-[#7B8A9A] text-xs tracking-wide align-middle">
-                              QUANTITY{" "}
-
-                            </th>
-                            <th className="px-4 py-2 text-right font-semibold text-[#7B8A9A] text-xs tracking-wide align-middle">
-                              STOCK VALUE{" "}
-
-                            </th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {filteredCategoryItems.length ? (
-                            filteredCategoryItems.map((item) => (
-                              <tr
-                                key={item.id}
-                                className="border-b border-[#E3EAF2] hover:bg-[#F5F8FA]"
-                              >
-                                <td className="px-4 py-3 text-[#222B45] font-medium">
-                                  {item.name}
-                                </td>
-                                <td
-                                  className={`px-4 py-3 text-right font-semibold ${item.stockQuantity < 0
-                                    ? "text-[#E53935]"
-                                    : "text-[#43A047]"
-                                    }`}
-                                >
-                                  {item.stockQuantity}
-                                </td>
-                                <td className="px-4 py-3 text-right font-semibold text-[#43A047]">
-                                  Rs {Number(item.stockValue ?? 0).toLocaleString(undefined, {
-                                    minimumFractionDigits: 2,
-                                    maximumFractionDigits: 2,
-                                  })}
-                                </td>
-                              </tr>
-                            ))
-                          ) : (
-                            <tr>
-                              <td
-                                colSpan={3}
-                                className="px-4 py-6 text-center text-sm text-[#7B8A9A]"
-                              >
-                                There are no items to show.
-                              </td>
-                            </tr>
-                          )}
-                        </tbody>
-                      </table>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            </div>
-          )}
-
-          {activeTab === "units" && (
-            <div className="flex-1 flex gap-1 overflow-hidden">
-              {/* Left Panel - Unit List */}
-              <Card
-                className="w-80 bg-white rounded-md flex flex-col shrink-0 overflow-hidden shadow-sm"
-                style={{ marginLeft: "4px" }}
-              >
-                <div className="p-3 flex items-center justify-between border-b border-transparent">
-                  {isUnitSearchActive ? (
-                    <div className="relative flex-1 max-w-[220px]">
+        {activeTab === "category" && (
+          <div className="flex-1 flex gap-1 overflow-hidden">
+            {/* Left Panel - Category List */}
+            <div
+              className="w-80 bg-white rounded-md flex flex-col shrink-0 overflow-hidden shadow-sm"
+              style={{ marginLeft: "4px" }}
+            >
+              <div className="p-2 pb-0 border-none flex flex-col gap-2">
+                <div className="flex items-center justify-between mb-3">
+                  {isCategorySearchActive ? (
+                    <div className="relative mr-3 flex-1 max-w-[220px]">
                       <input
-                        ref={unitSearchInputRef}
+                        ref={categorySearchInputRef}
                         type="text"
-                        value={unitSearchTerm}
-                        onChange={(event) => setUnitSearchTerm(event.target.value)}
+                        value={categorySearchTerm}
+                        onChange={(event) =>
+                          setCategorySearchTerm(event.target.value)
+                        }
                         onBlur={() => {
-                          setUnitSearchTerm('');
-                          setIsUnitSearchActive(false);
+                          setCategorySearchTerm("");
+                          setIsCategorySearchActive(false);
                         }}
                         onKeyDown={(event) => {
-                          if (event.key === 'Escape') {
-                            setUnitSearchTerm('');
-                            setIsUnitSearchActive(false);
+                          if (event.key === "Escape") {
+                            setCategorySearchTerm("");
+                            setIsCategorySearchActive(false);
                           }
                         }}
-                        placeholder="Search units"
+                        placeholder="Search categories"
                         className="w-full border border-[#D1D5DB] rounded-lg px-3 py-2 text-sm"
                       />
                     </div>
                   ) : (
                     <button
                       type="button"
-                      onClick={() => setIsUnitSearchActive(true)}
-                      className="w-10 h-10 rounded-full bg-[#E5E7EB] flex items-center justify-center text-[#4B5563] hover:bg-[#D1D5DB] transition-colors"
-                      aria-label="Search units"
+                      onClick={() => setIsCategorySearchActive(true)}
+                      className="w-10 h-10 rounded-full bg-[#E5E7EB] flex items-center justify-center text-[#4B5563] hover:bg-[#D1D5DB] transition-colors mr-3"
+                      aria-label="Search categories"
                     >
                       <Search className="w-5 h-5" />
                     </button>
                   )}
                   <button
                     onClick={() => {
-                      setUnitBeingEdited(null);
-                      setAddUnitFullName('');
-                      setAddUnitShortName('');
-                      setShowAddUnit(true);
+                      setCategoryBeingEdited(null);
+                      setNewCategoryName("");
+                      setShowAddCategory(true);
                     }}
-                    className="flex items-center gap-1 bg-[#FFA726] hover:bg-[#FB8C00] text-white font-semibold rounded-lg px-4 py-2 shadow transition-all text-sm"
+                    className="flex items-center gap-2 bg-[#FFA726] hover:bg-[#FB8C00] text-white font-semibold rounded-lg px-5 py-2 shadow transition-all text-base relative"
                   >
                     <Plus className="w-5 h-5" />
-                    Add Units
+                    Add Category
                   </button>
                 </div>
-                <div className="flex-1 overflow-y-auto p-0">
-                  <table className="w-full text-sm">
-                    <thead className="bg-white sticky top-0 z-10 border-b border-[#E3EAF2]">
-                      <tr>
-                        <th className="px-4 py-3 text-left font-semibold text-[#7B8A9A] text-xs tracking-wide">
-                          FULLNAME
-                        </th>
-                        <th className="px-4 py-3 text-right font-semibold text-[#7B8A9A] text-xs tracking-wide pr-8">
-                          SHORTNAME
-                        </th>
+              </div>
+              <div className="flex-1 overflow-y-auto p-0">
+                <table className="w-full text-sm">
+                  <thead className="bg-[#F7F9FB] sticky top-0 z-10">
+                    <tr>
+                      <th className="px-4 py-2 text-left font-semibold text-[#7B8A9A] text-xs tracking-wide align-middle">
+                        CATEGORY
+                      </th>
+                      <th className="px-4 py-2 text-right font-semibold text-[#7B8A9A] text-xs tracking-wide align-middle">
+                        ITEM
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr
+                      onClick={() => setSelectedCategoryId(null)}
+                      className={`border-b border-[#E3EAF2] hover:bg-[#F5F8FA] cursor-pointer ${selectedCategoryId === null ? "bg-[#E3F0FF]" : ""}`}
+                    >
+                      <td className="px-4 py-3 text-[#222B45] font-medium">
+                        Items not in any Category
+                      </td>
+                      <td className="px-4 py-3 text-right font-semibold text-[#7B8A9A]">
+                        0
+                      </td>
+                    </tr>
+                    {filteredCategoryList.map((cat) => (
+                      <tr
+                        key={cat.id}
+                        onClick={() => setSelectedCategoryId(cat.id)}
+                        onContextMenu={(event) => {
+                          event.preventDefault();
+                          setCategoryContextMenu({
+                            category: cat,
+                            x: event.clientX,
+                            y: event.clientY,
+                          });
+                        }}
+                        className={`border-b border-[#E3EAF2] hover:bg-[#F5F8FA] cursor-pointer ${selectedCategoryId === cat.id ? "bg-[#E3F0FF]" : ""}`}
+                      >
+                        <td className="px-4 py-3 text-[#222B45] font-medium">
+                          {cat.name}
+                        </td>
+                        <td className="px-4 py-3 text-right font-semibold text-[#7B8A9A]">
+                          {cat.itemCount}
+                        </td>
                       </tr>
-                    </thead>
-                    <tbody>
-                      {filteredUnitList.map((unit) => {
-                        const isSelected = unit.id === selectedUnitInTabId;
-                        return (
-                          <tr
-                            key={unit.id}
-                            onClick={() => setSelectedUnitInTabId(unit.id)}
-                            onContextMenu={(event) => {
-                              event.preventDefault();
-                              setSelectedUnitInTabId(unit.id);
-                              setUnitContextMenu({
-                                unit,
-                                x: event.clientX,
-                                y: event.clientY,
-                              });
-                            }}
-                            className={`cursor-pointer border-b border-[#E3EAF2] ${isSelected ? "bg-[#DDEBFA]" : "hover:bg-[#F5F8FA]"
-                              }`}
-                          >
-                            <td className="px-4 py-3 text-[#222B45] font-medium uppercase">
-                              {unit.fullName}
-                            </td>
-                            <td className="px-4 py-3 text-right text-[#4B5563]">
-                              <div className="flex items-center justify-end gap-3">
-                                <span className="capitalize">
-                                  {unit.shortName}
-                                </span>
-                              </div>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              </Card>
-
-              {unitContextMenu && (
-                <div
-                  className="fixed z-50 min-w-40 rounded-md border bg-white p-1 shadow-md"
-                  style={getContextMenuStyle(unitContextMenu.x, unitContextMenu.y)}
-                  onClick={(event) => event.stopPropagation()}
-                >
-                  <button
-                    onClick={() => {
-                      setSelectedUnitInTabId(unitContextMenu.unit.id);
-                      openEditUnitDialog(unitContextMenu.unit);
-                      setUnitContextMenu(null);
-                    }}
-                    className="w-full rounded-sm px-2 py-1.5 text-left text-sm hover:bg-gray-100"
-                  >
-                    View/Edit
-                  </button>
-                  <button
-                    onClick={() => {
-                      const unit = unitContextMenu.unit;
-                      setUnitContextMenu(null);
-                      setUnitPendingDelete(unit);
-                    }}
-                    className="w-full rounded-sm px-2 py-1.5 text-left text-sm text-red-600 hover:bg-red-50"
-                  >
-                    Delete
-                  </button>
-                </div>
-              )}
-
-              {conversionContextMenu && (
-                <div
-                  className="fixed z-50 min-w-40 rounded-md border bg-white p-1 shadow-md"
-                  style={getContextMenuStyle(conversionContextMenu.x, conversionContextMenu.y)}
-                  onClick={(event) => event.stopPropagation()}
-                >
-                  <button
-                    onClick={() => {
-                      setConversionBeingEdited(conversionContextMenu.conversion);
-                      setConversionBaseUnit(conversionContextMenu.conversion.base_unit);
-                      setConversionSecondaryUnit(conversionContextMenu.conversion.secondary_unit);
-                      setConversionRateValue(conversionContextMenu.conversion.conversion_rate);
-                      setShowAddConversion(true);
-                      setConversionContextMenu(null);
-                    }}
-                    className="w-full rounded-sm px-2 py-1.5 text-left text-sm hover:bg-gray-100"
-                  >
-                    Edit
-                  </button>
-                  <button
-                    onClick={() => {
-                      setConversionContextMenu(null);
-                      setConversionPendingDelete(conversionContextMenu.conversion);
-                    }}
-                    className="w-full rounded-sm px-2 py-1.5 text-left text-sm text-red-600 hover:bg-red-50"
-                  >
-                    Delete
-                  </button>
-                </div>
-              )}
-
-              {/* Right Panel - Unit Details */}
-              <div
-                className="flex-1 flex flex-col overflow-y-auto"
-                style={{ marginRight: "4px" }}
-              >
-                {/* Top Card: Unit Selection Header */}
-                <Card
-                  className="bg-white rounded-md shadow-sm flex items-center justify-between px-6 py-3"
-                  style={{ minHeight: "64px", marginBottom: "4px" }}
-                >
-                  <h2 className="text-base font-bold text-[#151B26] tracking-wide uppercase">
-                    {selectedUnitInTab?.fullName ?? "NO UNIT SELECTED"}
-                  </h2>
-                  <button
-                    className="bg-[#1976D2] hover:bg-[#1251A3] text-white px-5 py-2 rounded-lg text-sm font-bold shadow transition-all"
-                    onClick={() => setShowAddConversion(true)}
-                  >
-                    Add Conversion
-                  </button>
-                  {/* Add Conversion Modal is rendered at the root of the component, not here */}
-                </Card>
-
-                {/* Bottom Card: Conversions Table Area */}
-                <Card className="bg-white rounded-md flex flex-col flex-1 overflow-hidden shadow-sm p-0">
-                  <CardContent className="p-0">
-                    <div className="flex items-center justify-between px-6 pt-4 pb-2">
-                      <h3 className="text-base font-bold text-[#222B45] tracking-wide">
-                        CONVERSIONS
-                      </h3>
-                      <div className="flex gap-2 items-center">
-                        <div className="relative">
-                          <input
-                            type="text"
-                            placeholder="Search..."
-                            value={conversionSearchTerm}
-                            onChange={(e) => setConversionSearchTerm(e.target.value)}
-                            className="bg-[#F7F9FB] border border-[#E3EAF2] rounded-lg px-8 py-1.5 text-sm text-[#222B45] focus:bg-white focus:border-[#1976D2]"
-                          />
-                          <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-[#AEB8C4]" />
-                        </div>
-                      </div>
-                    </div>
-                    <div className="border-t border-[#E3EAF2] rounded-b-lg overflow-x-auto">
-                      <table className="w-full text-sm">
-                        <thead className="bg-[#F7F9FB] sticky top-0 z-10">
-                          <tr>
-                            <th className="px-4 py-2 text-left font-semibold text-[#7B8A9A] text-xs tracking-wide align-middle w-16">
-                              #
-                            </th>
-                            <th className="px-4 py-2 text-left font-semibold text-[#7B8A9A] text-xs tracking-wide align-middle"></th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {filteredConversions.length ? (
-                            filteredConversions.map((conversion, index) => (
-                              <tr
-                                key={conversion.id}
-                                onContextMenu={(event) => {
-                                  event.preventDefault();
-                                  setConversionContextMenu({
-                                    conversion,
-                                    x: event.clientX,
-                                    y: event.clientY,
-                                  });
-                                }}
-                                className="border-b border-[#E3EAF2] hover:bg-[#F5F8FA] cursor-pointer"
-                              >
-                                <td className="px-4 py-3 text-[#4B5563] font-medium">
-                                  {index + 1}
-                                </td>
-                                <td className="px-4 py-3 text-[#222B45] uppercase">
-                                  {`1 ${conversion.base_unit} = ${Number(conversion.conversion_rate)} ${conversion.secondary_unit}`}
-                                </td>
-                              </tr>
-                            ))
-                          ) : (
-                            <tr>
-                              <td
-                                colSpan={2}
-                                className="px-4 py-6 text-center text-sm text-[#7B8A9A]"
-                              >
-                                There are no conversions to show.
-                              </td>
-                            </tr>
-                          )}
-                        </tbody>
-                      </table>
-                    </div>
-                  </CardContent>
-                </Card>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             </div>
-          )}
-        </div>
-      )}
 
-      {/* Modals & Popups */}
+            {categoryContextMenu && (
+              <div
+                className="fixed z-50 min-w-40 rounded-md border bg-white p-1 shadow-md"
+                style={getContextMenuStyle(
+                  categoryContextMenu.x,
+                  categoryContextMenu.y
+                )}
+                onClick={(event) => event.stopPropagation()}
+              >
+                <button
+                  onClick={() => {
+                    setSelectedCategoryId(categoryContextMenu.category.id);
+                    openEditCategoryDialog(categoryContextMenu.category);
+                    setCategoryContextMenu(null);
+                  }}
+                  className="w-full rounded-sm px-2 py-1.5 text-left text-sm hover:bg-gray-100"
+                >
+                  View/Edit
+                </button>
+                <button
+                  onClick={() => {
+                    const category = categoryContextMenu.category;
+                    setCategoryContextMenu(null);
+                    setCategoryPendingDelete(category);
+                  }}
+                  className="w-full rounded-sm px-2 py-1.5 text-left text-sm text-red-600 hover:bg-red-50"
+                >
+                  Delete
+                </button>
+              </div>
+            )}
+
+            {/* Right Panel - Category Details */}
+            <div
+              className="flex-1 flex flex-col"
+              style={{ marginRight: "4px" }}
+            >
+              <Card
+                className="bg-white rounded-md shadow-sm px-0 py-0"
+                style={{ minHeight: "72px", marginBottom: "4px" }}
+              >
+                <div className="flex w-full h-full items-start justify-between">
+                  <div className="flex flex-col justify-start pl-6 pt-5 pb-2 min-w-[220px]">
+                    <div className="flex items-center gap-2 mb-2">
+                      <h2 className="text-base font-bold text-[#151B26] tracking-wide uppercase">
+                        {selectedCategory?.name ?? "ITEMS NOT IN ANY CATEGORY"}
+                      </h2>
+                    </div>
+                    <span className="text-sm font-medium text-[#151B26]">
+                      {filteredCategoryItems.length}
+                    </span>
+                  </div>
+                  <div className="flex flex-col items-end justify-between flex-1 pr-6 pt-5 pb-2">
+                    <button
+                      onClick={openMoveItemsDialog}
+                      className="bg-[#1976D2] hover:bg-[#1251A3] text-white px-5 py-2 rounded-lg text-sm font-bold flex items-center gap-2 shadow transition-all mb-2"
+                      style={{ minWidth: "140px" }}
+                    >
+                      Move To This Category
+                    </button>
+                  </div>
+                </div>
+              </Card>
+              <Card className="bg-white rounded-md flex flex-col flex-1 overflow-hidden shadow-sm p-0">
+                <CardContent className="p-0">
+                  <div className="flex items-center justify-between px-6 pt-4 pb-2">
+                    <h3 className="text-base font-bold text-[#222B45] tracking-wide">
+                      ITEMS
+                    </h3>
+                    <div className="flex gap-2 items-center">
+                      <div className="relative">
+                        <input
+                          type="text"
+                          placeholder="Search items..."
+                          value={categoryItemSearchTerm}
+                          onChange={(e) =>
+                            setCategoryItemSearchTerm(e.target.value)
+                          }
+                          className="bg-[#F7F9FB] border border-[#E3EAF2] rounded-lg px-8 py-1.5 text-sm text-[#222B45] focus:bg-white focus:border-[#1976D2]"
+                        />
+                        <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-[#AEB8C4]" />
+                      </div>
+                    </div>
+                  </div>
+                  <div className="border-t border-[#E3EAF2] rounded-b-lg overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead className="bg-[#F7F9FB] sticky top-0 z-10">
+                        <tr>
+                          <th className="px-4 py-2 text-left font-semibold text-[#7B8A9A] text-xs tracking-wide align-middle">
+                            NAME{" "}
+                          </th>
+                          <th className="px-4 py-2 text-right font-semibold text-[#7B8A9A] text-xs tracking-wide align-middle">
+                            QUANTITY{" "}
+                          </th>
+                          <th className="px-4 py-2 text-right font-semibold text-[#7B8A9A] text-xs tracking-wide align-middle">
+                            STOCK VALUE{" "}
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filteredCategoryItems.length ? (
+                          filteredCategoryItems.map((item) => (
+                            <tr
+                              key={item.id}
+                              className="border-b border-[#E3EAF2] hover:bg-[#F5F8FA]"
+                            >
+                              <td className="px-4 py-3 text-[#222B45] font-medium">
+                                {item.name}
+                              </td>
+                              <td className="px-4 py-3 text-right font-semibold text-[#43A047]">
+                                —
+                              </td>
+                              <td className="px-4 py-3 text-right font-semibold text-[#43A047]">
+                                —
+                              </td>
+                            </tr>
+                          ))
+                        ) : (
+                          <tr>
+                            <td
+                              colSpan={3}
+                              className="px-4 py-6 text-center text-sm text-[#7B8A9A]"
+                            >
+                              There are no items to show.
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        )}
+
+        {activeTab === "units" && (
+          <div className="flex-1 flex gap-1 overflow-hidden">
+            {/* Left Panel - Unit List */}
+            <Card
+              className="w-80 bg-white rounded-md flex flex-col shrink-0 overflow-hidden shadow-sm"
+              style={{ marginLeft: "4px" }}
+            >
+              <div className="p-3 flex items-center justify-between border-b border-transparent">
+                {isUnitSearchActive ? (
+                  <div className="relative flex-1 max-w-[220px]">
+                    <input
+                      ref={unitSearchInputRef}
+                      type="text"
+                      value={unitSearchTerm}
+                      onChange={(event) =>
+                        setUnitSearchTerm(event.target.value)
+                      }
+                      onBlur={() => {
+                        setUnitSearchTerm("");
+                        setIsUnitSearchActive(false);
+                      }}
+                      onKeyDown={(event) => {
+                        if (event.key === "Escape") {
+                          setUnitSearchTerm("");
+                          setIsUnitSearchActive(false);
+                        }
+                      }}
+                      placeholder="Search units"
+                      className="w-full border border-[#D1D5DB] rounded-lg px-3 py-2 text-sm"
+                    />
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setIsUnitSearchActive(true)}
+                    className="w-10 h-10 rounded-full bg-[#E5E7EB] flex items-center justify-center text-[#4B5563] hover:bg-[#D1D5DB] transition-colors"
+                    aria-label="Search units"
+                  >
+                    <Search className="w-5 h-5" />
+                  </button>
+                )}
+                <button
+                  onClick={() => {
+                    setUnitBeingEdited(null);
+                    setAddUnitFullName("");
+                    setAddUnitShortName("");
+                    setShowAddUnit(true);
+                  }}
+                  className="flex items-center gap-1 bg-[#FFA726] hover:bg-[#FB8C00] text-white font-semibold rounded-lg px-4 py-2 shadow transition-all text-sm"
+                >
+                  <Plus className="w-5 h-5" />
+                  Add Units
+                </button>
+              </div>
+              <div className="flex-1 overflow-y-auto p-0">
+                <table className="w-full text-sm">
+                  <thead className="bg-white sticky top-0 z-10 border-b border-[#E3EAF2]">
+                    <tr>
+                      <th className="px-4 py-3 text-left font-semibold text-[#7B8A9A] text-xs tracking-wide">
+                        FULLNAME
+                      </th>
+                      <th className="px-4 py-3 text-right font-semibold text-[#7B8A9A] text-xs tracking-wide pr-8">
+                        SHORTNAME
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredUnitList.map((unit) => {
+                      const isSelected = unit.id === selectedUnitInTabId;
+                      return (
+                        <tr
+                          key={unit.id}
+                          onClick={() => setSelectedUnitInTabId(unit.id)}
+                          onContextMenu={(event) => {
+                            event.preventDefault();
+                            setSelectedUnitInTabId(unit.id);
+                            setUnitContextMenu({
+                              unit,
+                              x: event.clientX,
+                              y: event.clientY,
+                            });
+                          }}
+                          className={`cursor-pointer border-b border-[#E3EAF2] ${
+                            isSelected ? "bg-[#DDEBFA]" : "hover:bg-[#F5F8FA]"
+                          }`}
+                        >
+                          <td className="px-4 py-3 text-[#222B45] font-medium uppercase">
+                            {unit.fullName}
+                          </td>
+                          <td className="px-4 py-3 text-right text-[#4B5563]">
+                            <div className="flex items-center justify-end gap-3">
+                              <span className="capitalize">{unit.shortName}</span>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </Card>
+
+            {unitContextMenu && (
+              <div
+                className="fixed z-50 min-w-40 rounded-md border bg-white p-1 shadow-md"
+                style={getContextMenuStyle(
+                  unitContextMenu.x,
+                  unitContextMenu.y
+                )}
+                onClick={(event) => event.stopPropagation()}
+              >
+                <button
+                  onClick={() => {
+                    setSelectedUnitInTabId(unitContextMenu.unit.id);
+                    openEditUnitDialog(unitContextMenu.unit);
+                    setUnitContextMenu(null);
+                  }}
+                  className="w-full rounded-sm px-2 py-1.5 text-left text-sm hover:bg-gray-100"
+                >
+                  View/Edit
+                </button>
+                <button
+                  onClick={() => {
+                    const unit = unitContextMenu.unit;
+                    setUnitContextMenu(null);
+                    setUnitPendingDelete(unit);
+                  }}
+                  className="w-full rounded-sm px-2 py-1.5 text-left text-sm text-red-600 hover:bg-red-50"
+                >
+                  Delete
+                </button>
+              </div>
+            )}
+
+            {conversionContextMenu && (
+              <div
+                className="fixed z-50 min-w-40 rounded-md border bg-white p-1 shadow-md"
+                style={getContextMenuStyle(
+                  conversionContextMenu.x,
+                  conversionContextMenu.y
+                )}
+                onClick={(event) => event.stopPropagation()}
+              >
+                <button
+                  onClick={() => {
+                    setConversionBeingEdited(conversionContextMenu.conversion);
+                    setConversionBaseUnit(
+                      conversionContextMenu.conversion.base_unit
+                    );
+                    setConversionSecondaryUnit(
+                      conversionContextMenu.conversion.secondary_unit
+                    );
+                    setConversionRateValue(
+                      conversionContextMenu.conversion.conversion_rate
+                    );
+                    setShowAddConversion(true);
+                    setConversionContextMenu(null);
+                  }}
+                  className="w-full rounded-sm px-2 py-1.5 text-left text-sm hover:bg-gray-100"
+                >
+                  Edit
+                </button>
+                <button
+                  onClick={() => {
+                    setConversionContextMenu(null);
+                    setConversionPendingDelete(conversionContextMenu.conversion);
+                  }}
+                  className="w-full rounded-sm px-2 py-1.5 text-left text-sm text-red-600 hover:bg-red-50"
+                >
+                  Delete
+                </button>
+              </div>
+            )}
+
+            {/* Right Panel - Unit Details */}
+            <div
+              className="flex-1 flex flex-col overflow-y-auto"
+              style={{ marginRight: "4px" }}
+            >
+              <Card
+                className="bg-white rounded-md shadow-sm flex items-center justify-between px-6 py-3"
+                style={{ minHeight: "64px", marginBottom: "4px" }}
+              >
+                <h2 className="text-base font-bold text-[#151B26] tracking-wide uppercase">
+                  {selectedUnitInTab?.fullName ?? "NO UNIT SELECTED"}
+                </h2>
+                <button
+                  className="bg-[#1976D2] hover:bg-[#1251A3] text-white px-5 py-2 rounded-lg text-sm font-bold shadow transition-all"
+                  onClick={() => setShowAddConversion(true)}
+                >
+                  Add Conversion
+                </button>
+              </Card>
+
+              <Card className="bg-white rounded-md flex flex-col flex-1 overflow-hidden shadow-sm p-0">
+                <CardContent className="p-0">
+                  <div className="flex items-center justify-between px-6 pt-4 pb-2">
+                    <h3 className="text-base font-bold text-[#222B45] tracking-wide">
+                      CONVERSIONS
+                    </h3>
+                    <div className="flex gap-2 items-center">
+                      <div className="relative">
+                        <input
+                          type="text"
+                          placeholder="Search..."
+                          value={conversionSearchTerm}
+                          onChange={(e) =>
+                            setConversionSearchTerm(e.target.value)
+                          }
+                          className="bg-[#F7F9FB] border border-[#E3EAF2] rounded-lg px-8 py-1.5 text-sm text-[#222B45] focus:bg-white focus:border-[#1976D2]"
+                        />
+                        <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-[#AEB8C4]" />
+                      </div>
+                    </div>
+                  </div>
+                  <div className="border-t border-[#E3EAF2] rounded-b-lg overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead className="bg-[#F7F9FB] sticky top-0 z-10">
+                        <tr>
+                          <th className="px-4 py-2 text-left font-semibold text-[#7B8A9A] text-xs tracking-wide align-middle w-16">
+                            #
+                          </th>
+                          <th className="px-4 py-2 text-left font-semibold text-[#7B8A9A] text-xs tracking-wide align-middle"></th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filteredConversions.length ? (
+                          filteredConversions.map((conversion, index) => (
+                            <tr
+                              key={conversion.id}
+                              onContextMenu={(event) => {
+                                event.preventDefault();
+                                setConversionContextMenu({
+                                  conversion,
+                                  x: event.clientX,
+                                  y: event.clientY,
+                                });
+                              }}
+                              className="border-b border-[#E3EAF2] hover:bg-[#F5F8FA] cursor-pointer"
+                            >
+                              <td className="px-4 py-3 text-[#4B5563] font-medium">
+                                {index + 1}
+                              </td>
+                              <td className="px-4 py-3 text-[#222B45] uppercase">
+                                {`1 ${conversion.base_unit} = ${Number(conversion.conversion_rate)} ${conversion.secondary_unit}`}
+                              </td>
+                            </tr>
+                          ))
+                        ) : (
+                          <tr>
+                            <td
+                              colSpan={2}
+                              className="px-4 py-6 text-center text-sm text-[#7B8A9A]"
+                            >
+                              There are no conversions to show.
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* === SHARED MODALS (Category & Units tabs) === */}
+
+      {/* Add Conversion Modal */}
       <Dialog
         open={showAddConversion}
         onOpenChange={(isOpen: boolean) => {
           setShowAddConversion(isOpen);
           if (!isOpen && !conversionSaving) {
-            setConversionError('');
+            setConversionError("");
             setConversionRateValue(0);
-            setConversionBaseUnit(selectedUnitInTab?.shortName ?? '');
-            setConversionSecondaryUnit('');
+            setConversionBaseUnit(selectedUnitInTab?.shortName ?? "");
+            setConversionSecondaryUnit("");
           }
         }}
       >
@@ -2774,7 +1278,9 @@ export function Items() {
                 </label>
                 <select
                   value={conversionBaseUnit}
-                  onChange={(event) => setConversionBaseUnit(event.target.value)}
+                  onChange={(event) =>
+                    setConversionBaseUnit(event.target.value)
+                  }
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
                 >
                   <option value="">None</option>
@@ -2791,7 +1297,9 @@ export function Items() {
                 </label>
                 <select
                   value={conversionSecondaryUnit}
-                  onChange={(event) => setConversionSecondaryUnit(event.target.value)}
+                  onChange={(event) =>
+                    setConversionSecondaryUnit(event.target.value)
+                  }
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
                 >
                   <option value="">None</option>
@@ -2803,10 +1311,9 @@ export function Items() {
                 </select>
               </div>
             </div>
-
             <div className="flex items-center gap-2">
               <span className="text-sm text-gray-600">
-                1 {conversionBaseUnit || 'BASE UNIT'} =
+                1 {conversionBaseUnit || "BASE UNIT"} =
               </span>
               <input
                 type="number"
@@ -2818,469 +1325,20 @@ export function Items() {
                 className="w-24 border border-gray-300 rounded-lg px-3 py-2 text-sm"
               />
               <span className="text-sm text-gray-600">
-                {conversionSecondaryUnit || 'SECONDARY UNIT'}
+                {conversionSecondaryUnit || "SECONDARY UNIT"}
               </span>
             </div>
-
             {conversionError ? (
               <p className="text-sm text-red-600">{conversionError}</p>
             ) : null}
-
             <button
               type="button"
-              onClick={handleSaveConversion}
+              onClick={() => { void handleSaveConversion(); }}
               disabled={conversionSaving}
               className="w-full bg-[#1976D2] text-white py-2 rounded-lg text-sm font-medium hover:bg-[#1251A3] disabled:opacity-60"
             >
-              {conversionSaving ? 'Saving...' : 'SAVE'}
+              {conversionSaving ? "Saving..." : "SAVE"}
             </button>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Add Item Modal */}
-      <Dialog
-        open={showAddItem}
-        onOpenChange={(isOpen: boolean) => {
-          setShowAddItem(isOpen);
-          if (!isOpen) {
-            setAddItemTab('pricing');
-            setAddItemForm(getInitialAddItemFormState());
-            setItemBeingEdited(null);
-            setSelectedUnitId('');
-            setBaseUnitId('');
-            setSecondaryUnitId('');
-            setConversionRate(0);
-            setAddItemImageDataUrl(null);
-            setAddItemImageFileName('');
-            setAddItemExistingImagePath(null);
-          }
-        }}
-      >
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center justify-between gap-3">
-              <span>{itemBeingEdited ? 'Edit Item' : 'Add Item'}</span>
-              <div className="flex items-center gap-1">
-
-                <button
-                  type="button"
-                  onClick={() => setShowAddItem(false)}
-                  className="rounded p-1 text-gray-500 hover:bg-gray-100 hover:text-gray-700"
-                  aria-label="Close add item popup"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Item Name *
-                </label>
-                <input
-                  type="text"
-                  value={addItemForm.itemName}
-                  onChange={(event) =>
-                    setAddItemForm((previousValue) => ({
-                      ...previousValue,
-                      itemName: event.target.value,
-                    }))
-                  }
-                  placeholder="Enter item name"
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Category
-                </label>
-                <select
-                  value={addItemForm.categoryId}
-                  onChange={(event) => {
-                    const value = event.target.value;
-                    if (value === "add_new_category") {
-                      setShowAddCategory(true);
-                      setNewCategoryName("");
-                      setCategoryBeingEdited(null);
-                    } else {
-                      setAddItemForm((previousValue) => ({
-                        ...previousValue,
-                        categoryId: value,
-                      }));
-                    }
-                  }}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
-                >
-                  <option value="">Select Category</option>
-                  <option value="add_new_category" className="text-[#E53935] font-medium">+ Create New Category</option>
-                  {categoryList.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Item Code
-                </label>
-                <div className="relative">
-                  <input
-                    type="text"
-                    value={addItemForm.itemCode}
-                    onChange={(event) =>
-                      setAddItemForm((previousValue) => ({
-                        ...previousValue,
-                        itemCode: event.target.value,
-                      }))
-                    }
-                    placeholder="Enter item code"
-                    className="w-full border border-gray-300 rounded-lg pl-3 pr-10 py-2 text-sm"
-                  />
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setAddItemForm((previousValue) => ({
-                        ...previousValue,
-                        itemCode: `ITEM-${Date.now().toString().slice(-6)}`,
-                      }))
-                    }
-                    className="absolute right-2 top-1/2 -translate-y-1/2 text-blue-600 hover:text-blue-700"
-                    aria-label="Assign code"
-                    title="Assign code"
-                  >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                      <path
-                        d="M7 7h10M7 12h10M7 17h6"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                      />
-                    </svg>
-                  </button>
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Unit
-                </label>
-                <button
-                  onClick={() => setShowUnitSelector(true)}
-                  className="w-full border border-blue-300 text-blue-600 rounded-lg px-3 py-2 text-sm hover:bg-blue-50 text-left"
-                >
-                  {selectedUnit
-                    ? `${selectedUnit.fullName} (${selectedUnit.shortName})`
-                    : "Select Unit"}
-                </button>
-              </div>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Item Image
-              </label>
-              <input
-                type="file"
-                accept="image/*"
-                onChange={handleAddItemImageSelection}
-                className="w-full cursor-pointer border border-gray-300 rounded-lg px-3 py-2 text-sm transition-colors hover:border-blue-400 file:mr-3 file:cursor-pointer file:rounded file:border-0 file:bg-blue-50 file:px-3 file:py-1.5 file:text-blue-700 file:transition-colors file:hover:bg-blue-100"
-              />
-              {addItemImageFileName ? (
-                <p className="mt-1 text-xs text-gray-600">Selected: {addItemImageFileName}</p>
-              ) : null}
-              {!addItemImageFileName && addItemExistingImagePath ? (
-                <p className="mt-1 text-xs text-gray-600">Current: {addItemExistingImagePath}</p>
-              ) : null}
-              {addItemImageDataUrl ? (
-                <img
-                  src={addItemImageDataUrl}
-                  alt="Item preview"
-                  className="mt-2 h-20 w-20 rounded border border-gray-200 object-cover"
-                />
-              ) : null}
-            </div>
-
-            {/* Tabs */}
-            <div className="flex gap-4 border-b border-gray-200">
-              {[
-                { key: "pricing", label: "Pricing" },
-                { key: "stock", label: "Stock" },
-              ].map((tab) => (
-                <button
-                  key={tab.key}
-                  onClick={() => setAddItemTab(tab.key as "pricing" | "stock")}
-                  className={`pb-2 text-sm font-medium ${addItemTab === tab.key
-                    ? "text-[#E53935] border-b-2 border-[#E53935]"
-                    : "text-gray-500"
-                    }`}
-                >
-                  {tab.label}
-                </button>
-              ))}
-            </div>
-
-            {addItemTab === "pricing" && (
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Sale Price
-                    </label>
-                    <input
-                      type="number"
-                      value={addItemForm.salePrice}
-                      onChange={(event) =>
-                        setAddItemForm((previousValue) => ({
-                          ...previousValue,
-                          salePrice: event.target.value,
-                        }))
-                      }
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
-                      placeholder="Sale Price"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Wholesale Price
-                    </label>
-                    <input
-                      type="number"
-                      value={addItemForm.wholesalePrice}
-                      onChange={(event) =>
-                        setAddItemForm((previousValue) => ({
-                          ...previousValue,
-                          wholesalePrice: event.target.value,
-                        }))
-                      }
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
-                      placeholder="Wholesale Price"
-                    />
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Purchase Price
-                    </label>
-                    <input
-                      type="number"
-                      value={addItemForm.purchasePrice}
-                      onChange={(event) =>
-                        setAddItemForm((previousValue) => ({
-                          ...previousValue,
-                          purchasePrice: event.target.value,
-                        }))
-                      }
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
-                      placeholder="Purchase Price"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Minimum Wholesale Qty
-                    </label>
-                    <input
-                      type="number"
-                      placeholder="0"
-                      value={addItemForm.minWholesaleQty}
-                      onChange={(event) =>
-                        setAddItemForm((previousValue) => ({
-                          ...previousValue,
-                          minWholesaleQty: event.target.value,
-                        }))
-                      }
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {addItemTab === "stock" && (
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <div className="mb-1 flex items-center justify-between gap-3">
-                      <label className="block text-sm font-medium text-gray-700">
-                        Opening Stock
-                      </label>
-
-                    </div>
-                    <input
-                      type="number"
-                      value={addItemForm.openingStock}
-                      onChange={(event) =>
-                        setAddItemForm((previousValue) => ({
-                          ...previousValue,
-                          openingStock: event.target.value,
-                        }))
-                      }
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
-                      placeholder="0"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      At Price
-                    </label>
-                    <input
-                      type="number"
-                      value={addItemForm.atPrice}
-                      onChange={(event) =>
-                        setAddItemForm((previousValue) => ({
-                          ...previousValue,
-                          atPrice: event.target.value,
-                        }))
-                      }
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
-                      placeholder="0"
-                    />
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    As Of Date
-                  </label>
-                  <input
-                    type="date"
-                    placeholder="YYYY-MM-DD"
-                    value={addItemForm.asOfDate}
-                    onChange={(event) =>
-                      setAddItemForm((previousValue) => ({
-                        ...previousValue,
-                        asOfDate: event.target.value,
-                      }))
-                    }
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Manufacturing Date (Optional)
-                    </label>
-                    <input
-                      type="date"
-                      placeholder="YYYY-MM-DD"
-                      value={addItemForm.mfgDate}
-                      onChange={(event) =>
-                        setAddItemForm((previousValue) => ({
-                          ...previousValue,
-                          mfgDate: event.target.value,
-                        }))
-                      }
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Expiry Date (Optional)
-                    </label>
-                    <input
-                      type="date"
-                      placeholder="YYYY-MM-DD"
-                      value={addItemForm.expDate}
-                      onChange={(event) =>
-                        setAddItemForm((previousValue) => ({
-                          ...previousValue,
-                          expDate: event.target.value,
-                        }))
-                      }
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
-
-            <div className="flex justify-end gap-3 pt-4">
-              <button
-                onClick={() => setShowAddItem(false)}
-                className="px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => {
-                  void handleSaveItem(false);
-                }}
-                disabled={
-                  Boolean(itemBeingEdited) ||
-                  isSavingItem ||
-                  !addItemForm.itemName.trim() ||
-                  !selectedUnit
-                }
-                className="px-4 py-2 bg-[#E53935] text-white rounded-lg text-sm hover:bg-red-600 disabled:opacity-60"
-              >
-                Save & New
-              </button>
-              <button
-                onClick={() => {
-                  void handleSaveItem(true);
-                }}
-                disabled={isSavingItem || !addItemForm.itemName.trim() || !selectedUnit}
-                className="px-4 py-2 bg-[#1976D2] text-white rounded-lg text-sm hover:bg-blue-600 disabled:opacity-60"
-              >
-                {isSavingItem
-                  ? 'Saving...'
-                  : itemBeingEdited
-                    ? 'Update'
-                    : 'Save'}
-              </button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-
-
-      <Dialog
-        open={Boolean(itemPendingDelete)}
-        onOpenChange={(isOpen: boolean) => {
-          if (!isOpen && !isDeletingItem) {
-            setItemPendingDelete(null);
-          }
-        }}
-      >
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle>Delete Item</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <p className="text-sm text-gray-600">
-              {itemPendingDelete
-                ? `Are you sure you want to delete ${itemPendingDelete.name}? This action cannot be undone.`
-                : 'Are you sure you want to delete this item?'}
-            </p>
-            <div className="flex justify-end gap-2">
-              <button
-                type="button"
-                disabled={isDeletingItem}
-                onClick={() => setItemPendingDelete(null)}
-                className="px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                disabled={isDeletingItem || !itemPendingDelete}
-                onClick={() => {
-                  if (!itemPendingDelete) {
-                    return;
-                  }
-
-                  void handleDeleteItem(itemPendingDelete);
-                }}
-                className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 disabled:opacity-60"
-              >
-                {isDeletingItem ? 'Deleting...' : 'Delete'}
-              </button>
-            </div>
           </div>
         </DialogContent>
       </Dialog>
@@ -3293,19 +1351,23 @@ export function Items() {
           if (!isOpen) {
             setNewCategoryName("");
             setCategoryBeingEdited(null);
+            addCategoryCallbackRef.current = null;
           }
         }}
       >
         <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle className="flex items-center justify-between">
-              <span>{categoryBeingEdited ? "Edit Category" : "Add Category"}</span>
+              <span>
+                {categoryBeingEdited ? "Edit Category" : "Add Category"}
+              </span>
               <button
                 type="button"
                 onClick={() => {
                   setShowAddCategory(false);
                   setNewCategoryName("");
                   setCategoryBeingEdited(null);
+                  addCategoryCallbackRef.current = null;
                 }}
                 className="rounded p-1 text-gray-500 hover:bg-gray-100 hover:text-gray-700"
                 aria-label="Close add category popup"
@@ -3328,7 +1390,7 @@ export function Items() {
               />
             </div>
             <button
-              onClick={handleCreateCategory}
+              onClick={() => { void handleCreateCategoryWithCallback(); }}
               disabled={!newCategoryName.trim()}
               className="w-full bg-[#E53935] text-white py-2 rounded-lg text-sm font-medium"
             >
@@ -3338,12 +1400,11 @@ export function Items() {
         </DialogContent>
       </Dialog>
 
+      {/* Delete Category Modal */}
       <Dialog
         open={Boolean(categoryPendingDelete)}
         onOpenChange={(isOpen: boolean) => {
-          if (!isOpen && !isDeletingCategory) {
-            setCategoryPendingDelete(null);
-          }
+          if (!isOpen && !isDeletingCategory) setCategoryPendingDelete(null);
         }}
       >
         <DialogContent className="max-w-sm">
@@ -3369,10 +1430,7 @@ export function Items() {
                 type="button"
                 disabled={isDeletingCategory || !categoryPendingDelete}
                 onClick={() => {
-                  if (!categoryPendingDelete) {
-                    return;
-                  }
-
+                  if (!categoryPendingDelete) return;
                   void handleDeleteCategory(categoryPendingDelete);
                 }}
                 className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 disabled:opacity-60"
@@ -3384,14 +1442,15 @@ export function Items() {
         </DialogContent>
       </Dialog>
 
+      {/* Move Items Dialog */}
       <Dialog
         open={showMoveItemsDialog}
         onOpenChange={(isOpen: boolean) => {
           setShowMoveItemsDialog(isOpen);
           if (!isOpen && !isMovingItems) {
             setSelectedMoveItemIds([]);
-            setMoveItemsFilterCategoryId('all');
-            setMoveItemsSearchTerm('');
+            setMoveItemsFilterCategoryId("all");
+            setMoveItemsSearchTerm("");
           }
         }}
       >
@@ -3399,7 +1458,8 @@ export function Items() {
           <DialogHeader>
             <DialogTitle className="flex items-center justify-between">
               <span>
-                Move Items To {moveTargetCategoryName ?? 'Items Not In Any Category'}
+                Move Items To{" "}
+                {moveTargetCategoryName ?? "Items Not In Any Category"}
               </span>
               <button
                 type="button"
@@ -3421,7 +1481,9 @@ export function Items() {
                   <input
                     type="text"
                     value={moveItemsSearchTerm}
-                    onChange={(event) => setMoveItemsSearchTerm(event.target.value)}
+                    onChange={(event) =>
+                      setMoveItemsSearchTerm(event.target.value)
+                    }
                     placeholder="Search by item name, code, or category"
                     className="w-full border border-gray-300 rounded-lg px-3 py-2 pl-9 text-sm"
                   />
@@ -3434,11 +1496,15 @@ export function Items() {
                 </label>
                 <select
                   value={moveItemsFilterCategoryId}
-                  onChange={(event) => setMoveItemsFilterCategoryId(event.target.value)}
+                  onChange={(event) =>
+                    setMoveItemsFilterCategoryId(event.target.value)
+                  }
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
                 >
                   <option value="all">All Items</option>
-                  <option value="uncategorized">Items not in any Category</option>
+                  <option value="uncategorized">
+                    Items not in any Category
+                  </option>
                   {categoryList.map((category) => (
                     <option key={category.id} value={category.id}>
                       {category.name}
@@ -3464,20 +1530,20 @@ export function Items() {
                   {moveItemsFilteredList.length ? (
                     moveItemsFilteredList.map((item) => {
                       const isSelected = selectedMoveItemIds.includes(item.id);
-                      const isAlreadyInTargetCategory = item.category === moveTargetCategoryName;
-
+                      const isAlreadyInTargetCategory =
+                        item.category === moveTargetCategoryName;
                       return (
                         <tr
                           key={item.id}
                           onClick={() => {
-                            if (!isAlreadyInTargetCategory) {
+                            if (!isAlreadyInTargetCategory)
                               toggleMoveItemSelection(item.id);
-                            }
                           }}
-                          className={`border-b border-[#E3EAF2] ${isAlreadyInTargetCategory
-                            ? 'bg-gray-50 text-gray-400'
-                            : 'cursor-pointer hover:bg-[#F5F8FA]'
-                            } ${isSelected ? 'bg-[#E3F0FF]' : ''}`}
+                          className={`border-b border-[#E3EAF2] ${
+                            isAlreadyInTargetCategory
+                              ? "bg-gray-50 text-gray-400"
+                              : "cursor-pointer hover:bg-[#F5F8FA]"
+                          } ${isSelected ? "bg-[#E3F0FF]" : ""}`}
                         >
                           <td className="px-4 py-3">
                             <input
@@ -3493,7 +1559,7 @@ export function Items() {
                             {item.name}
                           </td>
                           <td className="px-4 py-3 text-[#4B5563]">
-                            {item.category ?? 'Items not in any Category'}
+                            {item.category ?? "Items not in any Category"}
                           </td>
                         </tr>
                       );
@@ -3521,20 +1587,18 @@ export function Items() {
               </button>
               <button
                 type="button"
-                onClick={() => {
-                  void handleMoveItemsToCategory();
-                }}
+                onClick={() => { void handleMoveItemsToCategory(); }}
                 disabled={isMovingItems || !selectedMoveItemIds.length}
                 className="px-4 py-2 bg-[#1976D2] text-white rounded-lg text-sm font-medium hover:bg-blue-600 disabled:opacity-60"
               >
-                {isMovingItems ? 'Moving...' : 'Move Selected Items'}
+                {isMovingItems ? "Moving..." : "Move Selected Items"}
               </button>
             </div>
           </div>
         </DialogContent>
       </Dialog>
 
-      {/* Unit Selector Modal */}
+      {/* Unit Selector Modal (used by ProductsTab via prop) */}
       <Dialog open={showUnitSelector} onOpenChange={setShowUnitSelector}>
         <DialogContent className="max-w-md">
           <DialogHeader>
@@ -3557,8 +1621,10 @@ export function Items() {
                   Base Unit
                 </label>
                 <select
-                  value={baseUnitId}
-                  onChange={(event) => setBaseUnitId(event.target.value)}
+                  value={unitSelectorBaseUnitId}
+                  onChange={(event) =>
+                    setUnitSelectorBaseUnitId(event.target.value)
+                  }
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
                 >
                   <option value="">None</option>
@@ -3574,8 +1640,10 @@ export function Items() {
                   Secondary Unit
                 </label>
                 <select
-                  value={secondaryUnitId}
-                  onChange={(event) => setSecondaryUnitId(event.target.value)}
+                  value={unitSelectorSecondaryUnitId}
+                  onChange={(event) =>
+                    setUnitSelectorSecondaryUnitId(event.target.value)
+                  }
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
                 >
                   <option value="">None</option>
@@ -3587,52 +1655,73 @@ export function Items() {
                 </select>
               </div>
             </div>
-            {baseUnit && conversionRates.filter(c => c.base_unit === baseUnit.shortName).length > 0 && (
-              <div className="mt-2 pt-3 border-t border-gray-100">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Existing Conversions for {baseUnit.fullName}
-                </label>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {conversionRates.filter(c => c.base_unit === baseUnit.shortName).map((conv) => {
-                    const secUnit = units.find(u => u.shortName === conv.secondary_unit);
-                    return (
-                      <button
-                        key={conv.id}
-                        onClick={() => {
-                          if (secUnit) setSecondaryUnitId(secUnit.id);
-                          setConversionRate(conv.conversion_rate);
-                        }}
-                        className="flex flex-col items-start p-2 border border-gray-200 rounded-lg hover:border-[#1976D2] hover:bg-blue-50 transition-colors text-left"
-                      >
-                        <span className="text-sm font-semibold text-gray-800">
-                          1 {baseUnit.shortName} = {conv.conversion_rate} {secUnit?.shortName || conv.secondary_unit}
-                        </span>
-                        <span className="text-xs text-gray-500 mt-0.5">Click to select</span>
-                      </button>
-                    );
-                  })}
+            {(() => {
+              const baseUnit = units.find((u) => u.id === unitSelectorBaseUnitId);
+              const baseConversions = baseUnit
+                ? conversionRates.filter(
+                    (c) => c.base_unit === baseUnit.shortName
+                  )
+                : [];
+              return baseUnit && baseConversions.length > 0 ? (
+                <div className="mt-2 pt-3 border-t border-gray-100">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Existing Conversions for {baseUnit.fullName}
+                  </label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {baseConversions.map((conv) => {
+                      const secUnit = units.find(
+                        (u) => u.shortName === conv.secondary_unit
+                      );
+                      return (
+                        <button
+                          key={conv.id}
+                          onClick={() => {
+                            if (secUnit)
+                              setUnitSelectorSecondaryUnitId(secUnit.id);
+                            setUnitSelectorConversionRate(conv.conversion_rate);
+                          }}
+                          className="flex flex-col items-start p-2 border border-gray-200 rounded-lg hover:border-[#1976D2] hover:bg-blue-50 transition-colors text-left"
+                        >
+                          <span className="text-sm font-semibold text-gray-800">
+                            1 {baseUnit.shortName} = {conv.conversion_rate}{" "}
+                            {secUnit?.shortName || conv.secondary_unit}
+                          </span>
+                          <span className="text-xs text-gray-500 mt-0.5">
+                            Click to select
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
-              </div>
-            )}
+              ) : null;
+            })()}
             <div className="flex items-center gap-2 mt-4 pt-3 border-t border-gray-100">
               <span className="text-sm text-gray-600">
-                1 {baseUnit?.fullName ?? "BASE UNIT"} =
+                1{" "}
+                {units.find((u) => u.id === unitSelectorBaseUnitId)?.fullName ??
+                  "BASE UNIT"}{" "}
+                =
               </span>
               <input
                 type="number"
                 className="w-20 border border-gray-300 rounded-lg px-3 py-2 text-sm"
                 placeholder="0"
-                value={conversionRate}
-                onChange={(event) => setConversionRate(Number(event.target.value) || 0)}
+                value={unitSelectorConversionRate}
+                onChange={(event) =>
+                  setUnitSelectorConversionRate(
+                    Number(event.target.value) || 0
+                  )
+                }
               />
               <span className="text-sm text-gray-600">
-                {secondaryUnit
-                  ? `${secondaryUnit.fullName} (${secondaryUnit.shortName})`
+                {units.find((u) => u.id === unitSelectorSecondaryUnitId)
+                  ? `${units.find((u) => u.id === unitSelectorSecondaryUnitId)!.fullName} (${units.find((u) => u.id === unitSelectorSecondaryUnitId)!.shortName})`
                   : "SECONDARY UNIT"}
               </span>
             </div>
             <button
-              onClick={handleUnitSave}
+              onClick={() => { void handleUnitSave(); }}
               className="w-full bg-[#1976D2] text-white py-2 rounded-lg text-sm font-medium"
             >
               SAVE
@@ -3648,15 +1737,15 @@ export function Items() {
           setShowAddUnit(isOpen);
           if (!isOpen) {
             setUnitBeingEdited(null);
-            setAddUnitFullName('');
-            setAddUnitShortName('');
+            setAddUnitFullName("");
+            setAddUnitShortName("");
           }
         }}
       >
         <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle className="flex items-center justify-between">
-              <span>{unitBeingEdited ? 'Edit Unit' : 'Add Unit'}</span>
+              <span>{unitBeingEdited ? "Edit Unit" : "Add Unit"}</span>
               <button
                 type="button"
                 onClick={() => setShowAddUnit(false)}
@@ -3704,22 +1793,29 @@ export function Items() {
               <button
                 type="button"
                 onClick={() => { void handleCreateUnit(); }}
-                disabled={isSavingUnit || !addUnitFullName.trim() || !addUnitShortName.trim()}
+                disabled={
+                  isSavingUnit ||
+                  !addUnitFullName.trim() ||
+                  !addUnitShortName.trim()
+                }
                 className="px-4 py-2 bg-[#1976D2] text-white rounded-lg text-sm font-medium hover:bg-blue-600 disabled:opacity-60"
               >
-                {isSavingUnit ? 'Saving...' : unitBeingEdited ? 'Update' : 'Save'}
+                {isSavingUnit
+                  ? "Saving..."
+                  : unitBeingEdited
+                    ? "Update"
+                    : "Save"}
               </button>
             </div>
           </div>
         </DialogContent>
       </Dialog>
 
+      {/* Delete Unit Modal */}
       <Dialog
         open={Boolean(unitPendingDelete)}
         onOpenChange={(isOpen: boolean) => {
-          if (!isOpen && !isDeletingUnit) {
-            setUnitPendingDelete(null);
-          }
+          if (!isOpen && !isDeletingUnit) setUnitPendingDelete(null);
         }}
       >
         <DialogContent className="max-w-sm">
@@ -3730,7 +1826,7 @@ export function Items() {
             <p className="text-sm text-gray-600">
               {unitPendingDelete
                 ? `Are you sure you want to delete ${unitPendingDelete.fullName}? This action cannot be undone.`
-                : 'Are you sure you want to delete this unit?'}
+                : "Are you sure you want to delete this unit?"}
             </p>
             <div className="flex justify-end gap-2">
               <button
@@ -3745,15 +1841,12 @@ export function Items() {
                 type="button"
                 disabled={isDeletingUnit || !unitPendingDelete}
                 onClick={() => {
-                  if (!unitPendingDelete) {
-                    return;
-                  }
-
+                  if (!unitPendingDelete) return;
                   void handleDeleteUnit(unitPendingDelete);
                 }}
                 className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 disabled:opacity-60"
               >
-                {isDeletingUnit ? 'Deleting...' : 'Delete'}
+                {isDeletingUnit ? "Deleting..." : "Delete"}
               </button>
             </div>
           </div>
@@ -3764,9 +1857,7 @@ export function Items() {
       <Dialog
         open={Boolean(conversionPendingDelete)}
         onOpenChange={(isOpen: boolean) => {
-          if (!isOpen && !isDeletingConversion) {
-            setConversionPendingDelete(null);
-          }
+          if (!isOpen && !isDeletingConversion) setConversionPendingDelete(null);
         }}
       >
         <DialogContent className="max-w-sm">
@@ -3795,193 +1886,62 @@ export function Items() {
                 }}
                 className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 disabled:opacity-60"
               >
-                {isDeletingConversion ? 'Deleting...' : 'Delete'}
+                {isDeletingConversion ? "Deleting..." : "Delete"}
               </button>
             </div>
           </div>
         </DialogContent>
       </Dialog>
-
-      {/* Adjust Stock Modal */}
-      <Dialog open={showAdjustStockModal} onOpenChange={setShowAdjustStockModal}>
-        <DialogContent className="w-full sm:max-w-[900px] !max-w-[900px] p-6 bg-white rounded-lg shadow-2xl overflow-visible">
-          {/* Header */}
-          <div className="flex items-center justify-between mb-8">
-            <div className="flex items-center gap-8">
-              <h2 className="text-[20px] font-semibold text-[#1A202C]">Stock Adjustment</h2>
-
-              <div className="flex items-center gap-3">
-                <span className={`text-sm font-medium ${adjustStockForm.type === 'Add' ? 'text-[#1976D2]' : 'text-gray-400'}`}>Add Stock</span>
-                <button
-                  onClick={() => setAdjustStockForm(prev => ({ ...prev, type: prev.type === 'Add' ? 'Reduce' : 'Add' }))}
-                  className="relative inline-flex h-[22px] w-11 items-center rounded-full bg-[#1976D2] transition-colors focus:outline-none"
-                >
-                  <span
-                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${adjustStockForm.type === 'Add' ? 'translate-x-[4px]' : 'translate-x-[24px]'
-                      }`}
-                  />
-                </button>
-                <span className={`text-sm font-medium ${adjustStockForm.type === 'Reduce' ? 'text-gray-400' : 'text-gray-400'}`}>Reduce Stock</span>
-              </div>
-            </div>
-
-            <button
-              onClick={() => setShowAdjustStockModal(false)}
-              className="text-gray-400 hover:text-gray-600 transition-colors"
-            >
-              <X className="w-6 h-6" strokeWidth={1.5} />
-            </button>
-          </div>
-
-          {/* Info Section */}
-          <div className="flex justify-between items-end pb-4 border-b border-[#E5E7EB] mb-6">
-            <div>
-              <p className="text-[13px] text-gray-500 mb-1 font-medium">Item Name</p>
-              <p className="text-[14px] font-bold text-[#1A202C]">{selectedItem?.name}</p>
-            </div>
-
-            <div>
-              <div className="relative border border-[#D1D5DB] rounded-[4px] px-3 py-[6px] flex items-center bg-white w-[200px]">
-                <span className="text-[11px] text-gray-500 absolute -top-[8px] left-3 bg-white px-1 leading-none">Adjustment Date</span>
-                <input
-                  type="date"
-                  value={adjustStockForm.date}
-                  onChange={e => setAdjustStockForm(prev => ({ ...prev, date: e.target.value }))}
-                  className="w-full text-[14px] outline-none text-[#4B5563] bg-transparent font-medium"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Form Row */}
-          <div className="flex gap-4 mb-8 items-center">
-            <div className="w-[180px]">
-              <input
-                type="number"
-                placeholder="Total Qty"
-                value={adjustStockForm.qty}
-                onChange={e => setAdjustStockForm(prev => ({ ...prev, qty: e.target.value }))}
-                className="w-full border border-[#D1D5DB] rounded-[4px] px-3 py-[8px] text-[14px] outline-none placeholder:text-[#9CA3AF] text-[#1A202C]"
-              />
-            </div>
-
-            <div className="w-[80px]">
-              <select
-                value={adjustStockForm.unit}
-                onChange={e => setAdjustStockForm(prev => ({ ...prev, unit: e.target.value }))}
-                className="w-full text-[14px] outline-none bg-transparent text-[#4B5563] font-medium cursor-pointer"
-              >
-                {selectedItem?.primaryUnit || selectedItem?.unit ? <option value={(selectedItem?.primaryUnit || selectedItem?.unit) || ""}>{selectedItem?.primaryUnit || selectedItem?.unit}</option> : null}
-                {selectedItem?.secondaryUnit && <option value={selectedItem.secondaryUnit || ""}>{selectedItem.secondaryUnit}</option>}
-              </select>
-            </div>
-
-            <div className="w-[200px]">
-              <input
-                type="number"
-                placeholder="At Price"
-                value={adjustStockForm.atPrice}
-                onChange={e => setAdjustStockForm(prev => ({ ...prev, atPrice: e.target.value }))}
-                className="w-full border border-[#D1D5DB] rounded-[4px] px-3 py-[8px] text-[14px] outline-none placeholder:text-[#9CA3AF] text-[#1A202C]"
-              />
-            </div>
-
-            <div className="flex-1">
-              <input
-                type="text"
-                placeholder="Details"
-                value={adjustStockForm.details}
-                onChange={e => setAdjustStockForm(prev => ({ ...prev, details: e.target.value }))}
-                className="w-full border border-[#D1D5DB] rounded-[4px] px-3 py-[8px] text-[14px] outline-none placeholder:text-[#9CA3AF] text-[#1A202C]"
-              />
-            </div>
-          </div>
-
-          {/* Footer Action */}
-          <div className="flex justify-end pt-2">
-            <button
-              onClick={handleSaveStockAdjustment}
-              disabled={isSavingAdjustment || !adjustStockForm.qty}
-              className="bg-[#1A73E8] hover:bg-[#1557B0] text-white px-8 py-[8px] rounded-[4px] font-semibold text-[14px] transition-colors disabled:opacity-60"
-            >
-              Save
-            </button>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Stock Details Dialog */}
-      <Dialog
-        open={showStockDetailsPopup}
-        onOpenChange={(isOpen: boolean) => setShowStockDetailsPopup(isOpen)}
-      >
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle>Stock Details</DialogTitle>
-          </DialogHeader>
-          {selectedItem && (
-            <div className="space-y-4 pt-2 pb-4">
-              <div className="flex justify-between items-center border-b pb-2">
-                <span className="text-sm text-gray-500 font-medium">{selectedItem.primaryUnit || selectedItem.unit || 'Primary Unit'}</span>
-                <span className="text-sm font-semibold text-gray-800">{Math.floor(selectedItem.stockQuantity)}</span>
-              </div>
-              <div className="flex justify-between items-center border-b pb-2">
-                <span className="text-sm text-gray-500 font-medium">{selectedItem.secondaryUnit || 'Secondary Unit'}</span>
-                <span className="text-sm font-semibold text-gray-800">{selectedItem.secondaryStock ?? 0}</span>
-              </div>
-              <div className="flex justify-between items-center border-b pb-2">
-                <span className="text-sm text-gray-500 font-medium">Conversion Rate</span>
-                <span className="text-sm font-semibold text-gray-800">
-                  {selectedItem.conversionRate
-                    ? `1 ${(selectedItem.primaryUnit || selectedItem.unit || 'Unit').includes('(') ? (selectedItem.primaryUnit || selectedItem.unit || 'Unit').split('(')[1].replace(')', '').trim() : (selectedItem.primaryUnit || selectedItem.unit || 'Unit')} = ${selectedItem.conversionRate} ${(selectedItem.secondaryUnit || 'Secondary Unit').includes('(') ? (selectedItem.secondaryUnit || 'Secondary Unit').split('(')[1].replace(')', '').trim() : (selectedItem.secondaryUnit || 'Secondary Unit')}`
-                    : '-'}
-                </span>
-              </div>
-              <div className="flex justify-between items-center pb-2">
-                <span className="text-sm text-gray-500 font-medium">Price Per {selectedItem.secondaryUnit || 'Secondary Unit'}</span>
-                <span className="text-sm font-semibold text-[#43A047]">
-                  Rs {
-                    (selectedItem.conversionRate && selectedItem.conversionRate > 0)
-                      ? (selectedItem.salePrice / selectedItem.conversionRate).toFixed(2)
-                      : '-'
-                  }
-                </span>
-              </div>
-              <div className="flex justify-between items-center border-t pt-2 pb-2">
-                <span className="text-sm text-gray-500 font-medium">Wholesale Price</span>
-                <span className="text-sm font-semibold text-[#43A047]">
-                  Rs {selectedItem.wholesalePrice.toFixed(2)}
-                </span>
-              </div>
-              <div className="flex justify-between items-center border-t pt-2 pb-2">
-                <span className="text-sm text-gray-500 font-medium">Wholesale Price Per {selectedItem.secondaryUnit || 'Secondary Unit'}</span>
-                <span className="text-sm font-semibold text-[#43A047]">
-                  Rs {
-                    (selectedItem.conversionRate && selectedItem.conversionRate > 0)
-                      ? (selectedItem.wholesalePrice / selectedItem.conversionRate).toFixed(2)
-                      : '-'
-                  }
-                </span>
-              </div>
-              <div className="flex justify-between items-center border-t pt-2 pb-2">
-                <span className="text-sm text-gray-500 font-medium">Min Wholesale Qty</span>
-                <span className="text-sm font-semibold text-gray-800">
-                  {selectedItem.minStock ?? '-'}
-                </span>
-              </div>
-            </div>
-          )}
-          <div className="flex justify-end mt-2">
-            <button
-              type="button"
-              onClick={() => setShowStockDetailsPopup(false)}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
-            >
-              Close
-            </button>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
+
+  // ---- Helper: create category and forward ID back to caller ----
+  async function handleCreateCategoryWithCallback() {
+    const normalizedName = newCategoryName.trim();
+    if (!normalizedName) return;
+    const alreadyExists = categoryList.some(
+      (c) =>
+        c.name.toLowerCase() === normalizedName.toLowerCase() &&
+        c.id !== categoryBeingEdited?.id
+    );
+    if (alreadyExists) return;
+
+    try {
+      const response = await fetch("/api/categories", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: categoryBeingEdited?.id,
+          name: normalizedName,
+          itemCount: 0,
+        }),
+      });
+      if (!response.ok) throw new Error("Failed to create category");
+      const createdCategory = (await response.json()) as CategoryRecord;
+      setCategoryList((prev) => {
+        const hasExisting = prev.some((c) => c.id === createdCategory.id);
+        const next = hasExisting
+          ? prev.map((c) => (c.id === createdCategory.id ? createdCategory : c))
+          : [...prev, createdCategory];
+        return next.sort((a, b) => a.name.localeCompare(b.name));
+      });
+      setSelectedCategoryId(createdCategory.id);
+
+      // If opened from AddItemModal inside ProductsTab, forward the ID
+      if (addCategoryCallbackRef.current) {
+        addCategoryCallbackRef.current(createdCategory.id);
+        addCategoryCallbackRef.current = null;
+      }
+
+      setNewCategoryName("");
+      setCategoryBeingEdited(null);
+      setShowAddCategory(false);
+    } catch (error) {
+      console.error(error);
+    }
+  }
 }
+
+// Ref to store the optional callback from ProductsTab's AddItemModal
+// (lives outside function so it can be used inside the early-return render)
+const addCategoryCallbackRef = { current: null as ((id: string) => void) | null };

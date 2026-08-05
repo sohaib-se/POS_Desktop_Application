@@ -18,7 +18,13 @@ import { CashBank } from "@/pages/CashBank";
 import { BankAccounts } from "@/pages/BankAccounts";
 import { Reports } from "@/pages/Reports";
 import { SettingsPage } from "@/pages/Settings";
-import { Utilities } from "@/pages/Utilities";
+import { ImportItems } from "@/pages/importitems";
+import { BarcodeGenerator } from "@/pages/barcodegenerator";
+import { UpdateItemsInBulk } from "@/pages/updateitemsinbulk";
+import { ImportParties } from "@/pages/importparties";
+import { ExportItems } from "@/pages/exportitems";
+import { RecycleBin } from "@/pages/recyclebin";
+import { SyncShare } from "@/pages/SyncShare";
 import { EditProfile } from "@/pages/EditProfile";
 import { AutoBackup } from "@/pages/autobackup";
 import { BackupToComputer } from "@/pages/backuptocomputer";
@@ -137,23 +143,19 @@ function App() {
       case "settings":
         return <SettingsPage initialTab={settingsInitialTab} />;
       case "utilities":
-        return <Utilities />;
+        return <ImportItems />;
       case "utilities-import-items":
-        return <Utilities initialTab="import-items" />;
+        return <ImportItems />;
       case "utilities-barcode":
-        return <Utilities initialTab="barcode" />;
+        return <BarcodeGenerator />;
       case "utilities-bulk-update":
-        return <Utilities initialTab="bulk-update" />;
+        return <UpdateItemsInBulk />;
       case "utilities-import-parties":
-        return <Utilities initialTab="import-parties" />;
-      case "utilities-export-tally":
-        return <Utilities initialTab="export-tally" />;
+        return <ImportParties />;
       case "utilities-export-items":
-        return <Utilities initialTab="export-items" />;
-      case "utilities-verify-data":
-        return <Utilities initialTab="verify-data" />;
+        return <ExportItems />;
       case "utilities-recycle-bin":
-        return <Utilities initialTab="recycle-bin" />;
+        return <RecycleBin />;
       case "edit-profile":
         return <EditProfile onBack={() => handleViewChange("home")} />;
       default:

@@ -211,8 +211,6 @@ export type ViewType =
   | 'utilities-barcode'
   | 'utilities-bulk-update'
   | 'utilities-import-parties'
-  | 'utilities-export-tally'
   | 'utilities-export-items'
-  | 'utilities-verify-data'
   | 'utilities-recycle-bin'
   | 'edit-profile';

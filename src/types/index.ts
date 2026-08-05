@@ -200,7 +200,7 @@ export type ViewType =
   | 'bank-accounts'
   | 'cash-in-hand'
   | 'reports'
-  | 'sync-share'
+  | 'backup'
   | 'sync-auto-backup'
   | 'sync-backup-computer'
   | 'sync-backup-drive'

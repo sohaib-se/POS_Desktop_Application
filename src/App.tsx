@@ -26,6 +26,10 @@ import { ExportItems } from "@/pages/exportitems";
 import { RecycleBin } from "@/pages/recyclebin";
 import { SyncShare } from "@/pages/SyncShare";
 import { EditProfile } from "@/pages/EditProfile";
+import { AutoBackup } from "@/pages/autobackup";
+import { BackupToComputer } from "@/pages/backuptocomputer";
+import { BackupToDrive } from "@/pages/backuptodrive";
+import { RestoreBackup } from "@/pages/restorebackup";
 import { LaimsoftPos } from "@/pages/LaimsoftPos";
 import type { SaleInvoiceEditData, ViewType } from "@/types";
 
@@ -128,16 +132,14 @@ function App() {
         return <CashBank subView={currentView} />;
       case "reports":
         return <Reports />;
-      case "sync-share":
-        return <SyncShare initialTab="sync-share" />;
       case "sync-auto-backup":
-        return <SyncShare initialTab="auto-backup" />;
+        return <AutoBackup />;
       case "sync-backup-computer":
-        return <SyncShare initialTab="backup-computer" />;
+        return <BackupToComputer />;
       case "sync-backup-drive":
-        return <SyncShare initialTab="backup-drive" />;
+        return <BackupToDrive />;
       case "sync-restore-backup":
-        return <SyncShare initialTab="restore-backup" />;
+        return <RestoreBackup />;
       case "settings":
         return <SettingsPage initialTab={settingsInitialTab} />;
       case "utilities":

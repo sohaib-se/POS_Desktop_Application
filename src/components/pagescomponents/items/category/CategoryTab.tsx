@@ -143,18 +143,28 @@ export function CategoryTab({
       try {
         const response = await fetch("/api/items");
         if (!response.ok) return;
-        const itemRows = (await response.json()) as {
-          id: string;
-          name: string;
-          code: string | null;
-          category: string | null;
-        }[];
+        const itemRows = (await response.json()) as any[];
         setAllItems(
-          itemRows.map((r) => ({
-            id: String(r.id),
-            name: String(r.name),
-            code: r.code,
-            category: r.category,
+          itemRows.map((record) => ({
+            id: String(record.id),
+            name: String(record.name),
+            code: record.code,
+            category: record.category,
+            imgPath: record.img_path,
+            unit: record.unit,
+            primaryUnit: record.primary_unit,
+            secondaryUnit: record.secondary_unit,
+            secondaryStock: record.secondary_stock,
+            conversionRate: record.conversion_rate,
+            minStock: record.min_stock,
+            salePrice: Number(record.sale_price ?? 0),
+            wholesalePrice: Number(record.wholesale_price ?? 0),
+            purchasePrice: Number(record.purchase_price ?? 0),
+            atPrice: record.at_price != null ? Number(record.at_price) : undefined,
+            stockQuantity: Number(record.stock_quantity ?? 0),
+            stockValue: Number(record.stock_value ?? 0),
+            mfgDate: record.mfg_date ?? null,
+            expDate: record.exp_date ?? null,
           }))
         );
       } catch (error) {
@@ -217,6 +227,21 @@ export function CategoryTab({
               name: item.name,
               code: item.code ?? null,
               category: moveTargetCategoryName,
+              salePrice: item.salePrice,
+              wholesalePrice: item.wholesalePrice,
+              purchasePrice: item.purchasePrice,
+              stockQuantity: item.stockQuantity,
+              unit: item.unit,
+              primaryUnit: item.primaryUnit,
+              secondaryUnit: item.secondaryUnit,
+              stockValue: item.stockValue,
+              minStock: item.minStock,
+              secondaryStock: item.secondaryStock,
+              conversionRate: item.conversionRate,
+              imgPath: item.imgPath,
+              mfgDate: item.mfgDate,
+              expDate: item.expDate,
+              atPrice: item.atPrice,
             }),
           });
           if (!response.ok) throw new Error("Failed to move items");
@@ -343,6 +368,7 @@ export function CategoryTab({
       <div className="flex-1 flex gap-1 overflow-hidden">
         {/* Left Panel */}
         <CategoryList
+          uncategorizedItemCount={allItems.filter(i => !i.category).length}
           filteredCategoryList={filteredCategoryList}
           selectedCategoryId={selectedCategoryId}
           isCategorySearchActive={isCategorySearchActive}

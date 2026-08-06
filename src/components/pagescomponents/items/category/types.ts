@@ -1,4 +1,4 @@
-import type { CategoryRecord } from "@/components/pagescomponents/items/products/types";
+import type { CategoryRecord, Item } from "@/components/pagescomponents/items/products/types";
 
 export type CategoryContextMenuState = {
   category: CategoryRecord;
@@ -6,9 +6,4 @@ export type CategoryContextMenuState = {
   y: number;
 };
 
-export type ItemRecord = {
-  id: string;
-  name: string;
-  code?: string | null;
-  category?: string | null;
-};
+export type ItemRecord = Item;

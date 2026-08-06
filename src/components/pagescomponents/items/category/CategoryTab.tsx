@@ -19,6 +19,7 @@ type Props = {
   setNewCategoryName: React.Dispatch<React.SetStateAction<string>>;
   categoryBeingEdited: CategoryRecord | null;
   setCategoryBeingEdited: React.Dispatch<React.SetStateAction<CategoryRecord | null>>;
+  selectorOnly?: boolean;
 };
 
 export function CategoryTab({
@@ -31,6 +32,7 @@ export function CategoryTab({
   setNewCategoryName,
   categoryBeingEdited,
   setCategoryBeingEdited,
+  selectorOnly = false,
 }: Props) {
   // ---- State ----
   const [isDeletingCategory, setIsDeletingCategory] = useState(false);
@@ -316,6 +318,26 @@ export function CategoryTab({
   };
 
   // ---- Render ----
+  if (selectorOnly) {
+    return (
+      <AddCategoryModal
+        open={showAddCategory}
+        categoryBeingEdited={categoryBeingEdited}
+        newCategoryName={newCategoryName}
+        onSetNewCategoryName={setNewCategoryName}
+        onClose={() => {
+          setShowAddCategory(false);
+          setNewCategoryName("");
+          setCategoryBeingEdited(null);
+          addCategoryCallbackRef.current = null;
+        }}
+        onSave={() => {
+          void handleCreateCategoryWithCallback();
+        }}
+      />
+    );
+  }
+
   return (
     <>
       <div className="flex-1 flex gap-1 overflow-hidden">

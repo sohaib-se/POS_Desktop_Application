@@ -132,6 +132,25 @@ export function Items() {
       {activeTab !== "units" && (
         <UnitsTab {...unitsTabSharedProps} selectorOnly />
       )}
+      
+      {/*
+        Similarly, AddCategoryModal must be accessible from the Products tab.
+        When the category tab is not active, we mount CategoryTab in selectorOnly mode.
+      */}
+      {activeTab !== "category" && (
+        <CategoryTab
+          categoryList={categoryList}
+          setCategoryList={setCategoryList}
+          addCategoryCallbackRef={addCategoryCallbackRef}
+          showAddCategory={showAddCategory}
+          setShowAddCategory={setShowAddCategory}
+          newCategoryName={newCategoryName}
+          setNewCategoryName={setNewCategoryName}
+          categoryBeingEdited={categoryBeingEdited}
+          setCategoryBeingEdited={setCategoryBeingEdited}
+          selectorOnly
+        />
+      )}
     </div>
   );
 }

@@ -120,7 +120,7 @@ export interface Report {
   description?: string;
 }
 
-export interface UserSettings {
+export interface UserProfile {
   businessName: string;
   phone: string;
   email?: string;
@@ -130,11 +130,6 @@ export interface UserSettings {
   pincode?: string;
   logo?: string;
   signature?: string;
-  currency: string;
-  decimalPlaces: number;
-  autoBackup: boolean;
-  backupFrequency: number;
-  transactionHistory: boolean;
 }
 
 export interface SaleInvoiceEditData {

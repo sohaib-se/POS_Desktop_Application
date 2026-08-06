@@ -25,7 +25,7 @@ export function seedDatabase() {
       DELETE FROM transactions;
       DELETE FROM items;
       DELETE FROM parties;
-      DELETE FROM user_settings;
+      DELETE FROM user_profile;
     `);
 
     const insertParty = db.prepare(`
@@ -158,18 +158,14 @@ export function seedDatabase() {
     seedData.chartData.forEach((entry) => insertChartData.run(entry));
 
     db.prepare(`
-      INSERT INTO user_settings (
-        id, business_name, phone, email, address, business_type, category, pincode, logo, signature,
-        currency, decimal_places, auto_backup, backup_frequency, transaction_history
+      INSERT INTO user_profile (
+        id, business_name, phone, email, address, business_type, category, pincode, logo, signature
       )
       VALUES (
-        1, @businessName, @phone, @email, @address, @businessType, @category, @pincode, @logo, @signature,
-        @currency, @decimalPlaces, @autoBackup, @backupFrequency, @transactionHistory
+        1, @businessName, @phone, @email, @address, @businessType, @category, @pincode, @logo, @signature
       )
     `).run({
-      ...seedData.userSettings,
-      autoBackup: seedData.userSettings.autoBackup ? 1 : 0,
-      transactionHistory: seedData.userSettings.transactionHistory ? 1 : 0
+      ...seedData.userProfile
     });
   });
 

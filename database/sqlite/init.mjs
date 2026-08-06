@@ -276,6 +276,22 @@ function migratePaymentOutRecordsToExpenseRecords(db) {
   `);
 }
 
+function ensureUserProfileColumns(db) {
+  const tableExists = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='user_profile'").get();
+  if (!tableExists) return;
+
+  const columns = db.prepare(`PRAGMA table_info(user_profile)`).all();
+  const existingColumnNames = new Set(columns.map((column) => column.name));
+
+  if (existingColumnNames.has('currency')) {
+    try {
+      db.exec('ALTER TABLE user_profile DROP COLUMN currency');
+    } catch (error) {
+      console.warn('Could not drop currency column from user_profile, ignoring', error);
+    }
+  }
+}
+
 export function initDatabase() {
   const db = openDatabase();
   const schemaSql = fs.readFileSync(schemaPath, 'utf8');
@@ -288,6 +304,7 @@ export function initDatabase() {
   ensureExpenseCategoryColumns(db);
   migratePaymentOutRecordsToExpenseRecords(db);
   ensureBankAccountColumns(db);
+  ensureUserProfileColumns(db);
   db.close();
   return dbPath;
 }

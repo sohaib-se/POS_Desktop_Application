@@ -1186,3 +1186,41 @@ export function deleteExpenseItem(id) {
   return result.changes > 0;
 }
 
+export function getUserProfile() {
+  const db = openDatabase();
+  const row = db.prepare('SELECT * FROM user_profile WHERE id = 1').get();
+  db.close();
+  return row;
+}
+
+export function updateUserProfile(profile) {
+  const db = openDatabase();
+  db.prepare(`
+    INSERT INTO user_profile (
+      id, business_name, phone, email, address, business_type, category, pincode, logo, signature, updated_at
+    ) VALUES (
+      1, @businessName, @phone, @email, @address, @businessType, @category, @pincode, @logo, @signature, datetime('now')
+    ) ON CONFLICT(id) DO UPDATE SET
+      business_name = excluded.business_name,
+      phone = excluded.phone,
+      email = excluded.email,
+      address = excluded.address,
+      business_type = excluded.business_type,
+      category = excluded.category,
+      pincode = excluded.pincode,
+      logo = COALESCE(excluded.logo, user_profile.logo),
+      signature = COALESCE(excluded.signature, user_profile.signature),
+      updated_at = excluded.updated_at
+  `).run({
+    businessName: profile.businessName || '',
+    phone: profile.phone || '',
+    email: profile.email || null,
+    address: profile.address || null,
+    businessType: profile.businessType || null,
+    category: profile.category || null,
+    pincode: profile.pincode || null,
+    logo: profile.logo || null,
+    signature: profile.signature || null
+  });
+  db.close();
+}

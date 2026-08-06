@@ -181,6 +181,86 @@ function sqliteApiPlugin() {
           console.error(error);
         });
 
+      server.middlewares.use('/api/user_profile', async (req, res) => {
+        try {
+          // @ts-expect-error Runtime-only Node module used in Vite middleware.
+          const repository = await import('./database/sqlite/repository.mjs');
+
+          if (req.method === 'GET') {
+            const profile = repository.getUserProfile();
+            res.statusCode = 200;
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify(profile || {}));
+            return;
+          }
+
+          if (req.method === 'PUT') {
+            const payload = await parseJsonBody(req);
+            
+            const currentProfile = repository.getUserProfile() || {};
+            
+            // Handle image uploads
+            let logoPath = payload.logo;
+            if (logoPath && logoPath.startsWith('data:image')) {
+              if (currentProfile.logo) {
+                try {
+                  const oldLogoPath = path.join(process.cwd(), currentProfile.logo.startsWith('/') ? currentProfile.logo.substring(1) : currentProfile.logo);
+                  if (fs.existsSync(oldLogoPath)) {
+                    fs.unlinkSync(oldLogoPath);
+                  }
+                } catch (e) { console.error("Error deleting old logo", e); }
+              }
+              const saved = saveDataUrlToAppData({
+                dataUrl: logoPath,
+                prefix: 'logo',
+                targetRoot: path.join(appDataRoot, 'user_images'),
+              });
+              logoPath = saved?.filePath;
+            }
+
+            let signaturePath = payload.signature;
+            if (signaturePath && signaturePath.startsWith('data:image')) {
+              if (currentProfile.signature) {
+                try {
+                  const oldSignaturePath = path.join(process.cwd(), currentProfile.signature.startsWith('/') ? currentProfile.signature.substring(1) : currentProfile.signature);
+                  if (fs.existsSync(oldSignaturePath)) {
+                    fs.unlinkSync(oldSignaturePath);
+                  }
+                } catch (e) { console.error("Error deleting old signature", e); }
+              }
+              const saved = saveDataUrlToAppData({
+                dataUrl: signaturePath,
+                prefix: 'signature',
+                targetRoot: path.join(appDataRoot, 'user_images'),
+              });
+              signaturePath = saved?.filePath;
+            }
+
+            const updatedPayload = {
+              ...payload,
+              logo: logoPath,
+              signature: signaturePath
+            };
+
+            repository.updateUserProfile(updatedPayload);
+            const updatedProfile = repository.getUserProfile();
+            
+            res.statusCode = 200;
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify(updatedProfile));
+            return;
+          }
+
+          res.statusCode = 405;
+          res.end('Method Not Allowed');
+        } catch (error) {
+          console.error(error);
+          res.statusCode = 500;
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify({ message: 'Internal server error.' }));
+        }
+      });
+
       server.middlewares.use('/api/adjust_stock_transactions', async (req, res) => {
         try {
           // @ts-expect-error Runtime-only Node module used in Vite middleware.

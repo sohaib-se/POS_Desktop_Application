@@ -119,7 +119,7 @@ export const seedData = {
     { date: '25 Feb', value: 0 },
     { date: '28 Feb', value: 0 }
   ],
-  userSettings: {
+  userProfile: {
     businessName: 'Laimsoft',
     phone: '3198224949',
     email: '',
@@ -128,11 +128,6 @@ export const seedData = {
     category: 'Book / Stationary store',
     pincode: '',
     logo: '',
-    signature: '',
-    currency: 'Rs',
-    decimalPlaces: 2,
-    autoBackup: true,
-    backupFrequency: 2,
-    transactionHistory: true
+    signature: ''
   }
 };

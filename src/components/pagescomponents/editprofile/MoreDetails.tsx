@@ -10,6 +10,8 @@ interface MoreDetailsProps {
   setPincode: Dispatch<SetStateAction<string>>;
   businessAddress: string;
   setBusinessAddress: Dispatch<SetStateAction<string>>;
+  signature: string | null;
+  setSignature: Dispatch<SetStateAction<string | null>>;
 }
 
 export function MoreDetails({
@@ -21,7 +23,20 @@ export function MoreDetails({
   setPincode,
   businessAddress,
   setBusinessAddress,
+  signature,
+  setSignature,
 }: MoreDetailsProps) {
+  const handleSignatureChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setSignature(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   return (
     <div className="col-span-2">
       <h2 className="text-base font-semibold text-gray-900 mb-4">
@@ -89,10 +104,22 @@ export function MoreDetails({
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Add Signature
           </label>
-          <div className="flex-1 border-2 border-dashed border-gray-300 rounded-lg p-6 flex flex-col items-center justify-center cursor-pointer hover:border-gray-400 transition-colors">
-            <Upload className="w-8 h-8 text-gray-400 mb-2" />
-            <p className="text-sm text-gray-500">Upload Signature</p>
-          </div>
+          <label className="flex-1 border-2 border-dashed border-gray-300 rounded-lg p-2 flex flex-col items-center justify-center cursor-pointer hover:border-gray-400 transition-colors overflow-hidden group relative block">
+            <input 
+              type="file" 
+              accept="image/*" 
+              className="hidden" 
+              onChange={handleSignatureChange} 
+            />
+            {signature ? (
+              <img src={signature} alt="Signature" className="max-w-full max-h-full object-contain" />
+            ) : (
+              <>
+                <Upload className="w-8 h-8 text-gray-400 mb-2" />
+                <p className="text-sm text-gray-500">Upload Signature</p>
+              </>
+            )}
+          </label>
         </div>
       </div>
     </div>

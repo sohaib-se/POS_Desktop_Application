@@ -276,7 +276,7 @@ CREATE TABLE IF NOT EXISTS chart_data (
   updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
-CREATE TABLE IF NOT EXISTS user_settings (
+CREATE TABLE IF NOT EXISTS user_profile (
   id INTEGER PRIMARY KEY CHECK (id = 1),
   business_name TEXT NOT NULL,
   phone TEXT NOT NULL,
@@ -287,11 +287,6 @@ CREATE TABLE IF NOT EXISTS user_settings (
   pincode TEXT,
   logo TEXT,
   signature TEXT,
-  currency TEXT NOT NULL,
-  decimal_places INTEGER NOT NULL,
-  auto_backup INTEGER NOT NULL,
-  backup_frequency INTEGER NOT NULL,
-  transaction_history INTEGER NOT NULL,
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );

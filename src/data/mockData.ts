@@ -175,7 +175,7 @@ export const chartData = [
   { date: '28 Feb', value: 0 },
 ];
 
-export const userSettings = {
+export const userProfile = {
   businessName: 'Laimsoft',
   phone: '3198224949',
   email: '',
@@ -185,9 +185,4 @@ export const userSettings = {
   pincode: '',
   logo: '',
   signature: '',
-  currency: 'Rs',
-  decimalPlaces: 2,
-  autoBackup: true,
-  backupFrequency: 2,
-  transactionHistory: true,
 };

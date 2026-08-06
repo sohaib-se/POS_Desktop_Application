@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { EditProfileHeader } from "../components/pagescomponents/editprofile/EditProfileHeader";
 import { LogoSection } from "../components/pagescomponents/editprofile/LogoSection";
 import { BusinessDetails } from "../components/pagescomponents/editprofile/BusinessDetails";
@@ -10,36 +10,82 @@ interface EditProfileProps {
 }
 
 export function EditProfile({ onBack }: EditProfileProps) {
-  const [businessName, setBusinessName] = useState("Laimsoft");
+  const [businessName, setBusinessName] = useState("");
   const [businessType, setBusinessType] = useState("Retail");
-  const [businessCategory, setBusinessCategory] = useState(
-    "Book / Stationary store",
-  );
-  const [phoneNumber, setPhoneNumber] = useState("3198224949");
+  const [businessCategory, setBusinessCategory] = useState("Book / Stationary store");
+  const [phoneNumber, setPhoneNumber] = useState("");
   const [emailId, setEmailId] = useState("");
   const [businessAddress, setBusinessAddress] = useState("");
   const [pincode, setPincode] = useState("");
+  const [logo, setLogo] = useState<string | null>(null);
+  const [signature, setSignature] = useState<string | null>(null);
 
-  const handleSave = () => {
-    // Handle save logic here
-    console.log({
-      businessName,
-      businessType,
-      businessCategory,
-      phoneNumber,
-      emailId,
-      businessAddress,
-      pincode,
-    });
+  const [toast, setToast] = useState<{message: string, type: 'success' | 'error'} | null>(null);
+
+  const showToast = (message: string, type: 'success' | 'error') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3000);
+  };
+
+  useEffect(() => {
+    fetch('/api/user_profile')
+      .then(res => res.json())
+      .then(data => {
+        if (data) {
+          setBusinessName(data.business_name || "");
+          setBusinessType(data.business_type || "Retail");
+          setBusinessCategory(data.category || "Book / Stationary store");
+          setPhoneNumber(data.phone || "");
+          setEmailId(data.email || "");
+          setBusinessAddress(data.address || "");
+          setPincode(data.pincode || "");
+          setLogo(data.logo || null);
+          setSignature(data.signature || null);
+        }
+      })
+      .catch(console.error);
+  }, []);
+
+  const handleSave = async () => {
+    try {
+      const res = await fetch('/api/user_profile', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          businessName,
+          businessType,
+          category: businessCategory,
+          phone: phoneNumber,
+          email: emailId,
+          address: businessAddress,
+          pincode,
+          logo,
+          signature
+        })
+      });
+      if (res.ok) {
+        showToast("Profile saved successfully", "success");
+      } else {
+        showToast("Failed to save profile", "error");
+      }
+    } catch (e) {
+      console.error(e);
+      showToast("Error saving profile", "error");
+    }
   };
 
   return (
-    <div className="h-full flex flex-col bg-gray-50 overflow-hidden">
+    <div className="h-full flex flex-col bg-gray-50 overflow-hidden relative">
+      {toast && (
+        <div className={`absolute top-6 right-6 z-50 px-6 py-3 rounded-lg shadow-lg text-white font-medium flex items-center gap-2 transition-all duration-300 animate-in fade-in slide-in-from-top-4 ${toast.type === 'success' ? 'bg-green-500' : 'bg-red-500'}`}>
+          {toast.message}
+        </div>
+      )}
       <EditProfileHeader />
 
       <div className="flex-1 overflow-y-auto">
         <div className="p-6 space-y-6">
-          <LogoSection />
+          <LogoSection logo={logo} setLogo={setLogo} />
           
           <div className="grid grid-cols-3 gap-8">
             <BusinessDetails
@@ -59,6 +105,8 @@ export function EditProfile({ onBack }: EditProfileProps) {
               setPincode={setPincode}
               businessAddress={businessAddress}
               setBusinessAddress={setBusinessAddress}
+              signature={signature}
+              setSignature={setSignature}
             />
           </div>
         </div>

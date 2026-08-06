@@ -94,10 +94,10 @@ export function CategoryDetailsPanel({
                         {item.name}
                       </td>
                       <td className="px-4 py-3 text-right font-semibold text-[#43A047]">
-                        —
+                        {item.stockQuantity ?? 0}
                       </td>
                       <td className="px-4 py-3 text-right font-semibold text-[#43A047]">
-                        —
+                        {item.stockValue != null ? `Rs ${item.stockValue.toFixed(2)}` : "—"}
                       </td>
                     </tr>
                   ))

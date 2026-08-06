@@ -4,6 +4,7 @@ import type { CategoryRecord } from "@/components/pagescomponents/items/products
 import type { CategoryContextMenuState } from "./types";
 
 type Props = {
+  uncategorizedItemCount: number;
   filteredCategoryList: CategoryRecord[];
   selectedCategoryId: string | null;
   isCategorySearchActive: boolean;
@@ -16,6 +17,7 @@ type Props = {
 };
 
 export function CategoryList({
+  uncategorizedItemCount,
   filteredCategoryList,
   selectedCategoryId,
   isCategorySearchActive,
@@ -100,7 +102,7 @@ export function CategoryList({
                 Items not in any Category
               </td>
               <td className="px-4 py-3 text-right font-semibold text-[#7B8A9A]">
-                0
+                {uncategorizedItemCount}
               </td>
             </tr>
             {filteredCategoryList.map((cat) => (

@@ -1,3 +1,4 @@
+import { useRef } from "react";
 import type { SaleTab, PartyOption } from "@/pages/AddSale";
 
 interface AddSaleCustomerHeaderProps {
@@ -17,6 +18,16 @@ export function AddSaleCustomerHeader({
   displayedInvoiceNo,
   displayedInvoiceDate,
 }: AddSaleCustomerHeaderProps) {
+  const dateInputRef = useRef<HTMLInputElement>(null);
+
+  let dateValue = "";
+  if (displayedInvoiceDate) {
+    const parts = displayedInvoiceDate.split('/');
+    if (parts.length === 3) {
+      dateValue = `${parts[2]}-${parts[1]}-${parts[0]}`;
+    }
+  }
+
   return (
     <div style={{ background: "#fff", padding: "25px 20px 80px 20px" }}>
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16 }}>
@@ -68,15 +79,31 @@ export function AddSaleCustomerHeader({
             <span style={{ color: "#6b7280" }}>Invoice Number</span>
             <span style={{ fontWeight: 600, color: "#1f2937" }}>{displayedInvoiceNo}</span>
           </div>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 12 }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 12, position: "relative" }}>
             <span style={{ color: "#6b7280" }}>Invoice Date</span>
             <span style={{ fontWeight: 600, color: "#1f2937" }}>{displayedInvoiceDate}</span>
-            <button style={{ background: "none", border: "none", cursor: "pointer", color: "#3b82f6", padding: 0 }}>
+            <button 
+              onClick={() => dateInputRef.current?.showPicker()}
+              style={{ background: "none", border: "none", cursor: "pointer", color: "#3b82f6", padding: 0, display: "flex", alignItems: "center" }}
+            >
               <svg width="17" height="17" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                 <rect x="3" y="4" width="18" height="18" rx="2" />
                 <path d="M16 2v4M8 2v4M3 10h18" />
               </svg>
             </button>
+            <input
+              type="date"
+              ref={dateInputRef}
+              value={dateValue}
+              onChange={(e) => {
+                const val = e.target.value;
+                if (val) {
+                  const [year, month, day] = val.split('-');
+                  updateTab({ invoiceDate: `${day}/${month}/${year}` });
+                }
+              }}
+              style={{ position: 'absolute', width: 0, height: 0, opacity: 0, overflow: 'hidden', bottom: 0, right: 0 }}
+            />
           </div>
         </div>
       </div>

@@ -21,6 +21,7 @@ export interface SaleTab {
   paymentMode: "credit" | "cash";
   customerSearch: string;
   phoneNo: string;
+  invoiceDate?: string;
   rows: SaleRow[];
   discountPercent: string;
   discountRs: string;
@@ -78,6 +79,7 @@ function createDefaultTab(id: number): SaleTab {
     paymentMode: "credit",
     customerSearch: "",
     phoneNo: "",
+    invoiceDate: formatDateForDisplay(new Date()),
     rows: [
       { id: 1, itemId: "", item: "", qty: "", unit: "NONE", pricePerUnit: "" },
       { id: 2, itemId: "", item: "", qty: "", unit: "NONE", pricePerUnit: "" },
@@ -235,6 +237,7 @@ export function AddSale({ onSave, onShare, onClose, initialInvoice }: AddSalePro
         paymentMode,
         customerSearch: initialInvoice.partyId ?? "",
         phoneNo: initialInvoice.partyPhone ?? "",
+        invoiceDate: initialInvoice.date ?? formatDateForDisplay(new Date()),
         rows: parsedRows.length
           ? [
             ...parsedRows.map((lineItem) => ({
@@ -321,7 +324,7 @@ export function AddSale({ onSave, onShare, onClose, initialInvoice }: AddSalePro
 
   const activeTab = tabs.find((t) => t.id === activeTabId)!;
   const displayedInvoiceNo = initialInvoice?.invoiceNo ?? nextInvoiceNo;
-  const displayedInvoiceDate = initialInvoice?.date ?? formatDateForDisplay(new Date());
+  const displayedInvoiceDate = activeTab.invoiceDate ?? (initialInvoice?.date ?? formatDateForDisplay(new Date()));
 
 
   const updateTab = (partial: Partial<SaleTab>) => {
@@ -480,7 +483,7 @@ export function AddSale({ onSave, onShare, onClose, initialInvoice }: AddSalePro
         },
         body: JSON.stringify({
           invoiceNo: isEditing ? initialInvoice?.invoiceNo : nextInvoiceNo,
-          date: displayedInvoiceDate,
+          date: activeTab.invoiceDate || displayedInvoiceDate,
           partyId: selectedParty ? String(selectedParty.id) : null,
           partyName: selectedParty ? selectedParty.name : "Cash Sale",
           partyPhone: activeTab.phoneNo,

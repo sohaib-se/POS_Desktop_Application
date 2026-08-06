@@ -2,8 +2,8 @@ import { ExportItemsHeader } from "@/components/pagescomponents/utilities/export
 
 export function ExportItems() {
   return (
-    <div className="h-full bg-white">
-      <div className="h-full overflow-y-auto p-6">
+    <div className="h-full bg-gray-50 flex flex-col items-center pt-6">
+      <div className="w-full max-w-xl px-4">
         <ExportItemsHeader />
       </div>
     </div>

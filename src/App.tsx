@@ -143,9 +143,9 @@ function App() {
       case "settings":
         return <SettingsPage initialTab={settingsInitialTab} />;
       case "utilities":
-        return <ImportItems />;
+        return <ImportItems onViewChange={handleViewChange} />;
       case "utilities-import-items":
-        return <ImportItems />;
+        return <ImportItems onViewChange={handleViewChange} />;
       case "utilities-barcode":
         return <BarcodeGenerator />;
       case "utilities-bulk-update":

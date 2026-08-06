@@ -1,10 +1,10 @@
 import { useState } from "react";
 import { ChevronDown } from "lucide-react";
-import { CheckRow, Hint } from "../shared/SharedComponents";
+import { CheckRow } from "../shared/SharedComponents";
 import { SH } from "../shared/styles";
 
 export function TransactionMessageTab() {
-  const [txnType, setTxnType] = useState("Sales Transaction");
+  const [txnType] = useState("Sales Transaction");
 
   return (
     <div

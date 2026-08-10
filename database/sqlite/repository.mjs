@@ -208,7 +208,24 @@ export function getEstimates() {
   const db = openDatabase();
   const rows = db.prepare('SELECT * FROM estimates ORDER BY created_at DESC, date DESC').all();
   db.close();
-  return rows;
+  return rows.map(r => ({
+    ...r,
+    referenceNo: r.reference_no,
+    partyName: r.party_name,
+    discountPercent: r.discount_percent,
+    discountAmount: r.discount_amount,
+    taxLabel: r.tax_label,
+    taxRate: r.tax_rate,
+    taxAmount: r.tax_amount,
+    roundOff: r.round_off,
+    roundOffAmount: r.round_off_amount,
+    lineItemsJson: r.line_items_json,
+    attachmentImagePath: r.attachment_image_path,
+    attachmentImageName: r.attachment_image_name,
+    attachmentDocumentPath: r.attachment_document_path,
+    attachmentDocumentName: r.attachment_document_name,
+    convertedSaleNo: r.converted_sale_no,
+  }));
 }
 
 export function deleteEstimate(id) {
@@ -321,6 +338,112 @@ export function getNextSaleInvoiceNo() {
   const row = db.prepare('SELECT COALESCE(MAX(CAST(invoice_no AS INTEGER)), 0) + 1 AS nextInvoiceNo FROM sale_invoices').get();
   db.close();
   return String(Number(row?.nextInvoiceNo ?? 1));
+}
+
+export function getNextEstimateNo() {
+  const db = openDatabase();
+  const row = db.prepare('SELECT COALESCE(MAX(CAST(reference_no AS INTEGER)), 0) + 1 AS nextEstimateNo FROM estimates').get();
+  db.close();
+  return String(Number(row?.nextEstimateNo ?? 1));
+}
+
+export function addEstimate(estimate) {
+  const db = openDatabase();
+  db.prepare(`
+    INSERT INTO estimates (
+      id,
+      reference_no,
+      date,
+      party_name,
+      subtotal,
+      discount_percent,
+      discount_amount,
+      tax_label,
+      tax_rate,
+      tax_amount,
+      round_off,
+      round_off_amount,
+      amount,
+      balance,
+      description,
+      line_items_json,
+      attachment_image_path,
+      attachment_image_name,
+      attachment_document_path,
+      attachment_document_name,
+      status,
+      created_at,
+      updated_at
+    )
+    VALUES (
+      @id,
+      @referenceNo,
+      @date,
+      @partyName,
+      @subtotal,
+      @discountPercent,
+      @discountAmount,
+      @taxLabel,
+      @taxRate,
+      @taxAmount,
+      @roundOff,
+      @roundOffAmount,
+      @amount,
+      @balance,
+      @description,
+      @lineItemsJson,
+      @attachmentImagePath,
+      @attachmentImageName,
+      @attachmentDocumentPath,
+      @attachmentDocumentName,
+      @status,
+      datetime('now'),
+      datetime('now')
+    )
+  `).run(estimate);
+  db.close();
+}
+
+export function updateEstimate(id, estimate) {
+  const db = openDatabase();
+  db.prepare(`
+    UPDATE estimates SET
+      reference_no = @referenceNo,
+      date = @date,
+      party_name = @partyName,
+      subtotal = @subtotal,
+      discount_percent = @discountPercent,
+      discount_amount = @discountAmount,
+      tax_label = @taxLabel,
+      tax_rate = @taxRate,
+      tax_amount = @taxAmount,
+      round_off = @roundOff,
+      round_off_amount = @roundOffAmount,
+      amount = @amount,
+      balance = @balance,
+      description = @description,
+      line_items_json = @lineItemsJson,
+      attachment_image_path = COALESCE(@attachmentImagePath, attachment_image_path),
+      attachment_image_name = COALESCE(@attachmentImageName, attachment_image_name),
+      attachment_document_path = COALESCE(@attachmentDocumentPath, attachment_document_path),
+      attachment_document_name = COALESCE(@attachmentDocumentName, attachment_document_name),
+      status = @status,
+      updated_at = datetime('now')
+    WHERE id = @id
+  `).run({ ...estimate, id });
+  db.close();
+}
+
+export function markEstimateConverted(id, saleNo) {
+  const db = openDatabase();
+  db.prepare(`
+    UPDATE estimates SET
+      status = 'Converted',
+      converted_sale_no = @saleNo,
+      updated_at = datetime('now')
+    WHERE id = @id
+  `).run({ id, saleNo });
+  db.close();
 }
 
 export function addSaleInvoice(invoice) {

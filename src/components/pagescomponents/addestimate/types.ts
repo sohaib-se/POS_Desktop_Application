@@ -9,9 +9,9 @@ export interface SaleRow {
 export interface SaleTab {
   id: number;
   label: string;
-  paymentMode: "credit" | "cash";
   customerSearch: string;
-  phoneNo: string;
+  estimateNo: string;
+  estimateDate: string;
   rows: SaleRow[];
   discountPercent: string;
   discountRs: string;
@@ -19,4 +19,6 @@ export interface SaleTab {
   roundOff: boolean;
   description: string;
   showDescriptionInput: boolean;
+  image: File | null;
+  document: File | null;
 }

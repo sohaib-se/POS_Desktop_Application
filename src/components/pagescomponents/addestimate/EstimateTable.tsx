@@ -1,5 +1,6 @@
 import type { MouseEvent } from "react";
 import type { SaleRow, SaleTab } from "./types";
+import { Trash2 } from "lucide-react";
 
 // Resize handle between columns
 const ResizeHandle = ({ col, startResize }: { col: number; startResize: (col: number, e: MouseEvent) => void }) => (
@@ -18,7 +19,8 @@ const ResizeHandle = ({ col, startResize }: { col: number; startResize: (col: nu
 
 interface EstimateTableProps {
   activeTab: SaleTab;
-  updateRow: (rowId: number, field: keyof SaleRow, value: string) => void;
+  updateRow: (rowId: number, field: keyof SaleRow | Partial<SaleRow>, value?: string) => void;
+  removeRow: (rowId: number) => void;
   addRow: () => void;
   widths: number[];
   startResize: (col: number, e: MouseEvent) => void;
@@ -26,19 +28,39 @@ interface EstimateTableProps {
   totalAmount: number;
   fmt: (n: number) => string;
   unitOptions: string[];
+  items?: any[];
 }
 
 export function EstimateTable({
   activeTab,
   updateRow,
+  removeRow,
   addRow,
   widths,
   startResize,
   totalQty,
   totalAmount,
   fmt,
-  unitOptions
+  unitOptions,
+  items = []
 }: EstimateTableProps) {
+  const handleItemSelect = (rowId: number, itemName: string) => {
+    const selectedItem = items.find(i => i.name === itemName);
+    if (selectedItem) {
+      const salePrice = selectedItem.salePrice ?? selectedItem.sale_price;
+      const rawUnit = selectedItem.primaryUnit || selectedItem.primary_unit || selectedItem.unit || "NONE";
+      const unit = String(rawUnit).toUpperCase();
+      updateRow(rowId, {
+        item: itemName,
+        pricePerUnit: salePrice ? String(salePrice) : "",
+        unit: unitOptions.includes(unit) ? unit : "NONE",
+        qty: "1"
+      });
+    } else {
+      updateRow(rowId, "item", itemName);
+    }
+  };
+
   return (
     <div style={{ background: "#fff", paddingBottom: 80 }}>
       <table style={{ width: "100%", borderCollapse: "collapse", tableLayout: "fixed" }}>
@@ -79,7 +101,7 @@ export function EstimateTable({
           </tr>
         </thead>
         <tbody>
-          {activeTab.rows.map((row, idx) => {
+          {activeTab.rows.map((row) => {
             const amount = (parseFloat(row.qty) || 0) * (parseFloat(row.pricePerUnit) || 0);
             return (
               <tr key={row.id} style={{ borderBottom: "1px solid #f0f0f0" }}
@@ -87,14 +109,27 @@ export function EstimateTable({
                 onMouseLeave={(e) => (e.currentTarget.style.background = "")}
               >
                 <td style={{ textAlign: "center", color: "#9ca3af", fontSize: 13, padding: "5px 0", borderRight: "1px solid #e5e7eb" }}>
-                  {idx + 1}
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 4 }}>
+                    <Trash2 
+                      size={14} 
+                      style={{ cursor: "pointer", color: "#9ca3af" }} 
+                      onClick={() => removeRow(row.id)} 
+                      onMouseEnter={(e) => e.currentTarget.style.color = "#ef4444"}
+                      onMouseLeave={(e) => e.currentTarget.style.color = "#9ca3af"}
+                    />
+                  </div>
                 </td>
                 <td style={{ borderRight: "1px solid #e5e7eb", padding: "4px 8px" }}>
-                  <input type="text"
-                    style={{ width: "100%", border: "none", outline: "none", fontSize: 13, color: "#374151", background: "transparent" }}
+                  <select
+                    style={{ width: "100%", border: "none", outline: "none", fontSize: 13, color: "#374151", background: "transparent", cursor: "pointer", appearance: "none" }}
                     value={row.item}
-                    onChange={(e) => updateRow(row.id, "item", e.target.value)}
-                  />
+                    onChange={(e) => handleItemSelect(row.id, e.target.value)}
+                  >
+                    <option value="">Select Item</option>
+                    {items.map(item => (
+                      <option key={item.id} value={item.name}>{item.name}</option>
+                    ))}
+                  </select>
                 </td>
                 <td style={{ borderRight: "1px solid #e5e7eb", padding: "4px 8px" }}>
                   <input type="number"
@@ -105,13 +140,30 @@ export function EstimateTable({
                 </td>
                 <td style={{ borderRight: "1px solid #e5e7eb", padding: "4px 8px" }}>
                   <div style={{ display: "flex", alignItems: "center" }}>
-                    <select
-                      style={{ flex: 1, border: "none", outline: "none", fontSize: 13, color: "#374151", background: "transparent", appearance: "none", cursor: "pointer" }}
-                      value={row.unit}
-                      onChange={(e) => updateRow(row.id, "unit", e.target.value)}
-                    >
-                      {unitOptions.map((u) => <option key={u} value={u}>{u}</option>)}
-                    </select>
+                    {(() => {
+                      const matchedItem = items.find((item) => item.name === row.item);
+                      let currentUnitOptions = ["NONE"];
+
+                      if (matchedItem) {
+                        currentUnitOptions = [];
+                        if (matchedItem.primary_unit || matchedItem.primaryUnit) currentUnitOptions.push(matchedItem.primary_unit || matchedItem.primaryUnit);
+                        else if (matchedItem.unit && matchedItem.unit !== "NONE") currentUnitOptions.push(matchedItem.unit);
+
+                        if (matchedItem.secondary_unit || matchedItem.secondaryUnit) currentUnitOptions.push(matchedItem.secondary_unit || matchedItem.secondaryUnit);
+
+                        if (currentUnitOptions.length === 0) currentUnitOptions = ["NONE"];
+                      }
+
+                      return (
+                        <select
+                          style={{ flex: 1, border: "none", outline: "none", fontSize: 13, color: "#374151", background: "transparent", appearance: "none", cursor: "pointer" }}
+                          value={row.unit}
+                          onChange={(e) => updateRow(row.id, "unit", e.target.value)}
+                        >
+                          {currentUnitOptions.map((u) => <option key={u} value={u}>{u}</option>)}
+                        </select>
+                      );
+                    })()}
                     <span style={{ color: "#9ca3af", fontSize: 10, pointerEvents: "none" }}>▾</span>
                   </div>
                 </td>
@@ -122,8 +174,16 @@ export function EstimateTable({
                     onChange={(e) => updateRow(row.id, "pricePerUnit", e.target.value)}
                   />
                 </td>
-                <td style={{ borderRight: "1px solid #e5e7eb", padding: "4px 10px", textAlign: "right", fontSize: 13, color: "#374151" }}>
-                  {amount > 0 ? fmt(amount) : ""}
+                <td style={{ borderRight: "1px solid #e5e7eb", padding: "4px 8px" }}>
+                  <input type="number"
+                    style={{ width: "100%", border: "none", outline: "none", fontSize: 13, color: "#374151", background: "transparent", textAlign: "right" }}
+                    value={amount > 0 ? parseFloat(amount.toFixed(2)) : ""}
+                    onChange={(e) => {
+                      const newAmt = parseFloat(e.target.value) || 0;
+                      const q = parseFloat(row.qty) || 1;
+                      updateRow(row.id, "pricePerUnit", String((newAmt / q).toFixed(2)));
+                    }}
+                  />
                 </td>
                 <td />
               </tr>

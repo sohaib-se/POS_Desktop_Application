@@ -6,7 +6,7 @@ interface EstimateRowMenuProps {
   openRowMenuPosition: { left: number; top: number } | null;
   records: EstimateRecord[];
   setViewingRecord: (record: EstimateRecord | null) => void;
-  setShowAddEstimate: (show: boolean) => void;
+  onEditEstimate: (record: EstimateRecord) => void;
   handleDelete: (id: string) => void;
   setOpenRowMenuId: (id: string | null) => void;
   setOpenRowMenuPosition: (pos: { left: number; top: number } | null) => void;
@@ -17,7 +17,7 @@ export function EstimateRowMenu({
   openRowMenuPosition,
   records,
   setViewingRecord,
-  setShowAddEstimate,
+  onEditEstimate,
   handleDelete,
   setOpenRowMenuId,
   setOpenRowMenuPosition,
@@ -50,7 +50,7 @@ export function EstimateRowMenu({
       <button
         className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-gray-50"
         onClick={() => {
-          setShowAddEstimate(true);
+          onEditEstimate(targetItem);
           setOpenRowMenuId(null);
           setOpenRowMenuPosition(null);
         }}

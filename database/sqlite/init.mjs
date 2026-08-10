@@ -106,6 +106,32 @@ function ensurePurchaseBillColumns(db) {
   addColumn('attachment_document_name', 'TEXT');
 }
 
+function ensureEstimateColumns(db) {
+  const estimateColumns = db.prepare(`PRAGMA table_info(estimates)`).all();
+  const existingColumnNames = new Set(estimateColumns.map((column) => column.name));
+
+  const addColumn = (columnName, definition) => {
+    if (!existingColumnNames.has(columnName)) {
+      db.exec(`ALTER TABLE estimates ADD COLUMN ${columnName} ${definition}`);
+    }
+  };
+
+  addColumn('subtotal', 'REAL NOT NULL DEFAULT 0');
+  addColumn('discount_percent', 'REAL NOT NULL DEFAULT 0');
+  addColumn('discount_amount', 'REAL NOT NULL DEFAULT 0');
+  addColumn('tax_label', 'TEXT');
+  addColumn('tax_rate', 'REAL NOT NULL DEFAULT 0');
+  addColumn('tax_amount', 'REAL NOT NULL DEFAULT 0');
+  addColumn('round_off', 'INTEGER NOT NULL DEFAULT 0');
+  addColumn('round_off_amount', 'REAL NOT NULL DEFAULT 0');
+  addColumn('description', 'TEXT');
+  addColumn('line_items_json', 'TEXT');
+  addColumn('attachment_image_path', 'TEXT');
+  addColumn('attachment_image_name', 'TEXT');
+  addColumn('attachment_document_path', 'TEXT');
+  addColumn('attachment_document_name', 'TEXT');
+}
+
 function ensurePaymentOutRecordColumns(db) {
   const paymentOutColumns = db.prepare(`PRAGMA table_info(payment_out_records)`).all();
   const existingColumnNames = new Set(paymentOutColumns.map((column) => column.name));
@@ -263,6 +289,7 @@ export function initDatabase() {
   ensureItemColumns(db);
   ensureSaleInvoiceColumns(db);
   ensurePurchaseBillColumns(db);
+  ensureEstimateColumns(db);
   ensurePaymentOutRecordColumns(db);
   ensureExpenseRecordColumns(db);
   ensureExpenseCategoryColumns(db);

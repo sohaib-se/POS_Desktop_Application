@@ -1,5 +1,5 @@
 import type { RefObject, Dispatch, SetStateAction } from "react";
-import { Search, Printer, Share2, MoreVertical } from "lucide-react";
+import { Search, Printer, Share2, MoreVertical, ArrowRightCircle } from "lucide-react";
 import type { EstimateRecord } from "./types";
 
 interface EstimatesTableProps {
@@ -12,6 +12,7 @@ interface EstimatesTableProps {
   openRowMenuId: string | null;
   setOpenRowMenuId: Dispatch<SetStateAction<string | null>>;
   setOpenRowMenuPosition: Dispatch<SetStateAction<{ left: number; top: number } | null>>;
+  onConvertEstimateToSale: (estimate: EstimateRecord) => void;
 }
 
 export function EstimatesTable({
@@ -24,6 +25,7 @@ export function EstimatesTable({
   openRowMenuId,
   setOpenRowMenuId,
   setOpenRowMenuPosition,
+  onConvertEstimateToSale,
 }: EstimatesTableProps) {
   return (
     <div
@@ -140,6 +142,9 @@ export function EstimatesTable({
                   >
                     {estimate.status}
                   </span>
+                  {estimate.status === "Converted" && estimate.convertedSaleNo && (
+                    <div className="text-[10px] text-gray-500 mt-1">Sale #{estimate.convertedSaleNo}</div>
+                  )}
                 </td>
                 <td className="px-4 py-3 relative">
                   <div className="flex items-center justify-center gap-2">
@@ -149,6 +154,16 @@ export function EstimatesTable({
                     <button className="p-1.5 hover:bg-gray-100 rounded" title="Share">
                       <Share2 className="w-4 h-4 text-gray-500" />
                     </button>
+                    {estimate.status !== "Converted" && (
+                      <button 
+                        className="p-1.5 hover:bg-blue-50 text-blue-600 rounded flex items-center gap-1 transition-colors" 
+                        title="Convert to Sale"
+                        onClick={() => onConvertEstimateToSale(estimate)}
+                      >
+                        <ArrowRightCircle className="w-4 h-4" />
+                        <span className="text-xs font-medium">Convert</span>
+                      </button>
+                    )}
                     <button
                       className="p-1.5 hover:bg-gray-100 rounded"
                       title="More actions"

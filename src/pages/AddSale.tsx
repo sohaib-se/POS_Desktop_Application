@@ -64,6 +64,7 @@ interface AddSaleProps {
   onShare?: () => void;
   onClose?: () => void;
   initialInvoice?: SaleInvoiceEditData | null;
+  isConversion?: boolean;
 }
 
 
@@ -199,7 +200,7 @@ function useColumnResize(initial: number[]) {
   return { widths, startResize };
 }
 
-export function AddSale({ onSave, onShare, onClose, initialInvoice }: AddSaleProps) {
+export function AddSale({ onSave, onShare, onClose, initialInvoice, isConversion }: AddSaleProps) {
   const [tabs, setTabs] = useState<SaleTab[]>([createDefaultTab(1)]);
   const [activeTabId, setActiveTabId] = useState(1);
   const [isOpenAnimated, setIsOpenAnimated] = useState(false);
@@ -233,20 +234,20 @@ export function AddSale({ onSave, onShare, onClose, initialInvoice }: AddSalePro
     setTabs([
       {
         id: 1,
-        label: `Sale #${initialInvoice.invoiceNo}`,
+        label: isConversion ? `New Sale` : `Sale #${initialInvoice.invoiceNo}`,
         paymentMode,
-        customerSearch: initialInvoice.partyId ?? "",
+        customerSearch: initialInvoice.partyId ?? initialInvoice.partyName ?? "",
         phoneNo: initialInvoice.partyPhone ?? "",
-        invoiceDate: initialInvoice.date ?? formatDateForDisplay(new Date()),
+        invoiceDate: isConversion ? formatDateForDisplay(new Date()) : (initialInvoice.date ?? formatDateForDisplay(new Date())),
         rows: parsedRows.length
           ? [
-            ...parsedRows.map((lineItem) => ({
+            ...parsedRows.map((lineItem: any) => ({
               id: globalRowId++,
               itemId: lineItem.itemId ?? "",
-              item: lineItem.name ?? "",
-              qty: String(lineItem.quantity ?? ""),
+              item: lineItem.item ?? lineItem.name ?? "",
+              qty: String(lineItem.qty ?? lineItem.quantity ?? ""),
               unit: lineItem.unit ?? "NONE",
-              pricePerUnit: String(lineItem.price ?? ""),
+              pricePerUnit: String(lineItem.pricePerUnit ?? lineItem.price ?? ""),
             })),
             createEmptyRow(),
           ]
@@ -305,7 +306,29 @@ export function AddSale({ onSave, onShare, onClose, initialInvoice }: AddSalePro
         );
 
         setTabs((previousTabs) => {
-          return previousTabs;
+          return previousTabs.map(tab => {
+            let updatedCustomerSearch = tab.customerSearch;
+            if (updatedCustomerSearch && !loadedParties.find(p => String(p.id) === updatedCustomerSearch)) {
+              const matchedParty = loadedParties.find(p => p.name === updatedCustomerSearch);
+              if (matchedParty) {
+                updatedCustomerSearch = String(matchedParty.id);
+              }
+            }
+
+            return {
+              ...tab,
+              customerSearch: updatedCustomerSearch,
+              rows: tab.rows.map(row => {
+                if (!row.itemId && row.item) {
+                  const matchedItem = loadedItems.find(i => i.name === row.item);
+                  if (matchedItem) {
+                    return { ...row, itemId: String(matchedItem.id) };
+                  }
+                }
+                return row;
+              })
+            };
+          });
         });
       } catch (error) {
         console.error(error);
@@ -475,7 +498,7 @@ export function AddSale({ onSave, onShare, onClose, initialInvoice }: AddSalePro
     setIsSaving(true);
 
     try {
-      const isEditing = Boolean(initialInvoice);
+      const isEditing = Boolean(initialInvoice) && !isConversion;
       const response = await fetch(isEditing ? `/api/sale_invoices/${initialInvoice?.id}` : "/api/sale_invoices", {
         method: isEditing ? "PUT" : "POST",
         headers: {
@@ -483,6 +506,7 @@ export function AddSale({ onSave, onShare, onClose, initialInvoice }: AddSalePro
         },
         body: JSON.stringify({
           invoiceNo: isEditing ? initialInvoice?.invoiceNo : nextInvoiceNo,
+          convertedFromEstimateId: isConversion ? initialInvoice?.id : undefined,
           date: activeTab.invoiceDate || displayedInvoiceDate,
           partyId: selectedParty ? String(selectedParty.id) : null,
           partyName: selectedParty ? selectedParty.name : "Cash Sale",

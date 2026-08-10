@@ -186,10 +186,18 @@ export function AddExpense({ onSave, onShare, onClose }: AddExpenseProps) {
     updateTab({ expenseCategoryId: categoryId });
   };
 
-  const updateRow = (rowId: number, field: keyof ExpenseRow, value: string) => {
-    updateTab({
-      rows: activeTab.rows.map((row) => (row.id === rowId ? { ...row, [field]: value } : row)),
-    });
+  const updateRow = (rowId: number, updates: Partial<ExpenseRow>) => {
+    setTabs((previousTabs) =>
+      previousTabs.map((tab) => {
+        if (tab.id === activeTabId) {
+          return {
+            ...tab,
+            rows: tab.rows.map((row) => (row.id === rowId ? { ...row, ...updates } : row)),
+          };
+        }
+        return tab;
+      })
+    );
   };
 
   const addTab = () => {
@@ -266,14 +274,13 @@ export function AddExpense({ onSave, onShare, onClose }: AddExpenseProps) {
     try {
       const expenseCategoryName = expenseCategoryMap[activeTab.expenseCategoryId]?.name ?? "";
       const lineItems = activeTab.rows
-        .map((row, index) => {
+        .map((row) => {
           const quantity = Number(row.note) || 0;
           const price = Number(row.paymentType) || 0;
           const amount = Number(row.amount) || quantity * price;
 
           return {
-            id: row.id,
-            itemId: row.categoryId || String(index + 1),
+            itemId: row.categoryId || "",
             name: row.category,
             quantity,
             price,
@@ -281,6 +288,7 @@ export function AddExpense({ onSave, onShare, onClose }: AddExpenseProps) {
           };
         })
         .filter((row) => row.name || row.quantity || row.price || row.amount);
+
 
       const computedAmount = lineItems.reduce((sum, row) => sum + (Number(row.amount) || 0), 0);
       const roundOffAmount = activeTab.roundOff ? Math.round(computedAmount) - computedAmount : 0;
@@ -292,8 +300,7 @@ export function AddExpense({ onSave, onShare, onClose }: AddExpenseProps) {
         },
         body: JSON.stringify({
           id: crypto.randomUUID(),
-          paymentNo: displayedExpenseNo,
-          date: displayedExpenseDate,
+          expenseNo: displayedExpenseNo,
           categoryId: activeTab.expenseCategoryId,
           categoryName: expenseCategoryName,
           amount: computedAmount,
@@ -351,13 +358,31 @@ export function AddExpense({ onSave, onShare, onClose }: AddExpenseProps) {
     });
     
     if (activeRowIdForNewItem !== null) {
-      updateRow(activeRowIdForNewItem, "category", createdItem.name);
-      updateRow(activeRowIdForNewItem, "paymentType", String(createdItem.price));
-      const activeRow = activeTab.rows.find(r => r.id === activeRowIdForNewItem);
-      if (activeRow) {
-        const qty = Number(activeRow.note) || 0;
-        updateRow(activeRowIdForNewItem, "amount", String(qty * createdItem.price));
-      }
+      setTabs((previousTabs) =>
+        previousTabs.map((tab) => {
+          if (tab.id === activeTabId) {
+            return {
+              ...tab,
+              rows: tab.rows.map((row) => {
+                if (row.id === activeRowIdForNewItem) {
+                  const qty = Number(row.note) || 1;
+                  return {
+                    ...row,
+                    categoryId: createdItem.id,
+                    category: createdItem.name,
+                    paymentType: String(createdItem.price),
+                    note: String(qty),
+                    amount: String(qty * createdItem.price),
+                  };
+                }
+                return row;
+              }),
+            };
+          }
+          return tab;
+        })
+      );
+      setActiveRowIdForNewItem(null);
     }
   };
 

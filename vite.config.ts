@@ -1169,6 +1169,70 @@ function sqliteApiPlugin() {
         }
       });
 
+      server.middlewares.use('/api/barcode_generator', async (req, res) => {
+        try {
+          // @ts-expect-error Runtime-only Node module used in Vite middleware.
+          const repository = await import('./database/sqlite/repository.mjs');
+          
+          if (req.method === 'GET') {
+            const rows = repository.getBarcodeGenerators();
+            // Map rows to match the frontend BarcodeItem structure
+            const mappedRows = rows.map(r => ({
+              id: r.id,
+              itemName: r.item_name,
+              itemCode: r.item_code,
+              noOfLabels: r.no_of_labels,
+              header: r.header,
+              line1: r.line1,
+              line2: r.line2,
+              line3: r.line3,
+              line4: r.line4,
+            }));
+            res.statusCode = 200;
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify(mappedRows));
+            return;
+          }
+
+          if (req.method === 'POST') {
+            let body = '';
+            req.on('data', chunk => { body += chunk.toString(); });
+            req.on('end', () => {
+              try {
+                const data = JSON.parse(body);
+                repository.insertBarcodeGenerator(data);
+                res.statusCode = 201;
+                res.setHeader('Content-Type', 'application/json');
+                res.end(JSON.stringify({ success: true }));
+              } catch (e) {
+                res.statusCode = 400;
+                res.setHeader('Content-Type', 'application/json');
+                res.end(JSON.stringify({ error: e.message }));
+              }
+            });
+            return;
+          }
+
+          if (req.method === 'DELETE') {
+            const requestUrl = new URL(req.url ?? '/', 'http://localhost');
+            const id = requestUrl.pathname.split('/').pop();
+            if (id) {
+              repository.deleteBarcodeGenerator(id);
+              res.statusCode = 200;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify({ success: true }));
+              return;
+            }
+          }
+
+          res.statusCode = 405;
+          res.end(JSON.stringify({ message: 'Method not allowed.' }));
+        } catch (e) {
+          res.statusCode = 500;
+          res.end(JSON.stringify({ message: 'Server error', error: e.message }));
+        }
+      });
+
       server.middlewares.use('/api/items', async (req, res) => {
         try {
           // @ts-expect-error Runtime-only Node module used in Vite middleware.

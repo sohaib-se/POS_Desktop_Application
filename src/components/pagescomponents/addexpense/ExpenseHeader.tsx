@@ -63,17 +63,11 @@ export function ExpenseHeader({
           <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 12 }}>
             <span style={{ color: "#94a3b8", width: 88, textAlign: "right" }}>Date</span>
             <input
-              type="text"
+              type="date"
               value={displayedExpenseDate}
               onChange={(event) => updateTab({ expenseDate: event.target.value })}
-              style={{ border: "none", outline: "none", background: "transparent", width: 120, textAlign: "center", color: "#111827" }}
+              style={{ border: "none", outline: "none", background: "transparent", width: 120, textAlign: "center", color: "#111827", cursor: "pointer" }}
             />
-            <button style={{ background: "none", border: "none", cursor: "pointer", color: "#1976d2", padding: 0 }}>
-              <svg width="17" height="17" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                <rect x="3" y="4" width="18" height="18" rx="2" />
-                <path d="M16 2v4M8 2v4M3 10h18" />
-              </svg>
-            </button>
           </div>
         </div>
       </div>

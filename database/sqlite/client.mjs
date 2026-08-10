@@ -428,6 +428,15 @@ export function ensureDataDirectory() {
   fs.mkdirSync(dataDir, { recursive: true });
 }
 
+function ensureEstimatesColumns(db) {
+  const rows = db.prepare('PRAGMA table_info(estimates)').all();
+  const existingColumns = new Set(rows.map((row) => row.name));
+
+  if (!existingColumns.has('converted_sale_no')) {
+    db.exec(`ALTER TABLE estimates ADD COLUMN converted_sale_no TEXT`);
+  }
+}
+
 export function openDatabase() {
   ensureDataDirectory();
   const db = new Database(dbPath);
@@ -451,6 +460,7 @@ export function openDatabase() {
   ensurePaymentInRecordColumns(db);
   ensurePaymentOutRecordColumns(db);
   ensureExpenseRecordColumns(db);
+  ensureEstimatesColumns(db);
   migratePaymentOutRecordsToExpenseRecords(db);
   ensureUnitsAndConversionRatesTables(db);
   ensureBankAccountColumns(db);

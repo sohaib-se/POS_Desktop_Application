@@ -38,6 +38,7 @@ function App() {
   const [lastStandardView, setLastStandardView] = useState<ViewType>("home");
   const [editingSaleInvoice, setEditingSaleInvoice] =
     useState<SaleInvoiceEditData | null>(null);
+  const [isConvertingEstimate, setIsConvertingEstimate] = useState(false);
   const [settingsInitialTab, setSettingsInitialTab] = useState<string>("general");
 
   const isOverlayView = (view: ViewType) =>
@@ -65,11 +66,19 @@ function App() {
 
   const handleEditSaleInvoice = (invoice: SaleInvoiceEditData) => {
     setEditingSaleInvoice(invoice);
+    setIsConvertingEstimate(false);
+    setCurrentView("add-sale");
+  };
+
+  const handleConvertEstimateToSale = (invoiceData: SaleInvoiceEditData) => {
+    setEditingSaleInvoice(invoiceData);
+    setIsConvertingEstimate(true);
     setCurrentView("add-sale");
   };
 
   const handleCloseAddSale = () => {
     setEditingSaleInvoice(null);
+    setIsConvertingEstimate(false);
     setCurrentView(lastStandardView);
   };
 
@@ -114,7 +123,7 @@ function App() {
           />
         );
       case "estimates":
-        return <Estimates />;
+        return <Estimates onConvertEstimateToSale={handleConvertEstimateToSale} />;
       case "payment-in":
         return <PaymentIn />;
       case "purchase-bills":
@@ -186,6 +195,7 @@ function App() {
           <AddSale
             onClose={handleCloseAddSale}
             initialInvoice={editingSaleInvoice}
+            isConversion={isConvertingEstimate}
           />
         </div>
       )}

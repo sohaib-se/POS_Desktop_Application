@@ -692,6 +692,156 @@ function sqliteApiPlugin() {
             return;
           }
 
+          if (req.method === 'POST') {
+            let createdImagePath: string | null = null;
+            let createdDocumentPath: string | null = null;
+
+            try {
+              const payload = await parseJsonBody(req);
+
+              if (!payload.partyName || !String(payload.partyName).trim()) {
+                res.statusCode = 400;
+                res.setHeader('Content-Type', 'application/json');
+                res.end(JSON.stringify({ message: 'Party name is required.' }));
+                return;
+              }
+
+              const lineItems = Array.isArray(payload.lineItems) ? payload.lineItems : [];
+              const subtotal = Number(payload.subtotal ?? 0);
+              const discountPercent = Number(payload.discountPercent ?? 0);
+              const discountAmount = Number(payload.discountAmount ?? 0);
+              const taxRate = Number(payload.taxRate ?? 0);
+              const taxAmount = Number(payload.taxAmount ?? 0);
+              const roundOffAmount = Number(payload.roundOffAmount ?? 0);
+              const amount = Number(payload.amount ?? 0);
+              const balance = Number(payload.balance ?? 0);
+
+              const imageFile = saveDataUrlToAppData({
+                dataUrl: payload.imageDataUrl,
+                prefix: 'estimate_image',
+                targetRoot: saleAttachmentsRoot,
+              });
+              createdImagePath = imageFile?.filePath ?? null;
+              
+              const documentFile = saveDataUrlToAppData({
+                dataUrl: payload.documentDataUrl,
+                prefix: 'estimate_document',
+                targetRoot: saleAttachmentsRoot,
+              });
+              createdDocumentPath = documentFile?.filePath ?? null;
+
+              const estimate = {
+                id: String(payload.id ?? Date.now().toString()),
+                referenceNo: String(payload.referenceNo ?? repository.getNextEstimateNo()),
+                date: String(payload.date ?? new Date().toLocaleDateString('en-GB')),
+                partyName: String(payload.partyName).trim(),
+                subtotal: Number.isFinite(subtotal) ? subtotal : 0,
+                discountPercent: Number.isFinite(discountPercent) ? discountPercent : 0,
+                discountAmount: Number.isFinite(discountAmount) ? discountAmount : 0,
+                taxLabel: payload.taxLabel ? String(payload.taxLabel) : null,
+                taxRate: Number.isFinite(taxRate) ? taxRate : 0,
+                taxAmount: Number.isFinite(taxAmount) ? taxAmount : 0,
+                roundOff: payload.roundOff ? 1 : 0,
+                roundOffAmount: Number.isFinite(roundOffAmount) ? roundOffAmount : 0,
+                amount: Number.isFinite(amount) ? amount : 0,
+                balance: Number.isFinite(balance) ? balance : 0,
+                description: payload.description ? String(payload.description) : null,
+                lineItemsJson: JSON.stringify(lineItems),
+                attachmentImagePath: imageFile?.filePath ?? null,
+                attachmentImageName: imageFile?.fileName ?? null,
+                attachmentDocumentPath: documentFile?.filePath ?? null,
+                attachmentDocumentName: documentFile?.fileName ?? null,
+                status: String(payload.status ?? 'Open'),
+              };
+
+              repository.addEstimate(estimate);
+
+              res.statusCode = 201;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify(estimate));
+              return;
+            } catch (err) {
+              if (createdImagePath) { try { fs.unlinkSync(createdImagePath); } catch (e) {} }
+              if (createdDocumentPath) { try { fs.unlinkSync(createdDocumentPath); } catch (e) {} }
+              console.error('Error saving estimate:', err);
+              res.statusCode = 500;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify({ message: 'Failed to save estimate.' }));
+              return;
+            }
+          }
+
+          if (req.method === 'PUT') {
+            const pathId = requestUrl.pathname.split('/').filter(Boolean)[0];
+            const queryId = requestUrl.searchParams.get('id');
+            const id = (pathId || queryId || '').trim();
+
+            if (!id) {
+              res.statusCode = 400;
+              res.end(JSON.stringify({ message: 'ID required' }));
+              return;
+            }
+
+            let createdImagePath: string | null = null;
+            let createdDocumentPath: string | null = null;
+
+            try {
+              const payload = await parseJsonBody(req);
+              const lineItems = Array.isArray(payload.lineItems) ? payload.lineItems : [];
+              
+              const imageFile = saveDataUrlToAppData({
+                dataUrl: payload.imageDataUrl,
+                prefix: 'estimate_image',
+                targetRoot: saleAttachmentsRoot,
+              });
+              createdImagePath = imageFile?.filePath ?? null;
+              
+              const documentFile = saveDataUrlToAppData({
+                dataUrl: payload.documentDataUrl,
+                prefix: 'estimate_document',
+                targetRoot: saleAttachmentsRoot,
+              });
+              createdDocumentPath = documentFile?.filePath ?? null;
+
+              const estimate = {
+                referenceNo: String(payload.referenceNo ?? repository.getNextEstimateNo()),
+                date: String(payload.date ?? new Date().toLocaleDateString('en-GB')),
+                partyName: String(payload.partyName).trim(),
+                subtotal: Number(payload.subtotal ?? 0),
+                discountPercent: Number(payload.discountPercent ?? 0),
+                discountAmount: Number(payload.discountAmount ?? 0),
+                taxLabel: payload.taxLabel ? String(payload.taxLabel) : null,
+                taxRate: Number(payload.taxRate ?? 0),
+                taxAmount: Number(payload.taxAmount ?? 0),
+                roundOff: payload.roundOff ? 1 : 0,
+                roundOffAmount: Number(payload.roundOffAmount ?? 0),
+                amount: Number(payload.amount ?? 0),
+                balance: Number(payload.balance ?? 0),
+                description: payload.description ? String(payload.description) : null,
+                lineItemsJson: JSON.stringify(lineItems),
+                attachmentImagePath: createdImagePath,
+                attachmentImageName: imageFile?.fileName ?? null,
+                attachmentDocumentPath: createdDocumentPath,
+                attachmentDocumentName: documentFile?.fileName ?? null,
+                status: String(payload.status ?? 'Open'),
+              };
+
+              repository.updateEstimate(id, estimate);
+
+              res.statusCode = 200;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify({ ...estimate, id }));
+              return;
+            } catch (err) {
+              if (createdImagePath) { try { fs.unlinkSync(createdImagePath); } catch (e) {} }
+              if (createdDocumentPath) { try { fs.unlinkSync(createdDocumentPath); } catch (e) {} }
+              console.error('Error updating estimate:', err);
+              res.statusCode = 500;
+              res.end(JSON.stringify({ message: 'Failed to update estimate.' }));
+              return;
+            }
+          }
+
           if (req.method === 'DELETE') {
             const pathId = requestUrl.pathname.split('/').filter(Boolean)[0];
             const queryId = requestUrl.searchParams.get('id');
@@ -762,8 +912,6 @@ function sqliteApiPlugin() {
                   creditLimit: payload.creditLimit ? Number(payload.creditLimit) : null,
                   type: payload.type ?? 'customer'
                 };
-
-                const isNew = !Number.isFinite(Number(payload.id));
 
                 repository.upsertParty(party);
 
@@ -1933,6 +2081,14 @@ function sqliteApiPlugin() {
               };
 
               repository.addSaleInvoice(invoice);
+
+              if (payload.convertedFromEstimateId) {
+                try {
+                  repository.markEstimateConverted(payload.convertedFromEstimateId, invoice.invoiceNo);
+                } catch (e) {
+                  console.error('Failed to mark estimate as converted', e);
+                }
+              }
 
               try {
                 if (String(invoice.paymentMode).toLowerCase() === 'cash') {

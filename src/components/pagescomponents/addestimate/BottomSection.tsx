@@ -1,4 +1,6 @@
+import { useRef } from "react";
 import type { SaleTab } from "./types";
+import { Trash2 } from "lucide-react";
 
 interface BottomSectionProps {
   activeTab: SaleTab;
@@ -21,6 +23,9 @@ export function BottomSection({
   fmt,
   taxOptions
 }: BottomSectionProps) {
+  const imageRef = useRef<HTMLInputElement>(null);
+  const docRef = useRef<HTMLInputElement>(null);
+
   return (
     <div style={{ background: "#fff", padding: "20px 20px 24px 20px" }}>
       <div style={{ display: "flex", gap: 24 }}>
@@ -42,14 +47,31 @@ export function BottomSection({
               ADD DESCRIPTION
             </button>
           )}
-          <button style={{ background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 8, color: "#9ca3af", fontSize: 12, fontWeight: 600, letterSpacing: "0.05em", padding: 0 }}>
-            <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" /><circle cx="12" cy="13" r="4" /></svg>
-            ADD IMAGE
-          </button>
-          <button style={{ background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 8, color: "#9ca3af", fontSize: 12, fontWeight: 600, letterSpacing: "0.05em", padding: 0 }}>
-            <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /></svg>
-            ADD DOCUMENT
-          </button>
+          {activeTab.image ? (
+            <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "#374151" }}>
+              <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 120 }}>{activeTab.image.name}</span>
+              <Trash2 size={14} style={{ cursor: "pointer", color: "#ef4444" }} onClick={() => updateTab({ image: null })} />
+            </div>
+          ) : (
+            <button onClick={() => imageRef.current?.click()} style={{ background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 8, color: "#9ca3af", fontSize: 12, fontWeight: 600, letterSpacing: "0.05em", padding: 0 }}>
+              <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" /><circle cx="12" cy="13" r="4" /></svg>
+              ADD IMAGE
+            </button>
+          )}
+          <input type="file" accept="image/*" style={{ display: "none" }} ref={imageRef} onChange={(e) => { if (e.target.files?.[0]) updateTab({ image: e.target.files[0] }) }} />
+          
+          {activeTab.document ? (
+            <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "#374151" }}>
+              <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 120 }}>{activeTab.document.name}</span>
+              <Trash2 size={14} style={{ cursor: "pointer", color: "#ef4444" }} onClick={() => updateTab({ document: null })} />
+            </div>
+          ) : (
+            <button onClick={() => docRef.current?.click()} style={{ background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 8, color: "#9ca3af", fontSize: 12, fontWeight: 600, letterSpacing: "0.05em", padding: 0 }}>
+              <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /></svg>
+              ADD DOCUMENT
+            </button>
+          )}
+          <input type="file" accept=".pdf,.doc,.docx,.txt" style={{ display: "none" }} ref={docRef} onChange={(e) => { if (e.target.files?.[0]) updateTab({ document: e.target.files[0] }) }} />
         </div>
 
         {/* Right: totals */}

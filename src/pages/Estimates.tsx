@@ -8,7 +8,7 @@ import { EstimatesTable } from "../components/pagescomponents/estimates/Estimate
 import { EstimateRowMenu } from "../components/pagescomponents/estimates/EstimateRowMenu";
 import { ViewEstimateDialog } from "../components/pagescomponents/estimates/ViewEstimateDialog";
 
-export function Estimates() {
+export function Estimates({ onConvertEstimateToSale }: { onConvertEstimateToSale?: (data: any) => void }) {
   const [showAddEstimate, setShowAddEstimate] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [showSearchInput, setShowSearchInput] = useState(false);
@@ -17,12 +17,43 @@ export function Estimates() {
   const [viewingRecord, setViewingRecord] = useState<EstimateRecord | null>(null);
   const [openRowMenuId, setOpenRowMenuId] = useState<string | null>(null);
   const [openRowMenuPosition, setOpenRowMenuPosition] = useState<{ left: number; top: number } | null>(null);
+  const [editingEstimate, setEditingEstimate] = useState<EstimateRecord | null>(null);
 
-  useEffect(() => {
+  const handleEditEstimate = (estimate: EstimateRecord) => {
+    setEditingEstimate(estimate);
+    setShowAddEstimate(true);
+  };
+
+  const handleConvert = (estimate: EstimateRecord) => {
+    if (onConvertEstimateToSale) {
+      onConvertEstimateToSale({
+        ...estimate,
+        invoiceNo: estimate.referenceNo,
+        transactionType: "Sale",
+        paymentMode: "credit",
+        paymentType: "Credit"
+      });
+    }
+  };
+
+  const fetchEstimates = () => {
     fetch('/api/estimates')
       .then(res => res.json())
       .then(data => setRecords(data))
       .catch(err => console.error("Failed to fetch estimates:", err));
+  };
+
+  useEffect(() => {
+    fetchEstimates();
+
+    const handleSaleRefresh = () => fetchEstimates();
+    window.addEventListener("sale-invoices-refresh", handleSaleRefresh);
+    window.addEventListener("estimates-refresh", handleSaleRefresh);
+
+    return () => {
+      window.removeEventListener("sale-invoices-refresh", handleSaleRefresh);
+      window.removeEventListener("estimates-refresh", handleSaleRefresh);
+    };
   }, []);
 
   useEffect(() => {
@@ -79,12 +110,17 @@ export function Estimates() {
           openRowMenuId={openRowMenuId}
           setOpenRowMenuId={setOpenRowMenuId}
           setOpenRowMenuPosition={setOpenRowMenuPosition}
+          onConvertEstimateToSale={handleConvert}
         />
       </div>
 
       {showAddEstimate && (
         <div className="fixed inset-0 z-[100]">
-          <AddEstimate onClose={() => setShowAddEstimate(false)} />
+          <AddEstimate 
+            initialEstimate={editingEstimate}
+            onClose={() => { setShowAddEstimate(false); setEditingEstimate(null); }} 
+            onSave={() => { fetchEstimates(); setShowAddEstimate(false); setEditingEstimate(null); }} 
+          />
         </div>
       )}
 
@@ -93,7 +129,7 @@ export function Estimates() {
         openRowMenuPosition={openRowMenuPosition}
         records={records}
         setViewingRecord={setViewingRecord}
-        setShowAddEstimate={setShowAddEstimate}
+        onEditEstimate={handleEditEstimate}
         handleDelete={handleDelete}
         setOpenRowMenuId={setOpenRowMenuId}
         setOpenRowMenuPosition={setOpenRowMenuPosition}

@@ -320,3 +320,16 @@ INSERT OR IGNORE INTO units (id, full_name, short_name) VALUES
 ('unit_5', 'Liter', 'L'),
 ('unit_6', 'Meter', 'm');
 
+CREATE TABLE IF NOT EXISTS recycle_bin (
+  id TEXT PRIMARY KEY,
+  transaction_date TEXT,
+  ref_no TEXT,
+  party_name TEXT,
+  txn_type TEXT,
+  payment_type TEXT,
+  amount REAL,
+  deleted_on TEXT NOT NULL DEFAULT (datetime('now')),
+  original_table TEXT NOT NULL,
+  original_id TEXT NOT NULL,
+  data_payload TEXT NOT NULL
+);

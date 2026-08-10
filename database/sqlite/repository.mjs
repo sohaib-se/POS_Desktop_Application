@@ -153,6 +153,23 @@ export function getPaymentInRecordById(id) {
 
 export function deletePaymentInRecord(id) {
   const db = openDatabase();
+  const row = db.prepare('SELECT * FROM payment_in_records WHERE id = ?').get(String(id));
+  if (row) {
+    try {
+      db.prepare(`
+        INSERT INTO recycle_bin (id, transaction_date, original_table, original_id, data_payload, txn_type, ref_no, party_name, amount, payment_type)
+        VALUES (?, datetime('now'), 'payment_in_records', ?, ?, 'Payment In', ?, ?, ?, ?)
+      `).run(
+        Date.now().toString() + Math.floor(Math.random()*1000),
+        String(id),
+        JSON.stringify(row),
+        row.payment_no || '',
+        row.party_name || '',
+        row.amount || 0,
+        row.payment_mode || ''
+      );
+    } catch(e) { console.error('Error inserting to recycle_bin', e); }
+  }
   const result = db.prepare('DELETE FROM payment_in_records WHERE id = ?').run(String(id));
   db.close();
   return result.changes > 0;
@@ -196,16 +213,48 @@ export function getEstimates() {
 
 export function deleteEstimate(id) {
   const db = openDatabase();
+  const row = db.prepare('SELECT * FROM estimates WHERE id = ?').get(String(id));
+  if (row) {
+    try {
+      db.prepare(`
+        INSERT INTO recycle_bin (id, transaction_date, original_table, original_id, data_payload, txn_type, ref_no, party_name, amount, payment_type)
+        VALUES (?, datetime('now'), 'estimates', ?, ?, 'Estimate', ?, ?, ?, ?)
+      `).run(
+        Date.now().toString() + Math.floor(Math.random()*1000),
+        String(id),
+        JSON.stringify(row),
+        row.estimate_no || '',
+        row.party_name || '',
+        row.amount || 0,
+        row.payment_mode || ''
+      );
+    } catch(e) { console.error('Error inserting to recycle_bin', e); }
+  }
   const result = db.prepare('DELETE FROM estimates WHERE id = ?').run(String(id));
   db.close();
   return result.changes > 0;
 }
 
+
+
 export function deleteParty(id) {
   const db = openDatabase();
-  const result = db
-    .prepare('DELETE FROM parties WHERE id = ?')
-    .run(String(id));
+  const row = db.prepare('SELECT * FROM parties WHERE id = ?').get(String(id));
+  if (row) {
+    try {
+      db.prepare(`
+        INSERT INTO recycle_bin (id, transaction_date, original_table, original_id, data_payload, txn_type, ref_no, party_name, amount, payment_type)
+        VALUES (?, datetime('now'), 'parties', ?, ?, 'Party', '', ?, ?, '')
+      `).run(
+        Date.now().toString() + Math.floor(Math.random()*1000),
+        String(id),
+        JSON.stringify(row),
+        row.name || '',
+        row.balance || 0
+      );
+    } catch(e) { console.error('Error inserting to recycle_bin', e); }
+  }
+  const result = db.prepare('DELETE FROM parties WHERE id = ?').run(String(id));
   db.close();
   return result.changes > 0;
 }
@@ -403,6 +452,24 @@ export function updateSaleInvoice(id, invoice) {
 
 export function deleteSaleInvoice(id) {
   const db = openDatabase();
+  const row = db.prepare('SELECT * FROM sale_invoices WHERE id = ?').get(String(id));
+  if (row) {
+    try {
+      db.prepare(`
+        INSERT INTO recycle_bin (id, transaction_date, original_table, original_id, data_payload, txn_type, ref_no, party_name, amount, payment_type)
+        VALUES (?, datetime('now'), 'sale_invoices', ?, ?, ?, ?, ?, ?, ?)
+      `).run(
+        Date.now().toString() + Math.floor(Math.random()*1000),
+        String(id),
+        JSON.stringify(row),
+        row.transaction_type || 'Sale',
+        row.invoice_no || '',
+        row.party_name || '',
+        row.amount || 0,
+        row.payment_mode || ''
+      );
+    } catch(e) { console.error('Error inserting to recycle_bin', e); }
+  }
   const result = db.prepare('DELETE FROM sale_invoices WHERE id = ?').run(String(id));
   db.close();
   return result.changes > 0;
@@ -563,6 +630,24 @@ export function updatePurchaseBill(id, invoice) {
 
 export function deletePurchaseBill(id) {
   const db = openDatabase();
+  const row = db.prepare('SELECT * FROM purchase_bills WHERE id = ?').get(String(id));
+  if (row) {
+    try {
+      db.prepare(`
+        INSERT INTO recycle_bin (id, transaction_date, original_table, original_id, data_payload, txn_type, ref_no, party_name, amount, payment_type)
+        VALUES (?, datetime('now'), 'purchase_bills', ?, ?, ?, ?, ?, ?, ?)
+      `).run(
+        Date.now().toString() + Math.floor(Math.random()*1000),
+        String(id),
+        JSON.stringify(row),
+        row.transaction_type || 'Purchase',
+        row.invoice_no || '',
+        row.party_name || '',
+        row.amount || 0,
+        row.payment_mode || ''
+      );
+    } catch(e) { console.error('Error inserting to recycle_bin', e); }
+  }
   const result = db.prepare('DELETE FROM purchase_bills WHERE id = ?').run(String(id));
   db.close();
   return result.changes > 0;
@@ -698,7 +783,72 @@ export function updateExpenseRecord(id, record) {
 
 export function deleteExpenseRecord(id) {
   const db = openDatabase();
+  const row = db.prepare('SELECT * FROM expense_records WHERE id = ?').get(String(id));
+  if (row) {
+    try {
+      db.prepare(`
+        INSERT INTO recycle_bin (id, transaction_date, original_table, original_id, data_payload, txn_type, ref_no, party_name, amount, payment_type)
+        VALUES (?, datetime('now'), 'expense_records', ?, ?, 'Expense', ?, '', ?, ?)
+      `).run(
+        Date.now().toString() + Math.floor(Math.random()*1000),
+        String(id),
+        JSON.stringify(row),
+        row.payment_no || '',
+        row.amount || 0,
+        row.payment_mode || ''
+      );
+    } catch(e) { console.error('Error inserting to recycle_bin', e); }
+  }
   const result = db.prepare('DELETE FROM expense_records WHERE id = ?').run(String(id));
+  db.close();
+  return result.changes > 0;
+}
+
+// --- Recycle Bin ---
+export function emptyRecycleBin() {
+  const db = openDatabase();
+  const result = db.prepare('DELETE FROM recycle_bin').run();
+  db.close();
+  return result.changes > 0;
+}
+
+export function getRecycleBinItems() {
+  const db = openDatabase();
+  const rows = db.prepare('SELECT * FROM recycle_bin ORDER BY deleted_on DESC').all();
+  db.close();
+  return rows;
+}
+
+export function restoreRecycleBinItem(id) {
+  const db = openDatabase();
+  const item = db.prepare('SELECT * FROM recycle_bin WHERE id = ?').get(String(id));
+  if (!item) {
+    db.close();
+    return false;
+  }
+  
+  const payload = JSON.parse(item.data_payload);
+  const table = item.original_table;
+  
+  const columns = Object.keys(payload);
+  const placeholders = columns.map(() => '?').join(', ');
+  const values = Object.values(payload);
+  
+  try {
+    db.prepare(`INSERT OR REPLACE INTO ${table} (${columns.join(', ')}) VALUES (${placeholders})`).run(...values);
+    db.prepare('DELETE FROM recycle_bin WHERE id = ?').run(String(id));
+    db.close();
+    return true;
+  } catch (error) {
+    console.error('Failed to restore from recycle bin:', error);
+    db.close();
+    return false;
+  }
+}
+
+export function permanentDeleteRecycleBinItem(id) {
+  const db = openDatabase();
+  const result = db.prepare('DELETE FROM recycle_bin WHERE id = ?').run(String(id));
   db.close();
   return result.changes > 0;
 }
@@ -724,6 +874,23 @@ export function getPaymentOutRecordById(id) {
 
 export function deletePaymentOutRecord(id) {
   const db = openDatabase();
+  const row = db.prepare('SELECT * FROM payment_out_records WHERE id = ?').get(String(id));
+  if (row) {
+    try {
+      db.prepare(`
+        INSERT INTO recycle_bin (id, transaction_date, original_table, original_id, data_payload, txn_type, ref_no, party_name, amount, payment_type)
+        VALUES (?, datetime('now'), 'payment_out_records', ?, ?, 'Payment Out', ?, ?, ?, ?)
+      `).run(
+        Date.now().toString() + Math.floor(Math.random()*1000),
+        String(id),
+        JSON.stringify(row),
+        row.payment_no || '',
+        row.party_name || '',
+        row.amount || 0,
+        row.payment_mode || ''
+      );
+    } catch(e) { console.error('Error inserting to recycle_bin', e); }
+  }
   const result = db.prepare('DELETE FROM payment_out_records WHERE id = ?').run(String(id));
   db.close();
   return result.changes > 0;
@@ -805,6 +972,22 @@ export function upsertItem(item) {
 
 export function deleteItem(id) {
   const db = openDatabase();
+  const row = db.prepare('SELECT * FROM items WHERE id = ?').get(String(id));
+  if (row) {
+    try {
+      db.prepare(`
+        INSERT INTO recycle_bin (id, transaction_date, original_table, original_id, data_payload, txn_type, ref_no, party_name, amount, payment_type)
+        VALUES (?, datetime('now'), 'items', ?, ?, 'Item', ?, ?, ?, '')
+      `).run(
+        Date.now().toString() + Math.floor(Math.random()*1000),
+        String(id),
+        JSON.stringify(row),
+        row.code || '',
+        row.name || '',
+        row.sale_price || 0
+      );
+    } catch(e) { console.error('Error inserting to recycle_bin', e); }
+  }
   const result = db
     .prepare('DELETE FROM items WHERE id = ?')
     .run(String(id));
@@ -936,6 +1119,22 @@ export function addCashInHandTransaction(entry) {
 export function deleteCashInHandTransaction(id) {
   const db = openDatabase();
   const txId = String(id);
+  const row = db.prepare('SELECT * FROM cash_in_hand_transactions WHERE id = ?').get(txId);
+  if (row) {
+    try {
+      db.prepare(`
+        INSERT INTO recycle_bin (id, transaction_date, original_table, original_id, data_payload, txn_type, ref_no, party_name, amount, payment_type)
+        VALUES (?, datetime('now'), 'cash_in_hand_transactions', ?, ?, 'Cash In Hand', ?, '', ?, ?)
+      `).run(
+        Date.now().toString() + Math.floor(Math.random()*1000),
+        txId,
+        JSON.stringify(row),
+        '',
+        row.amount || 0,
+        row.transaction_type || row.type || ''
+      );
+    } catch(e) { console.error('Error inserting to recycle_bin', e); }
+  }
   const result = db
     .prepare('DELETE FROM cash_in_hand_transactions WHERE id = ?')
     .run(txId);

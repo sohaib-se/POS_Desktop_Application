@@ -2591,6 +2591,124 @@ function sqliteApiPlugin() {
           res.end(JSON.stringify({ message: 'Failed to process request.' }));
         }
       });
+      
+      server.middlewares.use('/api/recycle_bin/restore', async (req, res) => {
+        try {
+          // @ts-expect-error Runtime-only Node module used in Vite middleware.
+          const repository = await import('./database/sqlite/repository.mjs');
+          
+          if (req.method === 'POST') {
+            const chunks = [];
+            req.on('data', (chunk) => chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk)));
+            req.on('end', () => {
+              try {
+                const raw = Buffer.concat(chunks).toString('utf8');
+                const payload = raw ? JSON.parse(raw) : {};
+                
+                if (!payload.id) {
+                  res.statusCode = 400;
+                  res.setHeader('Content-Type', 'application/json');
+                  res.end(JSON.stringify({ message: 'ID is required.' }));
+                  return;
+                }
+                
+                const success = repository.restoreRecycleBinItem(payload.id);
+                if (success) {
+                  res.statusCode = 200;
+                  res.setHeader('Content-Type', 'application/json');
+                  res.end(JSON.stringify({ message: 'Restored successfully.' }));
+                } else {
+                  res.statusCode = 404;
+                  res.setHeader('Content-Type', 'application/json');
+                  res.end(JSON.stringify({ message: 'Failed to restore item.' }));
+                }
+              } catch(e) {
+                res.statusCode = 400;
+                res.setHeader('Content-Type', 'application/json');
+                res.end(JSON.stringify({ message: 'Invalid payload.' }));
+              }
+            });
+            return;
+          }
+          
+          res.statusCode = 405;
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify({ message: 'Method not allowed.' }));
+        } catch(e) {
+          res.statusCode = 500;
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify({ message: 'Server error.' }));
+        }
+      });
+
+      server.middlewares.use('/api/recycle_bin/empty', async (req, res) => {
+        try {
+          // @ts-expect-error Runtime-only Node module used in Vite middleware.
+          const repository = await import('./database/sqlite/repository.mjs');
+          
+          if (req.method === 'DELETE') {
+            const success = repository.emptyRecycleBin();
+            res.statusCode = 200;
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({ message: 'Recycle bin emptied successfully.' }));
+            return;
+          }
+          
+          res.statusCode = 405;
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify({ message: 'Method not allowed.' }));
+        } catch(e) {
+          res.statusCode = 500;
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify({ message: 'Server error.' }));
+        }
+      });
+
+      server.middlewares.use('/api/recycle_bin', async (req, res) => {
+        try {
+          // @ts-expect-error Runtime-only Node module used in Vite middleware.
+          const repository = await import('./database/sqlite/repository.mjs');
+          const requestUrl = new URL(req.url ?? '/', 'http://localhost');
+
+          if (req.method === 'GET') {
+            const items = repository.getRecycleBinItems();
+            res.statusCode = 200;
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify(items));
+            return;
+          }
+
+          if (req.method === 'DELETE') {
+            const id = requestUrl.searchParams.get('id');
+            if (!id) {
+              res.statusCode = 400;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify({ message: 'ID is required.' }));
+              return;
+            }
+            const success = repository.permanentDeleteRecycleBinItem(id);
+            if (success) {
+              res.statusCode = 200;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify({ message: 'Deleted successfully.' }));
+            } else {
+              res.statusCode = 404;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify({ message: 'Item not found.' }));
+            }
+            return;
+          }
+          
+          res.statusCode = 405;
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify({ message: 'Method not allowed.' }));
+        } catch(e) {
+          res.statusCode = 500;
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify({ message: 'Server error.' }));
+        }
+      });
+
       server.middlewares.use('/api/cash_transactions', async (req, res) => {
         try {
           // @ts-expect-error Runtime-only Node module used in Vite middleware.

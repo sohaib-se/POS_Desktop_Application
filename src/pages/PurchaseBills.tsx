@@ -16,7 +16,11 @@ import { PurchaseBillTable } from "../components/pagescomponents/purchasebills/P
 import { PurchaseBillContextMenu } from "../components/pagescomponents/purchasebills/PurchaseBillContextMenu";
 import { PurchaseBillDialog } from "../components/pagescomponents/purchasebills/PurchaseBillDialog";
 
-export function PurchaseBills() {
+interface PurchaseBillsProps {
+  onBack?: () => void;
+}
+
+export function PurchaseBills({ onBack }: PurchaseBillsProps = {}) {
   const [invoiceRows, setInvoiceRows] = useState<PurchaseBillViewRow[]>([]);
   const [showAddPurchase, setShowAddPurchase] = useState(false);
   const [editingInvoice, setEditingInvoice] = useState<PurchaseBillEditData | null>(null);
@@ -219,6 +223,7 @@ export function PurchaseBills() {
     <div className="h-full flex flex-col bg-[#D0DCE7] gap-1 overflow-y-auto">
       <PurchaseBillHeader
         onAddPurchase={() => { setEditingInvoice(null); setShowAddPurchase(true); }}
+        onBack={onBack}
       />
 
       <PurchaseBillFilters

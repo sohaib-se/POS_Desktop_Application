@@ -21,9 +21,10 @@ import { SaleInvoiceDialog } from "../components/pagescomponents/saleinvoices/Sa
 interface SaleInvoicesProps {
   onViewChange: (view: ViewType) => void;
   onEditInvoice: (invoice: SaleInvoiceEditData) => void;
+  onBack?: () => void;
 }
 
-export function SaleInvoices({ onViewChange, onEditInvoice }: SaleInvoicesProps) {
+export function SaleInvoices({ onViewChange, onEditInvoice, onBack }: SaleInvoicesProps) {
   const [invoiceRows, setInvoiceRows] = useState<SaleInvoiceViewRow[]>([]);
   const [selectedMonthKey, setSelectedMonthKey] = useState<string>("");
   const [searchQuery, setSearchQuery] = useState("");
@@ -222,7 +223,7 @@ export function SaleInvoices({ onViewChange, onEditInvoice }: SaleInvoicesProps)
 
   return (
     <div className="h-full flex flex-col bg-[#D0DCE7] gap-1 overflow-y-auto">
-      <SaleInvoiceHeader onViewChange={onViewChange} />
+      <SaleInvoiceHeader onViewChange={onViewChange} onBack={onBack} />
 
       <SaleInvoiceFilters
         monthButtonLabel={monthButtonLabel}

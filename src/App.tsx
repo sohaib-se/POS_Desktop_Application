@@ -140,7 +140,7 @@ function App() {
       case "cash-in-hand":
         return <CashBank subView={currentView} />;
       case "reports":
-        return <Reports />;
+        return <Reports onViewChange={handleViewChange} onEditInvoice={handleEditSaleInvoice} />;
       case "sync-auto-backup":
         return <AutoBackup />;
       case "sync-backup-computer":

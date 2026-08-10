@@ -1835,8 +1835,8 @@ function sqliteApiPlugin() {
 
               res.statusCode = 200;
               res.setHeader('Content-Type', 'application/json');
-              res.end(JSON.stringify({ id, ...record }));
-            } catch (error) {
+              res.end(JSON.stringify(record));
+            } catch {
               if (createdImagePath) {
                 removeManagedAttachmentFile(createdImagePath);
               }
@@ -2661,8 +2661,8 @@ function sqliteApiPlugin() {
           const repository = await import('./database/sqlite/repository.mjs');
           
           if (req.method === 'POST') {
-            const chunks = [];
-            req.on('data', (chunk) => chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk)));
+            const chunks: Buffer[] = [];
+            req.on('data', (chunk: Buffer | string) => chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk)));
             req.on('end', () => {
               try {
                 const raw = Buffer.concat(chunks).toString('utf8');
@@ -2710,7 +2710,7 @@ function sqliteApiPlugin() {
           const repository = await import('./database/sqlite/repository.mjs');
           
           if (req.method === 'DELETE') {
-            const success = repository.emptyRecycleBin();
+            repository.emptyRecycleBin();
             res.statusCode = 200;
             res.setHeader('Content-Type', 'application/json');
             res.end(JSON.stringify({ message: 'Recycle bin emptied successfully.' }));

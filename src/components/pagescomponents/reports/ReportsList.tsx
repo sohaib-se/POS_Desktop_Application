@@ -3,20 +3,14 @@ import type { ReportCategory } from "./types";
 
 interface ReportsListProps {
   categories: ReportCategory[];
-  searchTerm: string;
+  onReportClick?: (categoryName: string, reportName: string) => void;
 }
 
-export function ReportsList({ categories, searchTerm }: ReportsListProps) {
-  // Apply filtering based on search term
-  const filteredCategories = categories.map(category => ({
-    ...category,
-    reports: category.reports.filter(r => r.toLowerCase().includes(searchTerm.toLowerCase()))
-  })).filter(category => category.reports.length > 0 || category.name.toLowerCase().includes(searchTerm.toLowerCase()));
-
+export function ReportsList({ categories, onReportClick }: ReportsListProps) {
   return (
     <div className="flex-1 overflow-y-auto p-4">
       <div className="grid grid-cols-2 gap-4">
-        {filteredCategories.map((category, idx) => {
+        {categories.map((category, idx) => {
           const Icon = category.icon;
           return (
             <div key={idx} className="border border-gray-200 rounded-xl overflow-hidden">
@@ -31,6 +25,7 @@ export function ReportsList({ categories, searchTerm }: ReportsListProps) {
                   <div 
                     key={ridx}
                     className="flex items-center justify-between px-4 py-3 hover:bg-gray-50 cursor-pointer transition-colors"
+                    onClick={() => onReportClick?.(category.name, reportName)}
                   >
                     <span className="text-sm text-gray-700">{reportName}</span>
                     <ChevronRight className="w-4 h-4 text-gray-400" />

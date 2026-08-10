@@ -45,7 +45,9 @@ export function Expenses({ onAddExpense }: ExpensesProps) {
 
     const loadExpenseCategories = async () => {
       try {
-        const response = await fetch("/api/expense_categories");
+        const response = await fetch("/api/expense_categories", {
+          cache: "no-store",
+        });
         if (!response.ok) {
           throw new Error("Failed to load expense categories");
         }
@@ -81,8 +83,12 @@ export function Expenses({ onAddExpense }: ExpensesProps) {
 
     void loadExpenseCategories();
 
+    const handleRefresh = () => void loadExpenseCategories();
+    window.addEventListener("expenses-refresh", handleRefresh);
+
     return () => {
       cancelled = true;
+      window.removeEventListener("expenses-refresh", handleRefresh);
     };
   }, []);
 
@@ -91,7 +97,9 @@ export function Expenses({ onAddExpense }: ExpensesProps) {
 
     const loadExpenseItems = async () => {
       try {
-        const response = await fetch("/api/expense_items");
+        const response = await fetch("/api/expense_items", {
+          cache: "no-store",
+        });
         if (!response.ok) {
           throw new Error("Failed to load expense items");
         }
@@ -112,8 +120,12 @@ export function Expenses({ onAddExpense }: ExpensesProps) {
 
     void loadExpenseItems();
 
+    const handleRefresh = () => void loadExpenseItems();
+    window.addEventListener("expenses-refresh", handleRefresh);
+
     return () => {
       cancelled = true;
+      window.removeEventListener("expenses-refresh", handleRefresh);
     };
   }, []);
 
@@ -122,7 +134,9 @@ export function Expenses({ onAddExpense }: ExpensesProps) {
 
     const loadExpenseRecords = async () => {
       try {
-        const response = await fetch("/api/expense_records");
+        const response = await fetch("/api/expense_records", {
+          cache: "no-store",
+        });
         if (!response.ok) return;
         const records = (await response.json()) as ExpenseRecord[];
         if (cancelled) return;

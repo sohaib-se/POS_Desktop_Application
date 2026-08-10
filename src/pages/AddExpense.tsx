@@ -36,7 +36,7 @@ function createDefaultTab(id: number): ExpenseTab {
     id,
     label: `Expense #${id}`,
     expenseCategoryId: expenseCategories[0]?.id ?? "",
-    expenseDate: new Date().toLocaleDateString("en-GB"),
+    expenseDate: new Date().toISOString().split("T")[0],
     paymentType: "Cash",
     roundOff: true,
     rows: [createDefaultRow(), createDefaultRow()],
@@ -139,25 +139,26 @@ export function AddExpense({ onSave, onShare, onClose }: AddExpenseProps) {
 
   useEffect(() => {
     let cancelled = false;
-
     const loadNextExpenseNo = async () => {
       try {
-        const response = await fetch("/api/expense_records");
+        const response = await fetch("/api/expense_records", {
+          cache: "no-store",
+        });
         if (!response.ok) {
           return;
         }
 
-        const records = (await response.json()) as Array<{ payment_no?: string | null; id?: string | null }>;
+        const records = (await response.json()) as Array<{ expense_no?: string | null; id?: string | null }>;
         if (cancelled) {
           return;
         }
 
-        const highestPaymentNo = records.reduce((highest, record) => {
-          const paymentNo = Number(record.payment_no ?? record.id ?? 0);
-          return Number.isFinite(paymentNo) && paymentNo > highest ? paymentNo : highest;
+        const highestExpenseNo = records.reduce((highest, record) => {
+          const expenseNo = Number(record.expense_no ?? 0);
+          return Number.isFinite(expenseNo) && expenseNo > highest ? expenseNo : highest;
         }, 0);
 
-        setNextExpenseNo(String(highestPaymentNo + 1));
+        setNextExpenseNo(String(highestExpenseNo + 1));
       } catch (error) {
         console.error(error);
       }
@@ -171,7 +172,8 @@ export function AddExpense({ onSave, onShare, onClose }: AddExpenseProps) {
   }, []);
 
   const activeTab = tabs.find((tab) => tab.id === activeTabId) ?? tabs[0];
-  const displayedExpenseNo = nextExpenseNo;
+  const tabIndex = tabs.findIndex((tab) => tab.id === activeTabId);
+  const displayedExpenseNo = String(Number(nextExpenseNo) + (tabIndex >= 0 ? tabIndex : 0));
   const displayedExpenseDate = activeTab.expenseDate;
 
   const totalAmount = useMemo(() => {

@@ -103,14 +103,6 @@ export function ExpenseTable({
             <th style={{ position: "relative", padding: "8px 10px", textAlign: "right", fontSize: 12, fontWeight: 600, color: "#6b7280", borderRight: "1px solid #e5e7eb", letterSpacing: "0.04em" }}>
               AMOUNT<ResizeHandle col={4} />
             </th>
-            <th style={{ padding: "8px 6px", textAlign: "center", background: "#f3f6f9" }}>
-              <button style={{ background: "none", border: "none", cursor: "pointer", color: "#3b82f6", padding: 0, display: "flex", alignItems: "center" }}>
-                <svg width="17" height="17" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                  <circle cx="12" cy="12" r="10" />
-                  <path d="M12 8v8M8 12h8" />
-                </svg>
-              </button>
-            </th>
           </tr>
         </thead>
         <tbody>
@@ -192,7 +184,6 @@ export function ExpenseTable({
                     onChange={(event) => updateRow(row.id, { amount: event.target.value })}
                   />
                 </td>
-                <td />
               </tr>
             );
           })}
@@ -213,7 +204,6 @@ export function ExpenseTable({
             <td style={{ padding: "8px 10px", textAlign: "right", fontSize: 13, fontWeight: 600, color: "#374151", borderRight: "1px solid #e5e7eb" }}>
               {totalAmount > 0 ? totalAmount.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0"}
             </td>
-            <td />
           </tr>
         </tbody>
       </table>

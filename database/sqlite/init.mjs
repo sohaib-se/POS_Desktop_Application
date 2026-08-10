@@ -134,17 +134,8 @@ function ensureExpenseRecordColumns(db) {
     CREATE TABLE IF NOT EXISTS expense_records (
       id TEXT PRIMARY KEY,
       expense_no TEXT,
-      category_id TEXT,
-      category_name TEXT,
-      payment_no TEXT,
-      date TEXT NOT NULL,
-      party_name TEXT NOT NULL,
-      expense_category_id TEXT,
-      expense_category_name TEXT,
       amount REAL NOT NULL,
       payment_type TEXT NOT NULL,
-      subtotal REAL NOT NULL DEFAULT 0,
-      balance REAL NOT NULL DEFAULT 0,
       description TEXT,
       line_items_json TEXT,
       attachment_image_path TEXT,
@@ -167,18 +158,9 @@ function ensureExpenseRecordColumns(db) {
     }
   };
 
-  addColumn('date', 'TEXT NOT NULL DEFAULT (datetime(\'now\'))');
-  addColumn('party_name', 'TEXT NOT NULL DEFAULT \"Expense\"');
   addColumn('amount', 'REAL NOT NULL DEFAULT 0');
-  addColumn('payment_type', 'TEXT NOT NULL DEFAULT \"Cash\"');
+  addColumn('payment_type', 'TEXT NOT NULL DEFAULT "Cash"');
   addColumn('expense_no', 'TEXT');
-  addColumn('category_id', 'TEXT');
-  addColumn('category_name', 'TEXT');
-  addColumn('subtotal', 'REAL NOT NULL DEFAULT 0');
-  addColumn('balance', 'REAL NOT NULL DEFAULT 0');
-  addColumn('payment_no', 'TEXT');
-  addColumn('expense_category_id', 'TEXT');
-  addColumn('expense_category_name', 'TEXT');
   addColumn('description', 'TEXT');
   addColumn('line_items_json', 'TEXT');
   addColumn('attachment_image_path', 'TEXT');
@@ -226,17 +208,8 @@ function migratePaymentOutRecordsToExpenseRecords(db) {
     INSERT OR IGNORE INTO expense_records (
       id,
       expense_no,
-      category_id,
-      category_name,
-      payment_no,
-      date,
-      party_name,
-      expense_category_id,
-      expense_category_name,
       amount,
       payment_type,
-      subtotal,
-      balance,
       description,
       line_items_json,
       attachment_image_path,
@@ -251,17 +224,8 @@ function migratePaymentOutRecordsToExpenseRecords(db) {
     SELECT
       id,
       payment_no,
-      expense_category_id,
-      expense_category_name,
-      payment_no,
-      date,
-      party_name,
-      expense_category_id,
-      expense_category_name,
       amount,
       payment_type,
-      amount,
-      0,
       description,
       line_items_json,
       attachment_image_path,

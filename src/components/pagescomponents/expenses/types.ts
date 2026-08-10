@@ -8,6 +8,22 @@ export interface ExpenseItem {
   category_id?: string;
 }
 
+export interface ExpenseRecord {
+  id: string;
+  expense_no: string | null;
+  category_id: string | null;
+  category_name: string | null;
+  amount: number;
+  payment_type: string;
+  description: string | null;
+  line_items_json: string | null;
+  round_off: number;
+  round_off_amount: number;
+  created_at: string;
+  updated_at: string;
+}
+
+
 export type ExpenseCategoryContextMenuState = {
   category: ExpenseCategory;
   x: number;

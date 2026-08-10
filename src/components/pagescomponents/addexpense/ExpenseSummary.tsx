@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import type React from "react";
 import type { ExpenseTab } from "./types";
 
@@ -17,6 +18,29 @@ export function ExpenseSummary({
   totalAmount,
   handleAttachmentSelection,
 }: ExpenseSummaryProps) {
+  const [paymentOptions, setPaymentOptions] = useState<string[]>(["Cash"]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const loadBankAccounts = async () => {
+      try {
+        const response = await fetch("/api/bank_accounts");
+        if (!response.ok) return;
+        const accounts = await response.json();
+        if (!cancelled) {
+          setPaymentOptions(["Cash", ...accounts.map((acc: any) => acc.name)]);
+        }
+      } catch (error) {
+        console.error(error);
+      }
+    };
+
+    void loadBankAccounts();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   return (
     <div style={{ background: "#fff", padding: "20px 20px 24px 20px" }}>
       <div style={{ display: "flex", gap: 24 }}>
@@ -30,9 +54,11 @@ export function ExpenseSummary({
               onChange={(event) => updateTab({ paymentType: event.target.value })}
               style={{ appearance: "none", border: "1px solid #d1d5db", borderRadius: 4, fontSize: 13, color: "#374151", background: "#fff", padding: "7px 30px 7px 12px", width: "100%", cursor: "pointer" }}
             >
-              <option>Cash</option>
-              <option>Bank Transfer</option>
-              <option>Cheque</option>
+              {paymentOptions.map((option) => (
+                <option key={option} value={option}>
+                  {option}
+                </option>
+              ))}
             </select>
             <span style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", pointerEvents: "none", color: "#6b7280" }}>▾</span>
           </div>

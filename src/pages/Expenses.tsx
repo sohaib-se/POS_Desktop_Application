@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { expenseCategories } from "@/data/mockData";
 import type { ExpenseCategory } from "@/types";
-import type { ExpenseItem } from "../components/pagescomponents/expenses/types";
+import type { ExpenseItem, ExpenseRecord } from "../components/pagescomponents/expenses/types";
+
 
 import { ExpensesTabs } from "../components/pagescomponents/expenses/ExpensesTabs";
 import { ExpensesSidebar } from "../components/pagescomponents/expenses/ExpensesSidebar";
@@ -21,7 +22,9 @@ export function Expenses({ onAddExpense }: ExpensesProps) {
   const [activeTab, setActiveTab] = useState<"category" | "items">("category");
   const [expenseItemList, setExpenseItemList] = useState<ExpenseItem[]>([]);
   const [selectedExpenseItem, setSelectedExpenseItem] = useState<ExpenseItem | null>(null);
-  
+  const [expenseRecordList, setExpenseRecordList] = useState<ExpenseRecord[]>([]);
+
+
   const [showAddCategory, setShowAddCategory] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState("");
   const [categoryBeingEdited, setCategoryBeingEdited] =
@@ -114,6 +117,33 @@ export function Expenses({ onAddExpense }: ExpensesProps) {
     };
   }, []);
 
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadExpenseRecords = async () => {
+      try {
+        const response = await fetch("/api/expense_records");
+        if (!response.ok) return;
+        const records = (await response.json()) as ExpenseRecord[];
+        if (cancelled) return;
+        setExpenseRecordList(records);
+      } catch (error) {
+        console.error(error);
+      }
+    };
+
+    void loadExpenseRecords();
+
+    const handleRefresh = () => void loadExpenseRecords();
+    window.addEventListener("expenses-refresh", handleRefresh);
+
+    return () => {
+      cancelled = true;
+      window.removeEventListener("expenses-refresh", handleRefresh);
+    };
+  }, []);
+
+
   const handleCreateCategory = async () => {
     const normalizedName = newCategoryName.trim();
     if (!normalizedName) {
@@ -156,8 +186,8 @@ export function Expenses({ onAddExpense }: ExpensesProps) {
 
         const nextCategories = hasExistingCategory
           ? previousCategories.map((category) =>
-              category.id === updatedCategory.id ? updatedCategory : category,
-            )
+            category.id === updatedCategory.id ? updatedCategory : category,
+          )
           : [...previousCategories, updatedCategory];
 
         return nextCategories.sort((a, b) => a.name.localeCompare(b.name));
@@ -259,8 +289,8 @@ export function Expenses({ onAddExpense }: ExpensesProps) {
 
         const nextItems = hasExistingItem
           ? previousItems.map((item) =>
-              item.id === updatedItem.id ? updatedItem : item,
-            )
+            item.id === updatedItem.id ? updatedItem : item,
+          )
           : [...previousItems, updatedItem];
 
         return nextItems.sort((a, b) => a.name.localeCompare(b.name));
@@ -330,6 +360,7 @@ export function Expenses({ onAddExpense }: ExpensesProps) {
           activeTab={activeTab}
           expenseCategoryList={expenseCategoryList}
           expenseItemList={expenseItemList}
+          expenseRecordList={expenseRecordList}
           selectedCategory={selectedCategory}
           setSelectedCategory={setSelectedCategory}
           selectedExpenseItem={selectedExpenseItem}
@@ -345,6 +376,7 @@ export function Expenses({ onAddExpense }: ExpensesProps) {
           activeTab={activeTab}
           selectedCategory={selectedCategory}
           selectedExpenseItem={selectedExpenseItem}
+          expenseRecordList={expenseRecordList}
         />
       </div>
 

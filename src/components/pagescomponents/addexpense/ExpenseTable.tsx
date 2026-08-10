@@ -7,7 +7,7 @@ interface ExpenseTableProps {
   expenseItemList: ExpenseItem[];
   setShowAddItemPopup: (show: boolean) => void;
   setActiveRowIdForNewItem: (id: number | null) => void;
-  updateRow: (rowId: number, field: keyof ExpenseRow, value: string) => void;
+  updateRow: (rowId: number, updates: Partial<ExpenseRow>) => void;
   addRow: () => void;
   totalAmount: number;
 }
@@ -136,11 +136,17 @@ export function ExpenseTable({
                         setShowAddItemPopup(true);
                       } else {
                         const selectedItem = expenseItemList.find(i => i.name === val);
-                        updateRow(row.id, "category", val);
                         if (selectedItem) {
-                          updateRow(row.id, "paymentType", String(selectedItem.price));
-                          const qty = Number(row.note) || 0;
-                          updateRow(row.id, "amount", String(qty * selectedItem.price));
+                          const qty = Number(row.note) || 1;
+                          updateRow(row.id, {
+                            categoryId: selectedItem.id,
+                            category: val,
+                            paymentType: String(selectedItem.price),
+                            note: String(qty),
+                            amount: String(qty * selectedItem.price),
+                          });
+                        } else {
+                          updateRow(row.id, { category: val });
                         }
                       }
                     }}
@@ -157,7 +163,11 @@ export function ExpenseTable({
                     type="number"
                     style={{ width: "100%", border: "none", outline: "none", fontSize: 13, color: "#374151", background: "transparent", textAlign: "right" }}
                     value={row.note}
-                    onChange={(event) => updateRow(row.id, "note", event.target.value)}
+                    onChange={(event) => {
+                      const newQty = event.target.value;
+                      const price = Number(row.paymentType) || 0;
+                      updateRow(row.id, { note: newQty, amount: String((Number(newQty) || 0) * price) });
+                    }}
                     placeholder="Qty"
                   />
                 </td>
@@ -166,7 +176,11 @@ export function ExpenseTable({
                     type="number"
                     style={{ width: "100%", border: "none", outline: "none", fontSize: 13, color: "#374151", background: "transparent", textAlign: "right" }}
                     value={row.paymentType}
-                    onChange={(event) => updateRow(row.id, "paymentType", event.target.value)}
+                    onChange={(event) => {
+                      const newPrice = event.target.value;
+                      const qty = Number(row.note) || 0;
+                      updateRow(row.id, { paymentType: newPrice, amount: String(qty * (Number(newPrice) || 0)) });
+                    }}
                     placeholder="Price"
                   />
                 </td>
@@ -175,7 +189,7 @@ export function ExpenseTable({
                     type="number"
                     style={{ width: "100%", border: "none", outline: "none", fontSize: 13, color: "#374151", background: "transparent", textAlign: "right" }}
                     value={row.amount}
-                    onChange={(event) => updateRow(row.id, "amount", event.target.value)}
+                    onChange={(event) => updateRow(row.id, { amount: event.target.value })}
                   />
                 </td>
                 <td />

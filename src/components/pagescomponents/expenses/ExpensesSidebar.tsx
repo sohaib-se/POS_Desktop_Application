@@ -3,14 +3,17 @@ import { Search, Plus } from "lucide-react";
 import type { ExpenseCategory } from "@/types";
 import type {
   ExpenseItem,
+  ExpenseRecord,
   ExpenseCategoryContextMenuState,
   ExpenseItemContextMenuState,
 } from "./types";
+
 
 interface ExpensesSidebarProps {
   activeTab: "category" | "items";
   expenseCategoryList: ExpenseCategory[];
   expenseItemList: ExpenseItem[];
+  expenseRecordList: ExpenseRecord[];
   selectedCategory: ExpenseCategory | null;
   setSelectedCategory: (cat: ExpenseCategory) => void;
   selectedExpenseItem: ExpenseItem | null;
@@ -26,6 +29,7 @@ export function ExpensesSidebar({
   activeTab,
   expenseCategoryList,
   expenseItemList,
+  expenseRecordList,
   selectedCategory,
   setSelectedCategory,
   selectedExpenseItem,
@@ -43,13 +47,19 @@ export function ExpensesSidebar({
   const [itemContextMenu, setItemContextMenu] =
     useState<ExpenseItemContextMenuState | null>(null);
 
-  const filteredCategoryList = expenseCategoryList.filter((cat) =>
-    cat.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredCategoryList = expenseCategoryList
+    .filter((cat) => cat.name.toLowerCase().includes(searchQuery.toLowerCase()))
+    .map((cat) => ({
+      ...cat,
+      amount: expenseRecordList
+        .filter((r) => r.category_id === cat.id)
+        .reduce((sum, r) => sum + Number(r.amount), 0),
+    }));
 
   const filteredItemList = expenseItemList.filter((item) =>
     item.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
 
   const getContextMenuStyle = (x: number, y: number) => {
     if (typeof window === "undefined") {
@@ -179,15 +189,14 @@ export function ExpensesSidebar({
                       y: event.clientY,
                     });
                   }}
-                  className={`cursor-pointer border-b border-gray-100 ${
-                    selectedCategory?.id === cat.id
+                  className={`cursor-pointer border-b border-gray-100 ${selectedCategory?.id === cat.id
                       ? "bg-[#E3F2FD]"
                       : "hover:bg-gray-50"
-                  }`}
+                    }`}
                 >
                   <td className="px-4 py-3 text-gray-900">{cat.name}</td>
                   <td className="px-4 py-3 text-right font-medium">
-                    {cat.amount}
+                    {cat.amount > 0 ? cat.amount.toFixed(2) : "0.00"}
                   </td>
                 </tr>
               ))
@@ -204,11 +213,10 @@ export function ExpensesSidebar({
                       y: event.clientY,
                     });
                   }}
-                  className={`cursor-pointer border-b border-gray-100 ${
-                    selectedExpenseItem?.id === item.id
+                  className={`cursor-pointer border-b border-gray-100 ${selectedExpenseItem?.id === item.id
                       ? "bg-[#E3F2FD]"
                       : "hover:bg-gray-50"
-                  }`}
+                    }`}
                 >
                   <td className="px-4 py-3 text-gray-900">{item.name}</td>
                   <td className="px-4 py-3 text-right font-medium">

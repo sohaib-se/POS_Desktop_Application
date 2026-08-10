@@ -167,8 +167,6 @@ CREATE TABLE IF NOT EXISTS expense_records (
   expense_no TEXT,
   category_id TEXT,
   category_name TEXT,
-  payment_no TEXT,
-  date TEXT NOT NULL,
   amount REAL NOT NULL,
   payment_type TEXT NOT NULL,
   description TEXT,

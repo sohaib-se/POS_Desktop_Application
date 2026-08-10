@@ -936,37 +936,32 @@ function sqliteApiPlugin() {
           }
 
           if (req.method === 'POST') {
-            const chunks: Buffer[] = [];
-            req.on('data', (chunk) => chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk)));
-            req.on('end', () => {
-              try {
-                const raw = Buffer.concat(chunks).toString('utf8');
-                const payload = raw ? JSON.parse(raw) : {};
+            try {
+              const payload = await parseJsonBody(req);
 
-                if (!payload.name || !String(payload.name).trim()) {
-                  res.statusCode = 400;
-                  res.setHeader('Content-Type', 'application/json');
-                  res.end(JSON.stringify({ message: 'Category name is required.' }));
-                  return;
-                }
-
-                const category = {
-                  id: payload.id ? String(payload.id) : Date.now().toString(),
-                  name: String(payload.name).trim(),
-                  type: payload.type ? String(payload.type).trim() : 'Indirect Expense',
-                  amount: Number(payload.amount) || 0
-                };
-
-                repository.upsertExpenseCategory(category);
-                res.statusCode = 201;
-                res.setHeader('Content-Type', 'application/json');
-                res.end(JSON.stringify(category));
-              } catch {
+              if (!payload.name || !String(payload.name).trim()) {
                 res.statusCode = 400;
                 res.setHeader('Content-Type', 'application/json');
-                res.end(JSON.stringify({ message: 'Invalid JSON payload.' }));
+                res.end(JSON.stringify({ message: 'Category name is required.' }));
+                return;
               }
-            });
+
+              const category = {
+                id: payload.id ? String(payload.id) : Date.now().toString(),
+                name: String(payload.name).trim(),
+                type: payload.type ? String(payload.type).trim() : 'Indirect Expense',
+                amount: Number(payload.amount) || 0
+              };
+
+              repository.upsertExpenseCategory(category);
+              res.statusCode = 201;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify(category));
+            } catch {
+              res.statusCode = 400;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify({ message: 'Invalid JSON payload.' }));
+            }
             return;
           }
 
@@ -1019,37 +1014,32 @@ function sqliteApiPlugin() {
           }
 
           if (req.method === 'POST') {
-            const chunks: Buffer[] = [];
-            req.on('data', (chunk) => chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk)));
-            req.on('end', () => {
-              try {
-                const raw = Buffer.concat(chunks).toString('utf8');
-                const payload = raw ? JSON.parse(raw) : {};
+            try {
+              const payload = await parseJsonBody(req);
 
-                if (!payload.name || !String(payload.name).trim()) {
-                  res.statusCode = 400;
-                  res.setHeader('Content-Type', 'application/json');
-                  res.end(JSON.stringify({ message: 'Item name is required.' }));
-                  return;
-                }
-
-                const item = {
-                  id: payload.id ? String(payload.id) : Date.now().toString(),
-                  category_id: payload.category_id ? String(payload.category_id) : 'default',
-                  name: String(payload.name).trim(),
-                  price: Number(payload.price) || 0
-                };
-
-                repository.upsertExpenseItem(item);
-                res.statusCode = 201;
-                res.setHeader('Content-Type', 'application/json');
-                res.end(JSON.stringify(item));
-              } catch {
+              if (!payload.name || !String(payload.name).trim()) {
                 res.statusCode = 400;
                 res.setHeader('Content-Type', 'application/json');
-                res.end(JSON.stringify({ message: 'Invalid JSON payload.' }));
+                res.end(JSON.stringify({ message: 'Item name is required.' }));
+                return;
               }
-            });
+
+              const item = {
+                id: payload.id ? String(payload.id) : Date.now().toString(),
+                category_id: payload.category_id ? String(payload.category_id) : 'default',
+                name: String(payload.name).trim(),
+                price: Number(payload.price) || 0
+              };
+
+              repository.upsertExpenseItem(item);
+              res.statusCode = 201;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify(item));
+            } catch {
+              res.statusCode = 400;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify({ message: 'Invalid JSON payload.' }));
+            }
             return;
           }
 
@@ -1531,86 +1521,6 @@ function sqliteApiPlugin() {
         }
       });
 
-      server.middlewares.use('/api/expense_categories', async (req, res) => {
-        try {
-          // @ts-expect-error Runtime-only Node module used in Vite middleware.
-          const repository = await import('./database/sqlite/repository.mjs');
-          const requestUrl = new URL(req.url ?? '/', 'http://localhost');
-
-          if (req.method === 'GET') {
-            const categories = repository.getExpenseCategories();
-            res.statusCode = 200;
-            res.setHeader('Content-Type', 'application/json');
-            res.end(JSON.stringify(categories));
-            return;
-          }
-
-          if (req.method === 'POST') {
-            try {
-              const payload = await parseJsonBody(req);
-
-              if (!payload.name || !String(payload.name).trim()) {
-                res.statusCode = 400;
-                res.setHeader('Content-Type', 'application/json');
-                res.end(JSON.stringify({ message: 'Category name is required.' }));
-                return;
-              }
-
-              const category = {
-                id: payload.id ? String(payload.id) : Date.now().toString(),
-                name: String(payload.name).trim(),
-                amount: Number.isFinite(Number(payload.amount))
-                  ? Number(payload.amount)
-                  : 0,
-              };
-
-              const savedCategory = repository.upsertExpenseCategory(category);
-              res.statusCode = 201;
-              res.setHeader('Content-Type', 'application/json');
-              res.end(JSON.stringify(savedCategory ?? category));
-            } catch {
-              res.statusCode = 400;
-              res.setHeader('Content-Type', 'application/json');
-              res.end(JSON.stringify({ message: 'Invalid JSON payload.' }));
-            }
-            return;
-          }
-
-          if (req.method === 'DELETE') {
-            const pathId = requestUrl.pathname.split('/').filter(Boolean)[0];
-            const queryId = requestUrl.searchParams.get('id');
-            const id = (pathId || queryId || '').trim();
-
-            if (!id) {
-              res.statusCode = 400;
-              res.setHeader('Content-Type', 'application/json');
-              res.end(JSON.stringify({ message: 'Category id is required.' }));
-              return;
-            }
-
-            const deleted = repository.deleteExpenseCategory(id);
-            if (!deleted) {
-              res.statusCode = 404;
-              res.setHeader('Content-Type', 'application/json');
-              res.end(JSON.stringify({ message: 'Category not found.' }));
-              return;
-            }
-
-            res.statusCode = 204;
-            res.end();
-            return;
-          }
-
-          res.statusCode = 405;
-          res.setHeader('Content-Type', 'application/json');
-          res.end(JSON.stringify({ message: 'Method not allowed.' }));
-        } catch {
-          res.statusCode = 500;
-          res.setHeader('Content-Type', 'application/json');
-          res.end(JSON.stringify({ message: 'Failed to process request.' }));
-        }
-      });
-
       server.middlewares.use('/api/expense_records', async (req, res) => {
         let createdImagePath: string | null = null;
         let createdDocumentPath: string | null = null;
@@ -1668,26 +1578,23 @@ function sqliteApiPlugin() {
                   ? JSON.parse(payload.lineItemsJson)
                   : [];
 
-              const amount = Number(payload.amount ?? 0);
-              const roundOffAmount = Number(payload.roundOffAmount ?? 0);
-
               const record = {
-                id: String(payload.id ?? Date.now().toString()),
-                payment_no: String(payload.paymentNo ?? repository.getNextExpenseNo()),
-                date: String(payload.date ?? new Date().toLocaleDateString('en-GB')),
+                id: payload.id ?? crypto.randomUUID(),
+                expense_no: String(payload.expenseNo ?? repository.getNextExpenseNo()),
                 category_id: payload.categoryId ? String(payload.categoryId) : null,
                 category_name: payload.categoryName ? String(payload.categoryName) : null,
-                amount: Number.isFinite(amount) ? amount : 0,
-                paymentType: String(payload.paymentType ?? 'Cash'),
+                amount: Number(payload.amount ?? 0),
+                payment_type: String(payload.paymentType ?? 'Cash'),
                 description: payload.description ? String(payload.description) : null,
-                lineItemsJson: JSON.stringify(lineItems),
-                attachmentImagePath: imageFile?.filePath ?? null,
-                attachmentImageName: imageFile?.fileName ?? null,
-                attachmentDocumentPath: documentFile?.filePath ?? null,
-                attachmentDocumentName: documentFile?.fileName ?? null,
+                line_items_json: JSON.stringify(lineItems),
+                attachment_image_path: imageFile?.filePath ?? null,
+                attachment_image_name: imageFile?.fileName ?? null,
+                attachment_document_path: documentFile?.filePath ?? null,
+                attachment_document_name: documentFile?.fileName ?? null,
                 round_off: payload.roundOff ? 1 : 0,
-                round_off_amount: Number.isFinite(roundOffAmount) ? roundOffAmount : 0,
+                round_off_amount: Number(payload.roundOffAmount ?? 0),
               };
+
 
               repository.addExpenseRecord(record);
 
@@ -1750,12 +1657,12 @@ function sqliteApiPlugin() {
                   : JSON.parse(existingRecord.line_items_json ?? '[]');
 
               const record = {
-                payment_no: String(payload.paymentNo ?? existingRecord.payment_no ?? ''),
-                date: String(payload.date ?? existingRecord.date),
+                id: existingRecord.id,
+                expense_no: String(payload.expenseNo ?? existingRecord.expense_no),
                 category_id: payload.categoryId ? String(payload.categoryId) : existingRecord.category_id ?? null,
                 category_name: payload.categoryName ? String(payload.categoryName) : existingRecord.category_name ?? null,
-                amount: Number.isFinite(Number(payload.amount)) ? Number(payload.amount) : Number(existingRecord.amount ?? 0),
-                paymentType: String(payload.paymentType ?? existingRecord.payment_type ?? 'Cash'),
+                amount: Number(payload.amount ?? existingRecord.amount),
+                payment_type: String(payload.paymentType ?? existingRecord.payment_type ?? 'Cash'),
                 description: payload.description ? String(payload.description) : existingRecord.description ?? null,
                 lineItemsJson: JSON.stringify(lineItems),
                 attachmentImagePath: createdImagePath ?? existingRecord.attachment_image_path ?? null,

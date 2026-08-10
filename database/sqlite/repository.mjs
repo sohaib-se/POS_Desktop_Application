@@ -655,7 +655,7 @@ export function deletePurchaseBill(id) {
 
 export function getExpenseRecords() {
   const db = openDatabase();
-  const rows = db.prepare('SELECT * FROM expense_records ORDER BY created_at DESC, date DESC').all();
+  const rows = db.prepare('SELECT * FROM expense_records ORDER BY created_at DESC').all();
   db.close();
   return rows;
 }
@@ -669,9 +669,9 @@ export function getExpenseRecordById(id) {
 
 export function getNextExpenseNo() {
   const db = openDatabase();
-  const row = db.prepare('SELECT COALESCE(MAX(CAST(payment_no AS INTEGER)), 0) + 1 AS nextPaymentNo FROM expense_records').get();
+  const row = db.prepare('SELECT COALESCE(MAX(CAST(expense_no AS INTEGER)), 0) + 1 AS nextExpenseNo FROM expense_records').get();
   db.close();
-  return String(Number(row?.nextPaymentNo ?? 1));
+  return String(Number(row?.nextExpenseNo ?? 1));
 }
 
 export function addExpenseRecord(record) {
@@ -682,8 +682,6 @@ export function addExpenseRecord(record) {
       expense_no,
       category_id,
       category_name,
-      payment_no,
-      date,
       amount,
       payment_type,
       description,
@@ -702,8 +700,6 @@ export function addExpenseRecord(record) {
       @expenseNo,
       @categoryId,
       @categoryName,
-      @paymentNo,
-      @date,
       @amount,
       @paymentType,
       @description,
@@ -722,8 +718,6 @@ export function addExpenseRecord(record) {
     expenseNo: record.expense_no || null,
     categoryId: record.category_id || null,
     categoryName: record.category_name || null,
-    paymentNo: record.payment_no || null,
-    date: record.date || new Date().toISOString(),
     amount: Number(record.amount) || 0,
     paymentType: record.payment_type || 'Cash',
     description: record.description || null,
@@ -746,8 +740,6 @@ export function updateExpenseRecord(id, record) {
       expense_no = @expenseNo,
       category_id = @categoryId,
       category_name = @categoryName,
-      payment_no = @paymentNo,
-      date = @date,
       amount = @amount,
       payment_type = @paymentType,
       description = @description,
@@ -765,8 +757,6 @@ export function updateExpenseRecord(id, record) {
     expenseNo: record.expense_no || null,
     categoryId: record.category_id || null,
     categoryName: record.category_name || null,
-    paymentNo: record.payment_no || null,
-    date: record.date || new Date().toISOString(),
     amount: Number(record.amount) || 0,
     paymentType: record.payment_type || 'Cash',
     description: record.description || null,
@@ -1361,16 +1351,14 @@ export function upsertExpenseItem(item) {
   const db = openDatabase();
   const id = item.id || Date.now().toString();
   db.prepare(`
-    INSERT INTO expense_items (id, category_id, name, price, updated_at)
-    VALUES (@id, @category_id, @name, @price, datetime('now'))
+    INSERT INTO expense_items (id, name, price, updated_at)
+    VALUES (@id, @name, @price, datetime('now'))
     ON CONFLICT(id) DO UPDATE SET
-      category_id = excluded.category_id,
       name = excluded.name,
       price = excluded.price,
       updated_at = datetime('now')
   `).run({
     id,
-    category_id: item.category_id || 'default',
     name: item.name,
     price: Number(item.price) || 0
   });

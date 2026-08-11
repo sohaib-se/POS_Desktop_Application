@@ -409,6 +409,27 @@ function ensureEstimatesColumns(db) {
   }
 }
 
+function ensurePasscodeTable(db) {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS passcode (
+      id TEXT PRIMARY KEY,
+      code TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    )
+  `);
+
+  const rows = db.prepare('PRAGMA table_info(passcode)').all();
+  const existingColumns = new Set(rows.map((row) => row.name));
+
+  if (!existingColumns.has('recovery_email')) {
+    db.exec(`ALTER TABLE passcode ADD COLUMN recovery_email TEXT`);
+  }
+  if (!existingColumns.has('recovery_phone')) {
+    db.exec(`ALTER TABLE passcode ADD COLUMN recovery_phone TEXT`);
+  }
+}
+
 export function openDatabase() {
   ensureDataDirectory();
   const db = new Database(dbPath);
@@ -433,6 +454,7 @@ export function openDatabase() {
   ensurePaymentOutRecordColumns(db);
   ensureExpenseRecordColumns(db);
   ensureEstimatesColumns(db);
+  ensurePasscodeTable(db);
   migratePaymentOutRecordsToExpenseRecords(db);
   ensureUnitsAndConversionRatesTables(db);
   ensureBankAccountColumns(db);

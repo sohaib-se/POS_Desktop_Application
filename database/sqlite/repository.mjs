@@ -1563,3 +1563,27 @@ export function deleteBarcodeGenerator(id) {
     db.close();
   }
 }
+
+export function getPasscode() {
+  const db = openDatabase();
+  const row = db.prepare('SELECT code, recovery_email, recovery_phone FROM passcode LIMIT 1').get();
+  db.close();
+  return row || null;
+}
+
+export function setPasscode(code = null, email = null, phone = null) {
+  const db = openDatabase();
+  const existing = db.prepare('SELECT id FROM passcode LIMIT 1').get();
+  if (existing) {
+    db.prepare("UPDATE passcode SET code = COALESCE(?, code), recovery_email = COALESCE(?, recovery_email), recovery_phone = COALESCE(?, recovery_phone), updated_at = datetime('now') WHERE id = ?").run(code, email, phone, existing.id);
+  } else {
+    db.prepare('INSERT INTO passcode (id, code, recovery_email, recovery_phone) VALUES (?, ?, ?, ?)').run(Date.now().toString(), code, email, phone);
+  }
+  db.close();
+}
+
+export function deletePasscode() {
+  const db = openDatabase();
+  db.prepare('DELETE FROM passcode').run();
+  db.close();
+}

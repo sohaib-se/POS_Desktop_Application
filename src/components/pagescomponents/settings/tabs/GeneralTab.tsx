@@ -1,8 +1,120 @@
 import { ChevronDown, Clock, Search } from "lucide-react";
-import { Hint, Card, SettingToggleRow } from "../shared/SharedComponents";
-import { useState, useMemo } from "react";
-// @ts-ignore
-import { countries, currencies } from "country-data-list";
+import { Hint } from "../shared/SharedComponents";
+import React, { useState, useMemo, useEffect } from "react";
+import { currencies, countries } from "country-data-list";
+import { useSettings } from "../../../../hooks/useSettings";
+import { SetupPasscodeModal } from "../../../common/SetupPasscodeModal";
+import { RecoverySetupModal } from "../../../common/RecoverySetupModal";
+import { Button } from "@/components/ui/button";
+
+// Modern Card Wrapper
+
+const Card = ({ title, children }: { title: string, children: React.ReactNode }) => {
+  const [isHovered, setIsHovered] = useState(false);
+  return (
+    <div
+      style={{
+        background: "#ffffff",
+        border: "1px solid",
+        borderColor: isHovered ? "#cbd5e1" : "#e2e8f0",
+        borderRadius: "16px",
+        padding: "24px",
+        boxShadow: isHovered
+          ? "0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.01)"
+          : "0 4px 6px -1px rgba(0, 0, 0, 0.02), 0 2px 4px -2px rgba(0, 0, 0, 0.02)",
+        display: "flex",
+        flexDirection: "column",
+        gap: "16px",
+        transition: "all 0.3s ease",
+      }}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+    >
+      <h3 style={{ margin: 0, fontSize: "16px", fontWeight: 600, color: "#0f172a", letterSpacing: "-0.3px" }}>{title}</h3>
+      <div style={{ height: "1px", background: "#f1f5f9", margin: "0" }} />
+      <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+        {children}
+      </div>
+    </div>
+  );
+};
+
+// Sleek Toggle Switch Row
+const SettingToggleRow = ({
+  label,
+  checked,
+  onChange,
+  defaultChecked = false,
+  hint = true
+}: {
+  label: string,
+  checked?: boolean,
+  onChange?: (val: boolean) => void,
+  defaultChecked?: boolean,
+  hint?: boolean
+}) => {
+  const [internalChecked, setInternalChecked] = useState(defaultChecked);
+  const [isHovered, setIsHovered] = useState(false);
+
+  const isChecked = checked !== undefined ? checked : internalChecked;
+
+  const handleClick = () => {
+    if (onChange) {
+      onChange(!isChecked);
+    } else {
+      setInternalChecked(!internalChecked);
+    }
+  };
+
+  return (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        padding: "12px 16px",
+        background: isHovered ? "#f8fafc" : "transparent",
+        border: "1px solid",
+        borderColor: isHovered ? "#e2e8f0" : "transparent",
+        borderRadius: "10px",
+        cursor: "pointer",
+        transition: "all 0.2s ease",
+      }}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      onClick={handleClick}
+    >
+      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+        <span style={{ fontSize: "14px", color: "#334155", fontWeight: 500 }}>{label}</span>
+        {hint && <Hint />}
+      </div>
+
+      {/* iOS-style toggle */}
+      <div
+        style={{
+          width: "40px",
+          height: "22px",
+          background: isChecked ? "#3b82f6" : "#cbd5e1",
+          borderRadius: "22px",
+          position: "relative",
+          transition: "background 0.3s ease",
+        }}
+      >
+        <div style={{
+          width: "18px",
+          height: "18px",
+          background: "#fff",
+          borderRadius: "50%",
+          position: "absolute",
+          top: "2px",
+          left: isChecked ? "20px" : "2px",
+          transition: "left 0.3s cubic-bezier(0.4, 0.0, 0.2, 1)",
+          boxShadow: "0 1px 3px rgba(0,0,0,0.15)"
+        }} />
+      </div>
+    </div>
+  );
+};
 
 // Map npm package data to our format
 const ALL_CURRENCIES = Object.values(currencies)
@@ -27,6 +139,61 @@ export function GeneralTab() {
   const [selectedCurrency, setSelectedCurrency] = useState(DEFAULT_CURRENCY);
   const [searchQuery, setSearchQuery] = useState("");
 
+  const [isEstimationEnabled, setIsEstimationEnabled] = useSettings('settings.isEstimationEnabled', true);
+  const [isPasscodeEnabled, setIsPasscodeEnabled] = useSettings('settings.isPasscodeEnabled', false);
+  const [showSetupModal, setShowSetupModal] = useState(false);
+  const [showRecoveryModal, setShowRecoveryModal] = useState(false);
+  const [isChangePasscodeMode, setIsChangePasscodeMode] = useState(false);
+
+  useEffect(() => {
+    let mounted = true;
+    const fetchStatus = async () => {
+      try {
+        const res = await fetch('/api/passcode/status');
+        if (res.ok) {
+          const data = await res.json();
+          if (mounted) {
+            setIsPasscodeEnabled(data.isSet);
+          }
+        }
+      } catch (e) {
+        console.error('Failed to fetch passcode status', e);
+      }
+    };
+    fetchStatus();
+    return () => { mounted = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handlePasscodeToggle = async (val: boolean) => {
+    if (val) {
+      try {
+        const res = await fetch('/api/passcode/status');
+        const data = await res.json();
+        if (data.isSet) {
+          setIsPasscodeEnabled(true);
+        } else {
+          setIsChangePasscodeMode(false);
+          setShowSetupModal(true);
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    } else {
+      try {
+        await fetch('/api/passcode', { method: 'DELETE' });
+      } catch (e) {
+        console.error(e);
+      }
+      setIsPasscodeEnabled(false);
+    }
+  };
+
+  const handleChangePasscode = () => {
+    setIsChangePasscodeMode(true);
+    setShowSetupModal(true);
+  };
+
   const filteredCurrencies = useMemo(() => {
     const q = searchQuery.toLowerCase();
     return ALL_CURRENCIES.filter(
@@ -35,9 +202,9 @@ export function GeneralTab() {
   }, [searchQuery]);
 
   return (
-    <div style={{ 
-      padding: "32px", 
-      background: "#f8fafc", 
+    <div style={{
+      padding: "32px",
+      background: "#f8fafc",
       minHeight: "100%",
       fontFamily: "Inter, system-ui, sans-serif"
     }}>
@@ -48,13 +215,56 @@ export function GeneralTab() {
         maxWidth: "1400px",
         margin: "0 auto"
       }}>
-        
+
         {/* Application Card */}
         <Card title="Application">
-          <SettingToggleRow label="Enable Passcode" />
-          
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div style={{ flex: 1 }}>
+              <SettingToggleRow
+                label="Enable Passcode"
+                checked={isPasscodeEnabled}
+                onChange={handlePasscodeToggle}
+              />
+            </div>
+            {isPasscodeEnabled && (
+              <Button variant="link" onClick={handleChangePasscode} className="text-sm px-0 h-auto">
+                Change Passcode
+              </Button>
+            )}
+          </div>
+
+          <RecoverySetupModal
+            open={showRecoveryModal}
+            onOpenChange={setShowRecoveryModal}
+            onNext={async (email, phone) => {
+              try {
+                await fetch('/api/passcode/recovery/update', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ email, phone })
+                });
+              } catch (e) {
+                console.error('Failed to update recovery options', e);
+              }
+              setShowRecoveryModal(false);
+              setIsPasscodeEnabled(true);
+            }}
+          />
+
+          <SetupPasscodeModal
+            open={showSetupModal}
+            onOpenChange={setShowSetupModal}
+            isChangeMode={isChangePasscodeMode}
+            onSuccess={() => {
+              setIsPasscodeEnabled(true);
+              if (!isChangePasscodeMode) {
+                setShowRecoveryModal(true);
+              }
+            }}
+          />
+
           {/* Business Currency Row - Custom layout for dropdown */}
-          <div 
+          <div
             style={{
               display: "flex",
               alignItems: "center",
@@ -76,9 +286,9 @@ export function GeneralTab() {
               <span style={{ fontSize: "14px", color: "#334155", fontWeight: 500 }}>Business Currency</span>
               <Hint />
             </div>
-            <div style={{ 
-              display: "flex", 
-              alignItems: "center", 
+            <div style={{
+              display: "flex",
+              alignItems: "center",
               gap: "6px",
               background: "#eff6ff",
               border: "1px solid #bfdbfe",
@@ -96,7 +306,7 @@ export function GeneralTab() {
             {dropdownOpen && (
               <>
                 {/* Transparent overlay to close dropdown on outside click */}
-                <div 
+                <div
                   style={{ position: "fixed", inset: 0, zIndex: 40 }}
                   onClick={(e) => {
                     e.stopPropagation();
@@ -104,7 +314,7 @@ export function GeneralTab() {
                     setSearchQuery(""); // Reset search on close
                   }}
                 />
-                <div 
+                <div
                   style={{
                     position: "absolute",
                     top: "calc(100% + 4px)",
@@ -194,8 +404,8 @@ export function GeneralTab() {
         {/* Backup & History Card */}
         <Card title="Backup & History">
           <SettingToggleRow label="Auto Backup" />
-          
-          <div style={{ 
+
+          <div style={{
             marginTop: "6px",
             padding: "12px 16px",
             background: "#fefce8",
@@ -215,7 +425,11 @@ export function GeneralTab() {
 
         {/* More Transactions Card */}
         <Card title="More Transactions">
-          <SettingToggleRow label="Estimate/Quotation" defaultChecked={true} />
+          <SettingToggleRow
+            label="Estimate/Quotation"
+            checked={isEstimationEnabled}
+            onChange={setIsEstimationEnabled}
+          />
         </Card>
 
       </div>

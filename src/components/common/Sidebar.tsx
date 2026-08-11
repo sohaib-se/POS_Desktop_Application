@@ -111,10 +111,25 @@ const menuItems: MenuItem[] = [
   },
 ];
 
+import { useSettings } from "@/hooks/useSettings";
+
 export function Sidebar({ currentView, onViewChange }: SidebarProps) {
-  const [expandedMenus, setExpandedMenus] = useState<string[]>([
-    "sale-invoices",
-  ]);
+  const [expandedMenus, setExpandedMenus] = useState<string[]>(["sale-invoices"]);
+  const [isEstimationEnabled] = useSettings('settings.isEstimationEnabled', true);
+
+  // Dynamically filter menu items based on settings
+  const filteredMenuItems = menuItems.map(item => {
+    if (item.id === "sale-invoices" && item.children) {
+      return {
+        ...item,
+        children: item.children.filter(child => {
+          if (child.id === "estimates" && !isEstimationEnabled) return false;
+          return true;
+        })
+      };
+    }
+    return item;
+  });
 
   const toggleMenu = (menuId: string) => {
     setExpandedMenus((prev) => (prev.includes(menuId) ? [] : [menuId]));
@@ -149,7 +164,7 @@ export function Sidebar({ currentView, onViewChange }: SidebarProps) {
         className="flex-1 overflow-y-auto scrollbar-thin px-2"
         style={{ scrollbarGutter: "stable" }}
       >
-        {menuItems.map((item) => {
+        {filteredMenuItems.map((item) => {
           const Icon = item.icon;
           const hasChildren = item.children && item.children.length > 0;
           const isExpanded = expandedMenus.includes(item.id);

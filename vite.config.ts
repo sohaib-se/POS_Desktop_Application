@@ -181,6 +181,122 @@ function sqliteApiPlugin() {
           console.error(error);
         });
 
+      server.middlewares.use('/api/passcode', async (req, res) => {
+        try {
+          // @ts-expect-error Runtime-only Node module used in Vite middleware.
+          const repository = await import('./database/sqlite/repository.mjs');
+          const requestUrl = new URL(req.url ?? '/', 'http://localhost');
+          const pathName = requestUrl.pathname.replace(/\/$/, '');
+
+          if (req.method === 'GET' && pathName === '/status') {
+            const passcodeRow = repository.getPasscode();
+            res.statusCode = 200;
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({ 
+              isSet: !!passcodeRow?.code, 
+              hasRecovery: !!(passcodeRow?.recovery_email || passcodeRow?.recovery_phone),
+              hasEmail: !!passcodeRow?.recovery_email,
+              hasPhone: !!passcodeRow?.recovery_phone
+            }));
+            return;
+          }
+
+          if (req.method === 'DELETE' && (pathName === '' || pathName === '/')) {
+            repository.deletePasscode();
+            res.statusCode = 200;
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({ success: true }));
+            return;
+          }
+
+          if (req.method === 'POST') {
+            const payload = await parseJsonBody(req);
+            const current = repository.getPasscode();
+
+            if (pathName === '/setup') {
+              if (current?.code && current.code !== payload.oldPasscode) {
+                res.statusCode = 400;
+                res.setHeader('Content-Type', 'application/json');
+                res.end(JSON.stringify({ success: false, message: 'Invalid old passcode.' }));
+                return;
+              }
+              repository.setPasscode(payload.newPasscode, payload.email ?? current?.recovery_email, payload.phone ?? current?.recovery_phone);
+              res.statusCode = 200;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify({ success: true }));
+              return;
+            }
+
+            if (pathName === '/reset') {
+              if (!current) {
+                res.statusCode = 400;
+                res.setHeader('Content-Type', 'application/json');
+                res.end(JSON.stringify({ success: false, message: 'Passcode not set.' }));
+                return;
+              }
+              if ((payload.method === 'email' && current.recovery_email === payload.value) || 
+                  (payload.method === 'phone' && current.recovery_phone === payload.value)) {
+                repository.setPasscode(payload.newPasscode, current.recovery_email, current.recovery_phone);
+                res.statusCode = 200;
+                res.setHeader('Content-Type', 'application/json');
+                res.end(JSON.stringify({ success: true }));
+                return;
+              } else {
+                res.statusCode = 400;
+                res.setHeader('Content-Type', 'application/json');
+                res.end(JSON.stringify({ success: false, message: 'Invalid recovery information.' }));
+                return;
+              }
+            }
+
+            if (pathName === '/recovery/update') {
+              repository.setPasscode(current?.code, payload.email, payload.phone);
+              res.statusCode = 200;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify({ success: true }));
+              return;
+            }
+
+            if (pathName === '/recovery/verify') {
+              if ((payload.method === 'email' && current?.recovery_email === payload.value) || 
+                  (payload.method === 'phone' && current?.recovery_phone === payload.value)) {
+                res.statusCode = 200;
+                res.setHeader('Content-Type', 'application/json');
+                res.end(JSON.stringify({ success: true }));
+                return;
+              } else {
+                res.statusCode = 400;
+                res.setHeader('Content-Type', 'application/json');
+                res.end(JSON.stringify({ success: false, message: 'Invalid recovery details.' }));
+                return;
+              }
+            }
+
+            if (pathName === '/verify') {
+              if (current?.code && current.code === payload.passcode) {
+                res.statusCode = 200;
+                res.setHeader('Content-Type', 'application/json');
+                res.end(JSON.stringify({ success: true }));
+                return;
+              } else {
+                res.statusCode = 400;
+                res.setHeader('Content-Type', 'application/json');
+                res.end(JSON.stringify({ success: false, message: 'Invalid passcode.' }));
+                return;
+              }
+            }
+          }
+
+          res.statusCode = 404;
+          res.end(JSON.stringify({ message: 'Not found' }));
+        } catch (error) {
+          console.error('/api/passcode error:', error);
+          res.statusCode = 500;
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify({ message: 'Internal server error.' }));
+        }
+      });
+
       server.middlewares.use('/api/user_profile', async (req, res) => {
         try {
           // @ts-expect-error Runtime-only Node module used in Vite middleware.
@@ -1325,7 +1441,7 @@ function sqliteApiPlugin() {
           if (req.method === 'GET') {
             const rows = repository.getBarcodeGenerators();
             // Map rows to match the frontend BarcodeItem structure
-            const mappedRows = rows.map(r => ({
+            const mappedRows = rows.map((r: any) => ({
               id: r.id,
               itemName: r.item_name,
               itemCode: r.item_code,
@@ -1355,7 +1471,7 @@ function sqliteApiPlugin() {
               } catch (e) {
                 res.statusCode = 400;
                 res.setHeader('Content-Type', 'application/json');
-                res.end(JSON.stringify({ error: e.message }));
+                res.end(JSON.stringify({ error: e instanceof Error ? e.message : String(e) }));
               }
             });
             return;
@@ -1377,7 +1493,7 @@ function sqliteApiPlugin() {
           res.end(JSON.stringify({ message: 'Method not allowed.' }));
         } catch (e) {
           res.statusCode = 500;
-          res.end(JSON.stringify({ message: 'Server error', error: e.message }));
+          res.end(JSON.stringify({ message: 'Server error', error: e instanceof Error ? e.message : String(e) }));
         }
       });
 

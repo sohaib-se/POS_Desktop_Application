@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import "./App.css";
 import { Sidebar } from "@/components/common/Sidebar";
 import { Header } from "@/components/common/Header";
+import { EnterPasscodeScreen } from "@/components/common/EnterPasscodeScreen";
 import { Dashboard } from "@/pages/Dashboard";
 import { Parties } from "@/pages/Parties";
 import { Items } from "@/pages/Items";
@@ -34,6 +35,37 @@ import { LaimsoftPos } from "@/pages/LaimsoftPos";
 import type { SaleInvoiceEditData, ViewType } from "@/types";
 
 function App() {
+  const [isAppLocked, setIsAppLocked] = useState(true);
+  const [isInitializing, setIsInitializing] = useState(true);
+
+  useEffect(() => {
+    let mounted = true;
+    const checkLockStatus = async () => {
+      try {
+        const res = await fetch('/api/passcode/status');
+        if (res.ok) {
+          const data = await res.json();
+          if (mounted) {
+            setIsAppLocked(data.isSet);
+            setIsInitializing(false);
+          }
+        } else {
+          if (mounted) {
+            setIsAppLocked(false);
+            setIsInitializing(false);
+          }
+        }
+      } catch (e) {
+        if (mounted) {
+          setIsAppLocked(false);
+          setIsInitializing(false);
+        }
+      }
+    };
+    checkLockStatus();
+    return () => { mounted = false; };
+  }, []);
+
   const [currentView, setCurrentView] = useState<ViewType>("home");
   const [lastStandardView, setLastStandardView] = useState<ViewType>("home");
   const [editingSaleInvoice, setEditingSaleInvoice] =
@@ -172,8 +204,13 @@ function App() {
     }
   };
 
+  if (isInitializing) {
+    return null;
+  }
+
   return (
     <>
+      {isAppLocked && <EnterPasscodeScreen onSuccess={() => setIsAppLocked(false)} />}
       <div className="h-screen flex bg-gray-50 overflow-hidden">
         {/* Sidebar */}
         <Sidebar currentView={activeBaseView} onViewChange={handleViewChange} />

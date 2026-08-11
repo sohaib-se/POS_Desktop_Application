@@ -16,7 +16,6 @@ import {
 } from "@/components/ui/dialog";
 import { GeneralTab } from "../components/pagescomponents/settings/tabs/GeneralTab";
 import { TransactionTab } from "../components/pagescomponents/settings/tabs/TransactionTab";
-import { TransactionMessageTab } from "../components/pagescomponents/settings/tabs/TransactionMessageTab";
 import { PartyTab } from "../components/pagescomponents/settings/tabs/PartyTab";
 import { ItemTab } from "../components/pagescomponents/settings/tabs/ItemTab";
 import { PrintSettings } from "../components/pagescomponents/settings/PrintSettings";
@@ -31,7 +30,6 @@ const tabs = [
   { id: "general", label: "GENERAL", icon: Settings },
   { id: "transaction", label: "TRANSACTION", icon: ArrowLeftRight },
   { id: "print", label: "PRINT", icon: Printer },
-  { id: "message", label: "TRANSACTION MESSAGE", icon: MessageSquare },
   { id: "party", label: "PARTY", icon: Users },
   { id: "item", label: "ITEM", icon: Package },
 ];
@@ -75,7 +73,6 @@ export function SettingsPage({ onClose, initialTab }: SettingsPageProps = {}) {
         <main style={{ flex: 1, overflowY: "auto", background: "#fff" }}>
           {activeTab === "general" && <GeneralTab />}
           {activeTab === "transaction" && <TransactionTab />}
-          {activeTab === "message" && <TransactionMessageTab />}
           {activeTab === "party" && <PartyTab />}
           {activeTab === "item" && <ItemTab />}
         </main>

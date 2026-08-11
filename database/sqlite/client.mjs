@@ -438,7 +438,25 @@ export function openDatabase() {
   ensureBankAccountColumns(db);
   ensureBankAccountTransactionsTable(db);
   ensureAdjustStockTransactionsTable(db);
+  ensureBarcodeGeneratorTable(db);
   return db;
+}
+
+function ensureBarcodeGeneratorTable(db) {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS barcode_generator (
+      id TEXT PRIMARY KEY,
+      item_name TEXT NOT NULL,
+      item_code TEXT NOT NULL,
+      no_of_labels TEXT NOT NULL,
+      header TEXT,
+      line1 TEXT,
+      line2 TEXT,
+      line3 TEXT,
+      line4 TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    )
+  `);
 }
 
 function ensureBankAccountTransactionsTable(db) {

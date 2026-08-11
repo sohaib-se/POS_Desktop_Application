@@ -1534,3 +1534,32 @@ export function updateUserProfile(profile) {
   });
   db.close();
 }
+
+export function getBarcodeGenerators() {
+  const db = openDatabase();
+  try {
+    return db.prepare('SELECT * FROM barcode_generator').all();
+  } finally {
+    db.close();
+  }
+}
+
+export function insertBarcodeGenerator(item) {
+  const db = openDatabase();
+  try {
+    const stmt = db.prepare('INSERT INTO barcode_generator (id, item_name, item_code, no_of_labels, header, line1, line2, line3, line4) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)');
+    stmt.run(item.id, item.itemName, item.itemCode, item.noOfLabels, item.header, item.line1, item.line2, item.line3, item.line4);
+  } finally {
+    db.close();
+  }
+}
+
+export function deleteBarcodeGenerator(id) {
+  const db = openDatabase();
+  try {
+    const stmt = db.prepare('DELETE FROM barcode_generator WHERE id = ?');
+    stmt.run(id);
+  } finally {
+    db.close();
+  }
+}

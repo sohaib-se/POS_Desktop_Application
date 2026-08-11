@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import { X, Printer } from "lucide-react";
 import { BarcodeLabel } from "./BarcodeLabel";
 import type { BarcodeItem } from "./BarcodeGeneratorItemList";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { Item } from "@/types";
 import { useReactToPrint } from "react-to-print";
 

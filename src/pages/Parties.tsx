@@ -74,9 +74,11 @@ function normalizePartyTransaction(row: TransactionApiRow): PartyTransactionRow 
 
 interface PartiesProps {
   onOpenSettings?: (tab?: string) => void;
+  isReportView?: boolean;
+  onBack?: () => void;
 }
 
-export function Parties({ onOpenSettings }: PartiesProps = {}) {
+export function Parties({ onOpenSettings, isReportView, onBack }: PartiesProps = {}) {
   const [parties, setParties] = useState<Party[]>([]);
   const [selectedParty, setSelectedParty] = useState<Party | null>(null);
   const [showAddParty, setShowAddParty] = useState(false);
@@ -599,11 +601,13 @@ export function Parties({ onOpenSettings }: PartiesProps = {}) {
           isLoading={isLoading}
           onAddParty={openAddPartyDialog}
           onOpenSettings={onOpenSettings}
+          isReportView={isReportView}
+          onBack={onBack}
         />
       )}
 
       {showEmptyState ? (
-        <PartiesEmptyState onAddParty={openAddPartyDialog} />
+        <PartiesEmptyState onAddParty={openAddPartyDialog} isReportView={isReportView} />
       ) : (
         <div className="flex-1 flex gap-1 overflow-hidden">
           <PartyList
@@ -615,6 +619,7 @@ export function Parties({ onOpenSettings }: PartiesProps = {}) {
             setSelectedParty={setSelectedParty}
             openEditPartyDialog={openEditPartyDialog}
             setPartyPendingDelete={setPartyPendingDelete}
+            isReportView={isReportView}
           />
           <PartyDetails
             isLoading={isLoading}
@@ -627,6 +632,7 @@ export function Parties({ onOpenSettings }: PartiesProps = {}) {
             handlePrintTransactions={handlePrintTransactions}
             handleExportExcel={handleExportExcel}
             openEditPartyDialog={openEditPartyDialog}
+            isReportView={isReportView}
           />
         </div>
       )}

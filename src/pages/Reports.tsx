@@ -8,6 +8,7 @@ import { PurchaseReport } from '../components/pagescomponents/reports/transactio
 import { DaybookReport } from '../components/pagescomponents/reports/transactionsreports/DaybookReport';
 import { AllTransactionsReport } from '../components/pagescomponents/reports/transactionsreports/AllTransactionsReport';
 import { AllPartiesReport } from '../components/pagescomponents/reports/parties reports/AllPartiesReport';
+import { PartyReport } from '../components/pagescomponents/reports/parties reports/PartyReport';
 
 interface ReportsProps {
   onViewChange?: (view: ViewType) => void;
@@ -41,6 +42,9 @@ export function Reports({ onViewChange, onEditInvoice }: ReportsProps) {
   if (activeReport?.category === 'Party Reports') {
     if (activeReport.name === 'All parties') {
       return <AllPartiesReport onBack={() => setActiveReport(null)} />;
+    }
+    if (activeReport.name === 'Party report') {
+      return <PartyReport onBack={() => setActiveReport(null)} />;
     }
   }
 

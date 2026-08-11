@@ -2,9 +2,10 @@ import { Phone, Settings, Printer, Plus } from "lucide-react";
 
 interface PartiesEmptyStateProps {
   onAddParty: () => void;
+  isReportView?: boolean;
 }
 
-export function PartiesEmptyState({ onAddParty }: PartiesEmptyStateProps) {
+export function PartiesEmptyState({ onAddParty, isReportView }: PartiesEmptyStateProps) {
   return (
     <div className="flex-1 flex flex-col items-center justify-center w-full h-full text-center py-12 px-4 bg-white m-1 rounded-md shadow-sm">
       <div className="w-32 h-32 mx-auto mb-6 relative">
@@ -62,13 +63,15 @@ export function PartiesEmptyState({ onAddParty }: PartiesEmptyStateProps) {
         </div>
       </div>
 
-      <button
-        onClick={onAddParty}
-        className="bg-[#E53935] hover:bg-red-600 text-white px-6 py-3 rounded-lg text-sm font-medium flex items-center gap-2 mx-auto"
-      >
-        <Plus className="w-4 h-4" />
-        Add Party
-      </button>
+      {!isReportView && (
+        <button
+          onClick={onAddParty}
+          className="bg-[#E53935] hover:bg-red-600 text-white px-6 py-3 rounded-lg text-sm font-medium flex items-center gap-2 mx-auto"
+        >
+          <Plus className="w-4 h-4" />
+          Add Party
+        </button>
+      )}
     </div>
   );
 }

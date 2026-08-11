@@ -25,6 +25,7 @@ interface PartyDetailsProps {
   handlePrintTransactions: () => void;
   handleExportExcel: () => void;
   openEditPartyDialog: (party: Party) => void;
+  isReportView?: boolean;
 }
 
 export function PartyDetails({
@@ -38,6 +39,7 @@ export function PartyDetails({
   handlePrintTransactions,
   handleExportExcel,
   openEditPartyDialog,
+  isReportView,
 }: PartyDetailsProps) {
   const selectedPartyBalanceLabel =
     selectedParty && selectedParty.balance > 0
@@ -66,10 +68,12 @@ export function PartyDetails({
                   <h2 className="text-lg font-semibold text-gray-900">
                     {selectedParty.name}
                   </h2>
-                  <Edit2
-                    onClick={() => openEditPartyDialog(selectedParty)}
-                    className="w-4 h-4 text-blue-500 cursor-pointer"
-                  />
+                  {!isReportView && (
+                    <Edit2
+                      onClick={() => openEditPartyDialog(selectedParty)}
+                      className="w-4 h-4 text-blue-500 cursor-pointer"
+                    />
+                  )}
                 </div>
                 <div className="flex gap-2 items-center">
                   <button
@@ -242,7 +246,7 @@ export function PartyDetails({
                           Rs {t.balance.toFixed(2)}
                         </td>
                         <td className="px-2 py-3 text-center">
-                          <MoreVertical className="w-4 h-4 text-gray-400 mx-auto cursor-pointer" />
+                          {!isReportView && <MoreVertical className="w-4 h-4 text-gray-400 mx-auto cursor-pointer" />}
                         </td>
                       </tr>
                     ))

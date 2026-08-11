@@ -17,6 +17,7 @@ interface PartyListProps {
   setSelectedParty: (party: Party) => void;
   openEditPartyDialog: (party: Party) => void;
   setPartyPendingDelete: (party: Party) => void;
+  isReportView?: boolean;
 }
 
 export function PartyList({
@@ -28,6 +29,7 @@ export function PartyList({
   setSelectedParty,
   openEditPartyDialog,
   setPartyPendingDelete,
+  isReportView,
 }: PartyListProps) {
   const [partyContextMenu, setPartyContextMenu] = useState<PartyContextMenuState | null>(null);
 
@@ -91,6 +93,7 @@ export function PartyList({
                   key={party.id}
                   onClick={() => setSelectedParty(party)}
                   onContextMenu={(event) => {
+                    if (isReportView) return;
                     event.preventDefault();
                     setPartyContextMenu({
                       party,

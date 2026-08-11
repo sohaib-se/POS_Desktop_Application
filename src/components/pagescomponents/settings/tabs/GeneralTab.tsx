@@ -1,581 +1,309 @@
-import { useState } from "react";
-import { ChevronDown, Pencil } from "lucide-react";
+import { ChevronDown, Clock, Search } from "lucide-react";
 import { Hint } from "../shared/SharedComponents";
-import { cbStyle, labelMd, nudgeBtn } from "../shared/styles";
+import { useState, useMemo } from "react";
+// @ts-ignore
+import { countries, currencies } from "country-data-list";
 
-export function GeneralTab() {
-  const [zoom, setZoom] = useState(100);
-  const zoomStops = [70, 80, 90, 100, 110, 115, 120, 130];
+// Modern Card Wrapper
+const Card = ({ title, children }: { title: string, children: React.ReactNode }) => {
+  const [isHovered, setIsHovered] = useState(false);
+  return (
+    <div 
+      style={{
+        background: "#ffffff",
+        border: "1px solid",
+        borderColor: isHovered ? "#cbd5e1" : "#e2e8f0",
+        borderRadius: "16px",
+        padding: "24px",
+        boxShadow: isHovered 
+          ? "0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.01)" 
+          : "0 4px 6px -1px rgba(0, 0, 0, 0.02), 0 2px 4px -2px rgba(0, 0, 0, 0.02)",
+        display: "flex",
+        flexDirection: "column",
+        gap: "16px",
+        transition: "all 0.3s ease",
+      }}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+    >
+      <h3 style={{ margin: 0, fontSize: "16px", fontWeight: 600, color: "#0f172a", letterSpacing: "-0.3px" }}>{title}</h3>
+      <div style={{ height: "1px", background: "#f1f5f9", margin: "0" }} />
+      <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+        {children}
+      </div>
+    </div>
+  );
+};
+
+// Sleek Toggle Switch Row
+const SettingToggleRow = ({ label, defaultChecked = false, hint = true }: { label: string, defaultChecked?: boolean, hint?: boolean }) => {
+  const [checked, setChecked] = useState(defaultChecked);
+  const [isHovered, setIsHovered] = useState(false);
 
   return (
-    <div style={{ padding: "0" }}>
-      {/* ── ROW 1: Application | Multi Firm | Backup & History ── */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr" }}>
-        {/* Col 1 – Application */}
-        <div style={{ padding: "22px 28px 20px" }}>
-          <div
-            style={{
-              fontSize: 14,
-              fontWeight: 700,
-              color: "#111827",
-              marginBottom: 8,
-            }}
-          >
-            Application
-          </div>
-          <hr
-            style={{
-              border: "none",
-              borderTop: "1px solid #e5e7eb",
-              marginBottom: 18,
-            }}
-          />
-
-          {/* Enable Passcode – checkbox LEFT, label right */}
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 9,
-              marginBottom: 18,
-            }}
-          >
-            <input type="checkbox" style={cbStyle} />
-            <span style={labelMd}>Enable Passcode</span>
-            <Hint />
-          </div>
-
-          {/* Business Currency – label LEFT inline, value right */}
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              marginBottom: 18,
-            }}
-          >
-            <span style={labelMd}>
-              Business Currency <Hint />
-            </span>
-            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <span style={{ fontSize: 13, color: "#374151" }}>Rs</span>
-              <ChevronDown size={13} color="#6b7280" />
-            </div>
-          </div>
-
-          {/* Amount */}
-          <div style={{ marginBottom: 18 }}>
-            <div
-              style={{
-                display: "flex",
-                alignItems: "flex-start",
-                justifyContent: "space-between",
-              }}
-            >
-              <div>
-                <div style={labelMd}>Amount</div>
-                <div style={{ fontSize: 11, color: "#6b7280" }}>
-                  (upto Decimal Places)
-                </div>
-                <Hint />
-              </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                {/* spinner input */}
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "stretch",
-                    border: "1px solid #d1d5db",
-                    borderRadius: 4,
-                    overflow: "hidden",
-                  }}
-                >
-                  <input
-                    type="number"
-                    defaultValue={2}
-                    style={{
-                      width: 36,
-                      border: "none",
-                      outline: "none",
-                      fontSize: 13,
-                      color: "#374151",
-                      padding: "3px 6px",
-                      textAlign: "center",
-                    }}
-                  />
-                  <div
-                    style={{
-                      display: "flex",
-                      flexDirection: "column",
-                      borderLeft: "1px solid #d1d5db",
-                      width: 16,
-                    }}
-                  >
-                    <button style={nudgeBtn}>▲</button>
-                    <button
-                      style={{ ...nudgeBtn, borderTop: "1px solid #d1d5db" }}
-                    >
-                      ▼
-                    </button>
-                  </div>
-                </div>
-                <span style={{ fontSize: 12, color: "#9ca3af" }}>
-                  e.g. 0.00
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* TIN Number */}
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 9,
-              marginBottom: 18,
-            }}
-          >
-            <input type="checkbox" style={cbStyle} />
-            <span style={{ ...labelMd, color: "#d97706" }}>TIN Number</span>
-            <Hint />
-          </div>
-
-          {/* Stop Sale on Negative Stock */}
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 9,
-              marginBottom: 18,
-            }}
-          >
-            <input type="checkbox" style={cbStyle} />
-            <span style={labelMd}>Stop Sale on Negative Stock</span>
-            <Hint />
-          </div>
-
-          {/* Block New Items */}
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 9,
-              marginBottom: 18,
-            }}
-          >
-            <input type="checkbox" style={cbStyle} />
-            <span style={labelMd}>Block New Items from Txn Form</span>
-            <Hint />
-          </div>
-
-          {/* Block New Parties */}
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 9,
-              marginBottom: 0,
-            }}
-          >
-            <input type="checkbox" style={cbStyle} />
-            <span style={labelMd}>Block New Parties from Txn Form</span>
-            <Hint />
-          </div>
-        </div>
-
-        {/* Col 2 – Multi Firm */}
-        <div
-          style={{ padding: "22px 28px 20px", borderLeft: "1px solid #e5e7eb" }}
-        >
-          {/* Title row with checkbox on the right */}
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              marginBottom: 8,
-            }}
-          >
-            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <span style={{ fontSize: 14, fontWeight: 700, color: "#111827" }}>
-                Multi Firm
-              </span>
-              {/* blue badge icon */}
-              <span
-                style={{
-                  width: 16,
-                  height: 16,
-                  borderRadius: "50%",
-                  background: "#2563eb",
-                  display: "inline-flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontSize: 9,
-                  color: "#fff",
-                  fontWeight: 700,
-                  flexShrink: 0,
-                }}
-              >
-                M
-              </span>
-            </div>
-            <input type="checkbox" style={cbStyle} />
-          </div>
-          <hr
-            style={{
-              border: "none",
-              borderTop: "1px solid #e5e7eb",
-              marginBottom: 18,
-            }}
-          />
-
-          {/* Company row */}
-          <div
-            style={{
-              border: "1px solid #d1d5db",
-              borderRadius: 8,
-              padding: "11px 14px",
-              display: "flex",
-              alignItems: "center",
-              gap: 10,
-            }}
-          >
-            {/* filled radio */}
-            <div
-              style={{
-                width: 18,
-                height: 18,
-                borderRadius: "50%",
-                border: "2px solid #2563eb",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                flexShrink: 0,
-              }}
-            >
-              <div
-                style={{
-                  width: 9,
-                  height: 9,
-                  borderRadius: "50%",
-                  background: "#2563eb",
-                }}
-              />
-            </div>
-            <span
-              style={{
-                fontSize: 13,
-                fontWeight: 500,
-                color: "#111827",
-                flex: 1,
-              }}
-            >
-              My Company
-            </span>
-            <span
-              style={{
-                fontSize: 10,
-                color: "#6b7280",
-                fontWeight: 600,
-                background: "transparent",
-                letterSpacing: "0.5px",
-              }}
-            >
-              DEFAULT
-            </span>
-            <Pencil
-              size={14}
-              color="#2563eb"
-              style={{ cursor: "pointer", marginLeft: 6 }}
-            />
-          </div>
-        </div>
-
-        {/* Col 3 – Backup & History */}
-        <div
-          style={{ padding: "22px 28px 20px", borderLeft: "1px solid #e5e7eb" }}
-        >
-          <div
-            style={{
-              fontSize: 14,
-              fontWeight: 700,
-              color: "#111827",
-              marginBottom: 8,
-            }}
-          >
-            Backup &amp; History
-          </div>
-          <hr
-            style={{
-              border: "none",
-              borderTop: "1px solid #e5e7eb",
-              marginBottom: 18,
-            }}
-          />
-
-          {/* Auto Backup row – label left, checkbox right */}
-          <div
-            style={{
-              display: "flex",
-              alignItems: "flex-start",
-              justifyContent: "space-between",
-              marginBottom: 6,
-              gap: 8,
-            }}
-          >
-            <div>
-              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                <span style={labelMd}>Auto Backup</span>
-                <Hint />
-              </div>
-            </div>
-            <input type="checkbox" style={cbStyle} />
-          </div>
-          {/* last backup amber text */}
-          <div style={{ fontSize: 11, color: "#ca8a04", marginBottom: 18 }}>
-            Last Backup 23/04/2026 | 10:04 PM <Hint />
-          </div>
-
-          {/* Transaction History – checkbox left */}
-          <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
-            <input type="checkbox" defaultChecked style={cbStyle} />
-            <span style={labelMd}>Transaction History</span>
-            <Hint />
-          </div>
-        </div>
+    <div 
+      style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        padding: "12px 16px",
+        background: isHovered ? "#f8fafc" : "transparent",
+        border: "1px solid",
+        borderColor: isHovered ? "#e2e8f0" : "transparent",
+        borderRadius: "10px",
+        cursor: "pointer",
+        transition: "all 0.2s ease",
+      }}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      onClick={() => setChecked(!checked)}
+    >
+      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+        <span style={{ fontSize: "14px", color: "#334155", fontWeight: 500 }}>{label}</span>
+        {hint && <Hint />}
       </div>
-
-      {/* ── ROW 2: More Transactions | Stock Transfer | Customize View ── */}
-      <div
+      
+      {/* iOS-style toggle */}
+      <div 
         style={{
-          display: "grid",
-          gridTemplateColumns: "1fr 1fr 1fr",
-          borderTop: "1px solid #e5e7eb",
+          width: "40px",
+          height: "22px",
+          background: checked ? "#3b82f6" : "#cbd5e1",
+          borderRadius: "22px",
+          position: "relative",
+          transition: "background 0.3s ease",
         }}
       >
-        {/* More Transactions */}
-        <div style={{ padding: "22px 28px 24px" }}>
-          <div
-            style={{
-              fontSize: 14,
-              fontWeight: 700,
-              color: "#111827",
-              marginBottom: 8,
-            }}
-          >
-            More Transactions
-          </div>
-          <hr
-            style={{
-              border: "none",
-              borderTop: "1px solid #e5e7eb",
-              marginBottom: 16,
-            }}
-          />
+        <div style={{
+          width: "18px",
+          height: "18px",
+          background: "#fff",
+          borderRadius: "50%",
+          position: "absolute",
+          top: "2px",
+          left: checked ? "20px" : "2px",
+          transition: "left 0.3s cubic-bezier(0.4, 0.0, 0.2, 1)",
+          boxShadow: "0 1px 3px rgba(0,0,0,0.15)"
+        }} />
+      </div>
+    </div>
+  );
+};
 
-          {[
-            { label: "Estimate/Quotation", checked: true },
-            { label: "Proforma Invoice", checked: true },
-            { label: "Sale/Purchase Order", checked: true },
-            { label: "Other Income", checked: false },
-          ].map((item) => (
-            <div
-              key={item.label}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 9,
-                marginBottom: 16,
-              }}
-            >
-              <input
-                type="checkbox"
-                defaultChecked={item.checked}
-                style={cbStyle}
-              />
-              <span
-                style={{
-                  ...labelMd,
-                  color: item.checked ? "#2563eb" : "#374151",
-                }}
-              >
-                {item.label}
-              </span>
-              <Hint />
-            </div>
-          ))}
-        </div>
+// Map npm package data to our format
+const ALL_CURRENCIES = Object.values(currencies)
+  .filter((c: any) => c.code && c.symbol && c.name)
+  .map((currency: any) => {
+    // Find the first country that uses this currency to get the flag
+    const country = countries.all.find((c: any) => c.currencies && c.currencies.includes(currency.code) && c.emoji);
+    return {
+      code: currency.code,
+      symbol: currency.symbol,
+      name: currency.name,
+      flag: country ? country.emoji : "🌐",
+    };
+  })
+  .sort((a, b) => a.code.localeCompare(b.code));
 
-        {/* Stock Transfer Between Stores */}
-        <div
-          style={{ padding: "22px 28px 24px", borderLeft: "1px solid #e5e7eb" }}
-        >
-          <div
-            style={{
-              fontSize: 14,
-              fontWeight: 700,
-              color: "#111827",
-              marginBottom: 8,
-            }}
-          >
-            Stock Transfer Between Stores
-          </div>
-          <hr
-            style={{
-              border: "none",
-              borderTop: "1px solid #e5e7eb",
-              marginBottom: 12,
-            }}
-          />
-          <p
-            style={{
-              fontSize: 12,
-              color: "#6b7280",
-              lineHeight: 1.65,
-              marginBottom: 16,
-            }}
-          >
-            Manage all your stores/godowns and transfer stock seamlessly between
-            them. Using this feature, you can transfer stock between
-            stores/godowns and manage your inventory more efficiently.
-          </p>
-          <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
-            <input type="checkbox" style={cbStyle} />
-            <span style={labelMd}>Store management &amp; Stock transfer</span>
-            <Hint />
-            {/* video icon placeholders */}
-            <span
-              style={{
-                width: 18,
-                height: 14,
-                background: "#ef4444",
-                borderRadius: 3,
-                display: "inline-flex",
-                alignItems: "center",
-                justifyContent: "center",
-                flexShrink: 0,
-              }}
-            >
-              <span style={{ fontSize: 8, color: "#fff" }}>▶</span>
-            </span>
-            <span
-              style={{
-                width: 18,
-                height: 18,
-                borderRadius: "50%",
-                background: "#2563eb",
-                display: "inline-flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: 9,
-                color: "#fff",
-                fontWeight: 700,
-                flexShrink: 0,
-              }}
-            >
-              M
-            </span>
-          </div>
-        </div>
+const DEFAULT_CURRENCY = ALL_CURRENCIES.find(c => c.code === "PKR") || ALL_CURRENCIES[0];
 
-        {/* Customize Your View */}
-        <div
-          style={{ padding: "22px 28px 24px", borderLeft: "1px solid #e5e7eb" }}
-        >
-          <div
-            style={{
-              fontSize: 14,
-              fontWeight: 700,
-              color: "#111827",
-              marginBottom: 8,
-            }}
-          >
-            Customize Your View
-          </div>
-          <hr
-            style={{
-              border: "none",
-              borderTop: "1px solid #e5e7eb",
-              marginBottom: 12,
-            }}
-          />
-          <div
-            style={{
-              fontSize: 13,
-              fontWeight: 500,
-              color: "#d97706",
-              marginBottom: 6,
-            }}
-          >
-            Choose Your Screen Zoom/Scale
-          </div>
-          <p
-            style={{
-              fontSize: 12,
-              color: "#6b7280",
-              lineHeight: 1.65,
-              marginBottom: 14,
-            }}
-          >
-            You can use this setting to resize the Vyapar screen, making it
-            larger or smaller to fit your preferences.
-          </p>
-          {/* Slider track */}
-          <div style={{ position: "relative", marginBottom: 4 }}>
-            <input
-              type="range"
-              min={70}
-              max={130}
-              step={5}
-              value={zoom}
-              onChange={(e) => setZoom(Number(e.target.value))}
-              style={{
-                width: "100%",
-                accentColor: "#2563eb",
-                cursor: "pointer",
-                height: 4,
-              }}
-            />
-          </div>
-          {/* Zoom labels */}
-          <div
+export function GeneralTab() {
+  const [currencyHovered, setCurrencyHovered] = useState(false);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [selectedCurrency, setSelectedCurrency] = useState(DEFAULT_CURRENCY);
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const filteredCurrencies = useMemo(() => {
+    const q = searchQuery.toLowerCase();
+    return ALL_CURRENCIES.filter(
+      c => c.code.toLowerCase().includes(q) || c.name.toLowerCase().includes(q)
+    );
+  }, [searchQuery]);
+
+  return (
+    <div style={{ 
+      padding: "32px", 
+      background: "#f8fafc", 
+      minHeight: "100%",
+      fontFamily: "Inter, system-ui, sans-serif"
+    }}>
+      <div style={{
+        display: "grid",
+        gridTemplateColumns: "repeat(auto-fit, minmax(380px, 1fr))",
+        gap: "24px",
+        maxWidth: "1400px",
+        margin: "0 auto"
+      }}>
+        
+        {/* Application Card */}
+        <Card title="Application">
+          <SettingToggleRow label="Enable Passcode" />
+          
+          {/* Business Currency Row - Custom layout for dropdown */}
+          <div 
             style={{
               display: "flex",
+              alignItems: "center",
               justifyContent: "space-between",
-              fontSize: 10,
-              color: "#9ca3af",
-              marginBottom: 12,
-            }}
-          >
-            {zoomStops.map((s) => (
-              <span
-                key={s}
-                style={{
-                  color: s === zoom ? "#2563eb" : "#9ca3af",
-                  fontWeight: s === zoom ? 600 : 400,
-                }}
-              >
-                {s}%
-              </span>
-            ))}
-          </div>
-          {/* Apply button */}
-          <button
-            style={{
-              background: "#fff",
-              color: "#2563eb",
-              border: "1px solid #2563eb",
-              borderRadius: 5,
-              padding: "5px 20px",
-              fontSize: 12,
-              fontWeight: 500,
+              padding: "12px 16px",
+              background: currencyHovered || dropdownOpen ? "#f8fafc" : "transparent",
+              border: "1px solid",
+              borderColor: currencyHovered || dropdownOpen ? "#e2e8f0" : "transparent",
+              borderRadius: "10px",
               cursor: "pointer",
-              float: "right",
+              transition: "all 0.2s ease",
+              position: "relative",
             }}
+            onMouseEnter={() => setCurrencyHovered(true)}
+            onMouseLeave={() => setCurrencyHovered(false)}
+            onClick={() => setDropdownOpen(!dropdownOpen)}
           >
-            Apply
-          </button>
-        </div>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <span style={{ fontSize: "14px", color: "#334155", fontWeight: 500 }}>Business Currency</span>
+              <Hint />
+            </div>
+            <div style={{ 
+              display: "flex", 
+              alignItems: "center", 
+              gap: "6px",
+              background: "#eff6ff",
+              border: "1px solid #bfdbfe",
+              padding: "6px 12px",
+              borderRadius: "8px",
+              color: "#1d4ed8",
+              boxShadow: "0 1px 2px rgba(0,0,0,0.02)"
+            }}>
+              <span style={{ fontSize: "14px", lineHeight: 1 }}>{selectedCurrency.flag}</span>
+              <span style={{ fontSize: "13px", fontWeight: 600 }}>{selectedCurrency.symbol}</span>
+              <ChevronDown size={14} style={{ transform: dropdownOpen ? "rotate(180deg)" : "none", transition: "transform 0.2s ease" }} />
+            </div>
+
+            {/* Currency Dropdown Menu */}
+            {dropdownOpen && (
+              <>
+                {/* Transparent overlay to close dropdown on outside click */}
+                <div 
+                  style={{ position: "fixed", inset: 0, zIndex: 40 }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setDropdownOpen(false);
+                    setSearchQuery(""); // Reset search on close
+                  }}
+                />
+                <div 
+                  style={{
+                    position: "absolute",
+                    top: "calc(100% + 4px)",
+                    right: "0",
+                    width: "280px",
+                    background: "#ffffff",
+                    border: "1px solid #e2e8f0",
+                    borderRadius: "12px",
+                    boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)",
+                    zIndex: 50,
+                    padding: "8px",
+                    display: "flex",
+                    flexDirection: "column",
+                  }}
+                  onClick={(e) => e.stopPropagation()} // Prevent bubbling to the row wrapper
+                >
+                  <div style={{ position: "relative", marginBottom: "8px" }}>
+                    <Search size={14} color="#94a3b8" style={{ position: "absolute", left: "10px", top: "50%", transform: "translateY(-50%)" }} />
+                    <input
+                      autoFocus
+                      type="text"
+                      placeholder="Search currency..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      style={{
+                        width: "100%",
+                        padding: "8px 12px 8px 32px",
+                        border: "1px solid #cbd5e1",
+                        borderRadius: "8px",
+                        outline: "none",
+                        fontSize: "13px",
+                        color: "#334155",
+                        boxSizing: "border-box"
+                      }}
+                    />
+                  </div>
+                  <div style={{ overflowY: "auto", maxHeight: "280px", display: "flex", flexDirection: "column", gap: "2px" }}>
+                    {filteredCurrencies.length > 0 ? (
+                      filteredCurrencies.map(currency => (
+                        <div
+                          key={currency.code}
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "space-between",
+                            padding: "8px 12px",
+                            borderRadius: "8px",
+                            cursor: "pointer",
+                            background: selectedCurrency.code === currency.code ? "#eff6ff" : "transparent",
+                            transition: "background 0.15s ease",
+                            flexShrink: 0
+                          }}
+                          onMouseEnter={(e) => {
+                            if (selectedCurrency.code !== currency.code) e.currentTarget.style.background = "#f8fafc";
+                          }}
+                          onMouseLeave={(e) => {
+                            if (selectedCurrency.code !== currency.code) e.currentTarget.style.background = "transparent";
+                          }}
+                          onClick={() => {
+                            setSelectedCurrency(currency);
+                            setDropdownOpen(false);
+                            setSearchQuery("");
+                          }}
+                        >
+                          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                            <span style={{ fontSize: "16px", lineHeight: 1 }}>{currency.flag}</span>
+                            <span style={{ fontSize: "14px", color: "#334155", fontWeight: 500 }}>{currency.code}</span>
+                            <span style={{ fontSize: "12px", color: "#64748b", maxWidth: "100px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{currency.name}</span>
+                          </div>
+                          <span style={{ fontSize: "14px", fontWeight: 600, color: "#1d4ed8" }}>{currency.symbol}</span>
+                        </div>
+                      ))
+                    ) : (
+                      <div style={{ padding: "16px", textAlign: "center", color: "#94a3b8", fontSize: "13px" }}>
+                        No currencies found
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+
+          <SettingToggleRow label="Stop Sale on Negative Stock" />
+        </Card>
+
+        {/* Backup & History Card */}
+        <Card title="Backup & History">
+          <SettingToggleRow label="Auto Backup" />
+          
+          <div style={{ 
+            marginTop: "6px",
+            padding: "12px 16px",
+            background: "#fefce8",
+            border: "1px solid #fef08a",
+            borderRadius: "10px",
+            display: "flex",
+            alignItems: "center",
+            gap: "10px",
+            color: "#a16207",
+            fontSize: "13px",
+            fontWeight: 500
+          }}>
+            <Clock size={16} className="text-amber-600" />
+            <span>Last Backup: 23/04/2026 | 10:04 PM</span>
+          </div>
+        </Card>
+
+        {/* More Transactions Card */}
+        <Card title="More Transactions">
+          <SettingToggleRow label="Estimate/Quotation" defaultChecked={true} />
+        </Card>
+
       </div>
     </div>
   );

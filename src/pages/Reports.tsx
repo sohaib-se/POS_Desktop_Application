@@ -9,6 +9,7 @@ import { DaybookReport } from '../components/pagescomponents/reports/transaction
 import { AllTransactionsReport } from '../components/pagescomponents/reports/transactionsreports/AllTransactionsReport';
 import { AllPartiesReport } from '../components/pagescomponents/reports/parties reports/AllPartiesReport';
 import { PartyReport } from '../components/pagescomponents/reports/parties reports/PartyReport';
+import { PartyWiseProfitLossReport } from '../components/pagescomponents/reports/parties reports/PartyWiseProfitLossReport';
 
 interface ReportsProps {
   onViewChange?: (view: ViewType) => void;
@@ -45,6 +46,9 @@ export function Reports({ onViewChange, onEditInvoice }: ReportsProps) {
     }
     if (activeReport.name === 'Party report') {
       return <PartyReport onBack={() => setActiveReport(null)} />;
+    }
+    if (activeReport.name === 'Party wise Profit & Loss') {
+      return <PartyWiseProfitLossReport onBack={() => setActiveReport(null)} />;
     }
   }
 

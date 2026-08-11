@@ -91,8 +91,8 @@ export function seedDatabase() {
     seedData.paymentOutRecords.forEach((record) => insertPaymentOut.run(record));
 
     const insertExpenseCategory = db.prepare(`
-      INSERT INTO expense_categories (id, name, amount)
-      VALUES (@id, @name, @amount)
+      INSERT INTO expense_categories (id, name, type, amount)
+      VALUES (@id, @name, @type, @amount)
     `);
     seedData.expenseCategories.forEach((category) => insertExpenseCategory.run(category));
 

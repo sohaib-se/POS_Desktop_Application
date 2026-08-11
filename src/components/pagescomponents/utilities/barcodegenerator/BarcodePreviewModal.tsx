@@ -28,16 +28,40 @@ export function BarcodePreviewModal({ open, onOpenChange, items, allItems = [], 
             </button>
           </div>
 
-          <div className="flex-1 overflow-y-auto p-8 bg-gray-50/50 flex flex-wrap gap-8 justify-center items-start content-start">
-            {items.map((item, index) => (
-              <BarcodeLabel
-                key={item.id + index}
-                formData={item}
-                items={allItems}
-                companyName={companyName}
-                className="transform scale-110 shadow-md bg-white m-4"
-              />
-            ))}
+          <div className="flex-1 overflow-y-auto bg-gray-50/50 flex flex-col items-center">
+            <div className="w-full">
+              {(() => {
+                const allLabels = items.flatMap((item, index) => {
+                  const count = parseInt(item.noOfLabels, 10) || 1;
+                  return Array.from({ length: count }).map((_, i) => ({
+                    item,
+                    key: `${item.id}-${index}-${i}`
+                  }));
+                });
+
+                const chunkedLabels = [];
+                for (let i = 0; i < allLabels.length; i += 10) {
+                  chunkedLabels.push(allLabels.slice(i, i + 10));
+                }
+
+                return chunkedLabels.map((pageLabels, pageIndex) => (
+                  <div 
+                    key={pageIndex} 
+                    className="flex flex-wrap gap-8 justify-center items-start p-8 mb-8 border-b border-gray-200 bg-white"
+                  >
+                    {pageLabels.map(({ item, key }) => (
+                      <BarcodeLabel
+                        key={key}
+                        formData={item}
+                        items={allItems}
+                        companyName={companyName}
+                        className="transform scale-110 shadow-md bg-white m-4 break-inside-avoid"
+                      />
+                    ))}
+                  </div>
+                ));
+              })()}
+            </div>
           </div>
         </div>
       </DialogContent>

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Maximize2, ScanBarcode, Trash2 } from "lucide-react";
+import { Maximize2, ScanBarcode, Trash2, Printer } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -9,6 +9,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { BarcodePreviewModal } from "./BarcodePreviewModal";
 import { BarcodeGenerateModal } from "./BarcodeGenerateModal";
 import type { Item } from "@/types";
@@ -35,6 +36,10 @@ interface BarcodeGeneratorItemListProps {
 export function BarcodeGeneratorItemList({ items, allItems = [], companyName = "", onDelete }: BarcodeGeneratorItemListProps) {
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [isGenerateOpen, setIsGenerateOpen] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [singlePrintItem, setSinglePrintItem] = useState<BarcodeItem | null>(null);
+
+  const selectedItemsToProcess = items.filter(item => selectedIds.includes(item.id));
 
   return (
     <>
@@ -48,6 +53,16 @@ export function BarcodeGeneratorItemList({ items, allItems = [], companyName = "
           <Table>
             <TableHeader className="bg-[#F8FAFC]">
               <TableRow>
+                <TableHead className="w-[50px] pl-4">
+                  <Checkbox 
+                    checked={items.length > 0 && selectedIds.length === items.length}
+                    onCheckedChange={(checked) => {
+                      if (checked) setSelectedIds(items.map(i => i.id));
+                      else setSelectedIds([]);
+                    }}
+                    className="border-gray-300 data-[state=checked]:bg-blue-500 data-[state=checked]:border-blue-500" 
+                  />
+                </TableHead>
                 <TableHead className="font-semibold text-gray-600">Item Name</TableHead>
                 <TableHead className="font-semibold text-gray-600">No of Labels</TableHead>
                 <TableHead className="font-semibold text-gray-600">Header</TableHead>
@@ -55,13 +70,13 @@ export function BarcodeGeneratorItemList({ items, allItems = [], companyName = "
                 <TableHead className="font-semibold text-gray-600">Line 2</TableHead>
                 <TableHead className="font-semibold text-gray-600">Line 3</TableHead>
                 <TableHead className="font-semibold text-gray-600">Line 4</TableHead>
-                <TableHead className="font-semibold text-gray-600 w-[50px]"></TableHead>
+                <TableHead className="font-semibold text-gray-600 w-[100px]"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {items.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="h-[200px] text-center">
+                  <TableCell colSpan={9} className="h-[200px] text-center">
                     <div className="flex flex-col items-center justify-center text-gray-400">
                       <ScanBarcode className="w-16 h-16 mb-2 opacity-50" />
                     </div>
@@ -70,6 +85,16 @@ export function BarcodeGeneratorItemList({ items, allItems = [], companyName = "
               ) : (
                 items.map((item) => (
                   <TableRow key={item.id}>
+                    <TableCell className="pl-4">
+                      <Checkbox 
+                        checked={selectedIds.includes(item.id)}
+                        onCheckedChange={(checked) => {
+                          if (checked) setSelectedIds(prev => [...prev, item.id]);
+                          else setSelectedIds(prev => prev.filter(id => id !== item.id));
+                        }}
+                        className="border-gray-300 data-[state=checked]:bg-blue-500 data-[state=checked]:border-blue-500" 
+                      />
+                    </TableCell>
                     <TableCell>{item.itemName}</TableCell>
                     <TableCell>{item.noOfLabels}</TableCell>
                     <TableCell>{item.header}</TableCell>
@@ -78,14 +103,25 @@ export function BarcodeGeneratorItemList({ items, allItems = [], companyName = "
                     <TableCell>{item.line3}</TableCell>
                     <TableCell>{item.line4}</TableCell>
                     <TableCell>
-                      {onDelete && (
+                      <div className="flex items-center gap-1 justify-end">
                         <button 
-                          onClick={() => onDelete(item.id)}
-                          className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors"
+                          onClick={() => {
+                            setSinglePrintItem(item);
+                            setIsGenerateOpen(true);
+                          }}
+                          className="p-2 text-gray-400 hover:text-blue-500 hover:bg-blue-50 rounded-full transition-colors"
                         >
-                          <Trash2 className="w-4 h-4" />
+                          <Printer className="w-4 h-4" />
                         </button>
-                      )}
+                        {onDelete && (
+                          <button 
+                            onClick={() => onDelete(item.id)}
+                            className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))
@@ -97,18 +133,21 @@ export function BarcodeGeneratorItemList({ items, allItems = [], companyName = "
         <div className="p-4 border-t border-gray-200 flex justify-end gap-4 bg-white">
           <Button 
             variant="outline" 
-            disabled={items.length === 0} 
+            disabled={selectedItemsToProcess.length === 0} 
             className="px-8 rounded-full border-gray-300 text-gray-600 font-semibold"
             onClick={() => setIsPreviewOpen(true)}
           >
-            Preview
+            Preview Selected
           </Button>
           <Button 
-            disabled={items.length === 0} 
+            disabled={selectedItemsToProcess.length === 0} 
             className="px-8 rounded-full bg-[#B1B8D1] hover:bg-indigo-400 text-white font-semibold disabled:opacity-50"
-            onClick={() => setIsGenerateOpen(true)}
+            onClick={() => {
+              setSinglePrintItem(null);
+              setIsGenerateOpen(true);
+            }}
           >
-            Generate
+            Generate Selected
           </Button>
         </div>
       </div>
@@ -116,14 +155,17 @@ export function BarcodeGeneratorItemList({ items, allItems = [], companyName = "
       <BarcodePreviewModal 
         open={isPreviewOpen} 
         onOpenChange={setIsPreviewOpen} 
-        items={items} 
+        items={selectedItemsToProcess} 
         allItems={allItems}
         companyName={companyName}
       />
       <BarcodeGenerateModal 
         open={isGenerateOpen} 
-        onOpenChange={setIsGenerateOpen} 
-        items={items} 
+        onOpenChange={(open) => {
+          setIsGenerateOpen(open);
+          if (!open) setSinglePrintItem(null);
+        }} 
+        items={singlePrintItem ? [singlePrintItem] : selectedItemsToProcess} 
         allItems={allItems}
         companyName={companyName}
       />

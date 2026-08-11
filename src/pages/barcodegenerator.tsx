@@ -17,6 +17,13 @@ export function BarcodeGenerator() {
     line4: "",
   });
 
+  const [activeFields, setActiveFields] = useState({
+    salePrice: true,
+    companyName: true,
+    itemName: true,
+    discount: true,
+  });
+
   const [itemList, setItemList] = useState<BarcodeItem[]>([]);
   const [items, setItems] = useState<Item[]>([]);
   const [companyName, setCompanyName] = useState("");
@@ -97,7 +104,7 @@ export function BarcodeGenerator() {
   return (
     <div className="h-full bg-[#F8FAFC] overflow-y-auto p-6">
       <div className="max-w-7xl mx-auto flex flex-col gap-6">
-        <BarcodeGeneratorHeader />
+        <BarcodeGeneratorHeader activeFields={activeFields} setActiveFields={setActiveFields} />
 
         <div className="flex border border-gray-200 bg-white p-6 rounded-md shadow-sm">
           <BarcodeGeneratorForm
@@ -106,6 +113,7 @@ export function BarcodeGenerator() {
             onAdd={handleAdd}
             isLoading={isLoading}
             items={items}
+            activeFields={activeFields}
           />
           <BarcodeGeneratorPreview
             formData={formData}

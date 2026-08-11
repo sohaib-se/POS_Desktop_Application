@@ -1,6 +1,7 @@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { ScanBarcode } from "lucide-react";
 import type { Item } from "@/types";
 
 export interface BarcodeFormData {
@@ -20,16 +21,22 @@ interface BarcodeGeneratorFormProps {
   onAdd: () => void;
   isLoading?: boolean;
   items: Item[];
+  activeFields?: {
+    salePrice: boolean;
+    companyName: boolean;
+    itemName: boolean;
+    discount: boolean;
+  };
 }
 
 const LABEL_OPTIONS = ["None", "Company Name", "Item Name", "Sale Price", "Discount"];
 
-export function BarcodeGeneratorForm({ formData, setFormData, onAdd, isLoading, items }: BarcodeGeneratorFormProps) {
+export function BarcodeGeneratorForm({ formData, setFormData, onAdd, isLoading, items, activeFields }: BarcodeGeneratorFormProps) {
   const handleChange = (field: keyof BarcodeFormData, value: string) => {
     if (field === 'itemName') {
       const selectedItem = items.find(i => i.name === value);
-      setFormData(prev => ({ 
-        ...prev, 
+      setFormData(prev => ({
+        ...prev,
         [field]: value,
         itemCode: selectedItem?.code || prev.itemCode // Auto-fill item code
       }));
@@ -49,6 +56,12 @@ export function BarcodeGeneratorForm({ formData, setFormData, onAdd, isLoading, 
 
     return LABEL_OPTIONS.filter(opt => {
       if (opt === "None") return true;
+      if (activeFields) {
+        if (opt === "Sale Price" && !activeFields.salePrice) return false;
+        if (opt === "Company Name" && !activeFields.companyName) return false;
+        if (opt === "Item Name" && !activeFields.itemName) return false;
+        if (opt === "Discount" && !activeFields.discount) return false;
+      }
       if (formData[currentField] === opt) return true; // Keep currently selected option
       return !selectedValues.includes(opt); // Exclude if selected elsewhere
     });
@@ -57,8 +70,8 @@ export function BarcodeGeneratorForm({ formData, setFormData, onAdd, isLoading, 
   const renderDropdown = (field: keyof BarcodeFormData, placeholder: string, label: string) => (
     <div>
       <label className="block text-xs font-semibold text-gray-500 mb-1.5">{label}</label>
-      <Select 
-        value={formData[field] || "None"} 
+      <Select
+        value={formData[field] || "None"}
         onValueChange={(val) => handleChange(field, val)}
       >
         <SelectTrigger className="w-full text-sm text-gray-700 border-gray-300">
@@ -78,7 +91,7 @@ export function BarcodeGeneratorForm({ formData, setFormData, onAdd, isLoading, 
   return (
     <div className="flex-1 pr-8">
       <h4 className="font-semibold text-gray-700 mb-6">Enter item details to add for barcode</h4>
-      
+
       <div className="grid grid-cols-3 gap-6 mb-6">
         <div>
           <label className="block text-xs font-semibold text-gray-500 mb-1.5">
@@ -102,21 +115,22 @@ export function BarcodeGeneratorForm({ formData, setFormData, onAdd, isLoading, 
             Item Code<span className="text-red-500">*</span>
           </label>
           <div className="relative">
-            <Input 
-              type="text" 
-              placeholder="Enter Item Code" 
-              className="text-sm placeholder:text-gray-400 border-gray-300 pr-24"
+            <Input
+              type="text"
+              placeholder="Enter Item Code"
+              className="text-sm placeholder:text-gray-400 border-gray-300 pr-10"
               value={formData.itemCode}
               onChange={(e) => handleChange('itemCode', e.target.value)}
             />
             <button
-              className="absolute right-1 top-1 bottom-1 px-3 text-xs font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded transition-colors"
+              className="absolute right-1 top-1 bottom-1 px-2 flex items-center justify-center text-white bg-[#E53935] hover:bg-[#d32f2f] rounded transition-colors"
+              title="Assign Random Code"
               onClick={() => {
                 const randomCode = Math.floor(100000000000 + Math.random() * 900000000000).toString();
                 handleChange('itemCode', randomCode);
               }}
             >
-              Assign Code
+              <ScanBarcode className="w-4 h-4" />
             </button>
           </div>
         </div>
@@ -124,9 +138,9 @@ export function BarcodeGeneratorForm({ formData, setFormData, onAdd, isLoading, 
           <label className="block text-xs font-semibold text-gray-500 mb-1.5">
             No of Labels<span className="text-red-500">*</span>
           </label>
-          <Input 
-            type="text" 
-            placeholder="Enter No of Labels" 
+          <Input
+            type="text"
+            placeholder="Enter No of Labels"
             className="text-sm placeholder:text-gray-400 border-gray-300"
             value={formData.noOfLabels}
             onChange={(e) => handleChange('noOfLabels', e.target.value)}
@@ -144,8 +158,8 @@ export function BarcodeGeneratorForm({ formData, setFormData, onAdd, isLoading, 
         {renderDropdown('line3', 'Enter Line 3', 'Line 3')}
         {renderDropdown('line4', 'Enter Line 4', 'Line 4')}
         <div className="flex items-end">
-          <Button 
-            className="w-full bg-[#B1B8D1] hover:bg-indigo-300 text-white font-semibold rounded-full disabled:opacity-50"
+          <Button
+            className="w-full bg-[#E53935] hover:bg-[#d32f2f] text-white font-semibold rounded-full disabled:opacity-50"
             onClick={onAdd}
             disabled={isLoading || !formData.itemName || !formData.itemCode || !formData.noOfLabels}
           >

@@ -222,6 +222,29 @@ function ensureExpenseCategoryColumns(db) {
   }
 }
 
+function seedDefaultExpenseCategories(db) {
+  const count = db.prepare('SELECT COUNT(*) as count FROM expense_categories').get().count;
+  if (count === 0) {
+    const defaultCategories = [
+      { id: '1', name: 'Petrol', type: 'Indirect Expense', amount: 0 },
+      { id: '2', name: 'Rent', type: 'Indirect Expense', amount: 0 },
+      { id: '3', name: 'Salary', type: 'Indirect Expense', amount: 0 },
+      { id: '4', name: 'Tea', type: 'Indirect Expense', amount: 0 },
+      { id: '5', name: 'Transport', type: 'Indirect Expense', amount: 0 },
+      { id: '6', name: 'Travel', type: 'Indirect Expense', amount: 500 }
+    ];
+    
+    const insertStmt = db.prepare(`
+      INSERT INTO expense_categories (id, name, type, amount)
+      VALUES (@id, @name, @type, @amount)
+    `);
+    
+    for (const category of defaultCategories) {
+      insertStmt.run(category);
+    }
+  }
+}
+
 function migratePaymentOutRecordsToExpenseRecords(db) {
   const tables = db.prepare("SELECT name FROM sqlite_master WHERE type = 'table'").all();
   const tableNames = new Set(tables.map((row) => row.name));
@@ -293,6 +316,7 @@ export function initDatabase() {
   ensurePaymentOutRecordColumns(db);
   ensureExpenseRecordColumns(db);
   ensureExpenseCategoryColumns(db);
+  seedDefaultExpenseCategories(db);
   migratePaymentOutRecordsToExpenseRecords(db);
   ensureBankAccountColumns(db);
   ensureUserProfileColumns(db);

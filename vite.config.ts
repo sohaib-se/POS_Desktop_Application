@@ -181,6 +181,9 @@ function sqliteApiPlugin() {
           console.error(error);
         });
 
+
+
+
       server.middlewares.use('/api/passcode', async (req, res) => {
         try {
           // @ts-expect-error Runtime-only Node module used in Vite middleware.
@@ -1337,6 +1340,95 @@ function sqliteApiPlugin() {
           res.setHeader('Content-Type', 'application/json');
           res.end(JSON.stringify({ message: 'Method not allowed.' }));
         } catch {
+          res.statusCode = 500;
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify({ message: 'Failed to process request.' }));
+        }
+      });
+
+      server.middlewares.use('/api/expense_records', async (req, res) => {
+        try {
+          // @ts-expect-error Runtime-only Node module used in Vite middleware.
+          const repository = await import('./database/sqlite/repository.mjs');
+
+          if (req.method === 'GET') {
+            const records = repository.getExpenseRecords();
+            res.statusCode = 200;
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify(records));
+            return;
+          }
+
+          if (req.method === 'POST') {
+            try {
+              const payload = await parseJsonBody(req);
+              
+              const record = {
+                id: payload.id ? String(payload.id) : Date.now().toString(),
+                expense_no: payload.expenseNo || repository.getNextExpenseNo(),
+                category_id: payload.categoryId,
+                category_name: payload.categoryName,
+                amount: Number(payload.amount) || 0,
+                payment_type: payload.paymentType || 'Cash',
+                description: payload.description || null,
+                line_items_json: payload.lineItems ? JSON.stringify(payload.lineItems) : null,
+                attachment_image_path: payload.imageDataUrl || null,
+                attachment_image_name: payload.imageFileName || null,
+                attachment_document_path: payload.documentDataUrl || null,
+                attachment_document_name: payload.documentFileName || null,
+                round_off: payload.roundOff ? 1 : 0,
+                round_off_amount: Number(payload.roundOffAmount) || 0
+              };
+
+              if (payload.isUpdate) {
+                repository.updateExpenseRecord(record.id, record);
+              } else {
+                repository.addExpenseRecord(record);
+              }
+
+              res.statusCode = 201;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify(record));
+            } catch (err) {
+              console.error(err);
+              res.statusCode = 400;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify({ message: 'Invalid JSON payload.' }));
+            }
+            return;
+          }
+
+          if (req.method === 'DELETE') {
+            const requestUrl = new URL(req.url ?? '/', 'http://localhost');
+            const pathId = requestUrl.pathname.split('/').filter(Boolean)[0];
+            const queryId = requestUrl.searchParams.get('id');
+            const id = (pathId || queryId || '').trim();
+
+            if (!id) {
+              res.statusCode = 400;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify({ message: 'Expense record ID is required.' }));
+              return;
+            }
+
+            const success = repository.deleteExpenseRecord(id);
+            if (success) {
+              res.statusCode = 200;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify({ success: true }));
+            } else {
+              res.statusCode = 404;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify({ message: 'Expense record not found.' }));
+            }
+            return;
+          }
+
+          res.statusCode = 405;
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify({ message: 'Method not allowed.' }));
+        } catch (error) {
+          console.error(error);
           res.statusCode = 500;
           res.setHeader('Content-Type', 'application/json');
           res.end(JSON.stringify({ message: 'Failed to process request.' }));

@@ -51,12 +51,12 @@ export const seedData = {
     { id: '3', date: '19/02/2026', partyName: 'sfe', amount: 2880, paymentType: 'Cash' }
   ],
   expenseCategories: [
-    { id: '1', name: 'Petrol', amount: 0 },
-    { id: '2', name: 'Rent', amount: 0 },
-    { id: '3', name: 'Salary', amount: 0 },
-    { id: '4', name: 'Tea', amount: 0 },
-    { id: '5', name: 'Transport', amount: 0 },
-    { id: '6', name: 'Travel', amount: 500 }
+    { id: '1', name: 'Petrol', type: 'Indirect Expense', amount: 0 },
+    { id: '2', name: 'Rent', type: 'Indirect Expense', amount: 0 },
+    { id: '3', name: 'Salary', type: 'Indirect Expense', amount: 0 },
+    { id: '4', name: 'Tea', type: 'Indirect Expense', amount: 0 },
+    { id: '5', name: 'Transport', type: 'Indirect Expense', amount: 0 },
+    { id: '6', name: 'Travel', type: 'Indirect Expense', amount: 500 }
   ],
   bankAccounts: [],
   cashInHandTransactions: [

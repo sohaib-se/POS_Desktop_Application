@@ -1,167 +1,109 @@
-import { CheckRow, Hint, AdditionalFieldRow, ToggleField } from "../shared/SharedComponents";
-import { COL, SH, HR, selStyle, inputStyle, nudgeBtn } from "../shared/styles";
+import { Card, SettingToggleRow, Hint } from "../shared/SharedComponents";
+import { inputStyle, nudgeBtn } from "../shared/styles";
 
 export function PartyTab() {
   return (
-    <div style={{ padding: "24px 0" }}>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr" }}>
-        {/* Party Settings */}
-        <div style={COL}>
-          <div style={SH}>Party Settings</div>
-          <hr style={HR} />
-          <CheckRow label="Party Grouping" hint />
-          <CheckRow label="Shipping Address" hint />
-          <CheckRow label="Manage Party Status" hint />
-          <CheckRow label="Enable Payment Reminder" hint defaultChecked />
+    <div style={{ 
+      padding: "32px", 
+      background: "#f8fafc", 
+      minHeight: "100%",
+      fontFamily: "Inter, system-ui, sans-serif"
+    }}>
+      <div style={{
+        display: "grid",
+        gridTemplateColumns: "repeat(auto-fit, minmax(380px, 1fr))",
+        gap: "24px",
+        maxWidth: "1400px",
+        margin: "0 auto"
+      }}>
+        
+        {/* Party Settings Card */}
+        <Card title="Party Settings">
+          <SettingToggleRow label="Shipping Address" hint={true} />
+          <SettingToggleRow label="Enable Payment Reminder" hint={true} defaultChecked={true} />
+          
           <div
             style={{
               display: "flex",
               alignItems: "center",
-              gap: 8,
-              marginBottom: 16,
+              justifyContent: "space-between",
+              padding: "12px 16px",
+              background: "transparent",
+              border: "1px solid #e2e8f0",
+              borderRadius: "10px",
               flexWrap: "wrap",
+              gap: "8px"
             }}
           >
-            <span style={{ fontSize: 13, color: "#374151" }}>
-              Remind me for payment due in
-            </span>
-            <Hint />
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                border: "1px solid #d1d5db",
-                borderRadius: 5,
-                overflow: "hidden",
-              }}
-            >
-              <input
-                type="number"
-                defaultValue={1}
-                style={{
-                  ...inputStyle,
-                  width: 44,
-                  border: "none",
-                  borderRadius: 0,
-                }}
-              />
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <span style={{ fontSize: "14px", color: "#334155", fontWeight: 500 }}>
+                Remind me for payment due in
+              </span>
+              <Hint />
+            </div>
+            
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
               <div
                 style={{
                   display: "flex",
-                  flexDirection: "column",
-                  borderLeft: "1px solid #d1d5db",
+                  alignItems: "center",
+                  border: "1px solid #cbd5e1",
+                  borderRadius: "8px",
+                  overflow: "hidden",
+                  background: "#fff"
                 }}
               >
-                <button style={nudgeBtn}>▲</button>
-                <button style={{ ...nudgeBtn, borderTop: "1px solid #d1d5db" }}>
-                  ▼
-                </button>
+                <input
+                  type="number"
+                  defaultValue={1}
+                  style={{
+                    ...inputStyle,
+                    width: "44px",
+                    border: "none",
+                    borderRadius: 0,
+                    textAlign: "center",
+                    fontWeight: 600,
+                    padding: "4px"
+                  }}
+                />
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    borderLeft: "1px solid #cbd5e1",
+                    background: "#f8fafc"
+                  }}
+                >
+                  <button style={{ ...nudgeBtn, padding: "2px 6px" }}>▲</button>
+                  <button style={{ ...nudgeBtn, padding: "2px 6px", borderTop: "1px solid #cbd5e1" }}>
+                    ▼
+                  </button>
+                </div>
               </div>
+              <span style={{ fontSize: "13px", color: "#64748b", fontWeight: 500 }}>(days)</span>
             </div>
-            <span style={{ fontSize: 13, color: "#374151" }}>(days)</span>
           </div>
+          
           <button
             style={{
-              border: "1px solid #2563eb",
+              border: "1px solid #3b82f6",
               background: "#fff",
-              color: "#2563eb",
-              borderRadius: 6,
-              padding: "6px 14px",
-              fontSize: 12,
+              color: "#3b82f6",
+              borderRadius: "8px",
+              padding: "8px 16px",
+              fontSize: "13px",
+              fontWeight: 600,
               cursor: "pointer",
+              alignSelf: "flex-start",
+              transition: "all 0.2s ease",
             }}
+            onMouseEnter={(e) => e.currentTarget.style.background = "#eff6ff"}
+            onMouseLeave={(e) => e.currentTarget.style.background = "#fff"}
           >
             Reminder Message &gt;
           </button>
-        </div>
+        </Card>
 
-        {/* Additional fields */}
-        <div style={{ ...COL, borderLeft: "1px solid #e5e7eb" }}>
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 6,
-              marginBottom: 6,
-            }}
-          >
-            <span style={SH}>Additional fields</span>
-            <Hint />
-          </div>
-          <hr style={HR} />
-          {[1, 2, 3].map((n) => (
-            <AdditionalFieldRow key={n} placeholder={`Additional Field ${n}`} />
-          ))}
-          {/* Field 4 with date */}
-          <div style={{ marginBottom: 16 }}>
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-                marginBottom: 8,
-              }}
-            >
-              <input
-                type="checkbox"
-                style={{
-                  accentColor: "#2563eb",
-                  width: 15,
-                  height: 15,
-                  cursor: "pointer",
-                  flexShrink: 0,
-                }}
-              />
-              <input
-                placeholder="Additional Field 4"
-                style={{ ...inputStyle, flex: 1 }}
-              />
-              <select style={{ ...selStyle, fontSize: 11 }}>
-                <option>dd/mm/yy</option>
-                <option>mm/dd/yy</option>
-              </select>
-            </div>
-            <ToggleField />
-          </div>
-        </div>
-
-        {/* Enable Loyalty Point */}
-        <div style={{ ...COL, borderLeft: "1px solid #e5e7eb" }}>
-          <div style={SH}>Enable Loyalty Point</div>
-          <hr style={HR} />
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <input
-              type="checkbox"
-              defaultChecked
-              style={{
-                accentColor: "#2563eb",
-                width: 15,
-                height: 15,
-                cursor: "pointer",
-              }}
-            />
-            <span style={{ fontSize: 13, color: "#374151" }}>
-              Enable Loyalty Point
-            </span>
-            <Hint />
-            <span
-              style={{
-                width: 18,
-                height: 18,
-                borderRadius: "50%",
-                background: "#2563eb",
-                display: "inline-flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: 10,
-                color: "#fff",
-                marginLeft: 2,
-              }}
-            >
-              M
-            </span>
-          </div>
-        </div>
       </div>
     </div>
   );

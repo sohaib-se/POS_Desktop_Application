@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { ArrowDown, ArrowUp } from "lucide-react";
+import { useSettings } from "@/hooks/useSettings";
 
 export function StatsCards() {
   const [totalReceivable, setTotalReceivable] = useState(0);
@@ -8,6 +9,11 @@ export function StatsCards() {
   const [payableParties, setPayableParties] = useState(0);
   const [todaySales, setTodaySales] = useState(0);
   const [todayProfit, setTodayProfit] = useState(0);
+
+  const [showTodaySales] = useSettings("show_card_today_sales", true);
+  const [showTodayProfit] = useSettings("show_card_today_profit", true);
+  const [showReceivable] = useSettings("show_card_total_receivable", true);
+  const [showPayable] = useSettings("show_card_total_payable", true);
 
   useEffect(() => {
     async function fetchStats() {
@@ -106,9 +112,12 @@ export function StatsCards() {
     fetchStats();
   }, []);
 
+  if (!showTodaySales && !showTodayProfit && !showReceivable && !showPayable) return null;
+
   return (
     <div className="grid grid-cols-2 gap-6">
       {/* Today's Sales */}
+      {showTodaySales && (
       <div className="stat-card">
         <div className="flex items-start justify-between">
           <div>
@@ -121,8 +130,10 @@ export function StatsCards() {
           </div>
         </div>
       </div>
+      )}
 
       {/* Today's Profit */}
+      {showTodayProfit && (
       <div className="stat-card">
         <div className="flex items-start justify-between">
           <div>
@@ -135,8 +146,10 @@ export function StatsCards() {
           </div>
         </div>
       </div>
+      )}
 
       {/* Total Receivable */}
+      {showReceivable && (
       <div className="stat-card">
         <div className="flex items-start justify-between">
           <div>
@@ -149,8 +162,10 @@ export function StatsCards() {
           </div>
         </div>
       </div>
+      )}
 
       {/* Total Payable */}
+      {showPayable && (
       <div className="stat-card">
         <div className="flex items-start justify-between">
           <div>
@@ -163,6 +178,7 @@ export function StatsCards() {
           </div>
         </div>
       </div>
+      )}
     </div>
   );
 }

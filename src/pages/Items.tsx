@@ -3,12 +3,15 @@ import { ProductsTab } from "@/components/pagescomponents/items/products/Product
 import type { CategoryRecord, UnitRecord, ConversionRateRecord } from "@/components/pagescomponents/items/products/types";
 import { CategoryTab } from "@/components/pagescomponents/items/category/CategoryTab";
 import { UnitsTab } from "@/components/pagescomponents/items/units/UnitsTab";
+import { useSettings } from "@/hooks/useSettings";
+import { Grid } from "lucide-react";
 
 // --- MAIN COMPONENT ---
 export function Items() {
   const [activeTab, setActiveTab] = useState<"products" | "category" | "units">(
     "products"
   );
+  const [enableGrid] = useSettings("enable_grid", false);
 
   // ---- Shared state ----
 
@@ -57,7 +60,7 @@ export function Items() {
 
   // ---- Render ----
   return (
-    <div className="h-full flex flex-col bg-[#D0DCE7] p-0 gap-1">
+    <div className="h-full flex flex-col bg-[#D0DCE7] p-0 gap-1 relative">
       {/* Top Tab Bar */}
       <div
         className="p-0 bg-white rounded-none flex items-center justify-between shrink-0 w-full"
@@ -150,6 +153,16 @@ export function Items() {
           setCategoryBeingEdited={setCategoryBeingEdited}
           selectorOnly
         />
+      )}
+
+      {/* Floating Grid Button */}
+      {enableGrid && (
+        <button
+          className="absolute bottom-6 right-6 w-14 h-14 bg-blue-600 text-white rounded-full flex items-center justify-center shadow-lg hover:bg-blue-700 transition-colors z-50 cursor-not-allowed opacity-80"
+          title="Grid View (Coming Soon)"
+        >
+          <Grid size={24} />
+        </button>
       )}
     </div>
   );

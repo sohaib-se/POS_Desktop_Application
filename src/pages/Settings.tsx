@@ -7,6 +7,7 @@ import {
   Package,
   X,
   ArrowLeftRight,
+  Palette,
 } from "lucide-react";
 import {
   Dialog,
@@ -19,6 +20,7 @@ import { TransactionTab } from "../components/pagescomponents/settings/tabs/Tran
 import { PartyTab } from "../components/pagescomponents/settings/tabs/PartyTab";
 import { ItemTab } from "../components/pagescomponents/settings/tabs/ItemTab";
 import { PrintTab } from "../components/pagescomponents/settings/tabs/PrintTab";
+import { AppearanceTab } from "../components/pagescomponents/settings/tabs/AppearanceTab";
 import { SettingsSidebar } from "../components/pagescomponents/settings/SettingsSidebar";
 
 interface SettingsPageProps {
@@ -32,6 +34,7 @@ const tabs = [
   { id: "print", label: "PRINT", icon: Printer },
   { id: "party", label: "PARTY", icon: Users },
   { id: "item", label: "ITEM", icon: Package },
+  { id: "appearance", label: "APPEARANCE", icon: Palette },
 ];
 
 export function SettingsPage({ onClose, initialTab }: SettingsPageProps = {}) {
@@ -74,6 +77,7 @@ export function SettingsPage({ onClose, initialTab }: SettingsPageProps = {}) {
           {activeTab === "print" && <PrintTab />}
           {activeTab === "party" && <PartyTab />}
           {activeTab === "item" && <ItemTab />}
+          {activeTab === "appearance" && <AppearanceTab />}
         </main>
       </div>
 

@@ -62,8 +62,11 @@ function ensureItemsTableColumns(db) {
     db.exec('ALTER TABLE items ADD COLUMN mfg_date TEXT');
   }
 
-  if (!existingColumns.has('exp_date')) {
+  if (!rows.find((r) => r.name === 'exp_date')) {
     db.exec('ALTER TABLE items ADD COLUMN exp_date TEXT');
+  }
+  if (!rows.find((r) => r.name === 'low_stock')) {
+    db.exec('ALTER TABLE items ADD COLUMN low_stock REAL');
   }
 }
 

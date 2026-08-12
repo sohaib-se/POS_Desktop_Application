@@ -33,9 +33,10 @@ const getInitialAddItemFormState = (): AddItemFormState => ({
   wholesalePrice: "",
   purchasePrice: "",
   minWholesaleQty: "",
+  lowStockThreshold: "",
   openingStock: "",
   atPrice: "",
-  asOfDate: "",
+  asOfDate: new Date().toISOString().split("T")[0],
   mfgDate: "",
   expDate: "",
 });
@@ -52,6 +53,7 @@ const mapItemApiRecord = (record: ItemApiRecord): Item => ({
   secondaryStock: record.secondary_stock,
   conversionRate: record.conversion_rate,
   minStock: record.min_stock,
+  lowStock: record.low_stock,
   salePrice: Number(record.sale_price ?? 0),
   wholesalePrice: Number(record.wholesale_price ?? 0),
   purchasePrice: Number(record.purchase_price ?? 0),
@@ -449,6 +451,7 @@ export function ProductsTab({
         secondaryUnit: selectedItem.secondaryUnit,
         stockValue: finalStockValue,
         minStock: selectedItem.minStock,
+        lowStock: selectedItem.lowStock,
         secondaryStock: newSecondaryStock,
         conversionRate: selectedItem.conversionRate,
       };
@@ -608,9 +611,13 @@ export function ProductsTab({
         item.minStock === null || item.minStock === undefined
           ? ""
           : String(item.minStock),
+      lowStockThreshold:
+        item.lowStock === null || item.lowStock === undefined
+          ? ""
+          : String(item.lowStock),
       openingStock: String(item.stockQuantity ?? ""),
       atPrice: item.atPrice != null ? String(item.atPrice) : "",
-      asOfDate: "",
+      asOfDate: new Date().toISOString().split("T")[0],
       mfgDate: item.mfgDate ?? "",
       expDate: item.expDate ?? "",
     });
@@ -719,6 +726,7 @@ export function ProductsTab({
       expDate,
       stockValue: openingStockValue,
       minStock: minWholesaleQty,
+      lowStock: addItemForm.lowStockThreshold !== "" ? Number(addItemForm.lowStockThreshold) : null,
     };
 
     setIsSavingItem(true);
@@ -741,12 +749,14 @@ export function ProductsTab({
         conversionRate?: number | null;
         imgPath?: string | null;
         minStock?: number | null;
+        lowStock?: number | null;
         salePrice: number;
         wholesalePrice?: number;
         purchasePrice: number;
         stockQuantity: number;
         stockValue: number;
         secondaryStock?: number | null;
+        atPrice?: number | null;
         mfgDate?: string | null;
         expDate?: string | null;
       };
@@ -772,9 +782,13 @@ export function ProductsTab({
         imgPath: createdItemPayload.imgPath ?? addItemExistingImagePath,
         mfgDate: createdItemPayload.mfgDate ?? mfgDate,
         expDate: createdItemPayload.expDate ?? expDate,
+        atPrice: createdItemPayload.atPrice ?? (addItemForm.atPrice !== "" ? Number(addItemForm.atPrice) : undefined),
         minStock:
           createdItemPayload.minStock ??
           (minWholesaleQty === 0 ? null : minWholesaleQty),
+        lowStock:
+          createdItemPayload.lowStock ??
+          (addItemForm.lowStockThreshold === "" ? null : Number(addItemForm.lowStockThreshold)),
         salePrice: Number(createdItemPayload.salePrice ?? salePrice),
         wholesalePrice: Number(
           createdItemPayload.wholesalePrice ??

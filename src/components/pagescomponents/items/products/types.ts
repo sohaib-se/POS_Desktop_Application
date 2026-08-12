@@ -12,6 +12,7 @@ export type Item = {
   secondaryStock?: number | null;
   conversionRate?: number | null;
   minStock?: number | null;
+  lowStock?: number | null;
   stockQuantity: number;
   salePrice: number;
   wholesalePrice: number;
@@ -34,6 +35,7 @@ export type ItemApiRecord = {
   secondary_stock: number | null;
   conversion_rate: number | null;
   min_stock: number | null;
+  low_stock: number | null;
   sale_price: number;
   wholesale_price: number;
   purchase_price: number;
@@ -52,6 +54,7 @@ export type AddItemFormState = {
   wholesalePrice: string;
   purchasePrice: string;
   minWholesaleQty: string;
+  lowStockThreshold: string;
   openingStock: string;
   atPrice: string;
   asOfDate: string;

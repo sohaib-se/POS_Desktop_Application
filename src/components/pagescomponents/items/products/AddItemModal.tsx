@@ -314,19 +314,35 @@ export function AddItemModal({
                   />
                 </div>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  As Of Date
-                </label>
-                <input
-                  type="date"
-                  placeholder="YYYY-MM-DD"
-                  value={addItemForm.asOfDate}
-                  onChange={(event) =>
-                    onFormChange("asOfDate", event.target.value)
-                  }
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
-                />
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    As Of Date
+                  </label>
+                  <input
+                    type="date"
+                    placeholder="YYYY-MM-DD"
+                    value={addItemForm.asOfDate}
+                    onChange={(event) =>
+                      onFormChange("asOfDate", event.target.value)
+                    }
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Low Stock Threshold
+                  </label>
+                  <input
+                    type="number"
+                    placeholder="0"
+                    value={addItemForm.lowStockThreshold}
+                    onChange={(event) =>
+                      onFormChange("lowStockThreshold", event.target.value)
+                    }
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                  />
+                </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>

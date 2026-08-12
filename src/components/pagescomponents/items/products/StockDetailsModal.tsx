@@ -99,6 +99,14 @@ export function StockDetailsModal({
                 {selectedItem.minStock ?? "-"}
               </span>
             </div>
+            <div className="flex justify-between items-center border-t pt-2 pb-2">
+              <span className="text-sm text-gray-500 font-medium">
+                Low Stock Threshold
+              </span>
+              <span className="text-sm font-semibold text-gray-800">
+                {selectedItem.lowStock ?? "-"}
+              </span>
+            </div>
           </div>
         )}
         <div className="flex justify-end mt-2">

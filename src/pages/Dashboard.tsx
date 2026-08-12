@@ -2,6 +2,8 @@ import { StatsCards } from "../components/pagescomponents/dashboard/StatsCards";
 import { SalesChart } from "../components/pagescomponents/dashboard/SalesChart";
 import { MostUsedReports } from "../components/pagescomponents/dashboard/MostUsedReports";
 
+import { LowStockItemsCard } from "../components/pagescomponents/dashboard/LowStockItemsCard";
+
 export function Dashboard() {
   return (
     <div className="p-6 space-y-6 overflow-y-auto h-full">
@@ -10,6 +12,7 @@ export function Dashboard() {
       <div className="grid grid-cols-3 gap-6">
         <SalesChart />
         <MostUsedReports />
+        <LowStockItemsCard />
       </div>
     </div>
   );

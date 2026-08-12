@@ -12,6 +12,9 @@ import { PartyReport } from '../components/pagescomponents/reports/parties repor
 import { PartyWiseProfitLossReport } from '../components/pagescomponents/reports/parties reports/PartyWiseProfitLossReport';
 import { PartyReportByItem } from '../components/pagescomponents/reports/parties reports/PartyReportByItem';
 import { SalePurchaseByParty } from '../components/pagescomponents/reports/stockreport/SalePurchaseByParty';
+import { LowStockDetails } from '../components/pagescomponents/reports/stockreport/LowStockDetails';
+import { StockDetails } from '../components/pagescomponents/reports/stockreport/StockDetails';
+import { StockInOutDetails } from '../components/pagescomponents/reports/stockreport/StockInOutDetails';
 
 interface ReportsProps {
   onViewChange?: (view: ViewType) => void;
@@ -60,6 +63,15 @@ export function Reports({ onViewChange, onEditInvoice }: ReportsProps) {
   if (activeReport?.category === 'Item/Stock Reports') {
     if (activeReport.name === 'Sale Purchase By Party') {
       return <SalePurchaseByParty onBack={() => setActiveReport(null)} />;
+    }
+    if (activeReport.name === 'Low stock details') {
+      return <LowStockDetails onBack={() => setActiveReport(null)} />;
+    }
+    if (activeReport.name === 'Stock details') {
+      return <StockDetails onBack={() => setActiveReport(null)} />;
+    }
+    if (activeReport.name === 'Stock In/Stock out Details') {
+      return <StockInOutDetails onBack={() => setActiveReport(null)} />;
     }
   }
 

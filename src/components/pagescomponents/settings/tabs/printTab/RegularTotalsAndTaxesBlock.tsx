@@ -17,7 +17,6 @@ export function RegularTotalsAndTaxesBlock() {
       <InfoCheckRow label="Current Balance of Party" />
       <InfoCheckRow label="Tax Details" defaultChecked />
       <InfoCheckRow label="You Saved" defaultChecked />
-      <InfoCheckRow label="Print Amount with Grouping" defaultChecked />
       
       <div style={{ display: "flex", alignItems: "center", marginBottom: 16 }}>
         <span style={{ fontSize: 13, color: TEXT_LABEL, marginRight: 8 }}>
@@ -36,8 +35,7 @@ export function RegularTotalsAndTaxesBlock() {
             fontSize: 13,
             color: TEXT_DARK,
             outline: "none",
-            background: "#fff",
-          }}
+            background: "#fff" }}
         >
           <option value="Indian">Indian</option>
           <option value="International">International</option>

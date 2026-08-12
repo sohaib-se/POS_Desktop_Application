@@ -1,30 +1,37 @@
+import { EditableText } from "./SharedComponents";
+import { useCompanyDetails } from "./useCompanyDetails";
 import { BORDER, TEXT_DARK, TEXT_MUTED } from "./constants";
 
 export function DoubleDivinePreview({ color }: { color?: string }) {
+  const { companyName, phone, email, address, logo, showCompanyName, showPhone, showEmail, showAddress, showLogo, updateDetail } = useCompanyDetails();
   const redBg = color || "#e31837";
   const darkBg = "#262626";
   const th: React.CSSProperties = { padding: "6px 8px", textAlign: "left", fontWeight: 600, color: "#fff" };
   const td: React.CSSProperties = { padding: "6px 8px", color: TEXT_DARK, borderRight: `1px solid ${BORDER}`, borderBottom: `1px solid ${BORDER}` };
 
   return (
-    <div style={{ background: "#fff", borderRadius: 4, padding: "0 0 20px 0", fontFamily: "Inter, system-ui, sans-serif", border: `1px solid ${BORDER}`, overflow: "hidden" }}>
+    <div style={{ background: "#fff", padding: "0 0 20px 0", fontFamily: "Inter, system-ui, sans-serif", border: "1px solid #000", overflow: "hidden" }}>
       
       {/* Header section with curves */}
       <div style={{ display: "flex", height: 100, marginBottom: 10 }}>
         <div style={{ flex: 1, background: darkBg, position: "relative", display: "flex", alignItems: "center", paddingLeft: 20 }}>
-          <div style={{ width: 60, height: 60, background: "#3f3f46", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, color: "#a1a1aa" }}>Image</div>
+          {showLogo && (
+<div style={{ width: 100, height: 100, background: "transparent", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, color: "#a1a1aa" , overflow: "hidden" }}>
+{logo ? <img src={logo} alt="Company Logo" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : "Image"}
+</div>
+)}
           <div style={{ position: "absolute", right: -30, top: 0, bottom: 0, width: 60, background: darkBg, borderRadius: "50%", zIndex: 1 }} />
         </div>
         <div style={{ flex: 1.5, background: redBg, position: "relative", display: "flex", alignItems: "center", paddingLeft: 40, color: "#fff", fontWeight: 600 }}>
-          <div style={{ zIndex: 2 }}>📞 3369007084</div>
+          <div style={{ zIndex: 2 }}>📞 {showPhone ? phone : ""}</div>
         </div>
       </div>
 
       <div style={{ padding: "0 20px" }}>
         <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 20 }}>
           <div>
-            <div style={{ fontSize: 18, fontWeight: 700, color: TEXT_DARK, marginBottom: 10 }}>My Company</div>
-            <div style={{ fontWeight: 700, color: redBg, marginBottom: 4, fontSize: 14 }}>Bill To:</div>
+            <div style={{ fontSize: 18, fontWeight: 700, color: TEXT_DARK, marginBottom: 10 }}>{showCompanyName ? companyName : ""}</div>
+            <div style={{ fontWeight: 700, color: redBg, marginBottom: 4, fontSize: 14 }}><EditableText textKey="lbl_bill_to" defaultText="Bill To:" /></div>
             <div style={{ color: TEXT_DARK, fontWeight: 600, fontSize: 11 }}>Classic Enterprises Pvt Ltd.</div>
             <div style={{ color: TEXT_MUTED, fontSize: 10 }}>Mehta Textiles, Marathalli Road, Bangalore, Karnataka, 560034</div>
             <div style={{ color: TEXT_MUTED, fontSize: 10 }}>Contact No: 1237894560</div>
@@ -42,15 +49,15 @@ export function DoubleDivinePreview({ color }: { color?: string }) {
               <span style={{ color: TEXT_MUTED }}>KA 8A8A 7878</span>
             </div>
             <div style={{ display: "flex", gap: 20, fontSize: 10, marginBottom: 2 }}>
-              <span style={{ fontWeight: 600, width: 80 }}>Delivery Date:</span>
+              <span style={{ fontWeight: 600, width: 80 }}>Delivery <EditableText textKey="lbl_date" defaultText="Date:" /></span>
               <span style={{ color: TEXT_MUTED }}>05 - Jun - 2020</span>
             </div>
           </div>
           <div style={{ textAlign: "right" }}>
-            <div style={{ fontSize: 24, fontWeight: 300, color: TEXT_DARK, marginBottom: 10 }}>Tax Invoice</div>
-            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, width: 140, marginLeft: "auto", marginBottom: 2 }}><span>Invoice No.:</span><span>#1</span></div>
-            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, width: 140, marginLeft: "auto", marginBottom: 2 }}><span>Invoice Date:</span><span>29/05/2020</span></div>
-            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, width: 140, marginLeft: "auto", marginBottom: 2 }}><span>Invoice Time:</span><span>12:30 PM</span></div>
+            <div style={{ fontSize: 24, fontWeight: 300, color: TEXT_DARK, marginBottom: 10 }}><EditableText textKey="title" defaultText="Tax Invoice" /></div>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, width: 140, marginLeft: "auto", marginBottom: 2 }}><span><EditableText textKey="lbl_inv_no" defaultText="Invoice No.:" /></span><span>#1</span></div>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, width: 140, marginLeft: "auto", marginBottom: 2 }}><span>Invoice <EditableText textKey="lbl_date" defaultText="Date:" /></span><span>29/05/2020</span></div>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, width: 140, marginLeft: "auto", marginBottom: 2 }}><span>Invoice <EditableText textKey="lbl_time" defaultText="Time:" /></span><span>12:30 PM</span></div>
             <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, width: 140, marginLeft: "auto", marginBottom: 2 }}><span>Place of Supply:</span><span>29-Karnataka</span></div>
             <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, width: 140, marginLeft: "auto", marginBottom: 2 }}><span>PO date:</span><span>29/05/2020</span></div>
           </div>
@@ -59,8 +66,8 @@ export function DoubleDivinePreview({ color }: { color?: string }) {
         <table style={{ width: "100%", fontSize: 9.5, borderCollapse: "collapse", border: `1px solid ${BORDER}`, marginBottom: 10 }}>
           <thead>
             <tr style={{ background: redBg }}>
-              {["#", "Item name", "HSN / SAC", "Quantity", "Price/unit", "Discount", "GST", "Amount"].map((h) => (
-                <th key={h} style={{ ...th, borderRight: `1px solid #fff` }}>{h}</th>
+              {["#", <EditableText textKey="th_item_name" defaultText=<EditableText textKey="th_item_name" defaultText="Item name" /> />, "HSN / SAC", <EditableText textKey="th_qty" defaultText=<EditableText textKey="th_qty" defaultText="Quantity" /> />, <EditableText textKey="th_price" defaultText=<EditableText textKey="th_price" defaultText="Price/unit" /> />, <EditableText textKey="th_discount" defaultText=<EditableText textKey="th_discount" defaultText="Discount" /> />, <EditableText textKey="th_tax" defaultText=<EditableText textKey="th_tax" defaultText="GST" /> />, <EditableText textKey="th_amount" defaultText=<EditableText textKey="th_amount" defaultText="Amount" /> />].map((h, i) => (
+              <th key={i} style={{ ...th, borderRight: `1px solid #fff` }}>{h}</th>
               ))}
             </tr>
           </thead>
@@ -78,7 +85,7 @@ export function DoubleDivinePreview({ color }: { color?: string }) {
               <td style={td}>4</td><td style={td}>Sony BRAVIA 32 inch Android Smart Tv</td><td style={td}>4528</td><td style={td}>1</td><td style={td}>Rs 45,000.00</td><td style={td}>Rs 0.00 (0%)</td><td style={td}>Rs 5,400.00 (12%)</td><td style={{ ...td, borderRight: "none" }}>Rs 50,400.00</td>
             </tr>
             <tr style={{ fontWeight: 700, background: redBg, color: "#fff" }}>
-              <td style={{ padding: "6px 8px", borderRight: `1px solid #fff` }} colSpan={3}>Total</td>
+              <td style={{ padding: "6px 8px", borderRight: `1px solid #fff` }} colSpan={3}><EditableText textKey="lbl_total" defaultText="Total" /></td>
               <td style={{ padding: "6px 8px", borderRight: `1px solid #fff` }}>9 + 1</td><td style={{ padding: "6px 8px", borderRight: `1px solid #fff` }} /><td style={{ padding: "6px 8px", borderRight: `1px solid #fff` }}>Rs 2,312.72</td><td style={{ padding: "6px 8px", borderRight: `1px solid #fff` }}>Rs 10,702.11</td><td style={{ padding: "6px 8px" }}>Rs 1,02,201.89</td>
             </tr>
           </tbody>
@@ -86,7 +93,7 @@ export function DoubleDivinePreview({ color }: { color?: string }) {
 
         <div style={{ display: "flex", gap: 20 }}>
           <div style={{ flex: 1 }}>
-            <div style={{ fontWeight: 700, color: redBg, marginBottom: 4, fontSize: 14 }}>Pay To:</div>
+            <div style={{ fontWeight: 700, color: redBg, marginBottom: 4, fontSize: 14 }}><EditableText textKey="lbl_pay_to" defaultText="Pay To:" /></div>
             <div style={{ fontSize: 10, color: TEXT_MUTED, marginBottom: 2 }}>Bank Name: ICICI BANK, Branch - HSR LAYOUT</div>
             <div style={{ fontSize: 10, color: TEXT_MUTED, marginBottom: 2 }}>Bank Account No.: 1234567890</div>
             <div style={{ fontSize: 10, color: TEXT_MUTED, marginBottom: 2 }}>Bank SWIFT code: IFSC000123</div>
@@ -98,9 +105,9 @@ export function DoubleDivinePreview({ color }: { color?: string }) {
             <div style={{ fontWeight: 700, color: redBg, marginBottom: 4, fontSize: 14 }}>Terms And Conditions</div>
             <div style={{ fontSize: 10, color: TEXT_MUTED, marginBottom: 16 }}>Thanks for doing business with us!</div>
 
-            <div style={{ fontSize: 10, color: TEXT_DARK, marginBottom: 6 }}>For: My Company</div>
+            <div style={{ fontSize: 10, color: TEXT_DARK, marginBottom: 6 }}><EditableText textKey="lbl_for" defaultText="For:" /> {showCompanyName ? companyName : ""}</div>
             <div style={{ width: 60, height: 40, background: "#f3f4f6", display: "inline-block", marginBottom: 6 }} />
-            <div style={{ fontSize: 10, color: TEXT_DARK, fontWeight: 600 }}>Authorized Signatory</div>
+            <div style={{ fontSize: 10, color: TEXT_DARK, fontWeight: 600 }}><EditableText textKey="lbl_auth_sig" defaultText="Authorized Signatory" /></div>
           </div>
           
           <div style={{ width: 220, fontSize: 9.5 }}>
@@ -113,10 +120,10 @@ export function DoubleDivinePreview({ color }: { color?: string }) {
               <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 8px", borderBottom: `1px solid ${BORDER}` }}><span>Ad. CESS</span><span>Rs 61.50</span></div>
               <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 8px", borderBottom: `1px solid ${BORDER}` }}><span>Shipping</span><span>Rs 250.00</span></div>
               <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 8px", borderBottom: `1px solid ${BORDER}` }}><span>Round off</span><span>Rs 0.11</span></div>
-              <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 8px", borderBottom: `1px solid ${BORDER}`, background: redBg, color: "#fff", fontWeight: 700 }}><span>Total</span><span>Rs 1,02,452.00</span></div>
-              <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 8px", borderBottom: `1px solid ${BORDER}` }}><span>Received</span><span>Rs 50,000.00</span></div>
-              <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 8px", borderBottom: `1px solid ${BORDER}` }}><span>Balance</span><span>Rs 52,452.00</span></div>
-              <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 8px", borderBottom: `1px solid ${BORDER}`, background: redBg, color: "#fff", fontWeight: 700 }}><span>You Saved</span><span>Rs 30.32.00</span></div>
+              <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 8px", borderBottom: `1px solid ${BORDER}`, background: redBg, color: "#fff", fontWeight: 700 }}><span><EditableText textKey="lbl_total" defaultText="Total" /></span><span>Rs 1,02,452.00</span></div>
+              <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 8px", borderBottom: `1px solid ${BORDER}` }}><span><EditableText textKey="lbl_received_no_colon" defaultText="Received" /></span><span>Rs 50,000.00</span></div>
+              <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 8px", borderBottom: `1px solid ${BORDER}` }}><span><EditableText textKey="lbl_balance_no_colon" defaultText="Balance" /></span><span>Rs 52,452.00</span></div>
+              <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 8px", borderBottom: `1px solid ${BORDER}`, background: redBg, color: "#fff", fontWeight: 700 }}><span><EditableText textKey="lbl_saved_no_colon" defaultText="You Saved" /></span><span>Rs 30.32.00</span></div>
             </div>
           </div>
         </div>

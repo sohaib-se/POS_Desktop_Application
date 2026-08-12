@@ -1,11 +1,4 @@
-import { BLUE, BORDER } from "./constants";
-
-export const THEME_COLORS = [
-  "#94a3b8", "#0ea5e9", "#9ca3af", "#4b5563", "#6b7280", "#3b82f6",
-  "#06b6d4", "#22c55e", "#14b8a6", "#8b5cf6", "#a855f7", "#ec4899",
-  "#f59e0b", "#78350f",
-  "#f9a8d4", "#f97316", "#ef4444", "#7c2d12", "#92400e", "#ffffff",
-];
+import { BLUE, BORDER, THEME_COLORS } from "./constants";
 
 export function ColorGrid({ color, onColorChange }: { color: string; onColorChange: (c: string) => void }) {
   return (
@@ -22,8 +15,7 @@ export function ColorGrid({ color, onColorChange }: { color: string; onColorChan
             border: color === c ? `2px solid ${BLUE}` : c === "#ffffff" ? `1px solid ${BORDER}` : "2px solid transparent",
             boxShadow: color === c ? "0 0 0 1.5px #fff inset" : "none",
             cursor: "pointer",
-            padding: 0,
-          }}
+            padding: 0 }}
         />
       ))}
     </div>

@@ -1,6 +1,8 @@
 import { BLUE, BORDER, TEXT_DARK, TEXT_MUTED } from "./constants";
+import { useCompanyDetails } from "./useCompanyDetails";
 
-export function RegularInvoicePreview({ color }: { color?: string }) {
+export function RegularInvoicePreview({ color: _color }: { color?: string }) {
+  const { companyName, phone, email, address, logo, showCompanyName, showPhone, showEmail, showAddress, showLogo } = useCompanyDetails();
   const th: React.CSSProperties = {
     padding: "3px 5px",
     textAlign: "left",
@@ -15,28 +17,46 @@ export function RegularInvoicePreview({ color }: { color?: string }) {
       </div>
 
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
-        <div
-          style={{
-            width: 40,
-            height: 40,
-            borderRadius: "50%",
-            background: "#f3f4f6",
-            border: `1px dashed ${BORDER}`,
-            flexShrink: 0,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            fontSize: 8,
-            color: TEXT_MUTED,
-          }}
-        >
-          Image
-        </div>
-        <div>
-          <div style={{ fontSize: 15, fontWeight: 700, color: TEXT_DARK }}>My Company</div>
-          <div style={{ fontSize: 10, color: TEXT_MUTED }}>
-            Phone: <strong style={{ color: TEXT_DARK }}>3369007084</strong>
+        {showLogo && (
+          <div
+            style={{
+              width: 100,
+              height: 100,
+              borderRadius: "50%",
+              background: "transparent",
+              flexShrink: 0,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: 8,
+              color: TEXT_MUTED,
+              overflow: "hidden"
+            }}
+          >
+{logo ? (
+              <img src={logo} alt="Company Logo" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+            ) : (
+              "Image"
+            )}
           </div>
+        )}
+        <div>
+          {showCompanyName && <div style={{ fontSize: 15, fontWeight: 700, color: TEXT_DARK }}>{companyName}</div>}
+          {showPhone && (
+            <div style={{ fontSize: 10, color: TEXT_MUTED }}>
+              Phone: <strong style={{ color: TEXT_DARK }}>{phone}</strong>
+            </div>
+          )}
+          {showEmail && (
+            <div style={{ fontSize: 10, color: TEXT_MUTED }}>
+              Email: <strong style={{ color: TEXT_DARK }}>{email}</strong>
+            </div>
+          )}
+          {showAddress && (
+            <div style={{ fontSize: 10, color: TEXT_MUTED }}>
+              Address: <strong style={{ color: TEXT_DARK }}>{address}</strong>
+            </div>
+          )}
         </div>
       </div>
 

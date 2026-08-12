@@ -7,8 +7,7 @@ import {
   InfoLogoRow,
   LabeledNumber,
   LabeledSelect,
-  SectionTitle,
-} from "./SharedComponents";
+  SectionTitle } from "./SharedComponents";
 
 function PageSizeSelector() {
   const options: { label: string; sub: string }[] = [
@@ -34,8 +33,7 @@ function PageSizeSelector() {
               color: active === i ? "#fff" : TEXT_LABEL,
               cursor: "pointer",
               textAlign: "center",
-              lineHeight: 1.3,
-            }}
+              lineHeight: 1.3 }}
           >
             <div style={{ fontSize: 12, fontWeight: 600 }}>{o.label}</div>
             <div style={{ fontSize: 10, opacity: 0.85 }}>{o.sub}</div>
@@ -51,8 +49,7 @@ function PageSizeSelector() {
             color: isCustom ? "#fff" : TEXT_LABEL,
             cursor: "pointer",
             textAlign: "center",
-            lineHeight: 1.3,
-          }}
+            lineHeight: 1.3 }}
         >
           <div style={{ fontSize: 12, fontWeight: 600 }}>Custom</div>
           <div style={{ fontSize: 10, opacity: 0.85 }}>48 (Chars)</div>
@@ -62,28 +59,27 @@ function PageSizeSelector() {
   );
 }
 
+import { useCompanyDetails } from "./useCompanyDetails";
+
 export function ThermalSettings() {
+  const { companyName, phone, address, email, showCompanyName, showPhone, showAddress, showEmail, showLogo, updateDetail } = useCompanyDetails();
+
   return (
     <>
       <InfoCheckRow label="Make Thermal Printer Default" />
       <PageSizeSelector />
       <Divider />
-      <LabeledSelect label="Printing Type" options={["Text Printing", "Image Printing"]} defaultValue="Text Printing" />
       <InfoCheckRow label="Use Text Styling(Bold)" defaultChecked />
       <InfoCheckRow label="Auto Cut Paper After Printing" />
-      <InfoCheckRow label="Open Cash Drawer After Printing" />
-      <div style={{ display: "flex", gap: 16 }}>
-        <LabeledNumber label="Extra lines at the end" defaultValue={0} />
-        <LabeledNumber label="Number of copies" defaultValue={1} />
-      </div>
+      <LabeledNumber label="Number of copies" defaultValue={1} />
       
       <Divider />
       <SectionTitle>Print Company Info / Header</SectionTitle>
-      <InfoFieldRow label="Company Name" defaultValue="My Company" defaultChecked />
-      <InfoLogoRow defaultChecked />
-      <InfoFieldRow label="Address" placeholder="Address" defaultChecked />
-      <InfoFieldRow label="Email" placeholder="Email" defaultChecked />
-      <InfoFieldRow label="Phone Number" defaultValue="3369007084" defaultChecked />
+      <InfoFieldRow label="Company Name" value={companyName} onChange={(val) => updateDetail("companyName", val)} checked={showCompanyName} onCheckedChange={(c) => updateDetail("show_companyName", c.toString())} />
+      <InfoLogoRow checked={showLogo} onCheckedChange={(c) => updateDetail("show_logo", c.toString())} />
+      <InfoFieldRow label="Address" value={address} onChange={(val) => updateDetail("address", val)} placeholder="Address" checked={showAddress} onCheckedChange={(c) => updateDetail("show_address", c.toString())} />
+      <InfoFieldRow label="Email" value={email} onChange={(val) => updateDetail("email", val)} placeholder="Email" checked={showEmail} onCheckedChange={(c) => updateDetail("show_email", c.toString())} />
+      <InfoFieldRow label="Phone Number" value={phone} onChange={(val) => updateDetail("phone", val)} checked={showPhone} onCheckedChange={(c) => updateDetail("show_phone", c.toString())} />
       <div style={{ color: BLUE, fontSize: 12, fontWeight: 600, marginTop: 12, cursor: "pointer" }}>Change Transaction Names &gt;</div>
 
       <Divider />
@@ -95,11 +91,8 @@ export function ThermalSettings() {
 
       <Divider />
       <SectionTitle>Additional Item Details</SectionTitle>
-      <InfoCheckRow label="Batch No." defaultChecked />
       <InfoCheckRow label="Exp. Date" defaultChecked />
       <InfoCheckRow label="Mfg. Date" defaultChecked />
-      <InfoCheckRow label="Size" defaultChecked />
-      <InfoCheckRow label="Model No." defaultChecked />
       <InfoCheckRow label="Serial No." defaultChecked />
 
       <Divider />
@@ -115,7 +108,6 @@ export function ThermalSettings() {
       <InfoCheckRow label="Current Balance of Party" />
       <InfoCheckRow label="Tax Details" defaultChecked />
       <InfoCheckRow label="You Saved" defaultChecked />
-      <InfoCheckRow label="Print Amount with Grouping" defaultChecked />
       
       <div style={{ display: "flex", alignItems: "center", gap: 16, marginTop: 8, marginBottom: 12 }}>
         <LabeledSelect label="Amount in Words" options={["Indian", "International"]} defaultValue="Indian" />
@@ -134,8 +126,7 @@ export function ThermalSettings() {
             alignItems: "center",
             justifyContent: "center",
             flexShrink: 0,
-            cursor: "default",
-          }}
+            cursor: "default" }}
         >
           i
         </span>

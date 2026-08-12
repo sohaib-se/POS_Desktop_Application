@@ -1,27 +1,34 @@
+import { EditableText } from "./SharedComponents";
+import { useCompanyDetails } from "./useCompanyDetails";
 import { BORDER, TEXT_DARK, TEXT_MUTED } from "./constants";
 
 export function TaxTheme2Preview({ color }: { color?: string }) {
+  const { companyName, phone, email, address, logo, showCompanyName, showPhone, showEmail, showAddress, showLogo, updateDetail } = useCompanyDetails();
   const th: React.CSSProperties = { padding: "4px 6px", textAlign: "left", fontWeight: 600, color: "#fff" };
   const td: React.CSSProperties = { padding: "4px 6px", color: TEXT_DARK, borderRight: `1px solid ${BORDER}`, borderBottom: `1px solid ${BORDER}` };
   const themeBg = color || "#f59e0b"; // Orange
 
   return (
-    <div style={{ background: "#fff", borderRadius: 4, padding: 20, fontFamily: "Inter, system-ui, sans-serif", border: `1px solid ${BORDER}` }}>
-      <div style={{ textAlign: "center", fontWeight: 700, fontSize: 16, marginBottom: 10 }}>Sale</div>
+    <div style={{ background: "#fff", padding: 20, fontFamily: "Inter, system-ui, sans-serif", border: "1px solid #000" }}>
+      <div style={{ textAlign: "center", fontWeight: 700, fontSize: 16, marginBottom: 10 }}><EditableText textKey="title" defaultText="Sale" /></div>
       <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 10 }}>
-        <div style={{ width: 60, height: 60, background: "#f3f4f6", border: `1px dashed ${BORDER}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, color: TEXT_MUTED }}>Image</div>
+        {showLogo && (
+<div style={{ width: 100, height: 100, background: "transparent",  display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, color: TEXT_MUTED , overflow: "hidden" }}>
+{logo ? <img src={logo} alt="Company Logo" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : "Image"}
+</div>
+)}
         <div style={{ textAlign: "right" }}>
-          <div style={{ fontSize: 18, fontWeight: 700, color: TEXT_DARK }}>My Company</div>
-          <div style={{ fontSize: 10, color: TEXT_MUTED }}>Ph. no.: 3369007084</div>
+          <div style={{ fontSize: 18, fontWeight: 700, color: TEXT_DARK }}>{showCompanyName ? companyName : ""}</div>
+          {showPhone && (<div style={{ fontSize: 10, color: TEXT_MUTED }}>Ph. no.: {showPhone ? phone : ""}</div>)}
         </div>
       </div>
       
       <table style={{ width: "100%", fontSize: 10, borderCollapse: "collapse", border: `1px solid ${BORDER}`, marginBottom: 0 }}>
         <tbody>
           <tr style={{ background: themeBg, color: "#fff", fontWeight: 600 }}>
-            <td style={{ padding: "4px 6px", borderRight: `1px solid #fff`, width: "33%" }}>Bill To:</td>
+            <td style={{ padding: "4px 6px", borderRight: `1px solid #fff`, width: "33%" }}><EditableText textKey="lbl_bill_to" defaultText="Bill To:" /></td>
             <td style={{ padding: "4px 6px", borderRight: `1px solid #fff`, width: "33%" }}>Shipping To</td>
-            <td style={{ padding: "4px 6px", textAlign: "right" }}>Invoice Details</td>
+            <td style={{ padding: "4px 6px", textAlign: "right" }}><EditableText textKey="lbl_inv_details_no_colon" defaultText="Invoice Details" /></td>
           </tr>
           <tr>
             <td style={{ padding: "4px 6px", borderRight: `1px solid ${BORDER}`, verticalAlign: "top" }}>
@@ -45,8 +52,8 @@ export function TaxTheme2Preview({ color }: { color?: string }) {
       <table style={{ width: "100%", fontSize: 9.5, borderCollapse: "collapse", border: `1px solid ${BORDER}`, borderTop: "none" }}>
         <thead>
           <tr style={{ background: themeBg, borderBottom: `1px solid ${BORDER}` }}>
-            {["#", "Item name", "HSC/SAC", "Quantity", "Price/unit", "Discount", "GST", "Amount"].map((h) => (
-              <th key={h} style={{ ...th, borderRight: `1px solid #fff` }}>{h}</th>
+            {["#", <EditableText textKey="th_item_name" defaultText=<EditableText textKey="th_item_name" defaultText="Item name" /> />, <EditableText textKey="th_hsn" defaultText=<EditableText textKey="th_hsn" defaultText="HSC/SAC" /> />, <EditableText textKey="th_qty" defaultText=<EditableText textKey="th_qty" defaultText="Quantity" /> />, <EditableText textKey="th_price" defaultText=<EditableText textKey="th_price" defaultText="Price/unit" /> />, <EditableText textKey="th_discount" defaultText=<EditableText textKey="th_discount" defaultText="Discount" /> />, <EditableText textKey="th_tax" defaultText=<EditableText textKey="th_tax" defaultText="GST" /> />, <EditableText textKey="th_amount" defaultText=<EditableText textKey="th_amount" defaultText="Amount" /> />].map((h, i) => (
+              <th key={i} style={{ ...th, borderRight: `1px solid #fff` }}>{h}</th>
             ))}
           </tr>
         </thead>
@@ -58,7 +65,7 @@ export function TaxTheme2Preview({ color }: { color?: string }) {
             <td style={td}>2</td><td style={td}>ITEM 2</td><td style={td}>6325</td><td style={td}>1</td><td style={td}>Rs 30.00</td><td style={td}>Rs 0.00 (0%)</td><td style={td}>Rs 5.40 (18%)</td><td style={{ ...td, borderRight: "none" }}>Rs 35.40</td>
           </tr>
           <tr style={{ fontWeight: 600 }}>
-            <td style={td} colSpan={3}>Total</td><td style={td}>2 + 1</td><td style={td} /><td style={td}>Rs 0.10</td><td style={td}>Rs 5.90</td><td style={{ ...td, borderRight: "none" }}>Rs 45.80</td>
+            <td style={td} colSpan={3}><EditableText textKey="lbl_total" defaultText="Total" /></td><td style={td}>2 + 1</td><td style={td} /><td style={td}>Rs 0.10</td><td style={td}>Rs 5.90</td><td style={{ ...td, borderRight: "none" }}>Rs 45.80</td>
           </tr>
         </tbody>
       </table>
@@ -71,13 +78,13 @@ export function TaxTheme2Preview({ color }: { color?: string }) {
         <div style={{ width: 180 }}>
           <div style={{ background: themeBg, color: "#fff", fontWeight: 600, padding: "4px 6px" }}>Amounts</div>
           <div style={{ padding: "4px 6px" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 2 }}><span>Sub Total</span><span>Rs 45.80</span></div>
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 2 }}><span><EditableText textKey="lbl_sub_total" defaultText="Sub Total" /></span><span>Rs 45.80</span></div>
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 2 }}><span>Discount (12%)</span><span>Rs 5.50</span></div>
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 2 }}><span>Tax (5%)</span><span>Rs 2.02</span></div>
-            <div style={{ display: "flex", justifyContent: "space-between", borderTop: `1px solid ${BORDER}`, paddingTop: 2, marginBottom: 2 }}><span>Total</span><span>Rs 42.32</span></div>
-            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 2 }}><span>Received</span><span>Rs 12.000</span></div>
-            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 2 }}><span>Balance</span><span>Rs 30.32</span></div>
-            <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 600 }}><span>You Saved</span><span>Rs 30.32</span></div>
+            <div style={{ display: "flex", justifyContent: "space-between", borderTop: `1px solid ${BORDER}`, paddingTop: 2, marginBottom: 2 }}><span><EditableText textKey="lbl_total" defaultText="Total" /></span><span>Rs 42.32</span></div>
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 2 }}><span><EditableText textKey="lbl_received_no_colon" defaultText="Received" /></span><span>Rs 12.000</span></div>
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 2 }}><span><EditableText textKey="lbl_balance_no_colon" defaultText="Balance" /></span><span>Rs 30.32</span></div>
+            <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 600 }}><span><EditableText textKey="lbl_saved_no_colon" defaultText="You Saved" /></span><span>Rs 30.32</span></div>
           </div>
         </div>
       </div>
@@ -125,9 +132,9 @@ export function TaxTheme2Preview({ color }: { color?: string }) {
             <td style={{ padding: "8px", verticalAlign: "top" }}>
               <div style={{ color: TEXT_MUTED, marginBottom: 10 }}>Thanks for doing business with us!</div>
               <div style={{ textAlign: "right" }}>
-                <div style={{ fontWeight: 600, marginBottom: 6, textAlign: "right" }}>For: My Company</div>
-                <div style={{ width: 60, height: 30, background: "#f3f4f6", borderRadius: 4, display: "inline-block", marginBottom: 6 }} />
-                <div style={{ color: TEXT_MUTED }}>Authorized Signatory</div>
+                <div style={{ fontWeight: 600, marginBottom: 6, textAlign: "right" }}><EditableText textKey="lbl_for" defaultText="For:" /> {showCompanyName ? companyName : ""}</div>
+                <div style={{ width: 60, height: 30, background: "#f3f4f6", display: "inline-block", marginBottom: 6 }} />
+                <div style={{ color: TEXT_MUTED }}><EditableText textKey="lbl_auth_sig" defaultText="Authorized Signatory" /></div>
               </div>
             </td>
           </tr>

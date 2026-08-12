@@ -36,7 +36,7 @@ const getInitialAddItemFormState = (): AddItemFormState => ({
   lowStockThreshold: "",
   openingStock: "",
   atPrice: "",
-  asOfDate: "",
+  asOfDate: new Date().toISOString().split("T")[0],
   mfgDate: "",
   expDate: "",
 });
@@ -617,7 +617,7 @@ export function ProductsTab({
           : String(item.lowStock),
       openingStock: String(item.stockQuantity ?? ""),
       atPrice: item.atPrice != null ? String(item.atPrice) : "",
-      asOfDate: "",
+      asOfDate: new Date().toISOString().split("T")[0],
       mfgDate: item.mfgDate ?? "",
       expDate: item.expDate ?? "",
     });
@@ -756,6 +756,7 @@ export function ProductsTab({
         stockQuantity: number;
         stockValue: number;
         secondaryStock?: number | null;
+        atPrice?: number | null;
         mfgDate?: string | null;
         expDate?: string | null;
       };
@@ -781,6 +782,7 @@ export function ProductsTab({
         imgPath: createdItemPayload.imgPath ?? addItemExistingImagePath,
         mfgDate: createdItemPayload.mfgDate ?? mfgDate,
         expDate: createdItemPayload.expDate ?? expDate,
+        atPrice: createdItemPayload.atPrice ?? (addItemForm.atPrice !== "" ? Number(addItemForm.atPrice) : undefined),
         minStock:
           createdItemPayload.minStock ??
           (minWholesaleQty === 0 ? null : minWholesaleQty),

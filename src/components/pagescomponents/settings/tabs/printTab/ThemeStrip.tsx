@@ -1,11 +1,10 @@
 import { useRef, useEffect } from "react";
-import { BLUE, BLUE_LIGHT, BORDER, TEXT_MUTED } from "./constants";
+import { BORDER, TEXT_MUTED } from "./constants";
 
 export function ThemeStrip({
   themes,
   active,
-  onSelect,
-}: {
+  onSelect }: {
   themes: string[];
   active: number;
   onSelect: (i: number) => void;
@@ -51,8 +50,7 @@ export function ThemeStrip({
           color: TEXT_MUTED,
           cursor: "pointer",
           flexShrink: 0,
-          fontWeight: "bold",
-        }}
+          fontWeight: "bold" }}
       >
         &lt;
       </button>
@@ -82,8 +80,7 @@ export function ThemeStrip({
                 borderRadius: 6,
                 cursor: "pointer",
                 textAlign: "center",
-                flexShrink: 0,
-              }}
+                flexShrink: 0 }}
             >
               <div
                 style={{
@@ -92,8 +89,7 @@ export function ThemeStrip({
                   borderRadius: 3,
                   padding: "6px 5px",
                   marginBottom: 6,
-                  boxShadow: "0 1px 2px rgba(0,0,0,0.05)",
-                }}
+                  boxShadow: "0 1px 2px rgba(0,0,0,0.05)" }}
               >
                 <div style={{ height: 3, background: "#cbd5e1", borderRadius: 1, marginBottom: 3 }} />
                 <div style={{ height: 2, background: "#e2e8f0", borderRadius: 1, marginBottom: 2, width: "70%" }} />
@@ -119,8 +115,7 @@ export function ThemeStrip({
           color: TEXT_MUTED,
           cursor: "pointer",
           flexShrink: 0,
-          fontWeight: "bold",
-        }}
+          fontWeight: "bold" }}
       >
         &gt;
       </button>

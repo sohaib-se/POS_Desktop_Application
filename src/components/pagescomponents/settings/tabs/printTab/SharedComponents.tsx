@@ -1,5 +1,34 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { BLUE, BORDER, TEXT_MUTED, TEXT_LABEL, TEXT_DARK } from "./constants";
+
+export function EditableText({ textKey, defaultText }: { textKey: string, defaultText: string }) {
+  const [val, setVal] = useState(() => localStorage.getItem(`print_${textKey}`) || defaultText);
+
+  useEffect(() => {
+    const handleUpdate = () => {
+      setVal(localStorage.getItem(`print_${textKey}`) || defaultText);
+    };
+    window.addEventListener("company-details-update", handleUpdate);
+    return () => window.removeEventListener("company-details-update", handleUpdate);
+  }, [textKey, defaultText]);
+
+  const handleBlur = (e: React.FocusEvent<HTMLSpanElement>) => {
+    const newVal = e.currentTarget.textContent || "";
+    localStorage.setItem(`print_${textKey}`, newVal);
+    window.dispatchEvent(new Event("company-details-update"));
+  };
+
+  return (
+    <span
+      contentEditable
+      suppressContentEditableWarning
+      onBlur={handleBlur}
+      style={{ cursor: "text", outline: "none" }}
+    >
+      {val}
+    </span>
+  );
+}
 
 export function InfoIcon() {
   return (
@@ -19,8 +48,7 @@ export function InfoIcon() {
         justifyContent: "center",
         flexShrink: 0,
         cursor: "default",
-        marginLeft: 8,
-      }}
+        marginLeft: 8 }}
     >
       i
     </span>
@@ -31,8 +59,7 @@ export function InfoIcon() {
 export function InfoCheckRow({
   label,
   defaultChecked,
-  trailing,
-}: {
+  trailing }: {
   label: string;
   defaultChecked?: boolean;
   trailing?: React.ReactNode;
@@ -43,8 +70,7 @@ export function InfoCheckRow({
       style={{
         display: "flex",
         alignItems: "center",
-        marginBottom: 12,
-      }}
+        marginBottom: 12 }}
     >
       <input
         type="checkbox"
@@ -55,8 +81,7 @@ export function InfoCheckRow({
           width: 15,
           height: 15,
           cursor: "pointer",
-          flexShrink: 0,
-        }}
+          flexShrink: 0 }}
       />
       <span style={{ fontSize: 13, color: TEXT_LABEL, marginLeft: 8 }}>
         {label}
@@ -71,37 +96,64 @@ export function InfoCheckRow({
 export function InfoFieldRow({
   label,
   defaultValue = "",
+  value,
+  onChange,
+  checked: externalChecked,
+  onCheckedChange,
   placeholder,
   defaultChecked = true,
-}: {
+  readOnly = true }: {
   label: string;
   defaultValue?: string;
+  value?: string;
+  onChange?: (val: string) => void;
+  checked?: boolean;
+  onCheckedChange?: (val: boolean) => void;
   placeholder?: string;
   defaultChecked?: boolean;
+  readOnly?: boolean;
 }) {
-  const [checked, setChecked] = useState(defaultChecked);
-  const [value, setValue] = useState(defaultValue);
+  const [localChecked, setLocalChecked] = useState(defaultChecked);
+  const currentChecked = externalChecked !== undefined ? externalChecked : localChecked;
+
+  const handleCheckChange = (c: boolean) => {
+    if (onCheckedChange) {
+      onCheckedChange(c);
+    } else {
+      setLocalChecked(c);
+    }
+  };
+
+  const [localVal, setLocalVal] = useState(defaultValue);
+  const currentVal = value !== undefined ? value : localVal;
+
+  const handleInputChange = (val: string) => {
+    if (onChange) {
+      onChange(val);
+    } else {
+      setLocalVal(val);
+    }
+  };
+
   return (
     <div
       style={{
         display: "flex",
         alignItems: "flex-start",
         marginBottom: 14,
-        gap: 8,
-      }}
+        gap: 8 }}
     >
       <input
         type="checkbox"
-        checked={checked}
-        onChange={(e) => setChecked(e.target.checked)}
+        checked={currentChecked}
+        onChange={(e) => handleCheckChange(e.target.checked)}
         style={{
           accentColor: BLUE,
           width: 15,
           height: 15,
           cursor: "pointer",
           marginTop: 10,
-          flexShrink: 0,
-        }}
+          flexShrink: 0 }}
       />
       <div style={{ position: "relative", flex: 1, maxWidth: 320 }}>
         <span
@@ -112,17 +164,17 @@ export function InfoFieldRow({
             background: "#f8fafc",
             padding: "0 4px",
             fontSize: 10,
-            color: TEXT_MUTED,
-          }}
+            color: TEXT_MUTED }}
         >
           {label}
         </span>
         <input
           type="text"
-          value={value}
+          value={currentVal}
           placeholder={placeholder}
-          onChange={(e) => setValue(e.target.value)}
-          disabled={!checked}
+          onChange={(e) => handleInputChange(e.target.value)}
+          disabled={!currentChecked}
+          readOnly={readOnly}
           style={{
             width: "100%",
             boxSizing: "border-box",
@@ -132,8 +184,7 @@ export function InfoFieldRow({
             fontSize: 13,
             color: TEXT_DARK,
             outline: "none",
-            background: checked ? "#fff" : "#f3f4f6",
-          }}
+            background: currentChecked && !readOnly ? "#fff" : "#f3f4f6" }}
         />
       </div>
       <InfoIcon />
@@ -141,29 +192,37 @@ export function InfoFieldRow({
   );
 }
 
-/** Checkbox + label + "(Change)" link + info icon (Company Logo row) */
-export function InfoLogoRow({ defaultChecked = true }: { defaultChecked?: boolean }) {
-  const [checked, setChecked] = useState(defaultChecked);
+/** Checkbox + label + info icon (Company Logo row) */
+export function InfoLogoRow({ 
+  checked: externalChecked,
+  onCheckedChange,
+  defaultChecked = true 
+}: { 
+  checked?: boolean;
+  onCheckedChange?: (val: boolean) => void;
+  defaultChecked?: boolean;
+}) {
+  const [localChecked, setLocalChecked] = useState(defaultChecked);
+  const currentChecked = externalChecked !== undefined ? externalChecked : localChecked;
+
+  const handleCheckChange = (c: boolean) => {
+    if (onCheckedChange) {
+      onCheckedChange(c);
+    } else {
+      setLocalChecked(c);
+    }
+  };
+
   return (
     <div style={{ display: "flex", alignItems: "center", marginBottom: 14 }}>
       <input
         type="checkbox"
-        checked={checked}
-        onChange={(e) => setChecked(e.target.checked)}
+        checked={currentChecked}
+        onChange={(e) => handleCheckChange(e.target.checked)}
         style={{ accentColor: BLUE, width: 15, height: 15, cursor: "pointer" }}
       />
       <span style={{ fontSize: 13, color: TEXT_LABEL, marginLeft: 8 }}>
         Company Logo
-      </span>
-      <span
-        style={{
-          fontSize: 12,
-          color: BLUE,
-          cursor: "pointer",
-          marginLeft: 8,
-        }}
-      >
-        (Change)
       </span>
       <InfoIcon />
     </div>
@@ -174,8 +233,7 @@ export function InfoLogoRow({ defaultChecked = true }: { defaultChecked?: boolea
 export function LabeledSelect({
   label,
   options,
-  defaultValue,
-}: {
+  defaultValue }: {
   label: string;
   options: string[];
   defaultValue?: string;
@@ -198,8 +256,7 @@ export function LabeledSelect({
             fontSize: 13,
             color: TEXT_DARK,
             background: "#fff",
-            outline: "none",
-          }}
+            outline: "none" }}
         >
           {options.map((o) => (
             <option key={o} value={o}>
@@ -216,8 +273,7 @@ export function LabeledSelect({
 /** Label above a small number <input>, with trailing info icon */
 export function LabeledNumber({
   label,
-  defaultValue,
-}: {
+  defaultValue }: {
   label: string;
   defaultValue: number;
 }) {
@@ -239,8 +295,7 @@ export function LabeledNumber({
             padding: "8px 10px",
             fontSize: 13,
             color: TEXT_DARK,
-            outline: "none",
-          }}
+            outline: "none" }}
         />
         <InfoIcon />
       </div>
@@ -255,8 +310,7 @@ export function SectionTitle({ children }: { children: React.ReactNode }) {
         fontSize: 13,
         fontWeight: 600,
         color: TEXT_DARK,
-        marginBottom: 12,
-      }}
+        marginBottom: 12 }}
     >
       {children}
     </div>
@@ -268,8 +322,7 @@ export function Divider() {
     <div
       style={{
         borderTop: `1px solid ${BORDER}`,
-        margin: "16px 0",
-      }}
+        margin: "16px 0" }}
     />
   );
 }

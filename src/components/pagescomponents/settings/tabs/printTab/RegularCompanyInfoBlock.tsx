@@ -1,16 +1,16 @@
-import { useState } from "react";
 import {
   InfoCheckRow,
   InfoFieldRow,
   InfoLogoRow,
   LabeledSelect,
   SectionTitle,
-  InfoIcon,
-} from "./SharedComponents";
-import { BLUE, BORDER, TEXT_DARK, TEXT_LABEL } from "./constants";
+  InfoIcon } from "./SharedComponents";
+import { BORDER } from "./constants";
+
+import { useCompanyDetails } from "./useCompanyDetails";
 
 export function RegularCompanyInfoBlock() {
-  const [extraSpace, setExtraSpace] = useState(0);
+  const { companyName, phone, address, email, showCompanyName, showPhone, showAddress, showEmail, showLogo, updateDetail } = useCompanyDetails();
 
   return (
     <>
@@ -19,19 +19,14 @@ export function RegularCompanyInfoBlock() {
       
       <InfoCheckRow label="Make Regular Printer Default" defaultChecked />
       <InfoCheckRow label="Print repeat header in all pages" defaultChecked />
-      <InfoFieldRow label="Company Name" defaultValue="My Company" defaultChecked />
-      <InfoLogoRow defaultChecked />
-      <InfoFieldRow label="Address" placeholder="Address" defaultChecked />
-      <InfoFieldRow label="Email" placeholder="Email" defaultChecked />
-      <InfoFieldRow label="Phone Number" defaultValue="3369007084" defaultChecked />
+      <InfoFieldRow label="Company Name" value={companyName} onChange={(val) => updateDetail("companyName", val)} checked={showCompanyName} onCheckedChange={(c) => updateDetail("show_companyName", c.toString())} />
+      <InfoLogoRow checked={showLogo} onCheckedChange={(c) => updateDetail("show_logo", c.toString())} />
+      <InfoFieldRow label="Address" value={address} onChange={(val) => updateDetail("address", val)} checked={showAddress} onCheckedChange={(c) => updateDetail("show_address", c.toString())} placeholder="Address" />
+      <InfoFieldRow label="Email" value={email} onChange={(val) => updateDetail("email", val)} checked={showEmail} onCheckedChange={(c) => updateDetail("show_email", c.toString())} placeholder="Email" />
+      <InfoFieldRow label="Phone Number" value={phone} onChange={(val) => updateDetail("phone", val)} checked={showPhone} onCheckedChange={(c) => updateDetail("show_phone", c.toString())} />
 
       <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
         <LabeledSelect label="Paper Size" options={["A4", "A5", "Letter"]} defaultValue="A4" />
-        <InfoIcon />
-      </div>
-      
-      <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-        <LabeledSelect label="Orientation" options={["Portrait", "Landscape"]} defaultValue="Portrait" />
         <InfoIcon />
       </div>
       
@@ -51,36 +46,6 @@ export function RegularCompanyInfoBlock() {
           defaultValue="Medium"
         />
         <InfoIcon />
-      </div>
-
-      <InfoCheckRow label="Print Original/Duplicate" />
-      
-      <div style={{ display: "flex", alignItems: "center", marginBottom: 16, marginTop: 8 }}>
-        <span style={{ fontSize: 13, color: TEXT_LABEL, marginRight: 8 }}>
-          Extra space on Top of PDF
-        </span>
-        <InfoIcon />
-        <input
-          type="number"
-          value={extraSpace}
-          onChange={(e) => setExtraSpace(Number(e.target.value))}
-          style={{
-            marginLeft: 8,
-            width: 40,
-            border: `1px solid ${BORDER}`,
-            borderRadius: 4,
-            padding: "4px 8px",
-            fontSize: 13,
-            color: TEXT_DARK,
-            outline: "none",
-          }}
-        />
-      </div>
-
-      <div style={{ marginBottom: 16 }}>
-        <span style={{ color: BLUE, fontSize: 13, cursor: "pointer", textDecoration: "none" }}>
-          Change Transaction Names &gt;
-        </span>
       </div>
     </>
   );

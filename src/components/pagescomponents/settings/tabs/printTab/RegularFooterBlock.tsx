@@ -14,7 +14,6 @@ export function RegularFooterBlock() {
       <InfoCheckRow label="Print Description" defaultChecked />
       <InfoCheckRow label="Print Terms and Conditions" defaultChecked />
       <InfoCheckRow label="Print Received by details" defaultChecked />
-      <InfoCheckRow label="Print Delivered by details" defaultChecked />
       
       <div style={{ display: "flex", alignItems: "center", marginBottom: 14 }}>
         <input
@@ -27,8 +26,7 @@ export function RegularFooterBlock() {
             height: 15,
             cursor: "pointer",
             flexShrink: 0,
-            marginRight: 8,
-          }}
+            marginRight: 8 }}
         />
         <div style={{ position: "relative", width: 220 }}>
           <span
@@ -39,8 +37,7 @@ export function RegularFooterBlock() {
               background: "#f8fafc",
               padding: "0 4px",
               fontSize: 10,
-              color: TEXT_MUTED,
-            }}
+              color: TEXT_MUTED }}
           >
             Print Signature Text
           </span>
@@ -58,8 +55,7 @@ export function RegularFooterBlock() {
               fontSize: 13,
               color: TEXT_DARK,
               outline: "none",
-              background: checked ? "#fff" : "#f3f4f6",
-            }}
+              background: checked ? "#fff" : "#f3f4f6" }}
           />
         </div>
         <InfoIcon />
@@ -69,7 +65,6 @@ export function RegularFooterBlock() {
       </div>
 
       <InfoCheckRow label="Payment Mode" />
-      <InfoCheckRow label="Print Acknowledgement" />
     </div>
   );
 }

@@ -18,7 +18,7 @@ import { GeneralTab } from "../components/pagescomponents/settings/tabs/GeneralT
 import { TransactionTab } from "../components/pagescomponents/settings/tabs/TransactionTab";
 import { PartyTab } from "../components/pagescomponents/settings/tabs/PartyTab";
 import { ItemTab } from "../components/pagescomponents/settings/tabs/ItemTab";
-import { PrintSettings } from "../components/pagescomponents/settings/PrintSettings";
+import { PrintTab } from "../components/pagescomponents/settings/tabs/PrintTab";
 import { SettingsSidebar } from "../components/pagescomponents/settings/SettingsSidebar";
 
 interface SettingsPageProps {
@@ -36,7 +36,6 @@ const tabs = [
 
 export function SettingsPage({ onClose, initialTab }: SettingsPageProps = {}) {
   const [activeTab, setActiveTab] = useState(initialTab || "general");
-  const [showPrintSettings, setShowPrintSettings] = useState(false);
   const [isOpenAnimated, setIsOpenAnimated] = useState(false);
 
   useEffect(() => {
@@ -66,27 +65,17 @@ export function SettingsPage({ onClose, initialTab }: SettingsPageProps = {}) {
           tabs={tabs} 
           activeTab={activeTab} 
           setActiveTab={setActiveTab} 
-          setShowPrintSettings={setShowPrintSettings} 
         />
 
         {/* ── Main content ── */}
         <main style={{ flex: 1, overflowY: "auto", background: "#fff" }}>
           {activeTab === "general" && <GeneralTab />}
           {activeTab === "transaction" && <TransactionTab />}
+          {activeTab === "print" && <PrintTab />}
           {activeTab === "party" && <PartyTab />}
           {activeTab === "item" && <ItemTab />}
         </main>
       </div>
-
-      {/* Print modal */}
-      <Dialog open={showPrintSettings} onOpenChange={setShowPrintSettings}>
-        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Print Settings</DialogTitle>
-          </DialogHeader>
-          <PrintSettings />
-        </DialogContent>
-      </Dialog>
 
       {onClose && (
         <button

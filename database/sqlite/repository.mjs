@@ -1033,10 +1033,10 @@ export function upsertItem(item) {
 
   db.prepare(`
     INSERT INTO items (
-      id, name, code, category, sale_price, wholesale_price, purchase_price, at_price, stock_quantity, unit, primary_unit, secondary_unit, secondary_stock, conversion_rate, img_path, stock_value, min_stock, mfg_date, exp_date, location, updated_at
+      id, name, code, category, sale_price, wholesale_price, purchase_price, at_price, stock_quantity, unit, primary_unit, secondary_unit, secondary_stock, conversion_rate, img_path, stock_value, min_stock, low_stock, mfg_date, exp_date, location, updated_at
     )
     VALUES (
-      @id, @name, @code, @category, @salePrice, @wholesalePrice, @purchasePrice, @atPrice, @stockQuantity, @unit, @primaryUnit, @secondaryUnit, @secondaryStock, @conversionRate, @imgPath, @stockValue, @minStock, @mfgDate, @expDate, @location, datetime('now')
+      @id, @name, @code, @category, @salePrice, @wholesalePrice, @purchasePrice, @atPrice, @stockQuantity, @unit, @primaryUnit, @secondaryUnit, @secondaryStock, @conversionRate, @imgPath, @stockValue, @minStock, @lowStock, @mfgDate, @expDate, @location, datetime('now')
     )
     ON CONFLICT(id) DO UPDATE SET
       name = excluded.name,
@@ -1055,6 +1055,7 @@ export function upsertItem(item) {
         img_path = excluded.img_path,
       stock_value = excluded.stock_value,
       min_stock = excluded.min_stock,
+      low_stock = excluded.low_stock,
       mfg_date = excluded.mfg_date,
       exp_date = excluded.exp_date,
       location = excluded.location,
@@ -1075,6 +1076,7 @@ export function upsertItem(item) {
     imgPath: item.imgPath ?? existingItem?.imgPath ?? null,
     stockValue: item.stockValue ?? null,
     minStock: item.minStock ?? null,
+    lowStock: item.lowStock ?? null,
     mfgDate: resolvedMfgDate,
     expDate: resolvedExpDate,
     location: item.location ?? null

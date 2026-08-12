@@ -1703,6 +1703,7 @@ function sqliteApiPlugin() {
                   imgPath: resolvedImgPath,
                   stockValue: Number.isFinite(Number(payload.stockValue)) ? Number(payload.stockValue) : null,
                   minStock: Number.isFinite(Number(payload.minStock)) ? Number(payload.minStock) : null,
+                  lowStock: Number.isFinite(Number(payload.lowStock)) ? Number(payload.lowStock) : null,
                   batchJson: payload.batchJson ? String(payload.batchJson) : null,
                   location: payload.location ? String(payload.location).trim() : null,
                   atPrice: payload.atPrice !== undefined && payload.atPrice !== null ? Number(payload.atPrice) : null,

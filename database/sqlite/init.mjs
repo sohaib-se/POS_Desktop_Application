@@ -233,12 +233,12 @@ function seedDefaultExpenseCategories(db) {
       { id: '5', name: 'Transport', type: 'Indirect Expense', amount: 0 },
       { id: '6', name: 'Travel', type: 'Indirect Expense', amount: 500 }
     ];
-    
+
     const insertStmt = db.prepare(`
       INSERT INTO expense_categories (id, name, type, amount)
       VALUES (@id, @name, @type, @amount)
     `);
-    
+
     for (const category of defaultCategories) {
       insertStmt.run(category);
     }

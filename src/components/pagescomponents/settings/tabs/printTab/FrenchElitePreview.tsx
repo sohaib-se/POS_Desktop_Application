@@ -3,7 +3,7 @@ import { useCompanyDetails } from "./useCompanyDetails";
 import { BORDER, TEXT_DARK, TEXT_MUTED } from "./constants";
 
 export function FrenchElitePreview({ color }: { color?: string }) {
-  const { companyName, phone, email, address, logo, showCompanyName, showPhone, showEmail, showAddress, showLogo, updateDetail } = useCompanyDetails();
+  const { companyName, phone, email, logo, showCompanyName, showPhone, showEmail, showLogo } = useCompanyDetails();
   const purpleBg = color || "#8b5cf6";
   const lightPurpleBg = color ? (color + "1a") : "#ede9fe";
   const th: React.CSSProperties = { padding: "6px 8px", textAlign: "left", fontWeight: 600, color: "#fff", fontSize: 9.5 };
@@ -22,7 +22,7 @@ export function FrenchElitePreview({ color }: { color?: string }) {
             <div style={{ fontSize: 10, color: TEXT_MUTED }}>Phone:</div>
             {showPhone && (<div style={{ fontSize: 10, color: TEXT_MUTED, marginBottom: 4 }}>{showPhone ? phone : ""}</div>)}
           </> )}
-          {showEmail && ( <div style={{ fontSize: 10, color: TEXT_MUTED }}>Email:</div> )}
+          {showEmail && ( <div style={{ fontSize: 10, color: TEXT_MUTED }}>Email: {email}</div> )}
         </div>
         {showLogo && (
           <div style={{ width: 100, height: 100, background: "transparent", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, color: TEXT_MUTED, overflow: "hidden" }}>

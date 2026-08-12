@@ -1382,8 +1382,27 @@ function sqliteApiPlugin() {
 
               if (payload.isUpdate) {
                 repository.updateExpenseRecord(record.id, record);
+                if (String(record.payment_type).toLowerCase() === 'cash') {
+                  repository.deleteCashInHandTransaction('cash_expense_' + record.id);
+                  repository.addCashInHandTransaction({
+                    id: 'cash_expense_' + record.id,
+                    date: new Date().toLocaleDateString('en-GB'),
+                    name: record.category_name || 'Expense',
+                    type: 'Expense',
+                    amount: record.amount
+                  });
+                }
               } else {
                 repository.addExpenseRecord(record);
+                if (String(record.payment_type).toLowerCase() === 'cash') {
+                  repository.addCashInHandTransaction({
+                    id: 'cash_expense_' + record.id,
+                    date: new Date().toLocaleDateString('en-GB'),
+                    name: record.category_name || 'Expense',
+                    type: 'Expense',
+                    amount: record.amount
+                  });
+                }
               }
 
               res.statusCode = 201;
@@ -1413,6 +1432,7 @@ function sqliteApiPlugin() {
 
             const success = repository.deleteExpenseRecord(id);
             if (success) {
+              repository.deleteCashInHandTransaction('cash_expense_' + id);
               res.statusCode = 200;
               res.setHeader('Content-Type', 'application/json');
               res.end(JSON.stringify({ success: true }));
@@ -2018,6 +2038,15 @@ function sqliteApiPlugin() {
 
 
               repository.addExpenseRecord(record);
+              if (String(record.payment_type).toLowerCase() === 'cash') {
+                repository.addCashInHandTransaction({
+                  id: 'cash_expense_' + record.id,
+                  date: new Date().toLocaleDateString('en-GB'),
+                  name: record.category_name || 'Expense',
+                  type: 'Expense',
+                  amount: record.amount
+                });
+              }
 
               res.statusCode = 201;
               res.setHeader('Content-Type', 'application/json');
@@ -2645,8 +2674,8 @@ function sqliteApiPlugin() {
                       id: 'cash_purchase_' + invoice.id,
                       date: invoice.date,
                       name: invoice.partyName || 'Cash Purchase',
-                      type: 'POS Purchase',
-                      amount: -paidAmount
+                      type: 'Purchase Bill',
+                      amount: paidAmount
                     });
                   } else if (String(invoice.paymentMode).toLowerCase() !== 'credit') {
                     repository.addBankAccountTransaction({

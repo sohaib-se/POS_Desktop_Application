@@ -11,10 +11,9 @@ interface SettingsSidebarProps {
   tabs: TabType[];
   activeTab: string;
   setActiveTab: Dispatch<SetStateAction<string>>;
-  setShowPrintSettings: Dispatch<SetStateAction<boolean>>;
 }
 
-export function SettingsSidebar({ tabs, activeTab, setActiveTab, setShowPrintSettings }: SettingsSidebarProps) {
+export function SettingsSidebar({ tabs, activeTab, setActiveTab }: SettingsSidebarProps) {
   return (
     <aside
       style={{
@@ -46,7 +45,6 @@ export function SettingsSidebar({ tabs, activeTab, setActiveTab, setShowPrintSet
               key={tab.id}
               onClick={() => {
                 setActiveTab(tab.id);
-                if (tab.id === "print") setShowPrintSettings(true);
               }}
               style={{
                 width: "100%",

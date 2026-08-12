@@ -6,6 +6,7 @@ import { EnterPasscodeScreen } from "@/components/common/EnterPasscodeScreen";
 import { Dashboard } from "@/pages/Dashboard";
 import { Parties } from "@/pages/Parties";
 import { Items } from "@/pages/Items";
+import { GridItems } from "@/pages/GridItems";
 import { AddSale } from "@/pages/AddSale";
 import { AddPurchase } from "@/pages/AddPurchase";
 import { AddExpense } from "@/pages/AddExpense";
@@ -146,7 +147,9 @@ function App() {
       case "parties":
         return <Parties onOpenSettings={handleOpenSettings} />;
       case "items":
-        return <Items />;
+        return <Items onViewChange={handleViewChange} />;
+      case "griditems":
+        return <GridItems onViewChange={handleViewChange} />;
       case "sale-invoices":
         return (
           <SaleInvoices

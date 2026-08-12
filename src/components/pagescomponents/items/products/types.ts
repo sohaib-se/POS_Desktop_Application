@@ -21,6 +21,8 @@ export type Item = {
   mfgDate?: string | null;
   expDate?: string | null;
   atPrice?: number;
+  createdAt?: string | null;
+  updatedAt?: string | null;
 };
 
 export type ItemApiRecord = {
@@ -44,6 +46,8 @@ export type ItemApiRecord = {
   mfg_date?: string | null;
   exp_date?: string | null;
   at_price?: number | null;
+  created_at?: string | null;
+  updated_at?: string | null;
 };
 
 export type AddItemFormState = {

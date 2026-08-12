@@ -183,6 +183,7 @@ export type ViewType =
   | 'home' 
   | 'parties' 
   | 'items' 
+  | 'griditems'
   | 'add-sale'
   | 'add-purchase'
   | 'add-expense'

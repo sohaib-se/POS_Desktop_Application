@@ -6,8 +6,14 @@ import { UnitsTab } from "@/components/pagescomponents/items/units/UnitsTab";
 import { useSettings } from "@/hooks/useSettings";
 import { Grid } from "lucide-react";
 
+import type { ViewType } from "@/types";
+
 // --- MAIN COMPONENT ---
-export function Items() {
+interface ItemsProps {
+  onViewChange?: (view: ViewType) => void;
+}
+
+export function Items({ onViewChange }: ItemsProps) {
   const [activeTab, setActiveTab] = useState<"products" | "category" | "units">(
     "products"
   );
@@ -158,8 +164,9 @@ export function Items() {
       {/* Floating Grid Button */}
       {enableGrid && (
         <button
-          className="absolute bottom-6 right-6 w-14 h-14 bg-blue-600 text-white rounded-full flex items-center justify-center shadow-lg hover:bg-blue-700 transition-colors z-50 cursor-not-allowed opacity-80"
-          title="Grid View (Coming Soon)"
+          onClick={() => onViewChange?.('griditems')}
+          className="absolute bottom-6 right-6 w-14 h-14 bg-blue-600 text-white rounded-full flex items-center justify-center shadow-lg hover:bg-blue-700 transition-colors z-50"
+          title="Grid View"
         >
           <Grid size={24} />
         </button>

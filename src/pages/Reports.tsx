@@ -11,6 +11,7 @@ import { AllPartiesReport } from '../components/pagescomponents/reports/parties 
 import { PartyReport } from '../components/pagescomponents/reports/parties reports/PartyReport';
 import { PartyWiseProfitLossReport } from '../components/pagescomponents/reports/parties reports/PartyWiseProfitLossReport';
 import { PartyReportByItem } from '../components/pagescomponents/reports/parties reports/PartyReportByItem';
+import { SalePurchaseByParty } from '../components/pagescomponents/reports/stockreport/SalePurchaseByParty';
 
 interface ReportsProps {
   onViewChange?: (view: ViewType) => void;
@@ -53,6 +54,12 @@ export function Reports({ onViewChange, onEditInvoice }: ReportsProps) {
     }
     if (activeReport.name === 'Party Report By Item') {
       return <PartyReportByItem onBack={() => setActiveReport(null)} />;
+    }
+  }
+
+  if (activeReport?.category === 'Item/Stock Reports') {
+    if (activeReport.name === 'Sale Purchase By Party') {
+      return <SalePurchaseByParty onBack={() => setActiveReport(null)} />;
     }
   }
 

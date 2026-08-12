@@ -14,6 +14,7 @@ import { PartyReportByItem } from '../components/pagescomponents/reports/parties
 import { SalePurchaseByParty } from '../components/pagescomponents/reports/stockreport/SalePurchaseByParty';
 import { LowStockDetails } from '../components/pagescomponents/reports/stockreport/LowStockDetails';
 import { StockDetails } from '../components/pagescomponents/reports/stockreport/StockDetails';
+import { StockInOutDetails } from '../components/pagescomponents/reports/stockreport/StockInOutDetails';
 
 interface ReportsProps {
   onViewChange?: (view: ViewType) => void;
@@ -68,6 +69,9 @@ export function Reports({ onViewChange, onEditInvoice }: ReportsProps) {
     }
     if (activeReport.name === 'Stock details') {
       return <StockDetails onBack={() => setActiveReport(null)} />;
+    }
+    if (activeReport.name === 'Stock In/Stock out Details') {
+      return <StockInOutDetails onBack={() => setActiveReport(null)} />;
     }
   }
 

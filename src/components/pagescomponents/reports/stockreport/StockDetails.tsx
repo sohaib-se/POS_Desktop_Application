@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState, useMemo } from "react";
 import { Printer, ArrowLeft } from "lucide-react";
 
-interface LowStockDetailsProps {
+interface StockDetailsProps {
   onBack: () => void;
 }
 
@@ -10,11 +10,10 @@ interface Item {
   name: string;
   category?: string;
   purchase_price?: number | string;
-  min_stock?: number | string;
   stock_quantity?: number | string;
 }
 
-export function LowStockDetails({ onBack }: LowStockDetailsProps) {
+export function StockDetails({ onBack }: StockDetailsProps) {
   const [loading, setLoading] = useState(true);
   const [rawItems, setRawItems] = useState<Item[]>([]);
 
@@ -38,34 +37,44 @@ export function LowStockDetails({ onBack }: LowStockDetailsProps) {
   }, [loadRawData]);
 
   const displayData = useMemo(() => {
-      let results = rawItems.filter(item => {
-          const qty = Number(item.stock_quantity || 0);
-          const minStock = Number(item.min_stock || 0);
-          return minStock > 0 && qty <= minStock;
-      });
-
+      // Show all items, sorting by name
+      const results = [...rawItems];
       return results.sort((a, b) => a.name.localeCompare(b.name));
   }, [rawItems]);
+
+  const totalStockValue = useMemo(() => {
+    return displayData.reduce((total, item) => {
+        const price = Number(item.purchase_price || 0);
+        const qty = Number(item.stock_quantity || 0);
+        return total + (price * qty);
+    }, 0);
+  }, [displayData]);
 
   const handleExportExcel = () => {
     if (displayData.length === 0) return;
     
-    const headers = ["#", "ITEM NAME", "CATEGORY", "PURCHASE PRICE", "LOW THRESHOLD", "CURRENT QUANTITY"];
-    const rows = displayData.map((row, index) => [
-        String(index + 1),
-        `"${row.name.replace(/"/g, '""')}"`,
-        `"${row.category || ''}"`,
-        Number(row.purchase_price || 0).toFixed(2),
-        Number(row.min_stock || 0).toString(),
-        Number(row.stock_quantity || 0).toString()
-    ]);
+    const headers = ["#", "ITEM NAME", "CATEGORY", "PURCHASE PRICE", "QUANTITY", "STOCK VALUE"];
+    const rows = displayData.map((row, index) => {
+        const price = Number(row.purchase_price || 0);
+        const qty = Number(row.stock_quantity || 0);
+        const stockValue = price * qty;
+        
+        return [
+            String(index + 1),
+            `"${row.name.replace(/"/g, '""')}"`,
+            `"${row.category || ''}"`,
+            price.toFixed(2),
+            qty.toString(),
+            stockValue.toFixed(2)
+        ];
+    });
 
     const csvContent = [headers.join(","), ...rows.map(r => r.join(","))].join("\n");
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.setAttribute("download", `Low_Stock_Details.csv`);
+    link.setAttribute("download", `Stock_Details.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -80,7 +89,7 @@ export function LowStockDetails({ onBack }: LowStockDetailsProps) {
             <ArrowLeft className="w-5 h-5" />
           </button>
           
-          <h1 className="text-xl font-semibold text-gray-800">Low Stock Details</h1>
+          <h1 className="text-xl font-semibold text-gray-800">Stock Details</h1>
         </div>
 
         <div className="flex items-center gap-6 pr-4">
@@ -122,10 +131,10 @@ export function LowStockDetails({ onBack }: LowStockDetailsProps) {
                     PURCHASE PRICE
                   </th>
                   <th className="px-4 py-3 font-semibold text-gray-500 border-r border-gray-100 text-right">
-                    LOW THRESHOLD
+                    QUANTITY
                   </th>
                   <th className="px-4 py-3 font-semibold text-gray-500 border-r border-gray-100 text-right">
-                    CURRENT QUANTITY
+                    STOCK VALUE
                   </th>
                 </tr>
               </thead>
@@ -139,24 +148,27 @@ export function LowStockDetails({ onBack }: LowStockDetailsProps) {
                 ) : displayData.length === 0 ? (
                   <tr>
                     <td colSpan={6} className="px-4 py-8 text-center text-gray-500">
-                      No low stock items found.
+                      No stock items found.
                     </td>
                   </tr>
                 ) : (
                   displayData.map((row, index) => {
+                      const price = Number(row.purchase_price || 0);
+                      const qty = Number(row.stock_quantity || 0);
+                      const stockValue = price * qty;
                       return (
                         <tr key={row.id} className={`transition-colors hover:bg-gray-50/50`}>
                             <td className="px-4 py-3 text-gray-900 border-r border-white/50 text-center">{index + 1}</td>
                             <td className="px-4 py-3 text-gray-900 border-r border-white/50 text-left">{row.name}</td>
                             <td className="px-4 py-3 text-gray-900 border-r border-white/50 text-left">{row.category || '---'}</td>
                             <td className="px-4 py-3 border-r border-white/50 text-right text-gray-900">
-                               Rs {Number(row.purchase_price || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}
+                               Rs {price.toLocaleString(undefined, {minimumFractionDigits: 2})}
                             </td>
                             <td className="px-4 py-3 border-r border-white/50 text-right text-gray-900">
-                               {Number(row.min_stock || 0)}
+                               {qty}
                             </td>
-                            <td className="px-4 py-3 border-r border-white/50 text-right text-red-500 font-medium">
-                               {Number(row.stock_quantity || 0)}
+                            <td className="px-4 py-3 border-r border-white/50 text-right font-medium text-gray-900">
+                               Rs {stockValue.toLocaleString(undefined, {minimumFractionDigits: 2})}
                             </td>
                         </tr>
                       );
@@ -165,6 +177,14 @@ export function LowStockDetails({ onBack }: LowStockDetailsProps) {
               </tbody>
             </table>
           </div>
+          
+          {/* Footer Totals */}
+          <div className="bg-white border-t border-gray-200 p-4 px-6 flex justify-end items-center text-[15px] sticky bottom-0 shadow-[0_-2px_4px_rgba(0,0,0,0.05)]">
+            <div className="text-gray-600 font-medium">
+              Total Stock Value: <span className="text-gray-900 ml-2">Rs {totalStockValue.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+            </div>
+          </div>
+
         </div>
       </div>
     </div>

@@ -13,6 +13,7 @@ import { PartyWiseProfitLossReport } from '../components/pagescomponents/reports
 import { PartyReportByItem } from '../components/pagescomponents/reports/parties reports/PartyReportByItem';
 import { SalePurchaseByParty } from '../components/pagescomponents/reports/stockreport/SalePurchaseByParty';
 import { LowStockDetails } from '../components/pagescomponents/reports/stockreport/LowStockDetails';
+import { StockDetails } from '../components/pagescomponents/reports/stockreport/StockDetails';
 
 interface ReportsProps {
   onViewChange?: (view: ViewType) => void;
@@ -64,6 +65,9 @@ export function Reports({ onViewChange, onEditInvoice }: ReportsProps) {
     }
     if (activeReport.name === 'Low stock details') {
       return <LowStockDetails onBack={() => setActiveReport(null)} />;
+    }
+    if (activeReport.name === 'Stock details') {
+      return <StockDetails onBack={() => setActiveReport(null)} />;
     }
   }
 

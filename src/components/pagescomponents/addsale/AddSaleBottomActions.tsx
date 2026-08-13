@@ -1,4 +1,5 @@
 import type { SaleTab } from "@/pages/AddSale";
+import { useSettings } from "@/hooks/useSettings";
 
 interface AddSaleBottomActionsProps {
   activeTab: SaleTab;
@@ -40,6 +41,9 @@ export function AddSaleBottomActions({
   isEditing,
 }: AddSaleBottomActionsProps) {
   const fmt = (n: number) => n.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const [isTransactionTaxEnabled] = useSettings('settings.isTransactionTaxEnabled', true);
+  const [isTransactionDiscountEnabled] = useSettings('settings.isTransactionDiscountEnabled', true);
+  const [isRoundOffTotalEnabled] = useSettings('settings.isRoundOffTotalEnabled', true);
 
   return (
     <>
@@ -87,52 +91,58 @@ export function AddSaleBottomActions({
           <div style={{ marginLeft: "auto", display: "flex", flexDirection: "column", gap: 12, fontSize: 13, minWidth: 370 }}>
 
             {/* Discount */}
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 8 }}>
-              <span style={{ color: "#6b7280", width: 68, textAlign: "right" }}>Discount</span>
-              <input type="number"
-                style={{ border: "1px solid #d1d5db", borderRadius: 4, padding: "5px 8px", width: 78, textAlign: "right", fontSize: 13, outline: "none" }}
-                value={activeTab.discountPercent}
-                onChange={(e) => updateDiscountPercent(e.target.value)}
-              />
-              <span style={{ color: "#9ca3af", fontSize: 12 }}>(%)</span>
-              <span style={{ color: "#d1d5db", margin: "0 2px" }}>–</span>
-              <input type="number"
-                style={{ border: "1px solid #d1d5db", borderRadius: 4, padding: "5px 8px", width: 100, textAlign: "right", fontSize: 13, outline: "none" }}
-                value={activeTab.discountRs}
-                onChange={(e) => updateDiscountAmount(e.target.value)}
-              />
-              <span style={{ color: "#9ca3af", fontSize: 12 }}>(Rs)</span>
-            </div>
+            {isTransactionDiscountEnabled && (
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 8 }}>
+                <span style={{ color: "#6b7280", width: 68, textAlign: "right" }}>Discount</span>
+                <input type="number"
+                  style={{ border: "1px solid #d1d5db", borderRadius: 4, padding: "5px 8px", width: 78, textAlign: "right", fontSize: 13, outline: "none" }}
+                  value={activeTab.discountPercent}
+                  onChange={(e) => updateDiscountPercent(e.target.value)}
+                />
+                <span style={{ color: "#9ca3af", fontSize: 12 }}>(%)</span>
+                <span style={{ color: "#d1d5db", margin: "0 2px" }}>–</span>
+                <input type="number"
+                  style={{ border: "1px solid #d1d5db", borderRadius: 4, padding: "5px 8px", width: 100, textAlign: "right", fontSize: 13, outline: "none" }}
+                  value={activeTab.discountRs}
+                  onChange={(e) => updateDiscountAmount(e.target.value)}
+                />
+                <span style={{ color: "#9ca3af", fontSize: 12 }}>(Rs)</span>
+              </div>
+            )}
 
             {/* Tax */}
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 8 }}>
-              <span style={{ color: "#6b7280", width: 68, textAlign: "right" }}>Tax</span>
-              <select
-                style={{ border: "1px solid #d1d5db", borderRadius: 4, padding: "5px 8px", width: 170, fontSize: 13, color: "#374151", background: "#fff", outline: "none" }}
-                value={activeTab.tax}
-                onChange={(e) => updateTab({ tax: e.target.value })}
-              >
-                {taxOptions.map((t) => <option key={t} value={t}>{t}</option>)}
-              </select>
-              <span style={{ color: "#374151", width: 62, textAlign: "right" }}>
-                {taxAmount > 0 ? taxAmount.toFixed(2) : "0"}
-              </span>
-            </div>
+            {isTransactionTaxEnabled && (
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 8 }}>
+                <span style={{ color: "#6b7280", width: 68, textAlign: "right" }}>Tax</span>
+                <select
+                  style={{ border: "1px solid #d1d5db", borderRadius: 4, padding: "5px 8px", width: 170, fontSize: 13, color: "#374151", background: "#fff", outline: "none" }}
+                  value={activeTab.tax}
+                  onChange={(e) => updateTab({ tax: e.target.value })}
+                >
+                  {taxOptions.map((t) => <option key={t} value={t}>{t}</option>)}
+                </select>
+                <span style={{ color: "#374151", width: 62, textAlign: "right" }}>
+                  {taxAmount > 0 ? taxAmount.toFixed(2) : "0"}
+                </span>
+              </div>
+            )}
 
             {/* Round Off */}
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 8 }}>
-              <label style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer" }}>
-                <input type="checkbox" checked={activeTab.roundOff}
-                  onChange={(e) => updateTab({ roundOff: e.target.checked })}
-                  style={{ width: 15, height: 15, accentColor: "#3b82f6", cursor: "pointer" }}
+            {isRoundOffTotalEnabled && (
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 8 }}>
+                <label style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer" }}>
+                  <input type="checkbox" checked={activeTab.roundOff}
+                    onChange={(e) => updateTab({ roundOff: e.target.checked })}
+                    style={{ width: 15, height: 15, accentColor: "#3b82f6", cursor: "pointer" }}
+                  />
+                  <span style={{ color: "#6b7280" }}>Round Off</span>
+                </label>
+                <input type="text" readOnly
+                  style={{ border: "1px solid #e5e7eb", borderRadius: 4, padding: "5px 8px", width: 80, textAlign: "right", fontSize: 13, color: "#6b7280", background: "#f9fafb" }}
+                  value={roundOffDiff !== 0 ? roundOffDiff.toFixed(2) : "0"}
                 />
-                <span style={{ color: "#6b7280" }}>Round Off</span>
-              </label>
-              <input type="text" readOnly
-                style={{ border: "1px solid #e5e7eb", borderRadius: 4, padding: "5px 8px", width: 80, textAlign: "right", fontSize: 13, color: "#6b7280", background: "#f9fafb" }}
-                value={roundOffDiff !== 0 ? roundOffDiff.toFixed(2) : "0"}
-              />
-            </div>
+              </div>
+            )}
 
             {/* Total */}
             <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 8 }}>

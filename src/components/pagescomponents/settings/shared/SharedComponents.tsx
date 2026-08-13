@@ -52,15 +52,29 @@ export const Card = ({ title, children }: { title: string, children: React.React
 // Sleek Toggle Switch Row
 export const SettingToggleRow = ({ 
   label, 
+  checked,
+  onChange,
   defaultChecked = false, 
   hint = true 
 }: { 
-  label: React.ReactNode, 
+  label: React.ReactNode,
+  checked?: boolean,
+  onChange?: (val: boolean) => void,
   defaultChecked?: boolean, 
   hint?: boolean 
 }) => {
-  const [checked, setChecked] = useState(defaultChecked);
+  const [internalChecked, setInternalChecked] = useState(defaultChecked);
   const [isHovered, setIsHovered] = useState(false);
+
+  const isChecked = checked !== undefined ? checked : internalChecked;
+
+  const handleClick = () => {
+    if (onChange) {
+      onChange(!isChecked);
+    } else {
+      setInternalChecked(!internalChecked);
+    }
+  };
 
   return (
     <div 
@@ -78,7 +92,7 @@ export const SettingToggleRow = ({
       }}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      onClick={() => setChecked(!checked)}
+      onClick={handleClick}
     >
       <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
         <span style={{ fontSize: "14px", color: "#334155", fontWeight: 500 }}>{label}</span>
@@ -90,7 +104,7 @@ export const SettingToggleRow = ({
         style={{
           width: "40px",
           height: "22px",
-          background: checked ? "#3b82f6" : "#cbd5e1",
+          background: isChecked ? "#3b82f6" : "#cbd5e1",
           borderRadius: "22px",
           position: "relative",
           transition: "background 0.3s ease",
@@ -103,7 +117,7 @@ export const SettingToggleRow = ({
           borderRadius: "50%",
           position: "absolute",
           top: "2px",
-          left: checked ? "20px" : "2px",
+          left: isChecked ? "20px" : "2px",
           transition: "left 0.3s cubic-bezier(0.4, 0.0, 0.2, 1)",
           boxShadow: "0 1px 3px rgba(0,0,0,0.15)"
         }} />

@@ -1,7 +1,12 @@
 import { Card, SettingToggleRow } from "../shared/SharedComponents";
 import { selStyle, inputStyle, nudgeBtn } from "../shared/styles";
+import { useSettings } from "../../../../hooks/useSettings";
 
 export function TransactionTab() {
+  const [isTransactionTaxEnabled, setIsTransactionTaxEnabled] = useSettings('settings.isTransactionTaxEnabled', true);
+  const [isTransactionDiscountEnabled, setIsTransactionDiscountEnabled] = useSettings('settings.isTransactionDiscountEnabled', true);
+  const [isRoundOffTotalEnabled, setIsRoundOffTotalEnabled] = useSettings('settings.isRoundOffTotalEnabled', true);
+
   return (
     <div style={{ 
       padding: "32px", 
@@ -28,9 +33,21 @@ export function TransactionTab() {
 
         {/* Taxes, Discount & Totals Card */}
         <Card title="Taxes, Discount & Totals">
-          <SettingToggleRow label="Transaction wise Tax" defaultChecked={true} />
-          <SettingToggleRow label="Transaction wise Discount" defaultChecked={true} />
-          <SettingToggleRow label="Round Off Total" defaultChecked={true} />
+          <SettingToggleRow 
+            label="Transaction wise Tax" 
+            checked={isTransactionTaxEnabled} 
+            onChange={setIsTransactionTaxEnabled} 
+          />
+          <SettingToggleRow 
+            label="Transaction wise Discount" 
+            checked={isTransactionDiscountEnabled} 
+            onChange={setIsTransactionDiscountEnabled} 
+          />
+          <SettingToggleRow 
+            label="Round Off Total" 
+            checked={isRoundOffTotalEnabled} 
+            onChange={setIsRoundOffTotalEnabled} 
+          />
           
           <div
             style={{

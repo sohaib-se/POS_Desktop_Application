@@ -1,6 +1,7 @@
 import { useRef } from "react";
 import type { SaleTab } from "./types";
 import { Trash2 } from "lucide-react";
+import { useSettings } from "@/hooks/useSettings";
 
 interface BottomSectionProps {
   activeTab: SaleTab;
@@ -25,6 +26,10 @@ export function BottomSection({
 }: BottomSectionProps) {
   const imageRef = useRef<HTMLInputElement>(null);
   const docRef = useRef<HTMLInputElement>(null);
+
+  const [isTransactionTaxEnabled] = useSettings('settings.isTransactionTaxEnabled', true);
+  const [isTransactionDiscountEnabled] = useSettings('settings.isTransactionDiscountEnabled', true);
+  const [isRoundOffTotalEnabled] = useSettings('settings.isRoundOffTotalEnabled', true);
 
   return (
     <div style={{ background: "#fff", padding: "20px 20px 24px 20px" }}>
@@ -78,55 +83,61 @@ export function BottomSection({
         <div style={{ marginLeft: "auto", display: "flex", flexDirection: "column", gap: 12, fontSize: 13, minWidth: 370 }}>
 
           {/* Discount */}
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 8 }}>
-            <span style={{ color: "#6b7280", width: 68, textAlign: "right" }}>Discount</span>
-            <input type="number"
-              style={{ border: "1px solid #d1d5db", borderRadius: 4, padding: "5px 8px", width: 78, textAlign: "right", fontSize: 13, outline: "none" }}
-              value={activeTab.discountPercent}
-              onChange={(e) => {
-                const pct = parseFloat(e.target.value) || 0;
-                updateTab({ discountPercent: e.target.value, discountRs: totalAmount > 0 ? (totalAmount * pct / 100).toFixed(2) : "" });
-              }}
-            />
-            <span style={{ color: "#9ca3af", fontSize: 12 }}>(%)</span>
-            <span style={{ color: "#d1d5db", margin: "0 2px" }}>–</span>
-            <input type="number"
-              style={{ border: "1px solid #d1d5db", borderRadius: 4, padding: "5px 8px", width: 100, textAlign: "right", fontSize: 13, outline: "none" }}
-              value={activeTab.discountRs}
-              onChange={(e) => updateTab({ discountRs: e.target.value })}
-            />
-            <span style={{ color: "#9ca3af", fontSize: 12 }}>(Rs)</span>
-          </div>
+          {isTransactionDiscountEnabled && (
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 8 }}>
+              <span style={{ color: "#6b7280", width: 68, textAlign: "right" }}>Discount</span>
+              <input type="number"
+                style={{ border: "1px solid #d1d5db", borderRadius: 4, padding: "5px 8px", width: 78, textAlign: "right", fontSize: 13, outline: "none" }}
+                value={activeTab.discountPercent}
+                onChange={(e) => {
+                  const pct = parseFloat(e.target.value) || 0;
+                  updateTab({ discountPercent: e.target.value, discountRs: totalAmount > 0 ? (totalAmount * pct / 100).toFixed(2) : "" });
+                }}
+              />
+              <span style={{ color: "#9ca3af", fontSize: 12 }}>(%)</span>
+              <span style={{ color: "#d1d5db", margin: "0 2px" }}>–</span>
+              <input type="number"
+                style={{ border: "1px solid #d1d5db", borderRadius: 4, padding: "5px 8px", width: 100, textAlign: "right", fontSize: 13, outline: "none" }}
+                value={activeTab.discountRs}
+                onChange={(e) => updateTab({ discountRs: e.target.value })}
+              />
+              <span style={{ color: "#9ca3af", fontSize: 12 }}>(Rs)</span>
+            </div>
+          )}
 
           {/* Tax */}
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 8 }}>
-            <span style={{ color: "#6b7280", width: 68, textAlign: "right" }}>Tax</span>
-            <select
-              style={{ border: "1px solid #d1d5db", borderRadius: 4, padding: "5px 8px", width: 170, fontSize: 13, color: "#374151", background: "#fff", outline: "none" }}
-              value={activeTab.tax}
-              onChange={(e) => updateTab({ tax: e.target.value })}
-            >
-              {taxOptions.map((t) => <option key={t} value={t}>{t}</option>)}
-            </select>
-            <span style={{ color: "#374151", width: 62, textAlign: "right" }}>
-              {taxAmount > 0 ? taxAmount.toFixed(2) : "0"}
-            </span>
-          </div>
+          {isTransactionTaxEnabled && (
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 8 }}>
+              <span style={{ color: "#6b7280", width: 68, textAlign: "right" }}>Tax</span>
+              <select
+                style={{ border: "1px solid #d1d5db", borderRadius: 4, padding: "5px 8px", width: 170, fontSize: 13, color: "#374151", background: "#fff", outline: "none" }}
+                value={activeTab.tax}
+                onChange={(e) => updateTab({ tax: e.target.value })}
+              >
+                {taxOptions.map((t) => <option key={t} value={t}>{t}</option>)}
+              </select>
+              <span style={{ color: "#374151", width: 62, textAlign: "right" }}>
+                {taxAmount > 0 ? taxAmount.toFixed(2) : "0"}
+              </span>
+            </div>
+          )}
 
           {/* Round Off */}
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 8 }}>
-            <label style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer" }}>
-              <input type="checkbox" checked={activeTab.roundOff}
-                onChange={(e) => updateTab({ roundOff: e.target.checked })}
-                style={{ width: 15, height: 15, accentColor: "#3b82f6", cursor: "pointer" }}
+          {isRoundOffTotalEnabled && (
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 8 }}>
+              <label style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer" }}>
+                <input type="checkbox" checked={activeTab.roundOff}
+                  onChange={(e) => updateTab({ roundOff: e.target.checked })}
+                  style={{ width: 15, height: 15, accentColor: "#3b82f6", cursor: "pointer" }}
+                />
+                <span style={{ color: "#6b7280" }}>Round Off</span>
+              </label>
+              <input type="text" readOnly
+                style={{ border: "1px solid #e5e7eb", borderRadius: 4, padding: "5px 8px", width: 80, textAlign: "right", fontSize: 13, color: "#6b7280", background: "#f9fafb" }}
+                value={roundOffDiff !== 0 ? roundOffDiff.toFixed(2) : "0"}
               />
-              <span style={{ color: "#6b7280" }}>Round Off</span>
-            </label>
-            <input type="text" readOnly
-              style={{ border: "1px solid #e5e7eb", borderRadius: 4, padding: "5px 8px", width: 80, textAlign: "right", fontSize: 13, color: "#6b7280", background: "#f9fafb" }}
-              value={roundOffDiff !== 0 ? roundOffDiff.toFixed(2) : "0"}
-            />
-          </div>
+            </div>
+          )}
 
           {/* Total */}
           <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 8 }}>

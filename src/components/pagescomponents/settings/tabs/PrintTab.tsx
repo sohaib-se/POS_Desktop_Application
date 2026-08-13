@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ACCENT_UNDERLINE, BLUE, BORDER, TEXT_DARK, TEXT_MUTED, THEME_COLORS } from "./printTab/constants";
 import { ThemeStrip } from "./printTab/ThemeStrip";
 import { ColorGrid } from "./printTab/ColorGrid";
@@ -23,19 +23,48 @@ import { ThermalTheme3Preview } from "./printTab/ThermalTheme3Preview";
 import { ThermalTheme4Preview } from "./printTab/ThermalTheme4Preview";
 import { ThermalTheme5Preview } from "./printTab/ThermalTheme5Preview";
 
+
 /* ---------------------------------------------------------------------- */
 /*  Main component                                                         */
 /* ---------------------------------------------------------------------- */
 
 export function PrintTab() {
-  const [activePrinter, setActivePrinter] = useState<"regular" | "thermal">(
-    "regular",
-  );
+  const [activePrinter, setActivePrinter] = useState<"regular" | "thermal">(() => {
+    return (localStorage.getItem("print_activePrinter") as "regular" | "thermal") || "regular";
+  });
   const [activeTab, setActiveTab] = useState<"layout" | "colors">("layout");
 
-  const [regularThemeIdx, setRegularThemeIdx] = useState(1);
-  const [thermalThemeIdx, setThermalThemeIdx] = useState(2);
-  const [themeColor, setThemeColor] = useState(THEME_COLORS[9]); // default purple color in screenshots
+  const [regularThemeIdx, setRegularThemeIdx] = useState(() => {
+    const saved = localStorage.getItem("print_regularThemeIdx");
+    return saved !== null ? parseInt(saved, 10) : 1;
+  });
+  const [thermalThemeIdx, setThermalThemeIdx] = useState(() => {
+    const saved = localStorage.getItem("print_thermalThemeIdx");
+    return saved !== null ? parseInt(saved, 10) : 2;
+  });
+  const [themeColor, setThemeColor] = useState(() => {
+    return localStorage.getItem("print_themeColor") || THEME_COLORS[9]; // default purple color
+  }); 
+  const isWhiteTheme = themeColor === "#ffffff" || themeColor === "#fff";
+
+
+  const currentPrinter = activePrinter;
+
+  useEffect(() => {
+    localStorage.setItem("print_activePrinter", activePrinter);
+  }, [activePrinter]);
+
+  useEffect(() => {
+    localStorage.setItem("print_regularThemeIdx", regularThemeIdx.toString());
+  }, [regularThemeIdx]);
+
+  useEffect(() => {
+    localStorage.setItem("print_thermalThemeIdx", thermalThemeIdx.toString());
+  }, [thermalThemeIdx]);
+
+  useEffect(() => {
+    localStorage.setItem("print_themeColor", themeColor);
+  }, [themeColor]);
 
   const regularThemes = [
     "Tally Theme",
@@ -71,30 +100,32 @@ export function PrintTab() {
               marginBottom: 20,
             }}
           >
-            {(["regular", "thermal"] as const).map((p) => (
-              <button
-                key={p}
-                onClick={() => setActivePrinter(p)}
-                style={{
-                  paddingBottom: 10,
-                  fontSize: 12,
-                  fontWeight: 600,
-                  letterSpacing: 0.3,
-                  border: "none",
-                  background: "transparent",
-                  cursor: "pointer",
-                  borderBottom:
-                    activePrinter === p ? `2px solid ${BLUE}` : "2px solid transparent",
-                  color: activePrinter === p ? BLUE : TEXT_MUTED,
-                }}
-              >
-                {p === "regular" ? "REGULAR PRINTER" : "THERMAL PRINTER"}
-              </button>
-            ))}
+            {(["regular", "thermal"] as const).map((p) => {
+              return (
+                <button
+                  key={p}
+                  onClick={() => setActivePrinter(p)}
+                  style={{
+                    paddingBottom: 10,
+                    fontSize: 12,
+                    fontWeight: 600,
+                    letterSpacing: 0.3,
+                    border: "none",
+                    background: "transparent",
+                    cursor: "pointer",
+                    borderBottom:
+                      currentPrinter === p ? `2px solid ${BLUE}` : "2px solid transparent",
+                    color: currentPrinter === p ? BLUE : TEXT_MUTED,
+                  }}
+                >
+                  {p === "regular" ? "REGULAR PRINTER" : "THERMAL PRINTER"}
+                </button>
+              );
+            })}
           </div>
 
           {/* Layout / Colors sub-tabs (regular printer only) */}
-          {activePrinter === "regular" && (
+          {currentPrinter === "regular" && (
             <div style={{ display: "flex", gap: 24, marginBottom: 20 }}>
               {(["layout", "colors"] as const).map((t) => (
                 <button
@@ -120,7 +151,7 @@ export function PrintTab() {
           )}
 
           {/* Layout sub-tab (thermal printer only, single option shown in screenshot) */}
-          {activePrinter === "thermal" && (
+          {currentPrinter === "thermal" && (
             <div style={{ display: "flex", gap: 24, marginBottom: 20 }}>
               <span
                 style={{
@@ -137,7 +168,7 @@ export function PrintTab() {
             </div>
           )}
 
-          {activePrinter === "regular" && activeTab === "layout" && (
+          {currentPrinter === "regular" && activeTab === "layout" && (
             <>
               <ThemeStrip
                 themes={regularThemes}
@@ -151,17 +182,13 @@ export function PrintTab() {
             </>
           )}
 
-          {activePrinter === "regular" && activeTab === "colors" && (
+          {currentPrinter === "regular" && activeTab === "colors" && (
             <>
               <ColorGrid color={themeColor} onColorChange={setThemeColor} />
-              <RegularCompanyInfoBlock />
-              <RegularItemTableBlock />
-              <RegularTotalsAndTaxesBlock />
-              <RegularFooterBlock />
             </>
           )}
 
-          {activePrinter === "thermal" && (
+          {currentPrinter === "thermal" && (
             <>
               <ThemeStrip
                 themes={["Theme 1", "Theme 2", "Theme 3", "Theme 4", "Theme 5"]}
@@ -175,6 +202,7 @@ export function PrintTab() {
 
         {/* ---------------- Right: live preview ---------------- */}
         <div
+          className={isWhiteTheme && currentPrinter === "regular" ? "print-white-theme" : ""}
           style={{
             maxHeight: "calc(100vh - 32px)",
             height: "calc(100vh - 32px)",
@@ -182,11 +210,17 @@ export function PrintTab() {
             paddingRight: 8,
             display: "flex",
             flexDirection: "column",
-            justifyContent: activePrinter === "thermal" ? "center" : "flex-start",
+            justifyContent: currentPrinter === "thermal" ? "center" : "flex-start",
             alignItems: "center",
           }}
         >
-          {activePrinter === "regular" ? (
+          <style>{`
+            .print-white-theme * {
+              color: #000 !important;
+              border-color: #000 !important;
+            }
+          `}</style>
+          {currentPrinter === "regular" ? (
             regularThemeIdx === 0 ? <RegularInvoicePreview color={themeColor} /> :
             regularThemeIdx === 1 ? <TaxTheme1Preview color={themeColor} /> :
             regularThemeIdx === 2 ? <TaxTheme2Preview color={themeColor} /> :

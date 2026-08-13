@@ -3,7 +3,11 @@ import { useCompanyDetails } from "./useCompanyDetails";
 import { BORDER, TEXT_DARK, TEXT_MUTED } from "./constants";
 
 export function TaxTheme3Preview({ color }: { color?: string }) {
-  const { companyName, phone, logo, showCompanyName, showPhone, showLogo } = useCompanyDetails();
+  const { companyName, phone, logo, showCompanyName, showPhone, showLogo , companyNameTextSize, invoiceTextSize } = useCompanyDetails();
+
+  const companyNameSize = companyNameTextSize === "Small" ? 14 : companyNameTextSize === "Large" ? 22 : 18;
+  const invoiceFontSize = invoiceTextSize === "Small" ? 8.5 : invoiceTextSize === "Large" ? 11.5 : 10;
+
   const greyBg = color || "#f3f4f6";
   const th: React.CSSProperties = {
     padding: "4px 6px",
@@ -26,22 +30,22 @@ export function TaxTheme3Preview({ color }: { color?: string }) {
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            fontSize: 8,
+            fontSize: invoiceFontSize,
             color: TEXT_MUTED , overflow: "hidden" }}>
 {logo ? <img src={logo} alt="Company Logo" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : null}
 </div>
 )}
         <div style={{ textAlign: "center", flex: 1 }}>
-          <div style={{ fontSize: 18, fontWeight: 700, color: TEXT_DARK }}>{showCompanyName ? companyName : ""}</div>
-          {showPhone && (<div style={{ fontSize: 10, color: TEXT_MUTED }}>Ph. no.: {showPhone ? phone : ""}</div>)}
+          <div style={{ fontSize: companyNameSize, fontWeight: 700, color: TEXT_DARK }}>{showCompanyName ? companyName : ""}</div>
+          {showPhone && (<div style={{ fontSize: invoiceFontSize, color: TEXT_MUTED }}>Ph. no.: {showPhone ? phone : ""}</div>)}
         </div>
       </div>
       
-      <div style={{ textAlign: "center", fontWeight: 600, fontSize: 14, marginBottom: 10 }}>
+      <div style={{ textAlign: "center", fontWeight: 600, fontSize: companyNameSize, marginBottom: 10 }}>
         <EditableText textKey="title" defaultText="Sale" />
       </div>
 
-      <table style={{ width: "100%", fontSize: 10, borderCollapse: "collapse", border: `1px solid ${BORDER}`, marginBottom: 0 }}>
+      <table style={{ width: "100%", fontSize: invoiceFontSize, borderCollapse: "collapse", border: `1px solid ${BORDER}`, marginBottom: 0 }}>
         <tbody>
           <tr>
             <td style={{ padding: "4px 6px", borderRight: `1px solid ${BORDER}`, borderBottom: `1px solid ${BORDER}`, width: "33%", verticalAlign: "top" }}>
@@ -67,7 +71,7 @@ export function TaxTheme3Preview({ color }: { color?: string }) {
         </tbody>
       </table>
 
-      <table style={{ width: "100%", fontSize: 9.5, borderCollapse: "collapse", border: `1px solid ${BORDER}`, borderTop: "none" }}>
+      <table style={{ width: "100%", fontSize: invoiceFontSize, borderCollapse: "collapse", border: `1px solid ${BORDER}`, borderTop: "none" }}>
         <thead>
           <tr style={{ background: greyBg, borderBottom: `1px solid ${BORDER}` }}>
             {["#", <EditableText textKey="th_item_name" defaultText="Item name" />, <EditableText textKey="th_hsn" defaultText="HSC/SAC" />, <EditableText textKey="th_qty" defaultText="Quantity" />, <EditableText textKey="th_price" defaultText="Price/unit" />, <EditableText textKey="th_discount" defaultText="Discount" />, <EditableText textKey="th_tax" defaultText="GST" />, <EditableText textKey="th_amount" defaultText="Amount" />].map((h, i) => (
@@ -107,7 +111,7 @@ export function TaxTheme3Preview({ color }: { color?: string }) {
         </tbody>
       </table>
 
-      <div style={{ display: "flex", fontSize: 9.5, border: `1px solid ${BORDER}`, borderTop: "none", marginBottom: 10 }}>
+      <div style={{ display: "flex", fontSize: invoiceFontSize, border: `1px solid ${BORDER}`, borderTop: "none", marginBottom: 10 }}>
         <div style={{ flex: 1, borderRight: `1px solid ${BORDER}`, padding: "4px 6px" }}>
           <div style={{ fontWeight: 600, marginBottom: 2 }}>Invoice Amount In Words</div>
           <div style={{ color: TEXT_MUTED, marginBottom: 10 }}>Forty Two Rupees and Thirty Two Paisa only</div>
@@ -127,7 +131,7 @@ export function TaxTheme3Preview({ color }: { color?: string }) {
         </div>
       </div>
       
-      <table style={{ width: "100%", fontSize: 9, borderCollapse: "collapse", border: `1px solid ${BORDER}`, marginBottom: 10 }}>
+      <table style={{ width: "100%", fontSize: invoiceFontSize, borderCollapse: "collapse", border: `1px solid ${BORDER}`, marginBottom: 10 }}>
         <thead>
           <tr style={{ borderBottom: `1px solid ${BORDER}`, background: greyBg }}>
             <th rowSpan={2} style={{ padding: "2px 4px", borderRight: `1px solid ${BORDER}` }}>HSN/ SAC</th>
@@ -174,7 +178,7 @@ export function TaxTheme3Preview({ color }: { color?: string }) {
         </tbody>
       </table>
 
-      <table style={{ width: "100%", fontSize: 9.5, borderCollapse: "collapse", border: `1px solid ${BORDER}` }}>
+      <table style={{ width: "100%", fontSize: invoiceFontSize, borderCollapse: "collapse", border: `1px solid ${BORDER}` }}>
         <tbody>
           <tr>
             <td style={{ padding: "8px", borderRight: `1px solid ${BORDER}`, width: "33%", verticalAlign: "top" }}>

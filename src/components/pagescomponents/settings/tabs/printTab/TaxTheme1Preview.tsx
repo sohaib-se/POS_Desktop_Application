@@ -3,7 +3,11 @@ import { useCompanyDetails } from "./useCompanyDetails";
 import { BORDER, TEXT_DARK, TEXT_MUTED } from "./constants";
 
 export function TaxTheme1Preview({ color }: { color?: string }) {
-  const { companyName, phone, logo, showCompanyName, showPhone, showLogo } = useCompanyDetails();
+  const { companyName, phone, logo, showCompanyName, showPhone, showLogo , companyNameTextSize, invoiceTextSize } = useCompanyDetails();
+
+  const companyNameSize = companyNameTextSize === "Small" ? 14 : companyNameTextSize === "Large" ? 22 : 18;
+  const invoiceFontSize = invoiceTextSize === "Small" ? 8.5 : invoiceTextSize === "Large" ? 11.5 : 10;
+
   const th: React.CSSProperties = {
     padding: "4px 6px",
     textAlign: "left",
@@ -16,8 +20,8 @@ export function TaxTheme1Preview({ color }: { color?: string }) {
     <div style={{ border: "1px solid #000", background: "#fff", padding: 20, fontFamily: "Inter, system-ui, sans-serif" }}>
       <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 10 }}>
         <div>
-          <div style={{ fontSize: 18, fontWeight: 700, color: TEXT_DARK }}>{showCompanyName ? companyName : ""}</div>
-          {showPhone && (<div style={{ fontSize: 10, color: TEXT_MUTED }}>Ph. no.: {showPhone ? phone : ""}</div>)}
+          <div style={{ fontSize: companyNameSize, fontWeight: 700, color: TEXT_DARK }}>{showCompanyName ? companyName : ""}</div>
+          {showPhone && (<div style={{ fontSize: invoiceFontSize, color: TEXT_MUTED }}>Ph. no.: {showPhone ? phone : ""}</div>)}
         </div>
         {showLogo && (
 <div
@@ -29,7 +33,7 @@ export function TaxTheme1Preview({ color }: { color?: string }) {
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            fontSize: 8,
+            fontSize: invoiceFontSize,
             color: TEXT_MUTED , overflow: "hidden" }}>
 {logo ? <img src={logo} alt="Company Logo" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : null}
 </div>
@@ -37,11 +41,11 @@ export function TaxTheme1Preview({ color }: { color?: string }) {
       </div>
       
       <div style={{ borderBottom: `2px solid ${purpleBg}`, marginBottom: 6 }} />
-      <div style={{ textAlign: "center", fontWeight: 600, color: purpleBg, fontSize: 16, marginBottom: 10 }}>
+      <div style={{ textAlign: "center", fontWeight: 600, color: purpleBg, fontSize: companyNameSize, marginBottom: 10 }}>
         <EditableText textKey="title" defaultText="Sale" />
       </div>
 
-      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, marginBottom: 10 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", fontSize: invoiceFontSize, marginBottom: 10 }}>
         <div>
           <div style={{ fontWeight: 600, marginBottom: 3 }}><EditableText textKey="lbl_bill_to" defaultText="Bill To:" /></div>
           <div style={{ color: TEXT_DARK, fontWeight: 600 }}>Classic enterprises</div>
@@ -61,7 +65,7 @@ export function TaxTheme1Preview({ color }: { color?: string }) {
         </div>
       </div>
 
-      <table style={{ width: "100%", fontSize: 9.5, borderCollapse: "collapse", marginBottom: 10 }}>
+      <table style={{ width: "100%", fontSize: invoiceFontSize, borderCollapse: "collapse", marginBottom: 10 }}>
         <thead>
           <tr style={{ background: purpleBg }}>
             {["#", <EditableText textKey="th_item_name" defaultText="Item name" />, <EditableText textKey="th_hsn" defaultText="HSC/SAC" />, <EditableText textKey="th_qty" defaultText="Quantity" />, <EditableText textKey="th_price" defaultText="Price/unit" />, <EditableText textKey="th_discount" defaultText="Discount" />, <EditableText textKey="th_tax" defaultText="GST" />, <EditableText textKey="th_amount" defaultText="Amount" />].map((h, i) => (
@@ -101,7 +105,7 @@ export function TaxTheme1Preview({ color }: { color?: string }) {
         </tbody>
       </table>
 
-      <div style={{ display: "flex", gap: 10, fontSize: 9.5, marginBottom: 10 }}>
+      <div style={{ display: "flex", gap: 10, fontSize: invoiceFontSize, marginBottom: 10 }}>
         <div style={{ flex: 1 }}>
           <div style={{ fontWeight: 600, marginBottom: 2 }}><EditableText textKey="lbl_desc_no_colon" defaultText="Description" /></div>
           <div style={{ color: TEXT_MUTED, marginBottom: 10 }}><EditableText textKey="title" defaultText="Sale" /> Description</div>
@@ -131,7 +135,7 @@ export function TaxTheme1Preview({ color }: { color?: string }) {
         </div>
       </div>
 
-      <table style={{ width: "100%", fontSize: 9.5, borderCollapse: "collapse", borderTop: `1px solid ${BORDER}` }}>
+      <table style={{ width: "100%", fontSize: invoiceFontSize, borderCollapse: "collapse", borderTop: `1px solid ${BORDER}` }}>
         <tbody>
           <tr>
             <td style={{ padding: "8px 0", width: "50%", verticalAlign: "top" }}>

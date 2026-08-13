@@ -3,27 +3,31 @@ import { useCompanyDetails } from "./useCompanyDetails";
 import { BORDER, TEXT_DARK, TEXT_MUTED } from "./constants";
 
 export function TaxTheme2Preview({ color }: { color?: string }) {
-  const { companyName, phone, logo, showCompanyName, showPhone, showLogo } = useCompanyDetails();
+  const { companyName, phone, logo, showCompanyName, showPhone, showLogo , companyNameTextSize, invoiceTextSize } = useCompanyDetails();
+
+  const companyNameSize = companyNameTextSize === "Small" ? 14 : companyNameTextSize === "Large" ? 22 : 18;
+  const invoiceFontSize = invoiceTextSize === "Small" ? 8.5 : invoiceTextSize === "Large" ? 11.5 : 10;
+
   const th: React.CSSProperties = { padding: "4px 6px", textAlign: "left", fontWeight: 600, color: "#fff" };
   const td: React.CSSProperties = { padding: "4px 6px", color: TEXT_DARK, borderRight: `1px solid ${BORDER}`, borderBottom: `1px solid ${BORDER}` };
   const themeBg = color || "#f59e0b"; // Orange
 
   return (
     <div style={{ background: "#fff", padding: 20, fontFamily: "Inter, system-ui, sans-serif", border: "1px solid #000" }}>
-      <div style={{ textAlign: "center", fontWeight: 700, fontSize: 16, marginBottom: 10 }}><EditableText textKey="title" defaultText="Sale" /></div>
+      <div style={{ textAlign: "center", fontWeight: 700, fontSize: companyNameSize, marginBottom: 10 }}><EditableText textKey="title" defaultText="Sale" /></div>
       <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 10 }}>
         {showLogo && (
-<div style={{ width: 100, height: 100, background: "transparent",  display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, color: TEXT_MUTED , overflow: "hidden" }}>
+<div style={{ width: 100, height: 100, background: "transparent",  display: "flex", alignItems: "center", justifyContent: "center", fontSize: invoiceFontSize, color: TEXT_MUTED , overflow: "hidden" }}>
 {logo ? <img src={logo} alt="Company Logo" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : null}
 </div>
 )}
         <div style={{ textAlign: "right" }}>
-          <div style={{ fontSize: 18, fontWeight: 700, color: TEXT_DARK }}>{showCompanyName ? companyName : ""}</div>
-          {showPhone && (<div style={{ fontSize: 10, color: TEXT_MUTED }}>Ph. no.: {showPhone ? phone : ""}</div>)}
+          <div style={{ fontSize: companyNameSize, fontWeight: 700, color: TEXT_DARK }}>{showCompanyName ? companyName : ""}</div>
+          {showPhone && (<div style={{ fontSize: invoiceFontSize, color: TEXT_MUTED }}>Ph. no.: {showPhone ? phone : ""}</div>)}
         </div>
       </div>
       
-      <table style={{ width: "100%", fontSize: 10, borderCollapse: "collapse", border: `1px solid ${BORDER}`, marginBottom: 0 }}>
+      <table style={{ width: "100%", fontSize: invoiceFontSize, borderCollapse: "collapse", border: `1px solid ${BORDER}`, marginBottom: 0 }}>
         <tbody>
           <tr style={{ background: themeBg, color: "#fff", fontWeight: 600 }}>
             <td style={{ padding: "4px 6px", borderRight: `1px solid #fff`, width: "33%" }}><EditableText textKey="lbl_bill_to" defaultText="Bill To:" /></td>
@@ -49,7 +53,7 @@ export function TaxTheme2Preview({ color }: { color?: string }) {
         </tbody>
       </table>
 
-      <table style={{ width: "100%", fontSize: 9.5, borderCollapse: "collapse", border: `1px solid ${BORDER}`, borderTop: "none" }}>
+      <table style={{ width: "100%", fontSize: invoiceFontSize, borderCollapse: "collapse", border: `1px solid ${BORDER}`, borderTop: "none" }}>
         <thead>
           <tr style={{ background: themeBg, borderBottom: `1px solid ${BORDER}` }}>
             {["#", <EditableText textKey="th_item_name" defaultText="Item name" />, <EditableText textKey="th_hsn" defaultText="HSC/SAC" />, <EditableText textKey="th_qty" defaultText="Quantity" />, <EditableText textKey="th_price" defaultText="Price/unit" />, <EditableText textKey="th_discount" defaultText="Discount" />, <EditableText textKey="th_tax" defaultText="GST" />, <EditableText textKey="th_amount" defaultText="Amount" />].map((h, i) => (
@@ -70,7 +74,7 @@ export function TaxTheme2Preview({ color }: { color?: string }) {
         </tbody>
       </table>
 
-      <div style={{ display: "flex", fontSize: 9.5, border: `1px solid ${BORDER}`, borderTop: "none", marginBottom: 10 }}>
+      <div style={{ display: "flex", fontSize: invoiceFontSize, border: `1px solid ${BORDER}`, borderTop: "none", marginBottom: 10 }}>
         <div style={{ flex: 1, borderRight: `1px solid ${BORDER}` }}>
           <div style={{ background: themeBg, color: "#fff", fontWeight: 600, padding: "4px 6px", textAlign: "center" }}>Invoice Amount In Words</div>
           <div style={{ color: TEXT_MUTED, padding: "8px", textAlign: "center" }}>Forty Two Rupees and Thirty Two Paisa only</div>
@@ -89,7 +93,7 @@ export function TaxTheme2Preview({ color }: { color?: string }) {
         </div>
       </div>
       
-      <table style={{ width: "100%", fontSize: 9, borderCollapse: "collapse", border: `1px solid ${BORDER}`, marginBottom: 10 }}>
+      <table style={{ width: "100%", fontSize: invoiceFontSize, borderCollapse: "collapse", border: `1px solid ${BORDER}`, marginBottom: 10 }}>
         <thead>
           <tr style={{ background: themeBg, color: "#fff" }}>
             <th style={{ padding: "4px", borderRight: `1px solid #fff`, textAlign: "left" }}>Tax type</th>
@@ -114,7 +118,7 @@ export function TaxTheme2Preview({ color }: { color?: string }) {
         </tbody>
       </table>
 
-      <table style={{ width: "100%", fontSize: 9.5, borderCollapse: "collapse", border: `1px solid ${BORDER}` }}>
+      <table style={{ width: "100%", fontSize: invoiceFontSize, borderCollapse: "collapse", border: `1px solid ${BORDER}` }}>
         <thead>
           <tr style={{ background: themeBg, color: "#fff" }}>
             <th style={{ padding: "4px 6px", borderRight: `1px solid #fff`, textAlign: "left", width: "50%" }}>Bank Details</th>

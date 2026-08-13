@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ReportsList } from '../components/pagescomponents/reports/ReportsList';
 import { reportCategories } from '../components/pagescomponents/reports/constants';
 
@@ -22,10 +22,17 @@ import { CashFlow } from '../components/pagescomponents/reports/financialreports
 interface ReportsProps {
   onViewChange?: (view: ViewType) => void;
   onEditInvoice?: (invoice: SaleInvoiceEditData) => void;
+  initialReport?: { category: string; name: string } | null;
 }
 
-export function Reports({ onViewChange, onEditInvoice }: ReportsProps) {
-  const [activeReport, setActiveReport] = useState<{ category: string; name: string } | null>(null);
+export function Reports({ onViewChange, onEditInvoice, initialReport }: ReportsProps) {
+  const [activeReport, setActiveReport] = useState<{ category: string; name: string } | null>(initialReport || null);
+
+  useEffect(() => {
+    if (initialReport) {
+      setActiveReport(initialReport);
+    }
+  }, [initialReport]);
 
   if (activeReport?.category === 'Transaction report') {
     if (activeReport.name === 'Sale') {

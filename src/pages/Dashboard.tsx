@@ -5,7 +5,13 @@ import { MostUsedReports } from "../components/pagescomponents/dashboard/MostUse
 import { LowStockItemsCard } from "../components/pagescomponents/dashboard/LowStockItemsCard";
 import { useSettings } from "../hooks/useSettings";
 
-export function Dashboard() {
+export function Dashboard({ 
+  onViewChange, 
+  onOpenReport 
+}: { 
+  onViewChange?: (view: any) => void;
+  onOpenReport?: (category: string, name: string) => void;
+}) {
   const [showSalesChart] = useSettings("show_card_total_sales_chart", true);
   const [showMostUsed] = useSettings("show_card_most_used_reports", true);
   const [showLowStock] = useSettings("show_card_low_stock", true);
@@ -16,7 +22,7 @@ export function Dashboard() {
 
       <div className="grid grid-cols-3 gap-6">
         {showSalesChart && <SalesChart />}
-        {showMostUsed && <MostUsedReports />}
+        {showMostUsed && <MostUsedReports onViewChange={onViewChange} onOpenReport={onOpenReport} />}
         {showLowStock && <LowStockItemsCard />}
       </div>
     </div>

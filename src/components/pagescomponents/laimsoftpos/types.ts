@@ -19,6 +19,7 @@ export interface ItemOption {
   exp_date?: string | null;
   wholesale_price?: number;
   min_stock?: number | null;
+  stock_quantity?: number;
 }
 
 export interface BankOption {

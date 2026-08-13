@@ -5,6 +5,7 @@ import { AddSaleTopBar } from "@/components/pagescomponents/addsale/AddSaleTopBa
 import { AddSaleCustomerHeader } from "@/components/pagescomponents/addsale/AddSaleCustomerHeader";
 import { AddSaleTable } from "@/components/pagescomponents/addsale/AddSaleTable";
 import { AddSaleBottomActions } from "@/components/pagescomponents/addsale/AddSaleBottomActions";
+import { useSettings } from "@/hooks/useSettings";
 
 export interface SaleRow {
   id: number;
@@ -57,6 +58,7 @@ export interface ItemOption {
   exp_date?: string | null;
   wholesale_price?: number;
   min_stock?: number | null;
+  stock_quantity?: number;
 }
 
 interface AddSaleProps {
@@ -209,6 +211,7 @@ export function AddSale({ onSave, onShare, onClose, initialInvoice, isConversion
   const [nextInvoiceNo, setNextInvoiceNo] = useState("1");
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
+  const [stopSaleOnNegativeStock] = useSettings('settings.stopSaleOnNegativeStock', false);
   const imageInputRef = useRef<HTMLInputElement | null>(null);
   const documentInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -483,6 +486,34 @@ export function AddSale({ onSave, onShare, onClose, initialInvoice, isConversion
     }
 
     const validRows = activeTab.rows.filter((row) => row.item || row.qty || row.pricePerUnit);
+
+    if (stopSaleOnNegativeStock) {
+      const itemQtyMap = new Map<string, number>();
+      for (const row of validRows) {
+        if (!row.itemId) continue;
+        const item = items.find((i) => String(i.id) === row.itemId);
+        if (!item) continue;
+
+        const qty = Number(row.qty) || 0;
+        const isSecondary = row.unit === item.secondary_unit;
+        const convRate = Number(item.conversion_rate) || 1;
+        const primaryQtyEquiv = isSecondary && convRate > 0 ? qty / convRate : qty;
+        
+        itemQtyMap.set(row.itemId, (itemQtyMap.get(row.itemId) || 0) + primaryQtyEquiv);
+      }
+
+      for (const [itemId, totalQty] of itemQtyMap.entries()) {
+        const item = items.find((i) => String(i.id) === itemId);
+        if (item) {
+          const currentStock = item.stock_quantity || 0;
+          if (totalQty > currentStock) {
+            setSaveError(`Cannot sell ${totalQty} of ${item.name}. Current stock is only ${currentStock}.`);
+            return;
+          }
+        }
+      }
+    }
+
     const subtotal = validRows.reduce(
       (sum, row) => sum + (Number(row.qty) || 0) * (Number(row.pricePerUnit) || 0),
       0,

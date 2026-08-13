@@ -76,10 +76,11 @@ let globalRowId = 3;
 let globalTabId = 2;
 
 function createDefaultTab(id: number): SaleTab {
+  const isCashSaleByDefault = JSON.parse(localStorage.getItem('settings.isCashSaleByDefault') || 'false');
   return {
     id,
     label: `Sale #${id}`,
-    paymentMode: "credit",
+    paymentMode: isCashSaleByDefault ? "cash" : "credit",
     customerSearch: "",
     phoneNo: "",
     invoiceDate: formatDateForDisplay(new Date()),

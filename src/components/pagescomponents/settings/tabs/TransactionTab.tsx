@@ -6,6 +6,7 @@ export function TransactionTab() {
   const [isTransactionTaxEnabled, setIsTransactionTaxEnabled] = useSettings('settings.isTransactionTaxEnabled', true);
   const [isTransactionDiscountEnabled, setIsTransactionDiscountEnabled] = useSettings('settings.isTransactionDiscountEnabled', true);
   const [isRoundOffTotalEnabled, setIsRoundOffTotalEnabled] = useSettings('settings.isRoundOffTotalEnabled', true);
+  const [isCashSaleByDefault, setIsCashSaleByDefault] = useSettings('settings.isCashSaleByDefault', false);
 
   return (
     <div style={{ 
@@ -22,14 +23,7 @@ export function TransactionTab() {
         margin: "0 auto"
       }}>
         
-        {/* Transaction Header Card */}
-        <Card title="Transaction Header">
-          <SettingToggleRow label="Invoice/Bill No." defaultChecked={true} />
-          <SettingToggleRow label="Add Time on Transactions" />
-          <SettingToggleRow label="Cash Sale by default" />
-          <SettingToggleRow label="Billing Name of Parties" />
-          <SettingToggleRow label="Customers P.O. Details on Transactions" />
-        </Card>
+
 
         {/* Taxes, Discount & Totals Card */}
         <Card title="Taxes, Discount & Totals">
@@ -110,6 +104,11 @@ export function TransactionTab() {
 
         {/* More Transaction Features Card */}
         <Card title="More Transaction Features">
+          <SettingToggleRow 
+            label="Cash Sale by default" 
+            checked={isCashSaleByDefault} 
+            onChange={setIsCashSaleByDefault} 
+          />
           <SettingToggleRow label="Barcode Scan" hint={true} />
           <SettingToggleRow label="Do not Show Invoice Preview" />
           <SettingToggleRow 

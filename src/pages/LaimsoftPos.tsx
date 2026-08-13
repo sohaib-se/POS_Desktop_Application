@@ -16,12 +16,13 @@ let globalRowId = 1;
 let globalTabId = 1;
 
 function createEmptyTab(invoiceNo: string): PosTab {
+  const isCashSaleByDefault = JSON.parse(localStorage.getItem('settings.isCashSaleByDefault') || 'false');
   return {
     id: globalTabId++,
     invoiceNo,
     date: new Date().toISOString().split("T")[0],
     rows: [],
-    paymentMode: "Cash",
+    paymentMode: isCashSaleByDefault ? "Cash" : "Credit",
     amountReceived: "0.00",
     isAmountReceivedDirty: false,
     customerSelectedId: null,

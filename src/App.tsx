@@ -69,6 +69,7 @@ function App() {
 
   const [currentView, setCurrentView] = useState<ViewType>("home");
   const [lastStandardView, setLastStandardView] = useState<ViewType>("home");
+  const [initialReport, setInitialReport] = useState<{ category: string; name: string } | null>(null);
   const [editingSaleInvoice, setEditingSaleInvoice] =
     useState<SaleInvoiceEditData | null>(null);
   const [isConvertingEstimate, setIsConvertingEstimate] = useState(false);
@@ -85,6 +86,9 @@ function App() {
     if (!isOverlayView(view)) {
       setLastStandardView(view);
     }
+    if (view !== "reports") {
+      setInitialReport(null);
+    }
 
     if (view === "add-sale") {
       setEditingSaleInvoice(null);
@@ -95,6 +99,11 @@ function App() {
     }
 
     setCurrentView(view);
+  };
+
+  const handleOpenReport = (category: string, name: string) => {
+    setInitialReport({ category, name });
+    setCurrentView("reports");
   };
 
   const handleEditSaleInvoice = (invoice: SaleInvoiceEditData) => {
@@ -143,7 +152,7 @@ function App() {
   const renderContent = (view: ViewType) => {
     switch (view) {
       case "home":
-        return <Dashboard />;
+        return <Dashboard onViewChange={handleViewChange} onOpenReport={handleOpenReport} />;
       case "parties":
         return <Parties onOpenSettings={handleOpenSettings} />;
       case "items":
@@ -175,7 +184,7 @@ function App() {
       case "cash-in-hand":
         return <CashBank subView={currentView} />;
       case "reports":
-        return <Reports onViewChange={handleViewChange} onEditInvoice={handleEditSaleInvoice} />;
+        return <Reports onViewChange={handleViewChange} onEditInvoice={handleEditSaleInvoice} initialReport={initialReport} />;
       case "sync-auto-backup":
         return <AutoBackup />;
       case "sync-backup-computer":
@@ -203,7 +212,7 @@ function App() {
       case "edit-profile":
         return <EditProfile onBack={() => handleViewChange("home")} />;
       default:
-        return <Dashboard />;
+        return <Dashboard onViewChange={handleViewChange} onOpenReport={handleOpenReport} />;
     }
   };
 

@@ -3,7 +3,7 @@ import { useCompanyDetails } from "./useCompanyDetails";
 import { BORDER, TEXT_DARK, TEXT_MUTED } from "./constants";
 
 export function DoubleDivinePreview({ color }: { color?: string }) {
-  const { companyName, phone, email, address, logo, showCompanyName, showPhone, showEmail, showAddress, showLogo, updateDetail } = useCompanyDetails();
+  const { companyName, phone, logo, showCompanyName, showPhone, showLogo } = useCompanyDetails();
   const redBg = color || "#e31837";
   const darkBg = "#262626";
   const th: React.CSSProperties = { padding: "6px 8px", textAlign: "left", fontWeight: 600, color: "#fff" };

@@ -2,19 +2,13 @@ import { useEffect, useState } from "react";
 import {
   Settings,
   Printer,
-  MessageSquare,
   Users,
   Package,
   X,
   ArrowLeftRight,
   Palette,
 } from "lucide-react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+
 import { GeneralTab } from "../components/pagescomponents/settings/tabs/GeneralTab";
 import { TransactionTab } from "../components/pagescomponents/settings/tabs/TransactionTab";
 import { PartyTab } from "../components/pagescomponents/settings/tabs/PartyTab";

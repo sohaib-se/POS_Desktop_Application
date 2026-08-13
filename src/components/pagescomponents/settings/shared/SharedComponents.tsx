@@ -1,7 +1,7 @@
 import type React from "react";
 import { Info, ChevronDown } from "lucide-react";
 import { useState } from "react";
-import { selStyle, inputStyle } from "./styles";
+import { inputStyle } from "./styles";
 
 export function Hint() {
   return (

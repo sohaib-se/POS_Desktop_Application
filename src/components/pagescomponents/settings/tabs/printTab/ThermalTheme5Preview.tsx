@@ -3,7 +3,7 @@ import { useCompanyDetails } from "./useCompanyDetails";
 import { TEXT_DARK, TEXT_MUTED } from "./constants";
 
 export function ThermalTheme5Preview() {
-  const { companyName, phone, email, address, logo, showCompanyName, showPhone, showEmail, showAddress, showLogo, updateDetail } = useCompanyDetails();
+  const { companyName, phone, showCompanyName, showPhone } = useCompanyDetails();
   const dash: React.CSSProperties = { borderTop: `1px dashed ${TEXT_MUTED}`, margin: "8px 0" };
   const rightCol = { width: 50, textAlign: "right" as const };
 

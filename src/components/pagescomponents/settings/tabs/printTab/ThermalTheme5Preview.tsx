@@ -13,8 +13,8 @@ export function ThermalTheme5Preview() {
   const rightCol = { width: 50, textAlign: "right" as const };
 
   return (
-    <div style={{ background: "#fff", border: "1px solid #000", height: "480px", boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)", padding: "16px", fontFamily: "Inter, system-ui, sans-serif", fontSize: invoiceFontSize, color: TEXT_DARK, width: 320, margin: "0 auto", lineHeight: 1.4, fontWeight: thermalTextBold ? 600 : 400, overflowY: "auto", overflowX: "hidden", wordBreak: "break-word" }}>
-      <div style={{ textAlign: "center", fontWeight: 700, fontSize: invoiceFontSize }}>{showCompanyName ? companyName : ""}</div>
+    <div style={{ background: "#fff", border: "1px solid #000", height: "640px", boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)", padding: "16px", fontFamily: "Inter, system-ui, sans-serif", fontSize: invoiceFontSize, color: TEXT_DARK, width: 320, margin: "0 auto", lineHeight: 1.4, fontWeight: thermalTextBold ? 600 : 400, overflowY: "auto", overflowX: "hidden", wordBreak: "break-word" }}>
+      <div style={{ textAlign: "center", fontWeight: 700, fontSize: companyNameSize }}>{showCompanyName ? companyName : ""}</div>
       {showPhone && (<div style={{ textAlign: "center" }}>Ph.No.: {showPhone ? phone : ""}</div>)}
       <div style={dash} />
       <div style={{ textAlign: "center", fontWeight: 600, marginBottom: 8 }}>Invoice</div>

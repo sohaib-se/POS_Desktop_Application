@@ -15,7 +15,7 @@ export function TaxTheme2Preview({ color }: { color?: string }) {
   return (
     <div style={{ background: "#fff", padding: 20, fontFamily: "Inter, system-ui, sans-serif", border: "1px solid #000" }}>
       <div style={{ textAlign: "center", fontWeight: 700, fontSize: companyNameSize, marginBottom: 10 }}><EditableText textKey="title" defaultText="Sale" /></div>
-      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 10 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
         {showLogo && (
 <div style={{ width: 100, height: 100, background: "transparent",  display: "flex", alignItems: "center", justifyContent: "center", fontSize: invoiceFontSize, color: TEXT_MUTED , overflow: "hidden" }}>
 {logo ? <img src={logo} alt="Company Logo" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : null}
@@ -32,7 +32,7 @@ export function TaxTheme2Preview({ color }: { color?: string }) {
           <tr style={{ background: themeBg, color: "#fff", fontWeight: 600 }}>
             <td style={{ padding: "4px 6px", borderRight: `1px solid #fff`, width: "33%" }}><EditableText textKey="lbl_bill_to" defaultText="Bill To:" /></td>
             <td style={{ padding: "4px 6px", borderRight: `1px solid #fff`, width: "33%" }}>Shipping To</td>
-            <td style={{ padding: "4px 6px", textAlign: "right" }}><EditableText textKey="lbl_inv_details_no_colon" defaultText="Invoice Details" /></td>
+            <td style={{ padding: "4px 6px", textAlign: "left" }}><EditableText textKey="lbl_inv_details_no_colon" defaultText="Invoice Details" /></td>
           </tr>
           <tr>
             <td style={{ padding: "4px 6px", borderRight: `1px solid ${BORDER}`, verticalAlign: "top" }}>

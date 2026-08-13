@@ -15,6 +15,9 @@ import { SalePurchaseByParty } from '../components/pagescomponents/reports/stock
 import { LowStockDetails } from '../components/pagescomponents/reports/stockreport/LowStockDetails';
 import { StockDetails } from '../components/pagescomponents/reports/stockreport/StockDetails';
 import { StockInOutDetails } from '../components/pagescomponents/reports/stockreport/StockInOutDetails';
+import { ProfitAndLoss } from '../components/pagescomponents/reports/financialreports/ProfitAndLoss';
+import { BillWiseProfit } from '../components/pagescomponents/reports/financialreports/BillWiseProfit';
+import { CashFlow } from '../components/pagescomponents/reports/financialreports/CashFlow';
 
 interface ReportsProps {
   onViewChange?: (view: ViewType) => void;
@@ -57,6 +60,18 @@ export function Reports({ onViewChange, onEditInvoice }: ReportsProps) {
     }
     if (activeReport.name === 'Party Report By Item') {
       return <PartyReportByItem onBack={() => setActiveReport(null)} />;
+    }
+  }
+
+  if (activeReport?.category === 'Financial Reports') {
+    if (activeReport.name === 'Profit And Loss') {
+      return <ProfitAndLoss onBack={() => setActiveReport(null)} />;
+    }
+    if (activeReport.name === 'Bill Wise Profit') {
+      return <BillWiseProfit onBack={() => setActiveReport(null)} />;
+    }
+    if (activeReport.name === 'Cash flow') {
+      return <CashFlow onBack={() => setActiveReport(null)} />;
     }
   }
 

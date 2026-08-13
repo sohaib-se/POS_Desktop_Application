@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { ArrowLeft, FileText, TrendingUp, TrendingDown } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { parseLineItems } from '../../saleinvoices/utils';
 
 interface ProfitAndLossProps {
@@ -22,7 +22,7 @@ const getCurrencySymbol = () => {
 export function ProfitAndLoss({ onBack }: ProfitAndLossProps) {
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
-  
+
   const [sales, setSales] = useState<any[]>([]);
   const [purchases, setPurchases] = useState<any[]>([]);
   const [expenses, setExpenses] = useState<any[]>([]);
@@ -41,19 +41,19 @@ export function ProfitAndLoss({ onBack }: ProfitAndLossProps) {
           fetch("/api/expense_records").catch(() => null),
           fetch("/api/items").catch(() => null),
         ]);
-        
+
         if (salesRes && salesRes.ok) setSales(await salesRes.json());
         if (purchasesRes && purchasesRes.ok) setPurchases(await purchasesRes.json());
         if (expensesRes && expensesRes.ok) setExpenses(await expensesRes.json());
         if (itemsRes && itemsRes.ok) setItems(await itemsRes.json());
-        
+
       } catch (error) {
         console.error("Failed to load profit and loss data", error);
       } finally {
         setLoading(false);
       }
     };
-    
+
     void loadData();
   }, []);
 
@@ -62,11 +62,11 @@ export function ProfitAndLoss({ onBack }: ProfitAndLossProps) {
       if (!dateFrom && !dateTo) return true;
       const recordDateStr = record.date || record.created_at;
       if (!recordDateStr) return true;
-      
-      const recordTime = record.created_at 
-        ? new Date(record.created_at).getTime() 
+
+      const recordTime = record.created_at
+        ? new Date(record.created_at).getTime()
         : new Date(recordDateStr.split('/').reverse().join('-')).getTime();
-      
+
       if (dateFrom) {
         if (recordTime < new Date(dateFrom).getTime()) return false;
       }
@@ -92,16 +92,16 @@ export function ProfitAndLoss({ onBack }: ProfitAndLossProps) {
     });
 
     let grossProfit = 0;
-    
+
     filteredSales.forEach(sale => {
       const lineItems = parseLineItems(sale.line_items_json);
-      
+
       lineItems.forEach((item: any) => {
           const itemId = String(item.itemId);
           const qty = Number(item.quantity || item.qty || 0);
           const invoiceSalePrice = Number(item.price || 0);
           const purchasePrice = itemPurchasePriceMap.get(itemId) || 0;
-          
+
           // Calculate gross profit for this specific item based on its sale price in the invoice
           grossProfit += (invoiceSalePrice - purchasePrice) * qty;
       });
@@ -122,79 +122,94 @@ export function ProfitAndLoss({ onBack }: ProfitAndLossProps) {
     };
   }, [sales, purchases, expenses, items, dateFrom, dateTo]);
 
+  const formatAmount = (value: number) =>
+    `${currencySymbol}${Math.abs(value).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+  // Rows shown in the statement table, in the order they should appear.
+  const rows: { label: string; amount: number; positive: boolean }[] = [
+    { label: 'Sale (+)', amount: stats.totalSalesAmount, positive: true },
+    { label: 'Purchase (-)', amount: stats.totalPurchasesAmount, positive: false },
+    { label: 'Expenses (-)', amount: stats.totalExpensesAmount, positive: false },
+  ];
+
   return (
-    <div className="h-full flex flex-col bg-gray-50">
-      <div className="bg-white px-6 py-4 border-b border-gray-200 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div className="h-full flex flex-col bg-white overflow-hidden">
+      <div className="px-6 py-4 border-b border-gray-200 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between shrink-0">
         <div className="flex items-center gap-4">
           <button onClick={onBack} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
             <ArrowLeft className="w-5 h-5 text-gray-600" />
           </button>
           <h1 className="text-xl font-semibold text-gray-900">Profit & Loss Report</h1>
         </div>
-        
+
         <div className="flex items-center gap-4 flex-wrap">
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-600">From:</span>
+          <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5">
+            <span className="text-sm text-gray-500">From</span>
             <input
               type="date"
               value={dateFrom}
               onChange={(e) => setDateFrom(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+              className="bg-transparent text-sm font-medium text-blue-600 focus:outline-none"
             />
           </div>
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-600">To:</span>
+          <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5">
+            <span className="text-sm text-gray-500">To</span>
             <input
               type="date"
               value={dateTo}
               onChange={(e) => setDateTo(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+              className="bg-transparent text-sm font-medium text-blue-600 focus:outline-none"
             />
           </div>
         </div>
       </div>
 
-      <div className="flex-1 p-6 overflow-auto">
+      <div className="flex-1 overflow-auto">
         {loading ? (
           <div className="h-full flex items-center justify-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
           </div>
         ) : (
-          <div className="max-w-3xl mx-auto bg-white p-8 rounded-lg shadow-sm border border-gray-200">
-            <h2 className="text-xl font-bold text-gray-800 border-b pb-4 mb-6 text-center">Profit & Loss Statement</h2>
-            
-            <div className="space-y-4">
-              <div className="flex justify-between items-center text-gray-700 text-lg">
-                <span>Sale (+)</span>
-                <span className="font-medium">{currencySymbol}{stats.totalSalesAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-              </div>
-              
-              <div className="flex justify-between items-center text-gray-700 text-lg">
-                <span>Purchase (-)</span>
-                <span className="font-medium">{currencySymbol}{stats.totalPurchasesAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-              </div>
+          <div className="w-full">
+            <table className="w-full border-collapse">
+              <thead>
+                <tr className="bg-gray-50 border-b border-gray-200 text-gray-600 text-sm">
+                  <th className="text-left font-medium px-[40px] py-3">Particulars</th>
+                  <th className="text-right font-medium px-[40px] py-3">Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((row, idx) => (
+                  <tr
+                    key={row.label}
+                    className={`text-[15px] border-b border-gray-100 ${idx % 2 === 1 ? 'bg-gray-50/50' : 'bg-white'}`}
+                  >
+                    <td className="px-[40px] py-4 text-gray-700">{row.label}</td>
+                    <td className={`px-[40px] py-4 text-right font-medium ${row.positive ? 'text-emerald-600' : 'text-red-500'}`}>
+                      {formatAmount(row.amount)}
+                    </td>
+                  </tr>
+                ))}
 
-              <div className="flex justify-between items-center text-gray-700 text-lg">
-                <span>Expenses (-)</span>
-                <span className="font-medium">{currencySymbol}{stats.totalExpensesAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-              </div>
-              
-              <div className="border-t border-gray-200 my-4 pt-4"></div>
+                <tr className="bg-gray-50/50 border-b border-gray-200">
+                  <td className="px-[40px] py-4 text-gray-900 font-semibold">
+                    {stats.grossProfit >= 0 ? 'Gross Profit' : 'Gross Loss'}
+                  </td>
+                  <td className={`px-[40px] py-4 text-right font-semibold ${stats.grossProfit >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>
+                    {formatAmount(stats.grossProfit)}
+                  </td>
+                </tr>
 
-              <div className={`flex justify-between items-center text-xl font-semibold ${stats.grossProfit >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                <span>{stats.grossProfit >= 0 ? 'Gross Profit' : 'Gross Loss'}</span>
-                <span>
-                  {currencySymbol}{Math.abs(stats.grossProfit).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </span>
-              </div>
-
-              <div className={`flex justify-between items-center text-xl font-bold mt-6 pt-4 border-t border-gray-200 ${stats.netProfit >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                <span>{stats.netProfit >= 0 ? 'Net Profit' : 'Net Loss'}</span>
-                <span>
-                  {currencySymbol}{Math.abs(stats.netProfit).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </span>
-              </div>
-            </div>
+                <tr className="bg-white">
+                  <td className="px-[40px] py-4 text-gray-900 font-bold text-lg">
+                    {stats.netProfit >= 0 ? 'Net Profit' : 'Net Loss'}
+                  </td>
+                  <td className={`px-[40px] py-4 text-right font-bold text-lg ${stats.netProfit >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>
+                    {formatAmount(stats.netProfit)}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         )}
       </div>

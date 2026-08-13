@@ -15,6 +15,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import type { Party } from "@/types";
+import { useSettings } from "@/hooks/useSettings";
 
 interface AddPartyDialogProps {
   showAddParty: boolean;
@@ -65,6 +66,8 @@ export function AddPartyDialog({
   showCreditLimitError,
   setShowCreditLimitError,
 }: AddPartyDialogProps) {
+  const [isShippingAddressEnabled] = useSettings('settings.isShippingAddressEnabled', true);
+
   return (
     <>
       {/* Add Party Modal */}
@@ -173,34 +176,36 @@ export function AddPartyDialog({
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#E53935]"
                 />
               </div>
-              <div>
-                {!showShippingAddress ? (
-                  <button
-                    onClick={() => setShowShippingAddress(true)}
-                    className="text-blue-500 text-sm font-medium hover:text-blue-600"
-                  >
-                    + Enable Shipping Address
-                  </button>
-                ) : (
-                  <>
-                    <h3 className="text-sm font-medium text-gray-900 mb-3">
-                      Shipping Address
-                    </h3>
-                    <textarea
-                      value={partyForm.shippingAddress}
-                      onChange={(e) =>
-                        setPartyForm({
-                          ...partyForm,
-                          shippingAddress: e.target.value,
-                        })
-                      }
-                      placeholder="Shipping Address"
-                      rows={4}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#E53935]"
-                    />
-                  </>
-                )}
-              </div>
+              {isShippingAddressEnabled && (
+                <div>
+                  {!showShippingAddress ? (
+                    <button
+                      onClick={() => setShowShippingAddress(true)}
+                      className="text-blue-500 text-sm font-medium hover:text-blue-600"
+                    >
+                      + Enable Shipping Address
+                    </button>
+                  ) : (
+                    <>
+                      <h3 className="text-sm font-medium text-gray-900 mb-3">
+                        Shipping Address
+                      </h3>
+                      <textarea
+                        value={partyForm.shippingAddress}
+                        onChange={(e) =>
+                          setPartyForm({
+                            ...partyForm,
+                            shippingAddress: e.target.value,
+                          })
+                        }
+                        placeholder="Shipping Address"
+                        rows={4}
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#E53935]"
+                      />
+                    </>
+                  )}
+                </div>
+              )}
             </div>
           )}
 

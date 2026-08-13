@@ -6,6 +6,7 @@ import { PosTable } from "../components/pagescomponents/laimsoftpos/PosTable";
 import { ActionButtons } from "../components/pagescomponents/laimsoftpos/ActionButtons";
 import { RightPanel } from "../components/pagescomponents/laimsoftpos/RightPanel";
 import { Modals } from "../components/pagescomponents/laimsoftpos/Modals";
+import { useSettings } from "@/hooks/useSettings";
 
 interface LaimsoftPosProps {
   onClose?: () => void;
@@ -15,12 +16,13 @@ let globalRowId = 1;
 let globalTabId = 1;
 
 function createEmptyTab(invoiceNo: string): PosTab {
+  const isCashSaleByDefault = JSON.parse(localStorage.getItem('settings.isCashSaleByDefault') || 'false');
   return {
     id: globalTabId++,
     invoiceNo,
     date: new Date().toISOString().split("T")[0],
     rows: [],
-    paymentMode: "Cash",
+    paymentMode: isCashSaleByDefault ? "Cash" : "Credit",
     amountReceived: "0.00",
     isAmountReceivedDirty: false,
     customerSelectedId: null,
@@ -62,6 +64,7 @@ export function LaimsoftPos({ onClose }: LaimsoftPosProps) {
   const [modalDiscountPercent, setModalDiscountPercent] = useState("");
   const [modalDiscountAmount, setModalDiscountAmount] = useState("");
   const [modalDescription, setModalDescription] = useState("");
+  const [stopSaleOnNegativeStock] = useSettings('settings.stopSaleOnNegativeStock', false);
 
   const searchInputRef = useRef<HTMLInputElement>(null);
 
@@ -382,6 +385,32 @@ export function LaimsoftPos({ onClose }: LaimsoftPosProps) {
     if (validRows.length === 0) {
       alert("Please add at least one item to save the sale.");
       return;
+    }
+
+    if (stopSaleOnNegativeStock) {
+      const itemQtyMap = new Map<string, number>();
+      for (const row of validRows) {
+        const item = items.find((i) => String(i.id) === row.itemId);
+        if (!item) continue;
+
+        const qty = Number(row.qty) || 0;
+        const isSecondary = row.unit === item.secondary_unit;
+        const convRate = Number(item.conversion_rate) || 1;
+        const primaryQtyEquiv = isSecondary && convRate > 0 ? qty / convRate : qty;
+        
+        itemQtyMap.set(row.itemId, (itemQtyMap.get(row.itemId) || 0) + primaryQtyEquiv);
+      }
+
+      for (const [itemId, totalQty] of itemQtyMap.entries()) {
+        const item = items.find((i) => String(i.id) === itemId);
+        if (item) {
+          const currentStock = item.stock_quantity || 0;
+          if (totalQty > currentStock) {
+            alert(`Cannot sell ${totalQty} of ${item.name}. Current stock is only ${currentStock}.`);
+            return;
+          }
+        }
+      }
     }
 
     if (receivedLessThanTotal) {

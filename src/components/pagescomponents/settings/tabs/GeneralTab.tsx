@@ -140,10 +140,12 @@ export function GeneralTab() {
   const [selectedCurrency, setSelectedCurrency] = useState(DEFAULT_CURRENCY);
   const [searchQuery, setSearchQuery] = useState("");
 
+  const [isShippingAddressEnabled, setIsShippingAddressEnabled] = useSettings('settings.isShippingAddressEnabled', true);
   const [isEstimationEnabled, setIsEstimationEnabled] = useSettings('settings.isEstimationEnabled', true);
   const [isPasscodeEnabled, setIsPasscodeEnabled] = useSettings('settings.isPasscodeEnabled', false);
   const [enableExpDate, setEnableExpDate] = useSettings('enableExpDate', true);
   const [enableMfgDate, setEnableMfgDate] = useSettings('enableMfgDate', true);
+  const [stopSaleOnNegativeStock, setStopSaleOnNegativeStock] = useSettings('settings.stopSaleOnNegativeStock', false);
   const [showSetupModal, setShowSetupModal] = useState(false);
   const [showRecoveryModal, setShowRecoveryModal] = useState(false);
   const [isChangePasscodeMode, setIsChangePasscodeMode] = useState(false);
@@ -221,7 +223,12 @@ export function GeneralTab() {
 
         {/* General Card */}
         <Card title="General">
-          <SettingToggleRow label="Shipping Address" hint={true} />
+          <SettingToggleRow 
+            label="Shipping Address" 
+            hint={true} 
+            checked={isShippingAddressEnabled} 
+            onChange={setIsShippingAddressEnabled} 
+          />
           
           {[
             {
@@ -465,7 +472,11 @@ export function GeneralTab() {
             )}
           </div>
 
-          <SettingToggleRow label="Stop Sale on Negative Stock" />
+          <SettingToggleRow 
+            label="Stop Sale on Negative Stock" 
+            checked={stopSaleOnNegativeStock} 
+            onChange={setStopSaleOnNegativeStock} 
+          />
         </Card>
 
         {/* Backup & History Card */}

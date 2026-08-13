@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import type React from "react";
 import type { ExpenseTab } from "./types";
+import { useSettings } from "@/hooks/useSettings";
 
 interface ExpenseSummaryProps {
   activeTab: ExpenseTab;
@@ -19,6 +20,7 @@ export function ExpenseSummary({
   handleAttachmentSelection,
 }: ExpenseSummaryProps) {
   const [paymentOptions, setPaymentOptions] = useState<string[]>(["Cash"]);
+  const [isRoundOffTotalEnabled] = useSettings('settings.isRoundOffTotalEnabled', true);
 
   useEffect(() => {
     let cancelled = false;
@@ -111,23 +113,25 @@ export function ExpenseSummary({
         </div>
 
         <div style={{ marginLeft: "auto", display: "flex", flexDirection: "column", gap: 12, fontSize: 13, minWidth: 370 }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 8 }}>
-            <label style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer" }}>
+          {isRoundOffTotalEnabled && (
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 8 }}>
+              <label style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer" }}>
+                <input
+                  type="checkbox"
+                  checked={activeTab.roundOff}
+                  onChange={(event) => updateTab({ roundOff: event.target.checked })}
+                  style={{ width: 15, height: 15, accentColor: "#1976d2", cursor: "pointer" }}
+                />
+                <span style={{ color: "#6b7280" }}>Round Off</span>
+              </label>
               <input
-                type="checkbox"
-                checked={activeTab.roundOff}
-                onChange={(event) => updateTab({ roundOff: event.target.checked })}
-                style={{ width: 15, height: 15, accentColor: "#1976d2", cursor: "pointer" }}
+                type="text"
+                readOnly
+                style={{ border: "1px solid #d1d5db", borderRadius: 4, padding: "5px 8px", width: 62, textAlign: "right", fontSize: 13, color: "#6b7280", background: "#fff" }}
+                value={activeTab.roundOff ? Math.round(totalAmount) - totalAmount : 0}
               />
-              <span style={{ color: "#6b7280" }}>Round Off</span>
-            </label>
-            <input
-              type="text"
-              readOnly
-              style={{ border: "1px solid #d1d5db", borderRadius: 4, padding: "5px 8px", width: 62, textAlign: "right", fontSize: 13, color: "#6b7280", background: "#fff" }}
-              value={activeTab.roundOff ? Math.round(totalAmount) - totalAmount : 0}
-            />
-          </div>
+            </div>
+          )}
           <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 8 }}>
             <span style={{ color: "#374151", fontWeight: 600, width: 68, textAlign: "right" }}>Total</span>
             <input

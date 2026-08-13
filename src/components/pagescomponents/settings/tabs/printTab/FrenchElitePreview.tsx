@@ -16,7 +16,7 @@ export function FrenchElitePreview({ color }: { color?: string }) {
   return (
     <div style={{ background: "#fff", padding: 20, fontFamily: "Inter, system-ui, sans-serif", border: "1px solid #000" }}>
       
-      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 20 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
         <div>
           <div style={{ background: purpleBg, color: "#fff", fontSize: 24, fontWeight: 700, padding: "10px 40px", display: "inline-block", marginBottom: 20 }}>
             TAX INVOICE

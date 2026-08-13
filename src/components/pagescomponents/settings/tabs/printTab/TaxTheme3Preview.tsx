@@ -19,7 +19,7 @@ export function TaxTheme3Preview({ color }: { color?: string }) {
 
   return (
     <div style={{ background: "#fff", padding: 20, fontFamily: "Inter, system-ui, sans-serif", border: "1px solid #000" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 10 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
         {showLogo && (
 <div
           style={{

@@ -18,7 +18,7 @@ export function TaxTheme1Preview({ color }: { color?: string }) {
 
   return (
     <div style={{ border: "1px solid #000", background: "#fff", padding: 20, fontFamily: "Inter, system-ui, sans-serif" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 10 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
         <div>
           <div style={{ fontSize: companyNameSize, fontWeight: 700, color: TEXT_DARK }}>{showCompanyName ? companyName : ""}</div>
           {showPhone && (<div style={{ fontSize: invoiceFontSize, color: TEXT_MUTED }}>Ph. no.: {showPhone ? phone : ""}</div>)}
@@ -57,7 +57,7 @@ export function TaxTheme1Preview({ color }: { color?: string }) {
           <div style={{ color: TEXT_MUTED }}>Mehta Textiles, Marathalli Road, Banglore, Karnataka, 560034</div>
         </div>
         <div style={{ textAlign: "right" }}>
-          <div style={{ fontWeight: 600, marginBottom: 3 }}><EditableText textKey="lbl_inv_details_no_colon" defaultText="Invoice Details" /></div>
+          <div style={{ fontWeight: 600, marginBottom: 3, textAlign: "left" }}><EditableText textKey="lbl_inv_details_no_colon" defaultText="Invoice Details" /></div>
           <div><EditableText textKey="lbl_inv_no" defaultText="Invoice No.:" /> Inv. 101</div>
           <div><EditableText textKey="lbl_date" defaultText="Date:" /> 02-07-2019</div>
           <div><EditableText textKey="lbl_time" defaultText="Time:" /> 12:30 PM</div>

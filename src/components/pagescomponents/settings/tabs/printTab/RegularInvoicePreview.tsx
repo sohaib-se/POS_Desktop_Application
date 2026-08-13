@@ -20,7 +20,7 @@ export function RegularInvoicePreview({ color: _color }: { color?: string }) {
         Tax Invoice
       </div>
 
-      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: 10 }}>
         {showLogo && (
           <div
             style={{
@@ -42,7 +42,7 @@ export function RegularInvoicePreview({ color: _color }: { color?: string }) {
             ) : null}
           </div>
         )}
-        <div>
+        <div style={{ textAlign: "right" }}>
           {showCompanyName && <div style={{ fontSize: companyNameSize, fontWeight: 700, color: TEXT_DARK }}>{companyName}</div>}
           {showPhone && (
             <div style={{ fontSize: invoiceFontSize, color: TEXT_MUTED }}>

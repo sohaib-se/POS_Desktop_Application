@@ -10,8 +10,6 @@ import { RegularInvoicePreview } from "./printTab/RegularInvoicePreview";
 import { TaxTheme1Preview } from "./printTab/TaxTheme1Preview";
 import { TaxTheme2Preview } from "./printTab/TaxTheme2Preview";
 import { TaxTheme3Preview } from "./printTab/TaxTheme3Preview";
-import { DoubleDivinePreview } from "./printTab/DoubleDivinePreview";
-import { FrenchElitePreview } from "./printTab/FrenchElitePreview";
 import { Theme1Preview } from "./printTab/Theme1Preview";
 import { Theme2Preview } from "./printTab/Theme2Preview";
 import { Theme3Preview } from "./printTab/Theme3Preview";
@@ -71,8 +69,6 @@ export function PrintTab() {
     "Tax Theme 1",
     "Tax Theme 2",
     "Tax Theme 3",
-    "Double Divine",
-    "French Elite",
     "Theme 1",
     "Theme 2",
     "Theme 3",
@@ -225,11 +221,9 @@ export function PrintTab() {
             regularThemeIdx === 1 ? <TaxTheme1Preview color={themeColor} /> :
             regularThemeIdx === 2 ? <TaxTheme2Preview color={themeColor} /> :
             regularThemeIdx === 3 ? <TaxTheme3Preview color={themeColor} /> :
-            regularThemeIdx === 4 ? <DoubleDivinePreview color={themeColor} /> :
-            regularThemeIdx === 5 ? <FrenchElitePreview color={themeColor} /> :
-            regularThemeIdx === 6 ? <Theme1Preview color={themeColor} /> :
-            regularThemeIdx === 7 ? <Theme2Preview color={themeColor} /> :
-            regularThemeIdx === 8 ? <Theme3Preview color={themeColor} /> :
+            regularThemeIdx === 4 ? <Theme1Preview color={themeColor} /> :
+            regularThemeIdx === 5 ? <Theme2Preview color={themeColor} /> :
+            regularThemeIdx === 6 ? <Theme3Preview color={themeColor} /> :
             <Theme4Preview color={themeColor} />
           ) : (
             thermalThemeIdx === 0 ? <ThermalTheme1Preview /> :

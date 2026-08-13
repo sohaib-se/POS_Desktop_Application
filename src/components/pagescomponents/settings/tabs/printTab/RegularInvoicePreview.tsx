@@ -35,9 +35,7 @@ export function RegularInvoicePreview({ color: _color }: { color?: string }) {
           >
 {logo ? (
               <img src={logo} alt="Company Logo" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-            ) : (
-              "Image"
-            )}
+            ) : null}
           </div>
         )}
         <div>

@@ -26,7 +26,7 @@ export function FrenchElitePreview({ color }: { color?: string }) {
         </div>
         {showLogo && (
           <div style={{ width: 100, height: 100, background: "transparent", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, color: TEXT_MUTED, overflow: "hidden" }}>
-{logo ? <img src={logo} alt="Company Logo" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : "Image"}
+{logo ? <img src={logo} alt="Company Logo" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : null}
           </div>
         )}
       </div>
@@ -100,7 +100,7 @@ export function FrenchElitePreview({ color }: { color?: string }) {
           <div style={{ fontSize: 9.5, color: TEXT_DARK, marginBottom: 6 }}><EditableText textKey="lbl_for" defaultText="For:" /> {showCompanyName ? companyName : ""}</div>
           {showLogo && (
           <div style={{ width: 100, height: 100, background: "transparent", display: "inline-flex", alignItems: "center", justifyContent: "center", marginBottom: 6, fontSize: 10, color: TEXT_MUTED, overflow: "hidden" }}>
-{logo ? <img src={logo} alt="Company Logo" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : "Image"}
+{logo ? <img src={logo} alt="Company Logo" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : null}
           </div>
 )}
           <div style={{ fontSize: 12, color: TEXT_DARK, fontWeight: 700 }}><EditableText textKey="lbl_auth_sig" defaultText="Authorized Signatory" /></div>

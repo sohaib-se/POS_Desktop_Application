@@ -17,7 +17,7 @@ export function DoubleDivinePreview({ color }: { color?: string }) {
         <div style={{ flex: 1, background: darkBg, position: "relative", display: "flex", alignItems: "center", paddingLeft: 20 }}>
           {showLogo && (
 <div style={{ width: 100, height: 100, background: "transparent", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, color: "#a1a1aa" , overflow: "hidden" }}>
-{logo ? <img src={logo} alt="Company Logo" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : "Image"}
+{logo ? <img src={logo} alt="Company Logo" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : null}
 </div>
 )}
           <div style={{ position: "absolute", right: -30, top: 0, bottom: 0, width: 60, background: darkBg, borderRadius: "50%", zIndex: 1 }} />
@@ -66,7 +66,7 @@ export function DoubleDivinePreview({ color }: { color?: string }) {
         <table style={{ width: "100%", fontSize: 9.5, borderCollapse: "collapse", border: `1px solid ${BORDER}`, marginBottom: 10 }}>
           <thead>
             <tr style={{ background: redBg }}>
-              {["#", <EditableText textKey="th_item_name" defaultText=<EditableText textKey="th_item_name" defaultText="Item name" /> />, "HSN / SAC", <EditableText textKey="th_qty" defaultText=<EditableText textKey="th_qty" defaultText="Quantity" /> />, <EditableText textKey="th_price" defaultText=<EditableText textKey="th_price" defaultText="Price/unit" /> />, <EditableText textKey="th_discount" defaultText=<EditableText textKey="th_discount" defaultText="Discount" /> />, <EditableText textKey="th_tax" defaultText=<EditableText textKey="th_tax" defaultText="GST" /> />, <EditableText textKey="th_amount" defaultText=<EditableText textKey="th_amount" defaultText="Amount" /> />].map((h, i) => (
+              {["#", <EditableText textKey="th_item_name" defaultText="Item name" />, "HSN / SAC", <EditableText textKey="th_qty" defaultText="Quantity" />, <EditableText textKey="th_price" defaultText="Price/unit" />, <EditableText textKey="th_discount" defaultText="Discount" />, <EditableText textKey="th_tax" defaultText="GST" />, <EditableText textKey="th_amount" defaultText="Amount" />].map((h, i) => (
               <th key={i} style={{ ...th, borderRight: `1px solid #fff` }}>{h}</th>
               ))}
             </tr>

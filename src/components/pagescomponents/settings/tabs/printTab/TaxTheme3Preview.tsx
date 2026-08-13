@@ -28,7 +28,7 @@ export function TaxTheme3Preview({ color }: { color?: string }) {
             justifyContent: "center",
             fontSize: 8,
             color: TEXT_MUTED , overflow: "hidden" }}>
-{logo ? <img src={logo} alt="Company Logo" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : "Image"}
+{logo ? <img src={logo} alt="Company Logo" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : null}
 </div>
 )}
         <div style={{ textAlign: "center", flex: 1 }}>
@@ -70,7 +70,7 @@ export function TaxTheme3Preview({ color }: { color?: string }) {
       <table style={{ width: "100%", fontSize: 9.5, borderCollapse: "collapse", border: `1px solid ${BORDER}`, borderTop: "none" }}>
         <thead>
           <tr style={{ background: greyBg, borderBottom: `1px solid ${BORDER}` }}>
-            {["#", <EditableText textKey="th_item_name" defaultText=<EditableText textKey="th_item_name" defaultText="Item name" /> />, <EditableText textKey="th_hsn" defaultText=<EditableText textKey="th_hsn" defaultText="HSC/SAC" /> />, <EditableText textKey="th_qty" defaultText=<EditableText textKey="th_qty" defaultText="Quantity" /> />, <EditableText textKey="th_price" defaultText=<EditableText textKey="th_price" defaultText="Price/unit" /> />, <EditableText textKey="th_discount" defaultText=<EditableText textKey="th_discount" defaultText="Discount" /> />, <EditableText textKey="th_tax" defaultText=<EditableText textKey="th_tax" defaultText="GST" /> />, <EditableText textKey="th_amount" defaultText=<EditableText textKey="th_amount" defaultText="Amount" /> />].map((h, i) => (
+            {["#", <EditableText textKey="th_item_name" defaultText="Item name" />, <EditableText textKey="th_hsn" defaultText="HSC/SAC" />, <EditableText textKey="th_qty" defaultText="Quantity" />, <EditableText textKey="th_price" defaultText="Price/unit" />, <EditableText textKey="th_discount" defaultText="Discount" />, <EditableText textKey="th_tax" defaultText="GST" />, <EditableText textKey="th_amount" defaultText="Amount" />].map((h, i) => (
               <th key={i} style={th}>{h}</th>
             ))}
           </tr>

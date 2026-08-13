@@ -2,8 +2,6 @@ import { useEffect, useState } from "react";
 import {
   Settings,
   Printer,
-  Users,
-  Package,
   X,
   ArrowLeftRight,
   Palette,
@@ -11,8 +9,6 @@ import {
 
 import { GeneralTab } from "../components/pagescomponents/settings/tabs/GeneralTab";
 import { TransactionTab } from "../components/pagescomponents/settings/tabs/TransactionTab";
-import { PartyTab } from "../components/pagescomponents/settings/tabs/PartyTab";
-import { ItemTab } from "../components/pagescomponents/settings/tabs/ItemTab";
 import { PrintTab } from "../components/pagescomponents/settings/tabs/PrintTab";
 import { AppearanceTab } from "../components/pagescomponents/settings/tabs/AppearanceTab";
 import { SettingsSidebar } from "../components/pagescomponents/settings/SettingsSidebar";
@@ -26,8 +22,6 @@ const tabs = [
   { id: "general", label: "GENERAL", icon: Settings },
   { id: "transaction", label: "TRANSACTION", icon: ArrowLeftRight },
   { id: "print", label: "PRINT", icon: Printer },
-  { id: "party", label: "PARTY", icon: Users },
-  { id: "item", label: "ITEM", icon: Package },
   { id: "appearance", label: "APPEARANCE", icon: Palette },
 ];
 
@@ -69,8 +63,6 @@ export function SettingsPage({ onClose, initialTab }: SettingsPageProps = {}) {
           {activeTab === "general" && <GeneralTab />}
           {activeTab === "transaction" && <TransactionTab />}
           {activeTab === "print" && <PrintTab />}
-          {activeTab === "party" && <PartyTab />}
-          {activeTab === "item" && <ItemTab />}
           {activeTab === "appearance" && <AppearanceTab />}
         </main>
       </div>

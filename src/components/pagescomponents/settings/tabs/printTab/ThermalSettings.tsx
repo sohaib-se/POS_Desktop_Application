@@ -7,19 +7,22 @@ import {
   InfoLogoRow,
   LabeledNumber,
   LabeledSelect,
-  SectionTitle } from "./SharedComponents";
+  SectionTitle,
+  TooltipContent,
+  InfoIcon } from "./SharedComponents";
 
-function PageSizeSelector() {
+function PageSizeSelector({ active, setActive }: { active: number, setActive: (idx: number) => void }) {
   const options: { label: string; sub: string }[] = [
     { label: "2 Inch", sub: "58mm" },
     { label: "3 Inch", sub: "68mm" },
     { label: "4 Inch", sub: "80mm" },
   ];
-  const [active, setActive] = useState(1);
-  const isCustom = active === 3;
   return (
     <div style={{ marginBottom: 20 }}>
-      <div style={{ fontSize: 12, color: TEXT_MUTED, marginBottom: 8 }}>Page Size</div>
+      <div style={{ display: "flex", alignItems: "center", marginBottom: 8 }}>
+        <div style={{ fontSize: 12, color: TEXT_MUTED }}>Page Size</div>
+        <InfoIcon tooltip={<TooltipContent title="Page Size" questions={[{q: "What is this?", a: "Select the size of paper for invoice print"}]} />} />
+      </div>
       <div style={{ display: "flex", gap: 8 }}>
         {options.map((o, i) => (
           <button
@@ -39,21 +42,6 @@ function PageSizeSelector() {
             <div style={{ fontSize: 10, opacity: 0.85 }}>{o.sub}</div>
           </button>
         ))}
-        <button
-          onClick={() => setActive(3)}
-          style={{
-            padding: "6px 14px",
-            borderRadius: 6,
-            border: `1.5px solid ${isCustom ? BLUE : BORDER}`,
-            background: isCustom ? BLUE : "#fff",
-            color: isCustom ? "#fff" : TEXT_LABEL,
-            cursor: "pointer",
-            textAlign: "center",
-            lineHeight: 1.3 }}
-        >
-          <div style={{ fontSize: 12, fontWeight: 600 }}>Custom</div>
-          <div style={{ fontSize: 10, opacity: 0.85 }}>48 (Chars)</div>
-        </button>
       </div>
     </div>
   );
@@ -62,25 +50,81 @@ function PageSizeSelector() {
 import { useCompanyDetails } from "./useCompanyDetails";
 
 export function ThermalSettings() {
-  const { companyName, phone, address, email, showCompanyName, showPhone, showAddress, showEmail, showLogo, updateDetail } = useCompanyDetails();
+  const { companyName, phone, address, email, showCompanyName, showPhone, showAddress, showEmail, showLogo, updateDetail, thermalPrinterDefault, thermalPageSize, thermalTextBold, thermalAutoCut, thermalCopies } = useCompanyDetails();
 
   return (
     <>
-      <InfoCheckRow label="Make Thermal Printer Default" />
-      <PageSizeSelector />
+      <InfoCheckRow 
+        label="Make Thermal Printer Default" 
+        checked={thermalPrinterDefault} 
+        onCheckedChange={(c) => updateDetail("thermalPrinterDefault", c.toString())} 
+        tooltip={<TooltipContent title="Make Thermal Printer Default" questions={[{q: "What is this?", a: "You can either make Regular or Thermal printer as your default printer. Choose the one which you will use."}]} />}
+      />
+      <PageSizeSelector active={parseInt(thermalPageSize, 10)} setActive={(idx) => updateDetail("thermalPageSize", idx.toString())} />
       <Divider />
-      <InfoCheckRow label="Use Text Styling(Bold)" defaultChecked />
-      <InfoCheckRow label="Auto Cut Paper After Printing" />
-      <LabeledNumber label="Number of copies" defaultValue={1} />
+      <InfoCheckRow 
+        label="Use Text Styling(Bold)" 
+        checked={thermalTextBold} 
+        onCheckedChange={(c) => updateDetail("thermalTextBold", c.toString())} 
+        tooltip={<TooltipContent title="Use Text Styling(Bold)" questions={[{q: "What is this?", a: "Enables you to print text stying like bold, large text etc in thermal printer."}]} />}
+      />
+      <InfoCheckRow 
+        label="Auto Cut Paper After Printing" 
+        checked={thermalAutoCut} 
+        onCheckedChange={(c) => updateDetail("thermalAutoCut", c.toString())} 
+        tooltip={<TooltipContent title="Auto Cut Paper After Printing" questions={[{q: "What is this?", a: "If you want the machine to auto cut your invoice after the printing is done. You can enable this setting."}]} />}
+      />
+      <LabeledSelect 
+        label="Number of copies" 
+        value={thermalCopies.toString()} 
+        onChange={(val) => updateDetail("thermalCopies", val)} 
+        options={["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"]} 
+        defaultValue="1" 
+        tooltip={<TooltipContent title="Number of copies" questions={[{q: "What is this?", a: "Enables you to print 1 to 9 copies of the bill."}]} />}
+      />
       
       <Divider />
       <SectionTitle>Print Company Info / Header</SectionTitle>
-      <InfoFieldRow label="Company Name" value={companyName} onChange={(val) => updateDetail("companyName", val)} checked={showCompanyName} onCheckedChange={(c) => updateDetail("show_companyName", c.toString())} />
-      <InfoLogoRow checked={showLogo} onCheckedChange={(c) => updateDetail("show_logo", c.toString())} />
-      <InfoFieldRow label="Address" value={address} onChange={(val) => updateDetail("address", val)} placeholder="Address" checked={showAddress} onCheckedChange={(c) => updateDetail("show_address", c.toString())} />
-      <InfoFieldRow label="Email" value={email} onChange={(val) => updateDetail("email", val)} placeholder="Email" checked={showEmail} onCheckedChange={(c) => updateDetail("show_email", c.toString())} />
-      <InfoFieldRow label="Phone Number" value={phone} onChange={(val) => updateDetail("phone", val)} checked={showPhone} onCheckedChange={(c) => updateDetail("show_phone", c.toString())} />
-      <div style={{ color: BLUE, fontSize: 12, fontWeight: 600, marginTop: 12, cursor: "pointer" }}>Change Transaction Names &gt;</div>
+      <InfoFieldRow 
+        label="Company Name" 
+        value={companyName} 
+        onChange={(val) => updateDetail("companyName", val)} 
+        checked={showCompanyName} 
+        onCheckedChange={(c) => updateDetail("show_companyName", c.toString())} 
+        tooltip={<TooltipContent title="Company Name" questions={[{q: "What is this?", a: "Enables you to print company name on the transaction PDF and party statement."}]} />}
+      />
+      <InfoLogoRow 
+        checked={showLogo} 
+        onCheckedChange={(c) => updateDetail("show_logo", c.toString())} 
+        tooltip={<TooltipContent title="Company Logo" questions={[{q: "What is this?", a: "Enables you to print company logo on the transaction PDF and party statement."}]} />}
+      />
+      <InfoFieldRow 
+        label="Address" 
+        value={address} 
+        onChange={(val) => updateDetail("address", val)} 
+        placeholder="Address" 
+        checked={showAddress} 
+        onCheckedChange={(c) => updateDetail("show_address", c.toString())} 
+        tooltip={<TooltipContent title="Address" questions={[{q: "What is this?", a: "Enables you to print your company address on invoices/bills and party statement."}]} />}
+      />
+      <InfoFieldRow 
+        label="Email" 
+        value={email} 
+        onChange={(val) => updateDetail("email", val)} 
+        placeholder="Email" 
+        checked={showEmail} 
+        onCheckedChange={(c) => updateDetail("show_email", c.toString())} 
+        tooltip={<TooltipContent title="Email" questions={[{q: "What is this?", a: "Print your company email on invoices/bills."}]} />}
+      />
+      <InfoFieldRow 
+        label="Phone Number" 
+        value={phone} 
+        onChange={(val) => updateDetail("phone", val)} 
+        checked={showPhone} 
+        onCheckedChange={(c) => updateDetail("show_phone", c.toString())} 
+        tooltip={<TooltipContent title="Phone Number" questions={[{q: "What is this?", a: "Enables you to print your company contact number on invoices/bills and party statement."}]} />}
+      />
+
 
       <Divider />
       <SectionTitle>Item table</SectionTitle>

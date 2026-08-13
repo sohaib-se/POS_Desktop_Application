@@ -3,7 +3,11 @@ import { useCompanyDetails } from "./useCompanyDetails";
 import { BORDER, TEXT_DARK, TEXT_MUTED } from "./constants";
 
 export function Theme2Preview({ color }: { color?: string }) {
-  const { companyName, phone, logo, showCompanyName, showPhone, showLogo } = useCompanyDetails();
+  const { companyName, phone, logo, showCompanyName, showPhone, showLogo , companyNameTextSize, invoiceTextSize } = useCompanyDetails();
+
+  const companyNameSize = companyNameTextSize === "Small" ? 14 : companyNameTextSize === "Large" ? 22 : 18;
+  const invoiceFontSize = invoiceTextSize === "Small" ? 8.5 : invoiceTextSize === "Large" ? 11.5 : 10;
+
   const themeBg = color || "#a855f7"; // Purple
   const th: React.CSSProperties = { padding: "4px 6px", textAlign: "left", fontWeight: 600, color: "#fff" };
   const td: React.CSSProperties = { padding: "4px 6px", color: TEXT_DARK, borderRight: `1px solid ${BORDER}`, borderBottom: `1px solid ${BORDER}` };
@@ -12,19 +16,19 @@ export function Theme2Preview({ color }: { color?: string }) {
     <div style={{ background: "#fff", padding: 20, fontFamily: "Inter, system-ui, sans-serif", border: "1px solid #000" }}>
       <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 10 }}>
         {showLogo && (
-<div style={{ width: 100, height: 100, background: "transparent",  display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, color: TEXT_MUTED , overflow: "hidden" }}>
+<div style={{ width: 100, height: 100, background: "transparent",  display: "flex", alignItems: "center", justifyContent: "center", fontSize: invoiceFontSize, color: TEXT_MUTED , overflow: "hidden" }}>
 {logo ? <img src={logo} alt="Company Logo" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : null}
 </div>
 )}
         <div style={{ textAlign: "right" }}>
-          <div style={{ fontSize: 18, fontWeight: 700, color: TEXT_DARK }}>{showCompanyName ? companyName : ""}</div>
-          {showPhone && (<div style={{ fontSize: 10, color: TEXT_MUTED }}>Ph. no.: {showPhone ? phone : ""}</div>)}
+          <div style={{ fontSize: companyNameSize, fontWeight: 700, color: TEXT_DARK }}>{showCompanyName ? companyName : ""}</div>
+          {showPhone && (<div style={{ fontSize: invoiceFontSize, color: TEXT_MUTED }}>Ph. no.: {showPhone ? phone : ""}</div>)}
         </div>
       </div>
       
-      <div style={{ background: themeBg, color: "#fff", textAlign: "center", fontWeight: 700, fontSize: 16, padding: "6px 0", marginBottom: 10 }}><EditableText textKey="title" defaultText="Sale" /></div>
+      <div style={{ background: themeBg, color: "#fff", textAlign: "center", fontWeight: 700, fontSize: companyNameSize, padding: "6px 0", marginBottom: 10 }}><EditableText textKey="title" defaultText="Sale" /></div>
       
-      <table style={{ width: "100%", fontSize: 10, borderCollapse: "collapse", border: `1px solid ${BORDER}`, marginBottom: 10 }}>
+      <table style={{ width: "100%", fontSize: invoiceFontSize, borderCollapse: "collapse", border: `1px solid ${BORDER}`, marginBottom: 10 }}>
         <tbody>
           <tr style={{ background: themeBg, color: "#fff", fontWeight: 600 }}>
             <td style={{ padding: "4px 6px", borderRight: `1px solid #fff`, width: "33%" }}><EditableText textKey="lbl_bill_to" defaultText="Bill To:" /></td>
@@ -50,7 +54,7 @@ export function Theme2Preview({ color }: { color?: string }) {
         </tbody>
       </table>
 
-      <table style={{ width: "100%", fontSize: 9.5, borderCollapse: "collapse", border: `1px solid ${BORDER}`, marginBottom: 10 }}>
+      <table style={{ width: "100%", fontSize: invoiceFontSize, borderCollapse: "collapse", border: `1px solid ${BORDER}`, marginBottom: 10 }}>
         <thead>
           <tr style={{ background: themeBg, borderBottom: `1px solid ${BORDER}` }}>
             {["#", <EditableText textKey="th_item_name" defaultText="Item name" />, <EditableText textKey="th_hsn" defaultText="HSC/SAC" />, <EditableText textKey="th_qty" defaultText="Quantity" />, <EditableText textKey="th_price" defaultText="Price/unit" />, <EditableText textKey="th_discount" defaultText="Discount" />, <EditableText textKey="th_tax" defaultText="GST" />, <EditableText textKey="th_amount" defaultText="Amount" />].map((h, i) => (
@@ -71,7 +75,7 @@ export function Theme2Preview({ color }: { color?: string }) {
         </tbody>
       </table>
 
-      <div style={{ display: "flex", fontSize: 9.5, border: `1px solid ${BORDER}`, marginBottom: 10 }}>
+      <div style={{ display: "flex", fontSize: invoiceFontSize, border: `1px solid ${BORDER}`, marginBottom: 10 }}>
         <table style={{ flex: 1, borderCollapse: "collapse", borderRight: `1px solid ${BORDER}` }}>
           <thead>
             <tr style={{ background: themeBg, color: "#fff" }}>
@@ -112,15 +116,15 @@ export function Theme2Preview({ color }: { color?: string }) {
       </div>
       
       <div style={{ background: themeBg, color: "#fff", fontWeight: 600, padding: "4px 6px" }}>Invoice Amount In Words</div>
-      <div style={{ border: `1px solid ${BORDER}`, borderTop: "none", color: TEXT_MUTED, padding: "4px 6px", marginBottom: 10, fontSize: 9.5 }}>Forty Two Rupees and Thirty Two Paisa only</div>
+      <div style={{ border: `1px solid ${BORDER}`, borderTop: "none", color: TEXT_MUTED, padding: "4px 6px", marginBottom: 10, fontSize: invoiceFontSize }}>Forty Two Rupees and Thirty Two Paisa only</div>
 
       <div style={{ background: themeBg, color: "#fff", fontWeight: 600, padding: "4px 6px" }}><EditableText textKey="lbl_desc_no_colon" defaultText="Description" /></div>
-      <div style={{ border: `1px solid ${BORDER}`, borderTop: "none", color: TEXT_MUTED, padding: "4px 6px", marginBottom: 10, fontSize: 9.5 }}><EditableText textKey="title" defaultText="Sale" /> Description</div>
+      <div style={{ border: `1px solid ${BORDER}`, borderTop: "none", color: TEXT_MUTED, padding: "4px 6px", marginBottom: 10, fontSize: invoiceFontSize }}><EditableText textKey="title" defaultText="Sale" /> Description</div>
       
       <div style={{ background: themeBg, color: "#fff", fontWeight: 600, padding: "4px 6px" }}>Terms and conditions</div>
-      <div style={{ border: `1px solid ${BORDER}`, borderTop: "none", color: TEXT_MUTED, padding: "4px 6px", marginBottom: 10, fontSize: 9.5 }}>Thanks for doing business with us!</div>
+      <div style={{ border: `1px solid ${BORDER}`, borderTop: "none", color: TEXT_MUTED, padding: "4px 6px", marginBottom: 10, fontSize: invoiceFontSize }}>Thanks for doing business with us!</div>
 
-      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 9.5 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", fontSize: invoiceFontSize }}>
         <div style={{ flex: 1, marginRight: 20 }}>
           <div style={{ background: themeBg, color: "#fff", fontWeight: 600, padding: "4px 6px" }}>Bank Details</div>
           <div style={{ border: `1px solid ${BORDER}`, borderTop: "none", padding: "8px", color: TEXT_MUTED }}>

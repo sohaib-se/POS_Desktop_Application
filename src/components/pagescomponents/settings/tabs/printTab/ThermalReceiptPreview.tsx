@@ -3,7 +3,11 @@ import { useCompanyDetails } from "./useCompanyDetails";
 import { TEXT_DARK, TEXT_MUTED } from "./constants";
 
 export function ThermalReceiptPreview() {
-  const { companyName, phone, address, updateDetail, showCompanyName, showPhone, showAddress } = useCompanyDetails();
+  const { companyName, phone, address, updateDetail, showCompanyName, showPhone, showAddress , companyNameTextSize, invoiceTextSize } = useCompanyDetails();
+
+  const companyNameSize = companyNameTextSize === "Small" ? 14 : companyNameTextSize === "Large" ? 22 : 18;
+  const invoiceFontSize = invoiceTextSize === "Small" ? 8.5 : invoiceTextSize === "Large" ? 11.5 : 10;
+
   const dash: React.CSSProperties = {
     borderTop: `1px dashed ${TEXT_MUTED}`,
     margin: "6px 0" };
@@ -13,7 +17,7 @@ export function ThermalReceiptPreview() {
         background: "#fff",
         padding: "16px 14px",
         fontFamily: "'Courier New', monospace",
-        fontSize: 9,
+        fontSize: invoiceFontSize,
         color: TEXT_DARK,
         maxWidth: 260,
         margin: "0 auto" }}

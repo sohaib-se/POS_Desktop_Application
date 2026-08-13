@@ -2,7 +2,11 @@ import { BLUE, BORDER, TEXT_DARK, TEXT_MUTED } from "./constants";
 import { useCompanyDetails } from "./useCompanyDetails";
 
 export function RegularInvoicePreview({ color: _color }: { color?: string }) {
-  const { companyName, phone, email, address, logo, showCompanyName, showPhone, showEmail, showAddress, showLogo } = useCompanyDetails();
+  const { companyName, phone, email, address, logo, showCompanyName, showPhone, showEmail, showAddress, showLogo , companyNameTextSize, invoiceTextSize } = useCompanyDetails();
+
+  const companyNameSize = companyNameTextSize === "Small" ? 14 : companyNameTextSize === "Large" ? 22 : 18;
+  const invoiceFontSize = invoiceTextSize === "Small" ? 8.5 : invoiceTextSize === "Large" ? 11.5 : 10;
+
   const th: React.CSSProperties = {
     padding: "3px 5px",
     textAlign: "left",
@@ -12,7 +16,7 @@ export function RegularInvoicePreview({ color: _color }: { color?: string }) {
 
   return (
     <div style={{ background: "#fff", borderRadius: 4, padding: 20, fontFamily: "Inter, system-ui, sans-serif" }}>
-      <div style={{ textAlign: "center", fontWeight: 700, fontSize: 15, marginBottom: 14 }}>
+      <div style={{ textAlign: "center", fontWeight: 700, fontSize: companyNameSize, marginBottom: 14 }}>
         Tax Invoice
       </div>
 
@@ -28,7 +32,7 @@ export function RegularInvoicePreview({ color: _color }: { color?: string }) {
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              fontSize: 8,
+              fontSize: invoiceFontSize,
               color: TEXT_MUTED,
               overflow: "hidden"
             }}
@@ -39,26 +43,26 @@ export function RegularInvoicePreview({ color: _color }: { color?: string }) {
           </div>
         )}
         <div>
-          {showCompanyName && <div style={{ fontSize: 15, fontWeight: 700, color: TEXT_DARK }}>{companyName}</div>}
+          {showCompanyName && <div style={{ fontSize: companyNameSize, fontWeight: 700, color: TEXT_DARK }}>{companyName}</div>}
           {showPhone && (
-            <div style={{ fontSize: 10, color: TEXT_MUTED }}>
+            <div style={{ fontSize: invoiceFontSize, color: TEXT_MUTED }}>
               Phone: <strong style={{ color: TEXT_DARK }}>{phone}</strong>
             </div>
           )}
           {showEmail && (
-            <div style={{ fontSize: 10, color: TEXT_MUTED }}>
+            <div style={{ fontSize: invoiceFontSize, color: TEXT_MUTED }}>
               Email: <strong style={{ color: TEXT_DARK }}>{email}</strong>
             </div>
           )}
           {showAddress && (
-            <div style={{ fontSize: 10, color: TEXT_MUTED }}>
+            <div style={{ fontSize: invoiceFontSize, color: TEXT_MUTED }}>
               Address: <strong style={{ color: TEXT_DARK }}>{address}</strong>
             </div>
           )}
         </div>
       </div>
 
-      <table style={{ width: "100%", fontSize: 10, borderCollapse: "collapse", marginBottom: 10 }}>
+      <table style={{ width: "100%", fontSize: invoiceFontSize, borderCollapse: "collapse", marginBottom: 10 }}>
         <tbody>
           <tr style={{ border: `1px solid ${BORDER}` }}>
             <td style={{ ...td, borderRight: `1px solid ${BORDER}`, width: "50%", verticalAlign: "top" }}>
@@ -78,12 +82,12 @@ export function RegularInvoicePreview({ color: _color }: { color?: string }) {
         </tbody>
       </table>
 
-      <div style={{ fontSize: 10, marginBottom: 8 }}>
+      <div style={{ fontSize: invoiceFontSize, marginBottom: 8 }}>
         <div style={{ fontWeight: 600, marginBottom: 2 }}>Ship To:</div>
         <div style={{ color: TEXT_MUTED }}>Mehta Textiles, Marathalli Road, Banglore, Karnataka, 560034</div>
       </div>
 
-      <table style={{ width: "100%", fontSize: 9.5, borderCollapse: "collapse", marginBottom: 10 }}>
+      <table style={{ width: "100%", fontSize: invoiceFontSize, borderCollapse: "collapse", marginBottom: 10 }}>
         <thead>
           <tr style={{ background: BLUE, color: "#fff" }}>
             {["#", "Item name", "HSC/SAC", "Quantity", "Price/unit", "Discount", "GST", "Amount"].map((h) => (
@@ -128,7 +132,7 @@ export function RegularInvoicePreview({ color: _color }: { color?: string }) {
       </table>
 
       <div style={{ display: "flex", gap: 10, marginBottom: 10 }}>
-        <table style={{ flex: 2, fontSize: 9, borderCollapse: "collapse", border: `1px solid ${BORDER}` }}>
+        <table style={{ flex: 2, fontSize: invoiceFontSize, borderCollapse: "collapse", border: `1px solid ${BORDER}` }}>
           <thead>
             <tr style={{ background: "#f3f4f6" }}>
               {["HSN/ SAC", "Taxable amount(Rs)", "CGST", "SGST", "Total Tax Amount(Rs)"].map((h) => (
@@ -162,7 +166,7 @@ export function RegularInvoicePreview({ color: _color }: { color?: string }) {
             </tr>
           </tbody>
         </table>
-        <div style={{ flex: 1, fontSize: 9.5, border: `1px solid ${BORDER}`, borderRadius: 4, padding: 6 }}>
+        <div style={{ flex: 1, fontSize: invoiceFontSize, border: `1px solid ${BORDER}`, borderRadius: 4, padding: 6 }}>
           <div style={{ marginBottom: 4 }}>
             <strong>Invoice Amount In Words:</strong>
             <div style={{ color: TEXT_MUTED }}>Forty Two Rupees and Thirty Two Paisa only</div>
@@ -173,7 +177,7 @@ export function RegularInvoicePreview({ color: _color }: { color?: string }) {
         </div>
       </div>
 
-      <table style={{ width: "100%", fontSize: 9.5, borderCollapse: "collapse", marginBottom: 10 }}>
+      <table style={{ width: "100%", fontSize: invoiceFontSize, borderCollapse: "collapse", marginBottom: 10 }}>
         <tbody>
           <tr>
             <td style={{ ...td, border: `1px solid ${BORDER}`, width: "50%", verticalAlign: "top" }}>
@@ -188,7 +192,7 @@ export function RegularInvoicePreview({ color: _color }: { color?: string }) {
         </tbody>
       </table>
 
-      <table style={{ width: "100%", fontSize: 9.5, borderCollapse: "collapse" }}>
+      <table style={{ width: "100%", fontSize: invoiceFontSize, borderCollapse: "collapse" }}>
         <tbody>
           <tr>
             <td style={{ ...td, border: `1px solid ${BORDER}`, width: "60%", verticalAlign: "top" }}>

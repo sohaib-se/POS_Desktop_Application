@@ -3,13 +3,18 @@ import { useCompanyDetails } from "./useCompanyDetails";
 import { TEXT_DARK, TEXT_MUTED } from "./constants";
 
 export function ThermalTheme5Preview() {
-  const { companyName, phone, showCompanyName, showPhone } = useCompanyDetails();
+  const { companyName, phone, showCompanyName, showPhone , companyNameTextSize, invoiceTextSize, thermalFontSizeOffset, thermalTextBold } = useCompanyDetails();
+
+  const companyNameSize = companyNameTextSize === "Small" ? 14 : companyNameTextSize === "Large" ? 22 : 18;
+  const baseInvoiceFontSize = invoiceTextSize === "Small" ? 8.5 : invoiceTextSize === "Large" ? 11.5 : 10;
+  const invoiceFontSize = baseInvoiceFontSize + thermalFontSizeOffset;
+
   const dash: React.CSSProperties = { borderTop: `1px dashed ${TEXT_MUTED}`, margin: "8px 0" };
   const rightCol = { width: 50, textAlign: "right" as const };
 
   return (
-    <div style={{ background: "#fff", border: "1px solid #000", minHeight: "480px", boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)", padding: "16px", fontFamily: "Inter, system-ui, sans-serif", fontSize: 9.5, color: TEXT_DARK, maxWidth: 320, margin: "0 auto", lineHeight: 1.4 }}>
-      <div style={{ textAlign: "center", fontWeight: 700, fontSize: 11 }}>{showCompanyName ? companyName : ""}</div>
+    <div style={{ background: "#fff", border: "1px solid #000", height: "480px", boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)", padding: "16px", fontFamily: "Inter, system-ui, sans-serif", fontSize: invoiceFontSize, color: TEXT_DARK, width: 320, margin: "0 auto", lineHeight: 1.4, fontWeight: thermalTextBold ? 600 : 400, overflowY: "auto", overflowX: "hidden", wordBreak: "break-word" }}>
+      <div style={{ textAlign: "center", fontWeight: 700, fontSize: invoiceFontSize }}>{showCompanyName ? companyName : ""}</div>
       {showPhone && (<div style={{ textAlign: "center" }}>Ph.No.: {showPhone ? phone : ""}</div>)}
       <div style={dash} />
       <div style={{ textAlign: "center", fontWeight: 600, marginBottom: 8 }}>Invoice</div>
@@ -52,7 +57,7 @@ export function ThermalTheme5Preview() {
       </div>
       <div style={{ display: "flex", paddingLeft: 15, justifyContent: "flex-end" }}><span style={{ color: TEXT_DARK }}>10,000.00</span></div>
       <div style={{ color: TEXT_MUTED, fontStyle: "italic", paddingLeft: 15 }}>Brittania Chococlate Cake description</div>
-      <div style={{ color: TEXT_MUTED, paddingLeft: 15, fontSize: 8.5 }}>Batch No.: N1234, Model No.: A12345, Exp. <EditableText textKey="lbl_date" defaultText="Date:" /> 08/2027, Mfg. <EditableText textKey="lbl_date" defaultText="Date:" /> 12/08/2026, Size: Med/32</div>
+      <div style={{ color: TEXT_MUTED, paddingLeft: 15, fontSize: invoiceFontSize }}>Batch No.: N1234, Model No.: A12345, Exp. <EditableText textKey="lbl_date" defaultText="Date:" /> 08/2027, Mfg. <EditableText textKey="lbl_date" defaultText="Date:" /> 12/08/2026, Size: Med/32</div>
       
       <div style={{ display: "flex", marginTop: 4 }}>
         <span style={{ width: 15 }}>2</span>

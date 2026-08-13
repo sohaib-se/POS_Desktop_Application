@@ -140,6 +140,7 @@ export function GeneralTab() {
   const [selectedCurrency, setSelectedCurrency] = useState(DEFAULT_CURRENCY);
   const [searchQuery, setSearchQuery] = useState("");
 
+  const [isShippingAddressEnabled, setIsShippingAddressEnabled] = useSettings('settings.isShippingAddressEnabled', true);
   const [isEstimationEnabled, setIsEstimationEnabled] = useSettings('settings.isEstimationEnabled', true);
   const [isPasscodeEnabled, setIsPasscodeEnabled] = useSettings('settings.isPasscodeEnabled', false);
   const [enableExpDate, setEnableExpDate] = useSettings('enableExpDate', true);
@@ -221,7 +222,12 @@ export function GeneralTab() {
 
         {/* General Card */}
         <Card title="General">
-          <SettingToggleRow label="Shipping Address" hint={true} />
+          <SettingToggleRow 
+            label="Shipping Address" 
+            hint={true} 
+            checked={isShippingAddressEnabled} 
+            onChange={setIsShippingAddressEnabled} 
+          />
           
           {[
             {

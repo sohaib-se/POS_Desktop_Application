@@ -93,6 +93,7 @@ export function TransactionTab() {
 
         {/* More Transaction Features Card */}
         <Card title="More Transaction Features">
+          <SettingToggleRow label="Barcode Scan" hint={true} />
           <SettingToggleRow label="Do not Show Invoice Preview" />
           <SettingToggleRow 
             label={

@@ -1,5 +1,6 @@
 import { X } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui";
+import { useSettings } from "@/hooks/useSettings";
 import type {
   AddItemFormState,
   CategoryRecord,
@@ -47,6 +48,9 @@ export function AddItemModal({
   onOpenAddCategory,
   onSaveItem,
 }: AddItemModalProps) {
+  const [enableExpDate] = useSettings('enableExpDate', true);
+  const [enableMfgDate] = useSettings('enableMfgDate', true);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -344,36 +348,42 @@ export function AddItemModal({
                   />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Manufacturing Date (Optional)
-                  </label>
-                  <input
-                    type="date"
-                    placeholder="YYYY-MM-DD"
-                    value={addItemForm.mfgDate}
-                    onChange={(event) =>
-                      onFormChange("mfgDate", event.target.value)
-                    }
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
-                  />
+              {(enableMfgDate || enableExpDate) && (
+                <div className="grid grid-cols-2 gap-4">
+                  {enableMfgDate && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Manufacturing Date (Optional)
+                      </label>
+                      <input
+                        type="date"
+                        placeholder="YYYY-MM-DD"
+                        value={addItemForm.mfgDate}
+                        onChange={(event) =>
+                          onFormChange("mfgDate", event.target.value)
+                        }
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                      />
+                    </div>
+                  )}
+                  {enableExpDate && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Expiry Date (Optional)
+                      </label>
+                      <input
+                        type="date"
+                        placeholder="YYYY-MM-DD"
+                        value={addItemForm.expDate}
+                        onChange={(event) =>
+                          onFormChange("expDate", event.target.value)
+                        }
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                      />
+                    </div>
+                  )}
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Expiry Date (Optional)
-                  </label>
-                  <input
-                    type="date"
-                    placeholder="YYYY-MM-DD"
-                    value={addItemForm.expDate}
-                    onChange={(event) =>
-                      onFormChange("expDate", event.target.value)
-                    }
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
-                  />
-                </div>
-              </div>
+              )}
             </div>
           )}
 

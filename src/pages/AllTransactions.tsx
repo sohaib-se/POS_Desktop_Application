@@ -1,5 +1,4 @@
-import { useState } from "react";
-import { transactions } from "@/data/mockData";
+import { useState, useEffect, useMemo } from "react";
 import { ChevronDown } from "lucide-react";
 
 export function AllTransactions() {
@@ -7,6 +6,13 @@ export function AllTransactions() {
   const [dateTo, setDateTo] = useState("");
   const [filterType, setFilterType] = useState("All Transaction");
   const [isFilterOpen, setIsFilterOpen] = useState(false);
+  
+  const [transactions, setTransactions] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Date filter applied via SEARCH button
+  const [appliedDateFrom, setAppliedDateFrom] = useState("");
+  const [appliedDateTo, setAppliedDateTo] = useState("");
 
   const filterOptions = [
     "All Transaction",
@@ -14,31 +20,179 @@ export function AllTransactions() {
     "Purchase",
     "Payment-In",
     "Payment-Out",
-    "Credit Note",
-    "Debit Note",
-    "Sale Order",
-    "Purchase Order",
     "Estimate",
-    "Proforma Invoice",
-    "Delivery Challan",
-    "Expense",
-    "Party to Party [Received]",
-    "Party to Party [Paid]"
+    "Expense"
   ];
 
-  const filteredTransactions = transactions.filter(t => {
-    if (filterType !== "All Transaction") {
-      if (t.type !== filterType) {
-        if (filterType === "Sale" && t.type === "PoS Sale") {
-          // Include PoS Sale in Sale
-        } else {
+  const parseDate = (dStr: string) => {
+    if (!dStr) return new Date(0);
+    const parts = dStr.split('/');
+    if (parts.length === 3) {
+      return new Date(`${parts[2]}-${parts[1]}-${parts[0]}`);
+    }
+    return new Date(dStr);
+  };
+
+  useEffect(() => {
+    let cancelled = false;
+    const fetchAllData = async () => {
+      setIsLoading(true);
+      try {
+        const [
+          salesRes,
+          purchasesRes,
+          payInRes,
+          payOutRes,
+          estimatesRes,
+          expensesRes,
+        ] = await Promise.all([
+          fetch('/api/sale_invoices').catch(() => ({ ok: false, json: () => [] })),
+          fetch('/api/purchase_bills').catch(() => ({ ok: false, json: () => [] })),
+          fetch('/api/payment_in_records').catch(() => ({ ok: false, json: () => [] })),
+          fetch('/api/payment_out_records').catch(() => ({ ok: false, json: () => [] })),
+          fetch('/api/estimates').catch(() => ({ ok: false, json: () => [] })),
+          fetch('/api/expense_records').catch(() => ({ ok: false, json: () => [] })),
+        ]);
+
+        if (cancelled) return;
+
+        const sales = salesRes.ok ? await salesRes.json() : [];
+        const purchases = purchasesRes.ok ? await purchasesRes.json() : [];
+        const payIn = payInRes.ok ? await payInRes.json() : [];
+        const payOut = payOutRes.ok ? await payOutRes.json() : [];
+        const estimates = estimatesRes.ok ? await estimatesRes.json() : [];
+        const expenses = expensesRes.ok ? await expensesRes.json() : [];
+
+        const allData: any[] = [];
+
+        sales.forEach((s: any) => {
+          allData.push({
+            id: s.id,
+            type: s.transaction_type || 'Sale',
+            invoiceNo: s.invoice_no,
+            partyName: s.party_name,
+            date: s.date,
+            amount: Number(s.amount || 0),
+            balance: Number(s.balance || 0),
+            dateObj: parseDate(s.date)
+          });
+        });
+
+        purchases.forEach((p: any) => {
+          allData.push({
+            id: p.id,
+            type: 'Purchase',
+            invoiceNo: p.invoice_no,
+            partyName: p.party_name,
+            date: p.date,
+            amount: Number(p.amount || 0),
+            balance: Number(p.balance || 0),
+            dateObj: parseDate(p.date)
+          });
+        });
+
+        payIn.forEach((p: any) => {
+          allData.push({
+            id: p.id,
+            type: 'Payment-In',
+            invoiceNo: p.receipt_no || p.receiptNo,
+            partyName: p.party_name || p.partyName,
+            date: p.date,
+            amount: Number(p.amount || 0),
+            balance: 0,
+            dateObj: parseDate(p.date)
+          });
+        });
+
+        payOut.forEach((p: any) => {
+          allData.push({
+            id: p.id,
+            type: 'Payment-Out',
+            invoiceNo: p.payment_no || p.paymentNo,
+            partyName: p.party_name || p.partyName,
+            date: p.date,
+            amount: Number(p.amount || 0),
+            balance: 0,
+            dateObj: parseDate(p.date)
+          });
+        });
+
+        estimates.forEach((e: any) => {
+          allData.push({
+            id: e.id,
+            type: 'Estimate',
+            invoiceNo: e.reference_no,
+            partyName: e.party_name,
+            date: e.date,
+            amount: Number(e.amount || 0),
+            balance: Number(e.balance || 0),
+            dateObj: parseDate(e.date)
+          });
+        });
+
+        expenses.forEach((e: any) => {
+          allData.push({
+            id: e.id,
+            type: 'Expense',
+            invoiceNo: e.expense_no,
+            partyName: e.expense_category,
+            date: e.date,
+            amount: Number(e.amount || 0),
+            balance: 0,
+            dateObj: parseDate(e.date)
+          });
+        });
+
+        allData.sort((a, b) => b.dateObj.getTime() - a.dateObj.getTime());
+        setTransactions(allData);
+      } catch (error) {
+        console.error("Failed to load transactions", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchAllData();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const handleSearch = () => {
+    setAppliedDateFrom(dateFrom);
+    setAppliedDateTo(dateTo);
+  };
+
+  const filteredTransactions = useMemo(() => {
+    return transactions.filter((t) => {
+      if (filterType !== "All Transaction") {
+        if (t.type !== filterType) {
+          if (filterType === "Sale" && t.type === "PoS Sale") {
+            // Include PoS Sale in Sale
+          } else {
+            return false;
+          }
+        }
+      }
+      
+      if (appliedDateFrom) {
+        const fromDate = new Date(appliedDateFrom);
+        fromDate.setHours(0, 0, 0, 0);
+        if (t.dateObj < fromDate) {
           return false;
         }
       }
-    }
-    
-    return true;
-  });
+      if (appliedDateTo) {
+        const toDate = new Date(appliedDateTo);
+        toDate.setHours(23, 59, 59, 999);
+        if (t.dateObj > toDate) {
+          return false;
+        }
+      }
+
+      return true;
+    });
+  }, [transactions, filterType, appliedDateFrom, appliedDateTo]);
 
   const getTypeColor = (type: string) => {
     switch (type) {
@@ -81,7 +235,10 @@ export function AllTransactions() {
               onChange={(e) => setDateTo(e.target.value)}
             />
           </div>
-          <button className="bg-[#008AC9] hover:bg-[#007AB3] text-white px-6 py-1.5 rounded font-medium text-sm transition-colors shadow-sm">
+          <button 
+            onClick={handleSearch}
+            className="bg-[#008AC9] hover:bg-[#007AB3] text-white px-6 py-1.5 rounded font-medium text-sm transition-colors shadow-sm"
+          >
             SEARCH
           </button>
         </div>
@@ -142,7 +299,13 @@ export function AllTransactions() {
                 </tr>
               </thead>
               <tbody>
-                {filteredTransactions.map((tx, i) => {
+                {isLoading ? (
+                  <tr>
+                    <td colSpan={7} className="px-4 py-8 text-center text-gray-500 text-sm">
+                      Loading transactions...
+                    </td>
+                  </tr>
+                ) : filteredTransactions.map((tx, i) => {
                   const receivedPaid = tx.amount - tx.balance;
                   
                   return (
@@ -157,18 +320,18 @@ export function AllTransactions() {
                       <td className="px-4 py-3 text-sm text-gray-700 border-l border-gray-100">{tx.partyName}</td>
                       <td className="px-4 py-3 text-sm text-gray-700 border-l border-gray-100">{tx.date}</td>
                       <td className="px-4 py-3 text-sm text-gray-700 border-l border-gray-100 text-right">
-                        Rs {tx.amount.toFixed(2)}
+                        Rs {(tx.amount || 0).toFixed(2)}
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-700 border-l border-gray-100 text-right">
-                        Rs {receivedPaid.toFixed(2)}
+                        Rs {(receivedPaid || 0).toFixed(2)}
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-700 border-l border-gray-100 text-right">
-                        Rs {tx.balance.toFixed(2)}
+                        Rs {(tx.balance || 0).toFixed(2)}
                       </td>
                     </tr>
                   );
                 })}
-                {filteredTransactions.length === 0 && (
+                {!isLoading && filteredTransactions.length === 0 && (
                   <tr>
                     <td colSpan={7} className="px-4 py-8 text-center text-gray-500 text-sm">
                       No transactions found for the selected filter.

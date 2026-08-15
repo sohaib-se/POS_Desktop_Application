@@ -154,7 +154,7 @@ function App() {
       case "home":
         return <Dashboard onViewChange={handleViewChange} onOpenReport={handleOpenReport} />;
       case "parties":
-        return <Parties onOpenSettings={handleOpenSettings} />;
+        return <Parties onOpenSettings={handleOpenSettings} onEditSaleInvoice={handleEditSaleInvoice} />;
       case "items":
         return <Items onViewChange={handleViewChange} />;
       case "griditems":

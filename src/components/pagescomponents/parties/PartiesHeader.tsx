@@ -30,15 +30,6 @@ export function PartiesHeader({ isLoading, onAddParty, onOpenSettings, isReportV
             Add Party
           </button>
         )}
-        {!isReportView && (
-          <button
-            className="p-2 hover:bg-gray-100 rounded-lg disabled:opacity-50"
-            disabled={isLoading}
-            onClick={() => onOpenSettings?.("party")}
-          >
-            <Settings className="w-5 h-5 text-gray-500" />
-          </button>
-        )}
       </div>
     </div>
   );

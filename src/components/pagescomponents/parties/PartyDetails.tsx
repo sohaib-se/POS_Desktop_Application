@@ -1,5 +1,13 @@
-import { Edit2, Mail, Search, Printer, MoreVertical } from "lucide-react";
-import type { Party, Transaction } from "@/types";
+import { useState } from "react";
+import { Edit2, Mail, Search, Printer, MoreVertical, Pencil as PencilIcon, Trash2 as TrashIcon } from "lucide-react";
+import type { Party, Transaction, SaleInvoiceEditData, PurchaseBillEditData } from "@/types";
+import { AddPurchase } from "@/pages/AddPurchase";
+import { SaleInvoiceDialog } from "@/components/pagescomponents/saleinvoices/SaleInvoiceDialog";
+import { PurchaseBillDialog } from "@/components/pagescomponents/purchasebills/PurchaseBillDialog";
+import { ViewPaymentInModal } from "@/components/pagescomponents/paymentin/ViewPaymentInModal";
+import { ViewPaymentOutDialog } from "@/components/pagescomponents/payementout/ViewPaymentOutDialog";
+import type { SaleInvoiceViewRow } from "@/components/pagescomponents/saleinvoices/types";
+import type { PurchaseBillViewRow } from "@/components/pagescomponents/purchasebills/types";
 
 export type PartyTransactionRow = {
   id: string;
@@ -12,6 +20,8 @@ export type PartyTransactionRow = {
   paymentType?: string;
   status?: Transaction["status"];
   partyId?: number;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  rawRow?: any;
 };
 
 interface PartyDetailsProps {
@@ -26,6 +36,8 @@ interface PartyDetailsProps {
   handleExportExcel: () => void;
   openEditPartyDialog: (party: Party) => void;
   isReportView?: boolean;
+  loadPartiesAndTransactions?: () => Promise<void>;
+  onEditSaleInvoice?: (invoice: SaleInvoiceEditData) => void;
 }
 
 export function PartyDetails({
@@ -40,7 +52,51 @@ export function PartyDetails({
   handleExportExcel,
   openEditPartyDialog,
   isReportView,
+  loadPartiesAndTransactions,
+  onEditSaleInvoice,
 }: PartyDetailsProps) {
+  const [openRowMenuId, setOpenRowMenuId] = useState<string | null>(null);
+  const [openRowMenuPosition, setOpenRowMenuPosition] = useState<{ left: number; top: number } | null>(null);
+
+  const [editingPurchaseInvoice, setEditingPurchaseInvoice] = useState<PurchaseBillEditData | null>(null);
+  const [viewingSaleInvoice, setViewingSaleInvoice] = useState<SaleInvoiceViewRow | null>(null);
+  const [viewingPurchaseBill, setViewingPurchaseBill] = useState<PurchaseBillViewRow | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [viewingPaymentIn, setViewingPaymentIn] = useState<any | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [viewingPaymentOut, setViewingPaymentOut] = useState<any | null>(null);
+
+  const handleDeleteTransaction = async (transaction: PartyTransactionRow) => {
+    const confirmed = window.confirm(`Delete ${transaction.type} transaction ${transaction.invoiceNo || transaction.id}?`);
+    if (!confirmed) return;
+
+    try {
+      let endpoint = '';
+      if (transaction.type === 'Sale') endpoint = `/api/sale_invoices/${transaction.id}`;
+      else if (transaction.type === 'Purchase') endpoint = `/api/purchase_bills/${transaction.id}`;
+      else if (transaction.type === 'Payment-In') endpoint = `/api/payment_in_records/${transaction.id}`;
+      else if (transaction.type === 'Payment-Out') endpoint = `/api/payment_out_records/${transaction.id}`;
+      else {
+        alert('Cannot delete this type of transaction directly.');
+        return;
+      }
+
+      const response = await fetch(endpoint, { method: "DELETE" });
+      if (!response.ok && response.status !== 204) {
+        throw new Error("Failed to delete transaction");
+      }
+      if (loadPartiesAndTransactions) {
+        await loadPartiesAndTransactions();
+      }
+    } catch (error) {
+      console.error(error);
+      alert('Failed to delete transaction.');
+    } finally {
+      setOpenRowMenuId(null);
+      setOpenRowMenuPosition(null);
+    }
+  };
+
   const selectedPartyBalanceLabel =
     selectedParty && selectedParty.balance > 0
       ? "Amount to Receive"
@@ -245,8 +301,30 @@ export function PartyDetails({
                         <td className="px-4 py-3 text-right text-gray-700">
                           Rs {t.balance.toFixed(2)}
                         </td>
-                        <td className="px-2 py-3 text-center">
-                          {!isReportView && <MoreVertical className="w-4 h-4 text-gray-400 mx-auto cursor-pointer" />}
+                        <td className="px-2 py-3 text-center relative">
+                          {!isReportView && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const rect = e.currentTarget.getBoundingClientRect();
+                                const menuWidth = 120;
+                                const menuHeight = 80;
+                                const nextLeft = Math.max(8, Math.min(rect.right - menuWidth, window.innerWidth - menuWidth - 8));
+                                const nextTop = rect.bottom + menuHeight > window.innerHeight
+                                  ? Math.max(8, rect.top - menuHeight - 8)
+                                  : rect.bottom + 8;
+                                setOpenRowMenuPosition(
+                                  openRowMenuId === t.id && openRowMenuPosition
+                                    ? null
+                                    : { left: nextLeft, top: nextTop }
+                                );
+                                setOpenRowMenuId((prev) => (prev === t.id ? null : t.id));
+                              }}
+                              className="p-1 hover:bg-gray-100 rounded"
+                            >
+                              <MoreVertical className="w-4 h-4 text-gray-400 mx-auto cursor-pointer" />
+                            </button>
+                          )}
                         </td>
                       </tr>
                     ))
@@ -265,6 +343,150 @@ export function PartyDetails({
       ) : (
         <div className="flex-1 flex items-center justify-center text-gray-500">
           Select a party to view details
+        </div>
+      )}
+      
+      {openRowMenuId && openRowMenuPosition && (
+        <>
+          <div
+            className="fixed inset-0 z-40"
+            onClick={() => {
+              setOpenRowMenuId(null);
+              setOpenRowMenuPosition(null);
+            }}
+          />
+          <div
+            className="fixed z-50 w-36 overflow-hidden rounded-lg border border-gray-200 bg-white shadow-lg"
+            style={{ left: openRowMenuPosition.left, top: openRowMenuPosition.top }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-gray-50"
+              onClick={() => {
+                const invoice = filteredPartyTransactions.find(t => t.id === openRowMenuId);
+                if (invoice?.rawRow) {
+                  const raw = invoice.rawRow;
+                  if (invoice.type === 'Sale') {
+                    setViewingSaleInvoice({
+                      id: raw.id, invoiceNo: raw.invoice_no, date: raw.date, partyName: raw.party_name,
+                      partyId: raw.party_id, partyPhone: raw.party_phone, transaction: raw.transaction_type,
+                      paymentType: raw.payment_type || raw.payment_mode || "", paymentMode: raw.payment_mode,
+                      amount: Number(raw.amount || 0), balance: Number(raw.balance || 0), monthKey: "",
+                      subtotal: Number(raw.subtotal || 0), discountPercent: Number(raw.discount_percent || 0),
+                      discountAmount: Number(raw.discount_amount || 0), taxLabel: raw.tax_label,
+                      taxRate: Number(raw.tax_rate || 0), taxAmount: Number(raw.tax_amount || 0),
+                      roundOff: Boolean(raw.round_off), roundOffAmount: Number(raw.round_off_amount || 0),
+                      description: raw.description, lineItemsJson: raw.line_items_json
+                    });
+                  } else if (invoice.type === 'Purchase') {
+                    setViewingPurchaseBill({
+                      id: raw.id, invoiceNo: raw.invoice_no, date: raw.date, partyName: raw.party_name,
+                      partyId: raw.party_id, partyPhone: raw.party_phone, transaction: raw.transaction_type,
+                      paymentType: raw.payment_type || raw.payment_mode || "", paymentMode: raw.payment_mode,
+                      amount: Number(raw.amount || 0), balance: Number(raw.balance || 0), monthKey: "",
+                      subtotal: Number(raw.subtotal || 0), discountPercent: Number(raw.discount_percent || 0),
+                      discountAmount: Number(raw.discount_amount || 0), taxLabel: raw.tax_label,
+                      taxRate: Number(raw.tax_rate || 0), taxAmount: Number(raw.tax_amount || 0),
+                      roundOff: Boolean(raw.round_off), roundOffAmount: Number(raw.round_off_amount || 0),
+                      description: raw.description, lineItemsJson: raw.line_items_json
+                    });
+                  } else if (invoice.type === 'Payment-In') {
+                    setViewingPaymentIn({
+                      id: raw.id, type: raw.transaction_type, receiptNo: raw.receipt_no, date: raw.date,
+                      partyName: raw.party_name, paymentMode: raw.payment_mode, amount: Number(raw.amount || 0),
+                      description: raw.description, monthKey: "", status: raw.status, partyId: raw.party_id
+                    });
+                  } else if (invoice.type === 'Payment-Out') {
+                    setViewingPaymentOut({
+                      id: raw.id, type: raw.transaction_type, receiptNo: raw.receipt_no, date: raw.date,
+                      partyName: raw.party_name, paymentMode: raw.payment_mode, amount: Number(raw.amount || 0),
+                      description: raw.description, monthKey: "", status: raw.status, partyId: raw.party_id
+                    });
+                  }
+                }
+                setOpenRowMenuId(null);
+                setOpenRowMenuPosition(null);
+              }}
+            >
+              <Search className="w-4 h-4 text-gray-500" />
+              View
+            </button>
+            <button
+              className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-gray-50"
+              onClick={() => {
+                const invoice = filteredPartyTransactions.find(t => t.id === openRowMenuId);
+                if (invoice?.rawRow) {
+                  const raw = invoice.rawRow;
+                  if (invoice.type === 'Sale' && onEditSaleInvoice) {
+                    onEditSaleInvoice({
+                      id: raw.id, invoiceNo: raw.invoice_no, date: raw.date, partyName: raw.party_name,
+                      partyId: raw.party_id, partyPhone: raw.party_phone,
+                      paymentType: raw.payment_type || raw.payment_mode || "", paymentMode: raw.payment_mode,
+                      amount: Number(raw.amount || 0), balance: Number(raw.balance || 0),
+                      subtotal: Number(raw.subtotal || 0), discountPercent: Number(raw.discount_percent || 0),
+                      discountAmount: Number(raw.discount_amount || 0), taxLabel: raw.tax_label,
+                      taxRate: Number(raw.tax_rate || 0), taxAmount: Number(raw.tax_amount || 0),
+                      roundOff: Boolean(raw.round_off), roundOffAmount: Number(raw.round_off_amount || 0),
+                      description: raw.description, lineItemsJson: raw.line_items_json
+                    });
+                  } else if (invoice.type === 'Purchase') {
+                    setEditingPurchaseInvoice({
+                      id: raw.id, invoiceNo: raw.invoice_no, date: raw.date, partyName: raw.party_name,
+                      partyId: raw.party_id, partyPhone: raw.party_phone,
+                      paymentType: raw.payment_type || raw.payment_mode || "", paymentMode: raw.payment_mode,
+                      amount: Number(raw.amount || 0), balance: Number(raw.balance || 0),
+                      subtotal: Number(raw.subtotal || 0), discountPercent: Number(raw.discount_percent || 0),
+                      discountAmount: Number(raw.discount_amount || 0), taxLabel: raw.tax_label,
+                      taxRate: Number(raw.tax_rate || 0), taxAmount: Number(raw.tax_amount || 0),
+                      roundOff: Boolean(raw.round_off), roundOffAmount: Number(raw.round_off_amount || 0),
+                      description: raw.description, lineItemsJson: raw.line_items_json
+                    });
+                  } else {
+                    alert(`Edit for ${invoice.type} is not directly supported from the party view yet.`);
+                  }
+                }
+                setOpenRowMenuId(null);
+                setOpenRowMenuPosition(null);
+              }}
+            >
+              <PencilIcon className="w-4 h-4 text-gray-500" />
+              Edit
+            </button>
+            <button
+              className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50"
+              onClick={() => {
+                const invoice = filteredPartyTransactions.find(t => t.id === openRowMenuId);
+                if (invoice) {
+                  handleDeleteTransaction(invoice);
+                } else {
+                  setOpenRowMenuId(null);
+                  setOpenRowMenuPosition(null);
+                }
+              }}
+            >
+              <TrashIcon className="w-4 h-4" />
+              Delete
+            </button>
+          </div>
+        </>
+      )}
+
+      {/* Render Dialogs */}
+      <SaleInvoiceDialog viewingInvoice={viewingSaleInvoice} setViewingInvoice={setViewingSaleInvoice} />
+      <PurchaseBillDialog viewingInvoice={viewingPurchaseBill} setViewingInvoice={setViewingPurchaseBill} />
+      <ViewPaymentInModal viewingRecord={viewingPaymentIn} setViewingRecord={setViewingPaymentIn} />
+      <ViewPaymentOutDialog viewingRecord={viewingPaymentOut} setViewingRecord={setViewingPaymentOut} />
+
+      {editingPurchaseInvoice && (
+        <div className="fixed inset-0 z-[100]">
+          <AddPurchase
+            initialInvoice={editingPurchaseInvoice}
+            onClose={() => setEditingPurchaseInvoice(null)}
+            onSave={() => {
+              setEditingPurchaseInvoice(null);
+              if (loadPartiesAndTransactions) loadPartiesAndTransactions();
+            }}
+          />
         </div>
       )}
     </div>

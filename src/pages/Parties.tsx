@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
-import type { Party, Transaction } from "@/types";
+import type { Party, Transaction, SaleInvoiceEditData } from "@/types";
 import { PartiesHeader } from "@/components/pagescomponents/parties/PartiesHeader";
 import { PartiesEmptyState } from "@/components/pagescomponents/parties/PartiesEmptyState";
 import { PartyList } from "@/components/pagescomponents/parties/PartyList";
@@ -69,6 +69,7 @@ function normalizePartyTransaction(row: TransactionApiRow): PartyTransactionRow 
           ? "Paid"
           : "Unpaid",
     partyId: Number.isFinite(numericPartyId) ? numericPartyId : undefined,
+    rawRow: row,
   };
 }
 
@@ -76,9 +77,10 @@ interface PartiesProps {
   onOpenSettings?: (tab?: string) => void;
   isReportView?: boolean;
   onBack?: () => void;
+  onEditSaleInvoice?: (invoice: SaleInvoiceEditData) => void;
 }
 
-export function Parties({ onOpenSettings, isReportView, onBack }: PartiesProps = {}) {
+export function Parties({ onOpenSettings, isReportView, onBack, onEditSaleInvoice }: PartiesProps = {}) {
   const [parties, setParties] = useState<Party[]>([]);
   const [selectedParty, setSelectedParty] = useState<Party | null>(null);
   const [showAddParty, setShowAddParty] = useState(false);
@@ -294,11 +296,13 @@ export function Parties({ onOpenSettings, isReportView, onBack }: PartiesProps =
           return false;
         }
 
-        if (transaction.partyId) {
-          return transaction.partyId === selectedParty.id;
+        if (transaction.partyId !== undefined && selectedParty.id !== undefined) {
+          if (Number(transaction.partyId) === Number(selectedParty.id)) {
+            return true;
+          }
         }
 
-        return transaction.partyName.toLowerCase() === selectedParty.name.toLowerCase();
+        return String(transaction.partyName).trim().toLowerCase() === String(selectedParty.name).trim().toLowerCase();
       },
     );
 
@@ -338,6 +342,16 @@ export function Parties({ onOpenSettings, isReportView, onBack }: PartiesProps =
       (t.amount.toString().includes(term)) ||
       (t.balance.toString().includes(term))
     );
+  }).sort((a, b) => {
+    const parseDate = (d: string) => {
+      if (!d) return 0;
+      const parts = d.split('/');
+      if (parts.length === 3) {
+        return new Date(`${parts[2]}-${parts[1]}-${parts[0]}`).getTime();
+      }
+      return new Date(d).getTime();
+    };
+    return parseDate(b.date) - parseDate(a.date);
   });
 
   const handlePrintTransactions = () => {
@@ -633,6 +647,8 @@ export function Parties({ onOpenSettings, isReportView, onBack }: PartiesProps =
             handleExportExcel={handleExportExcel}
             openEditPartyDialog={openEditPartyDialog}
             isReportView={isReportView}
+            loadPartiesAndTransactions={loadPartiesAndTransactions}
+            onEditSaleInvoice={onEditSaleInvoice}
           />
         </div>
       )}

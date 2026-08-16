@@ -1,14 +1,13 @@
-import { Plus, Settings, ArrowLeft } from "lucide-react";
+import { Plus, ArrowLeft } from "lucide-react";
 
 interface PartiesHeaderProps {
   isLoading: boolean;
   onAddParty: () => void;
-  onOpenSettings?: (tab?: string) => void;
   isReportView?: boolean;
   onBack?: () => void;
 }
 
-export function PartiesHeader({ isLoading, onAddParty, onOpenSettings, isReportView, onBack }: PartiesHeaderProps) {
+export function PartiesHeader({ isLoading, onAddParty, isReportView, onBack }: PartiesHeaderProps) {
   return (
     <div className="p-4 bg-white rounded-none flex items-center justify-between shrink-0 w-full">
       <div className="flex items-center gap-2">

@@ -1,8 +1,11 @@
+import type { BillPreviewSaleData } from "../../../previewbill/BillPreviewData";
+import { DUMMY_REGULAR_SALE } from "./DummySaleData";
 import { EditableText } from "./SharedComponents";
 import { useCompanyDetails } from "./useCompanyDetails";
 import { BORDER, TEXT_DARK, TEXT_MUTED } from "./constants";
 
-export function TaxTheme3Preview({ color }: { color?: string }) {
+export function TaxTheme3Preview({ color, sale }: { color?: string, sale?: BillPreviewSaleData }) {
+  const data = sale || DUMMY_REGULAR_SALE;
   const { companyName, phone, logo, showCompanyName, showPhone, showLogo , companyNameTextSize, invoiceTextSize } = useCompanyDetails();
 
   const companyNameSize = companyNameTextSize === "Small" ? 14 : companyNameTextSize === "Large" ? 22 : 18;
@@ -42,71 +45,41 @@ export function TaxTheme3Preview({ color }: { color?: string }) {
       </div>
       
       <div style={{ textAlign: "center", fontWeight: 600, fontSize: companyNameSize, marginBottom: 10 }}>
-        <EditableText textKey="title" defaultText="Sale" />
+        <EditableText textKey="title" defaultText="Sales" />
       </div>
 
+        <>
       <table style={{ width: "100%", fontSize: invoiceFontSize, borderCollapse: "collapse", border: `1px solid ${BORDER}`, marginBottom: 0 }}>
-        <tbody>
-          <tr>
-            <td style={{ padding: "4px 6px", borderRight: `1px solid ${BORDER}`, borderBottom: `1px solid ${BORDER}`, width: "33%", verticalAlign: "top" }}>
-              <div style={{ fontWeight: 600, marginBottom: 3 }}>Bill To</div>
-              <div style={{ color: TEXT_DARK, fontWeight: 600 }}>Classic enterprises</div>
-              <div style={{ color: TEXT_MUTED }}>Plot No. 1, Shop No. 8, Koramangala, Banglore, 560034</div>
-              <div style={{ color: TEXT_MUTED }}>Contact No.: 8888888888</div>
-            </td>
-            <td style={{ padding: "4px 6px", borderRight: `1px solid ${BORDER}`, borderBottom: `1px solid ${BORDER}`, width: "33%", verticalAlign: "top" }}>
-              <div style={{ fontWeight: 600, marginBottom: 3 }}>Shipping To</div>
-              <div style={{ color: TEXT_MUTED }}>Mehta Textiles, Marathalli Road, Banglore, Karnataka, 560034</div>
-            </td>
-            <td style={{ padding: "4px 6px", borderBottom: `1px solid ${BORDER}`, verticalAlign: "top" }}>
-              <div style={{ display: "flex", justifyContent: "space-between" }}><span>Invoice No.</span><span>Inv. 101</span></div>
-              <div style={{ display: "flex", justifyContent: "space-between" }}><span>Date</span><span>02-07-2019</span></div>
-              <div style={{ display: "flex", justifyContent: "space-between" }}><span>Time</span><span>12:30 PM</span></div>
-              <div style={{ display: "flex", justifyContent: "space-between" }}><span>Due Date</span><span>17-07-2019</span></div>
-              <div style={{ display: "flex", justifyContent: "space-between" }}><span>Transport Name</span><span>Transport-Ltd.</span></div>
-              <div style={{ display: "flex", justifyContent: "space-between" }}><span>Vehicle Number</span><span>DL 5D AA 1234</span></div>
-              <div style={{ display: "flex", justifyContent: "space-between" }}><span>Delivery Date</span><span>13/04/2019</span></div>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-
-      <table style={{ width: "100%", fontSize: invoiceFontSize, borderCollapse: "collapse", border: `1px solid ${BORDER}`, borderTop: "none" }}>
         <thead>
-          <tr style={{ background: greyBg, borderBottom: `1px solid ${BORDER}` }}>
-            {["#", <EditableText textKey="th_item_name" defaultText="Item name" />, <EditableText textKey="th_hsn" defaultText="HSC/SAC" />, <EditableText textKey="th_qty" defaultText="Quantity" />, <EditableText textKey="th_price" defaultText="Price/unit" />, <EditableText textKey="th_discount" defaultText="Discount" />, <EditableText textKey="th_tax" defaultText="GST" />, <EditableText textKey="th_amount" defaultText="Amount" />].map((h, i) => (
+          <tr style={{ background: greyBg, color: TEXT_DARK }}>
+            {["#", <EditableText textKey="th_item_name" defaultText="Item name" />, <EditableText textKey="th_hsn" defaultText="HSN/SAC" />, <EditableText textKey="th_qty" defaultText="Quantity" />, <EditableText textKey="th_price" defaultText="Price/unit" />].map((h, i) => (
               <th key={i} style={th}>{h}</th>
             ))}
+            {data.discountAmount > 0 && <th style={th}><EditableText textKey="th_discount" defaultText="Discount" /></th>}
+            {data.taxAmount > 0 && <th style={th}><EditableText textKey="th_tax" defaultText="GST" /></th>}
+            <th style={th}><EditableText textKey="th_amount" defaultText="Amount" /></th>
           </tr>
         </thead>
         <tbody>
-          <tr>
-            <td style={td}>1</td>
-            <td style={td}>ITEM 1</td>
-            <td style={td}>1234</td>
-            <td style={td}>1+1</td>
-            <td style={td}>Rs 10.00</td>
-            <td style={td}>Rs 0.10 (1%)</td>
-            <td style={td}>Rs 0.50 (5%)</td>
-            <td style={{ ...td, borderRight: "none" }}>Rs 10.40</td>
-          </tr>
-          <tr>
-            <td style={td}>2</td>
-            <td style={td}>ITEM 2</td>
-            <td style={td}>6325</td>
-            <td style={td}>1</td>
-            <td style={td}>Rs 30.00</td>
-            <td style={td}>Rs 0.00 (0%)</td>
-            <td style={td}>Rs 5.40 (18%)</td>
-            <td style={{ ...td, borderRight: "none" }}>Rs 35.40</td>
-          </tr>
+          {data.lineItems.map((item, idx) => (
+            <tr key={item.id ?? idx}>
+              <td style={td}>{idx + 1}</td>
+              <td style={td}>{item.name}</td>
+              <td style={td}></td>
+              <td style={td}>{item.quantity} {item.unit !== "NONE" ? item.unit : ""}</td>
+              <td style={td}>Rs {item.price.toFixed(2)}</td>
+              {data.discountAmount > 0 && <td style={td}>Rs {((item.price * item.quantity) * (data.discountPercent / 100)).toFixed(2)}</td>}
+              {data.taxAmount > 0 && <td style={td}>Rs {((item.price * item.quantity) * data.taxRate).toFixed(2)}</td>}
+              <td style={{ ...td, borderRight: "none" }}>Rs {item.amount.toFixed(2)}</td>
+            </tr>
+          ))}
           <tr style={{ fontWeight: 600 }}>
             <td style={td} colSpan={3}><EditableText textKey="lbl_total" defaultText="Total" /></td>
-            <td style={td}>2 + 1</td>
+            <td style={td}>{data.lineItems.reduce((sum, i) => sum + i.quantity, 0)}</td>
             <td style={td} />
-            <td style={td}>Rs 0.10</td>
-            <td style={td}>Rs 5.90</td>
-            <td style={{ ...td, borderRight: "none" }}>Rs 45.80</td>
+            {data.discountAmount > 0 && <td style={td}>Rs {(data.discountAmount || 0).toFixed(2)}</td>}
+            {data.taxAmount > 0 && <td style={td}>Rs {(data.taxAmount || 0).toFixed(2)}</td>}
+            <td style={{ ...td, borderRight: "none" }}>Rs {data.subtotal.toFixed(2)}</td>
           </tr>
         </tbody>
       </table>
@@ -116,67 +89,64 @@ export function TaxTheme3Preview({ color }: { color?: string }) {
           <div style={{ fontWeight: 600, marginBottom: 2 }}>Invoice Amount In Words</div>
           <div style={{ color: TEXT_MUTED, marginBottom: 10 }}>Forty Two Rupees and Thirty Two Paisa only</div>
           
-          <div style={{ fontWeight: 600, marginBottom: 2 }}><EditableText textKey="lbl_desc_no_colon" defaultText="Description" /></div>
-          <div style={{ color: TEXT_MUTED }}><EditableText textKey="title" defaultText="Sale" /> Description</div>
+          {data.description && (
+            <>
+              <div style={{ fontWeight: 600, marginBottom: 2 }}><EditableText textKey="lbl_desc_no_colon" defaultText="Description" /></div>
+              <div style={{ color: TEXT_MUTED }}>{data.description}</div>
+            </>
+          )}
         </div>
         <div style={{ width: 180, padding: "4px 6px" }}>
           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 2 }}><span>Amounts</span><span></span></div>
-          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 2 }}><span><EditableText textKey="lbl_sub_total" defaultText="Sub Total" /></span><span>Rs 45.80</span></div>
-          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 2 }}><span>Discount (12%)</span><span>Rs 5.50</span></div>
-          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 2 }}><span>Tax (5%)</span><span>Rs 2.02</span></div>
-          <div style={{ display: "flex", justifyContent: "space-between", borderTop: `1px solid ${BORDER}`, paddingTop: 2, marginBottom: 2 }}><span><EditableText textKey="lbl_total" defaultText="Total" /></span><span>Rs 42.32</span></div>
-          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 2 }}><span><EditableText textKey="lbl_received_no_colon" defaultText="Received" /></span><span>Rs 12.000</span></div>
-          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 2 }}><span><EditableText textKey="lbl_balance_no_colon" defaultText="Balance" /></span><span>Rs 30.32</span></div>
-          <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 600 }}><span><EditableText textKey="lbl_saved_no_colon" defaultText="You Saved" /></span><span>Rs 30.32</span></div>
+          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 2 }}><span><EditableText textKey="lbl_sub_total" defaultText="Sub Total" /></span><span>Rs {data.subtotal.toFixed(2)}</span></div>
+          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 2 }}><span>Discount</span><span>Rs {(data.discountAmount || 0).toFixed(2)}</span></div>
+          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 2 }}><span>{data.taxLabel}</span><span>Rs {(data.taxAmount || 0).toFixed(2)}</span></div>
+          <div style={{ display: "flex", justifyContent: "space-between", borderTop: `1px solid ${BORDER}`, paddingTop: 2, marginBottom: 2 }}><span><EditableText textKey="lbl_total" defaultText="Total" /></span><span>Rs {data.grandTotal.toFixed(2)}</span></div>
+          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 2 }}><span><EditableText textKey="lbl_received_no_colon" defaultText="Received" /></span><span>Rs {data.received.toFixed(2)}</span></div>
+          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 2 }}><span><EditableText textKey="lbl_balance_no_colon" defaultText="Balance" /></span><span>Rs {data.balance.toFixed(2)}</span></div>
+          {data.discountAmount > 0 && <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 600 }}><span><EditableText textKey="lbl_saved_no_colon" defaultText="You Saved" /></span><span>Rs {(data.discountAmount || 0).toFixed(2)}</span></div>}
         </div>
       </div>
       
-      <table style={{ width: "100%", fontSize: invoiceFontSize, borderCollapse: "collapse", border: `1px solid ${BORDER}`, marginBottom: 10 }}>
-        <thead>
-          <tr style={{ borderBottom: `1px solid ${BORDER}`, background: greyBg }}>
-            <th rowSpan={2} style={{ padding: "2px 4px", borderRight: `1px solid ${BORDER}` }}>HSN/ SAC</th>
-            <th rowSpan={2} style={{ padding: "2px 4px", borderRight: `1px solid ${BORDER}` }}>Taxable amount</th>
-            <th colSpan={2} style={{ padding: "2px 4px", borderRight: `1px solid ${BORDER}`, textAlign: "center" }}>CGST</th>
-            <th colSpan={2} style={{ padding: "2px 4px", borderRight: `1px solid ${BORDER}`, textAlign: "center" }}>SGST</th>
-            <th rowSpan={2} style={{ padding: "2px 4px" }}>Total Tax Amount</th>
-          </tr>
-          <tr style={{ borderBottom: `1px solid ${BORDER}`, background: greyBg }}>
-            <th style={{ padding: "2px 4px", borderRight: `1px solid ${BORDER}` }}>Rate</th>
-            <th style={{ padding: "2px 4px", borderRight: `1px solid ${BORDER}` }}>Amount</th>
-            <th style={{ padding: "2px 4px", borderRight: `1px solid ${BORDER}` }}>Rate</th>
-            <th style={{ padding: "2px 4px", borderRight: `1px solid ${BORDER}` }}>Amount</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td style={{ padding: "2px 4px", borderRight: `1px solid ${BORDER}` }} />
-            <td style={{ padding: "2px 4px", borderRight: `1px solid ${BORDER}` }}>Rs 50.20</td>
-            <td style={{ padding: "2px 4px", borderRight: `1px solid ${BORDER}` }}>2.5%</td>
-            <td style={{ padding: "2px 4px", borderRight: `1px solid ${BORDER}` }}>Rs 1.26</td>
-            <td style={{ padding: "2px 4px", borderRight: `1px solid ${BORDER}` }}>2.5%</td>
-            <td style={{ padding: "2px 4px", borderRight: `1px solid ${BORDER}` }}>Rs 1.26</td>
-            <td style={{ padding: "2px 4px" }}>Rs 2.52</td>
-          </tr>
-          <tr>
-            <td style={{ padding: "2px 4px", borderRight: `1px solid ${BORDER}` }} />
-            <td style={{ padding: "2px 4px", borderRight: `1px solid ${BORDER}` }}>Rs 30.00</td>
-            <td style={{ padding: "2px 4px", borderRight: `1px solid ${BORDER}` }}>9%</td>
-            <td style={{ padding: "2px 4px", borderRight: `1px solid ${BORDER}` }}>Rs 2.70</td>
-            <td style={{ padding: "2px 4px", borderRight: `1px solid ${BORDER}` }}>9%</td>
-            <td style={{ padding: "2px 4px", borderRight: `1px solid ${BORDER}` }}>Rs 2.70</td>
-            <td style={{ padding: "2px 4px" }}>Rs 5.40</td>
-          </tr>
-          <tr style={{ fontWeight: 600, borderTop: `1px solid ${BORDER}` }}>
-            <td style={{ padding: "2px 4px", borderRight: `1px solid ${BORDER}` }}><EditableText textKey="lbl_total" defaultText="Total" /></td>
-            <td style={{ padding: "2px 4px", borderRight: `1px solid ${BORDER}` }}>Rs 80.20</td>
-            <td style={{ padding: "2px 4px", borderRight: `1px solid ${BORDER}` }} />
-            <td style={{ padding: "2px 4px", borderRight: `1px solid ${BORDER}` }}>Rs 3.96</td>
-            <td style={{ padding: "2px 4px", borderRight: `1px solid ${BORDER}` }} />
-            <td style={{ padding: "2px 4px", borderRight: `1px solid ${BORDER}` }}>Rs 3.96</td>
-            <td style={{ padding: "2px 4px" }}>Rs 7.92</td>
-          </tr>
-        </tbody>
-      </table>
+      {data.taxAmount > 0 && (
+        <table style={{ width: "100%", fontSize: invoiceFontSize, borderCollapse: "collapse", border: `1px solid ${BORDER}`, marginBottom: 10 }}>
+          <thead>
+            <tr style={{ borderBottom: `1px solid ${BORDER}`, background: greyBg }}>
+              <th rowSpan={2} style={{ padding: "2px 4px", borderRight: `1px solid ${BORDER}` }}>HSN/ SAC</th>
+              <th rowSpan={2} style={{ padding: "2px 4px", borderRight: `1px solid ${BORDER}` }}>Taxable amount</th>
+              <th colSpan={2} style={{ padding: "2px 4px", borderRight: `1px solid ${BORDER}`, textAlign: "center" }}>CGST</th>
+              <th colSpan={2} style={{ padding: "2px 4px", borderRight: `1px solid ${BORDER}`, textAlign: "center" }}>SGST</th>
+              <th rowSpan={2} style={{ padding: "2px 4px" }}>Total Tax Amount</th>
+            </tr>
+            <tr style={{ borderBottom: `1px solid ${BORDER}`, background: greyBg }}>
+              <th style={{ padding: "2px 4px", borderRight: `1px solid ${BORDER}` }}>Rate</th>
+              <th style={{ padding: "2px 4px", borderRight: `1px solid ${BORDER}` }}>Amount</th>
+              <th style={{ padding: "2px 4px", borderRight: `1px solid ${BORDER}` }}>Rate</th>
+              <th style={{ padding: "2px 4px", borderRight: `1px solid ${BORDER}` }}>Amount</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td style={{ padding: "2px 4px", borderRight: `1px solid ${BORDER}` }} />
+              <td style={{ padding: "2px 4px", borderRight: `1px solid ${BORDER}` }}>Rs {(data.subtotal).toFixed(2)}</td>
+              <td style={{ padding: "2px 4px", borderRight: `1px solid ${BORDER}` }}>{(data.taxRate * 100 / 2).toFixed(1)}%</td>
+              <td style={{ padding: "2px 4px", borderRight: `1px solid ${BORDER}` }}>Rs {(data.taxAmount / 2).toFixed(2)}</td>
+              <td style={{ padding: "2px 4px", borderRight: `1px solid ${BORDER}` }}>{(data.taxRate * 100 / 2).toFixed(1)}%</td>
+              <td style={{ padding: "2px 4px", borderRight: `1px solid ${BORDER}` }}>Rs {(data.taxAmount / 2).toFixed(2)}</td>
+              <td style={{ padding: "2px 4px" }}>Rs {data.taxAmount.toFixed(2)}</td>
+            </tr>
+            <tr style={{ fontWeight: 600, borderTop: `1px solid ${BORDER}` }}>
+              <td style={{ padding: "2px 4px", borderRight: `1px solid ${BORDER}` }}><EditableText textKey="lbl_total" defaultText="Total" /></td>
+              <td style={{ padding: "2px 4px", borderRight: `1px solid ${BORDER}` }}>Rs {data.subtotal.toFixed(2)}</td>
+              <td style={{ padding: "2px 4px", borderRight: `1px solid ${BORDER}` }} />
+              <td style={{ padding: "2px 4px", borderRight: `1px solid ${BORDER}` }}>Rs {(data.taxAmount / 2).toFixed(2)}</td>
+              <td style={{ padding: "2px 4px", borderRight: `1px solid ${BORDER}` }} />
+              <td style={{ padding: "2px 4px", borderRight: `1px solid ${BORDER}` }}>Rs {(data.taxAmount / 2).toFixed(2)}</td>
+              <td style={{ padding: "2px 4px" }}>Rs {data.taxAmount.toFixed(2)}</td>
+            </tr>
+          </tbody>
+        </table>
+      )}
 
       <table style={{ width: "100%", fontSize: invoiceFontSize, borderCollapse: "collapse", border: `1px solid ${BORDER}` }}>
         <tbody>
@@ -188,10 +158,12 @@ export function TaxTheme3Preview({ color }: { color?: string }) {
               <div style={{ color: TEXT_MUTED }}>Bank IFSC code: 123123123</div>
               <div style={{ color: TEXT_MUTED }}>IBAN: AE12 3456 7890 1234 5678 901</div>
             </td>
-            <td style={{ padding: "8px", borderRight: `1px solid ${BORDER}`, width: "33%", verticalAlign: "top" }}>
-              <div style={{ fontWeight: 600, marginBottom: 2 }}>Terms and conditions:</div>
-              <div style={{ color: TEXT_MUTED }}>Thanks for doing business with us!</div>
-            </td>
+            {data.termsAndConditions && (
+              <td style={{ padding: "8px", borderRight: `1px solid ${BORDER}`, width: "33%", verticalAlign: "top" }}>
+                <div style={{ fontWeight: 600, marginBottom: 2 }}>Terms and conditions:</div>
+                <div style={{ color: TEXT_MUTED }}>{data.termsAndConditions}</div>
+              </td>
+            )}
             <td style={{ padding: "8px", verticalAlign: "top", textAlign: "center" }}>
               <div style={{ fontWeight: 600, marginBottom: 6, textAlign: "left" }}><EditableText textKey="lbl_for" defaultText="For:" /> {showCompanyName ? companyName : ""}</div>
               <div
@@ -207,6 +179,7 @@ export function TaxTheme3Preview({ color }: { color?: string }) {
           </tr>
         </tbody>
       </table>
+        </>
     </div>
   );
 }

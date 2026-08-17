@@ -33,7 +33,9 @@ import { BackupToComputer } from "@/pages/backuptocomputer";
 import { BackupToDrive } from "@/pages/backuptodrive";
 import { RestoreBackup } from "@/pages/restorebackup";
 import { LaimsoftPos } from "@/pages/LaimsoftPos";
+import { BillPreviewPage } from "@/components/pagescomponents/previewbill/BillPreviewPage";
 import type { SaleInvoiceEditData, ViewType } from "@/types";
+import type { BillPreviewSaleData } from "@/components/pagescomponents/previewbill/BillPreviewData";
 
 function App() {
   const [isAppLocked, setIsAppLocked] = useState(true);
@@ -74,12 +76,14 @@ function App() {
     useState<SaleInvoiceEditData | null>(null);
   const [isConvertingEstimate, setIsConvertingEstimate] = useState(false);
   const [settingsInitialTab, setSettingsInitialTab] = useState<string>("general");
+  const [billPreviewData, setBillPreviewData] = useState<BillPreviewSaleData | null>(null);
 
   const isOverlayView = (view: ViewType) =>
     view === "add-sale" ||
     view === "add-purchase" ||
     view === "add-expense" ||
     view === "settings" ||
+    view === "bill-preview" ||
     view === "pos";
 
   const handleViewChange = (view: ViewType) => {
@@ -142,6 +146,18 @@ function App() {
   };
 
   const handleClosePos = () => {
+    setCurrentView(lastStandardView);
+  };
+
+  const handleOpenBillPreview = (data: BillPreviewSaleData) => {
+    setBillPreviewData(data);
+    setCurrentView("bill-preview");
+  };
+
+  const handleCloseBillPreview = () => {
+    setBillPreviewData(null);
+    setEditingSaleInvoice(null);
+    setIsConvertingEstimate(false);
     setCurrentView(lastStandardView);
   };
 
@@ -243,6 +259,7 @@ function App() {
         <div className="fixed inset-0 z-[100]">
           <AddSale
             onClose={handleCloseAddSale}
+            onPreview={handleOpenBillPreview}
             initialInvoice={editingSaleInvoice}
             isConversion={isConvertingEstimate}
           />
@@ -271,6 +288,13 @@ function App() {
         <div className="fixed inset-0 z-[120]">
           <LaimsoftPos onClose={handleClosePos} />
         </div>
+      )}
+
+      {currentView === "bill-preview" && billPreviewData && (
+        <BillPreviewPage
+          sale={billPreviewData}
+          onClose={handleCloseBillPreview}
+        />
       )}
     </>
   );

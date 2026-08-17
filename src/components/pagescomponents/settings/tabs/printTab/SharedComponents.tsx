@@ -1,30 +1,34 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, createContext, useContext } from "react";
 import { createPortal } from "react-dom";
 import { BLUE, BORDER, TEXT_MUTED, TEXT_LABEL, TEXT_DARK } from "./constants";
 
+export const PrintPreviewContext = createContext({ isReadOnly: false });
+
 export function EditableText({ textKey, defaultText }: { textKey: string, defaultText: string }) {
-  const [val, setVal] = useState(() => localStorage.getItem(`print_${textKey}`) || defaultText);
+  const [val, setVal] = useState(() => localStorage.getItem(`print_lbl_v2_${textKey}`) || defaultText);
+  const { isReadOnly } = useContext(PrintPreviewContext);
 
   useEffect(() => {
     const handleUpdate = () => {
-      setVal(localStorage.getItem(`print_${textKey}`) || defaultText);
+      setVal(localStorage.getItem(`print_lbl_v2_${textKey}`) || defaultText);
     };
     window.addEventListener("company-details-update", handleUpdate);
     return () => window.removeEventListener("company-details-update", handleUpdate);
   }, [textKey, defaultText]);
 
   const handleBlur = (e: React.FocusEvent<HTMLSpanElement>) => {
+    if (isReadOnly) return;
     const newVal = e.currentTarget.textContent || "";
-    localStorage.setItem(`print_${textKey}`, newVal);
+    localStorage.setItem(`print_lbl_v2_${textKey}`, newVal);
     window.dispatchEvent(new Event("company-details-update"));
   };
 
   return (
     <span
-      contentEditable
+      contentEditable={!isReadOnly}
       suppressContentEditableWarning
       onBlur={handleBlur}
-      style={{ cursor: "text", outline: "none" }}
+      style={{ cursor: isReadOnly ? "default" : "text", outline: "none" }}
     >
       {val}
     </span>
@@ -149,16 +153,16 @@ export function InfoCheckRow({
   onCheckedChange,
   trailing,
   tooltip }: {
-  label: string;
-  defaultChecked?: boolean;
-  checked?: boolean;
-  onCheckedChange?: (val: boolean) => void;
-  trailing?: React.ReactNode;
-  tooltip?: React.ReactNode;
-}) {
+    label: string;
+    defaultChecked?: boolean;
+    checked?: boolean;
+    onCheckedChange?: (val: boolean) => void;
+    trailing?: React.ReactNode;
+    tooltip?: React.ReactNode;
+  }) {
   const [localChecked, setLocalChecked] = useState(!!defaultChecked);
   const currentChecked = externalChecked !== undefined ? externalChecked : localChecked;
-  
+
   const handleCheckChange = (c: boolean) => {
     if (onCheckedChange) {
       onCheckedChange(c);
@@ -172,7 +176,8 @@ export function InfoCheckRow({
       style={{
         display: "flex",
         alignItems: "center",
-        marginBottom: 12 }}
+        marginBottom: 12
+      }}
     >
       <input
         type="checkbox"
@@ -183,7 +188,8 @@ export function InfoCheckRow({
           width: 15,
           height: 15,
           cursor: "pointer",
-          flexShrink: 0 }}
+          flexShrink: 0
+        }}
       />
       <span style={{ fontSize: 13, color: TEXT_LABEL, marginLeft: 8 }}>
         {label}
@@ -206,17 +212,17 @@ export function InfoFieldRow({
   defaultChecked = true,
   readOnly = true,
   tooltip }: {
-  label: string;
-  defaultValue?: string;
-  value?: string;
-  onChange?: (val: string) => void;
-  checked?: boolean;
-  onCheckedChange?: (val: boolean) => void;
-  placeholder?: string;
-  defaultChecked?: boolean;
-  readOnly?: boolean;
-  tooltip?: React.ReactNode;
-}) {
+    label: string;
+    defaultValue?: string;
+    value?: string;
+    onChange?: (val: string) => void;
+    checked?: boolean;
+    onCheckedChange?: (val: boolean) => void;
+    placeholder?: string;
+    defaultChecked?: boolean;
+    readOnly?: boolean;
+    tooltip?: React.ReactNode;
+  }) {
   const [localChecked, setLocalChecked] = useState(defaultChecked);
   const currentChecked = externalChecked !== undefined ? externalChecked : localChecked;
 
@@ -245,7 +251,8 @@ export function InfoFieldRow({
         display: "flex",
         alignItems: "flex-start",
         marginBottom: 14,
-        gap: 8 }}
+        gap: 8
+      }}
     >
       <input
         type="checkbox"
@@ -257,7 +264,8 @@ export function InfoFieldRow({
           height: 15,
           cursor: "pointer",
           marginTop: 10,
-          flexShrink: 0 }}
+          flexShrink: 0
+        }}
       />
       <div style={{ position: "relative", flex: 1, maxWidth: 320 }}>
         <span
@@ -268,7 +276,8 @@ export function InfoFieldRow({
             background: "#f8fafc",
             padding: "0 4px",
             fontSize: 10,
-            color: TEXT_MUTED }}
+            color: TEXT_MUTED
+          }}
         >
           {label}
         </span>
@@ -288,7 +297,8 @@ export function InfoFieldRow({
             fontSize: 13,
             color: TEXT_DARK,
             outline: "none",
-            background: currentChecked && !readOnly ? "#fff" : "#f3f4f6" }}
+            background: currentChecked && !readOnly ? "#fff" : "#f3f4f6"
+          }}
         />
       </div>
       <InfoIcon tooltip={tooltip} />
@@ -297,12 +307,12 @@ export function InfoFieldRow({
 }
 
 /** Checkbox + label + info icon (Company Logo row) */
-export function InfoLogoRow({ 
+export function InfoLogoRow({
   checked: externalChecked,
   onCheckedChange,
   defaultChecked = true,
   tooltip
-}: { 
+}: {
   checked?: boolean;
   onCheckedChange?: (val: boolean) => void;
   defaultChecked?: boolean;
@@ -377,7 +387,8 @@ export function LabeledSelect({
             fontSize: 13,
             color: TEXT_DARK,
             background: "#fff",
-            outline: "none" }}
+            outline: "none"
+          }}
         >
           {options.map((o) => (
             <option key={o} value={o}>
@@ -395,9 +406,9 @@ export function LabeledSelect({
 export function LabeledNumber({
   label,
   defaultValue }: {
-  label: string;
-  defaultValue: number;
-}) {
+    label: string;
+    defaultValue: number;
+  }) {
   const [value, setValue] = useState(defaultValue);
   return (
     <div style={{ marginBottom: 16, maxWidth: 200 }}>
@@ -416,7 +427,8 @@ export function LabeledNumber({
             padding: "8px 10px",
             fontSize: 13,
             color: TEXT_DARK,
-            outline: "none" }}
+            outline: "none"
+          }}
         />
         <InfoIcon />
       </div>
@@ -431,7 +443,8 @@ export function SectionTitle({ children }: { children: React.ReactNode }) {
         fontSize: 13,
         fontWeight: 600,
         color: TEXT_DARK,
-        marginBottom: 12 }}
+        marginBottom: 12
+      }}
     >
       {children}
     </div>
@@ -443,7 +456,23 @@ export function Divider() {
     <div
       style={{
         borderTop: `1px solid ${BORDER}`,
-        margin: "16px 0" }}
+        margin: "16px 0"
+      }}
     />
   );
+}
+
+export function numberToWords(num: number): string {
+  if (num === 0) return "Zero";
+  const a = ["", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten", "Eleven", "Twelve", "Thirteen", "Fourteen", "Fifteen", "Sixteen", "Seventeen", "Eighteen", "Nineteen"];
+  const b = ["", "", "Twenty", "Thirty", "Forty", "Fifty", "Sixty", "Seventy", "Eighty", "Ninety"];
+  const format = (n: number): string => {
+    if (n < 20) return a[n];
+    if (n < 100) return b[Math.floor(n / 10)] + (n % 10 !== 0 ? " " + a[n % 10] : "");
+    if (n < 1000) return a[Math.floor(n / 100)] + " Hundred" + (n % 100 !== 0 ? " and " + format(n % 100) : "");
+    if (n < 100000) return format(Math.floor(n / 1000)) + " Thousand" + (n % 1000 !== 0 ? " " + format(n % 1000) : "");
+    if (n < 10000000) return format(Math.floor(n / 100000)) + " Lakh" + (n % 100000 !== 0 ? " " + format(n % 100000) : "");
+    return format(Math.floor(n / 10000000)) + " Crore" + (n % 10000000 !== 0 ? " " + format(n % 10000000) : "");
+  };
+  return format(Math.floor(num));
 }

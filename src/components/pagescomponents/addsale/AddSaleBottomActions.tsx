@@ -170,7 +170,7 @@ export function AddSaleBottomActions({
                   <span style={{ color: "#6b7280", width: 68, textAlign: "right" }}>Received</span>
                   <input type="number"
                     style={{ border: "1px solid #d1d5db", borderRadius: 4, padding: "5px 10px", width: 210, textAlign: "right", fontSize: 13, color: "#1f2937", background: "#fff", outline: "none" }}
-                    value={activeTab.received}
+                    value={activeTab.received || ""}
                     onChange={(e) => {
                       updateTab({ received: e.target.value, receivedAll: false });
                     }}

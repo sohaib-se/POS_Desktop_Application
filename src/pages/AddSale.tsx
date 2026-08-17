@@ -36,6 +36,7 @@ export interface SaleTab {
   imageFileName: string;
   documentDataUrl: string;
   documentFileName: string;
+  received: string;
   receivedAll: boolean;
   isPreviewMode?: boolean;
   previewData?: BillPreviewSaleData;

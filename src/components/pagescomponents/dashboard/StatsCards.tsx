@@ -11,6 +11,9 @@ export function StatsCards() {
   const [todayProfit, setTodayProfit] = useState(0);
 
   const [showTodaySales] = useSettings("show_card_today_sales", true);
+  const [currency] = useSettings('settings.businessCurrency', { code: 'PKR', symbol: 'Rs' });
+  const [currencyDisplay] = useSettings<'abbreviation' | 'icon'>('settings.currencyDisplay', 'abbreviation');
+  const currencyStr = currencyDisplay === 'icon' ? currency.symbol : currency.code;
   const [showTodayProfit] = useSettings("show_card_today_profit", true);
   const [showReceivable] = useSettings("show_card_total_receivable", true);
   const [showPayable] = useSettings("show_card_total_payable", true);
@@ -122,7 +125,7 @@ export function StatsCards() {
         <div className="flex items-start justify-between">
           <div>
             <p className="text-sm text-gray-500 mb-1">Today's Sales</p>
-            <p className="text-2xl font-bold text-gray-900">Rs {todaySales.toLocaleString(undefined, {minimumFractionDigits: 2})}</p>
+            <p className="text-2xl font-bold text-gray-900">{currencyStr} {todaySales.toLocaleString(undefined, {minimumFractionDigits: 2})}</p>
             <p className="text-xs text-gray-500 mt-1">For Today</p>
           </div>
           <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
@@ -138,7 +141,7 @@ export function StatsCards() {
         <div className="flex items-start justify-between">
           <div>
             <p className="text-sm text-gray-500 mb-1">Today's Profit</p>
-            <p className="text-2xl font-bold text-gray-900">Rs {todayProfit.toLocaleString(undefined, {minimumFractionDigits: 2})}</p>
+            <p className="text-2xl font-bold text-gray-900">{currencyStr} {todayProfit.toLocaleString(undefined, {minimumFractionDigits: 2})}</p>
             <p className="text-xs text-gray-500 mt-1">For Today</p>
           </div>
           <div className="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center">
@@ -154,7 +157,7 @@ export function StatsCards() {
         <div className="flex items-start justify-between">
           <div>
             <p className="text-sm text-gray-500 mb-1">Total Receivable</p>
-            <p className="text-2xl font-bold text-gray-900">Rs {totalReceivable.toLocaleString()}</p>
+            <p className="text-2xl font-bold text-gray-900">{currencyStr} {totalReceivable.toLocaleString()}</p>
             <p className="text-xs text-gray-500 mt-1">From {receivableParties} Part{receivableParties === 1 ? 'y' : 'ies'}</p>
           </div>
           <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
@@ -170,7 +173,7 @@ export function StatsCards() {
         <div className="flex items-start justify-between">
           <div>
             <p className="text-sm text-gray-500 mb-1">Total Payable</p>
-            <p className="text-2xl font-bold text-gray-900">Rs {totalPayable.toLocaleString()}</p>
+            <p className="text-2xl font-bold text-gray-900">{currencyStr} {totalPayable.toLocaleString()}</p>
             <p className="text-xs text-gray-500 mt-1">From {payableParties} Part{payableParties === 1 ? 'y' : 'ies'}</p>
           </div>
           <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">

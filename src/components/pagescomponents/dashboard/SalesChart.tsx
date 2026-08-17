@@ -10,8 +10,13 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { getMonthKeyFromDate, formatDateDisplay } from "../saleinvoices/utils";
+import { useSettings } from "@/hooks/useSettings";
 
 export function SalesChart() {
+  const [currency] = useSettings('settings.businessCurrency', { code: 'PKR', symbol: 'Rs' });
+  const [currencyDisplay] = useSettings<'abbreviation' | 'icon'>('settings.currencyDisplay', 'abbreviation');
+  const currencyStr = currencyDisplay === 'icon' ? currency.symbol : currency.code;
+
   const [invoices, setInvoices] = useState<any[]>([]);
   const [selectedMonthKey, setSelectedMonthKey] = useState<string>("");
 
@@ -95,7 +100,7 @@ export function SalesChart() {
         <div>
           <p className="text-sm text-gray-500">Total Sale</p>
           <div className="flex items-center gap-3 mt-1">
-            <p className="text-2xl font-bold text-gray-900">Rs {totalSale.toLocaleString()}</p>
+            <p className="text-2xl font-bold text-gray-900">{currencyStr} {totalSale.toLocaleString()}</p>
             {totalSale > 0 && (
               <span className="flex items-center gap-1 text-sm text-green-600 bg-green-50 px-2 py-0.5 rounded-full">
                 <TrendingUp className="w-3 h-3" />
@@ -143,7 +148,7 @@ export function SalesChart() {
                 border: "none",
                 boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
               }}
-              formatter={(value: any) => [`Rs ${value}`, "Amount"]}
+              formatter={(value: any) => [`${currencyStr} ${value}`, "Amount"]}
             />
             <Area
               type="monotone"

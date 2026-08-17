@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
+import { useSettings } from "@/hooks/useSettings";
 import type { Party, Transaction, SaleInvoiceEditData } from "@/types";
 import { PartiesHeader } from "@/components/pagescomponents/parties/PartiesHeader";
 import { PartiesEmptyState } from "@/components/pagescomponents/parties/PartiesEmptyState";
@@ -74,13 +75,16 @@ function normalizePartyTransaction(row: TransactionApiRow): PartyTransactionRow 
 }
 
 interface PartiesProps {
-  onOpenSettings?: (tab?: string) => void;
   isReportView?: boolean;
   onBack?: () => void;
   onEditSaleInvoice?: (invoice: SaleInvoiceEditData) => void;
 }
 
-export function Parties({ onOpenSettings, isReportView, onBack, onEditSaleInvoice }: PartiesProps = {}) {
+export function Parties({ isReportView, onBack, onEditSaleInvoice }: PartiesProps = {}) {
+  const [currency] = useSettings('settings.businessCurrency', { code: 'PKR', symbol: 'Rs' });
+  const [currencyDisplay] = useSettings<'abbreviation' | 'icon'>('settings.currencyDisplay', 'abbreviation');
+  const currencyStr = currencyDisplay === 'icon' ? currency.symbol : currency.code;
+
   const [parties, setParties] = useState<Party[]>([]);
   const [selectedParty, setSelectedParty] = useState<Party | null>(null);
   const [showAddParty, setShowAddParty] = useState(false);
@@ -395,8 +399,8 @@ export function Parties({ onOpenSettings, isReportView, onBack, onEditSaleInvoic
                   <td>${t.type}</td>
                   <td>${t.invoiceNo || ''}</td>
                   <td>${t.date}</td>
-                  <td>Rs ${t.amount.toFixed(2)}</td>
-                  <td>Rs ${t.balance.toFixed(2)}</td>
+                  <td>${currencyStr} ${t.amount.toFixed(2)}</td>
+                  <td>${currencyStr} ${t.balance.toFixed(2)}</td>
                 </tr>
               `).join('')}
             </tbody>
@@ -614,7 +618,6 @@ export function Parties({ onOpenSettings, isReportView, onBack, onEditSaleInvoic
         <PartiesHeader
           isLoading={isLoading}
           onAddParty={openAddPartyDialog}
-          onOpenSettings={onOpenSettings}
           isReportView={isReportView}
           onBack={onBack}
         />

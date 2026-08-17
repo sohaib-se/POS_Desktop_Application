@@ -1,3 +1,5 @@
+import { useSettings } from "@/hooks/useSettings";
+
 interface SaleInvoiceSummaryProps {
   totalSales: number;
   totalReceived: number;
@@ -5,6 +7,10 @@ interface SaleInvoiceSummaryProps {
 }
 
 export function SaleInvoiceSummary({ totalSales, totalReceived, totalBalance }: SaleInvoiceSummaryProps) {
+  const [currency] = useSettings('settings.businessCurrency', { code: 'PKR', symbol: 'Rs' });
+  const [currencyDisplay] = useSettings<'abbreviation' | 'icon'>('settings.currencyDisplay', 'abbreviation');
+  const currencyStr = currencyDisplay === 'icon' ? currency.symbol : currency.code;
+
   return (
     <div
       className="p-4 bg-white rounded-md shadow-sm shrink-0"
@@ -18,12 +24,12 @@ export function SaleInvoiceSummary({ totalSales, totalReceived, totalBalance }: 
           </span>
         </div>
         <p className="text-xl font-bold text-[#1C1F2A]">
-          Rs {totalSales.toLocaleString()}
+          {currencyStr} {totalSales.toLocaleString()}
         </p>
         <div className="flex items-center gap-3 text-xs text-[#6B6B83] mt-1">
-          <span>Received: Rs {totalReceived.toLocaleString()}</span>
+          <span>Received: {currencyStr} {totalReceived.toLocaleString()}</span>
           <span>|</span>
-          <span>Balance: Rs {totalBalance.toLocaleString()}</span>
+          <span>Balance: {currencyStr} {totalBalance.toLocaleString()}</span>
         </div>
       </div>
     </div>

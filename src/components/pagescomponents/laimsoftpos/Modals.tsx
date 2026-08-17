@@ -1,4 +1,5 @@
 import { X, ChevronDown } from "lucide-react";
+import { useSettings } from "@/hooks/useSettings";
 import type { PosRow } from "./types";
 
 interface ModalsProps {
@@ -44,6 +45,10 @@ export function Modals({
   setModalDescription,
   saveModal,
 }: ModalsProps) {
+  const [currency] = useSettings('settings.businessCurrency', { code: 'PKR', symbol: 'Rs' });
+  const [currencyDisplay] = useSettings<'abbreviation' | 'icon'>('settings.currencyDisplay', 'abbreviation');
+  const currencyStr = currencyDisplay === 'icon' ? currency.symbol : currency.code;
+
   if (activeModal === null) return null;
 
   return (
@@ -126,7 +131,7 @@ export function Modals({
               <div className="text-sm">
                 <span className="text-gray-600">Total: </span>
                 <span className="font-bold text-gray-900">
-                  Rs {subTotalAmount.toFixed(2)}
+                  {currencyStr} {subTotalAmount.toFixed(2)}
                 </span>
               </div>
               <div className="flex items-center gap-2">

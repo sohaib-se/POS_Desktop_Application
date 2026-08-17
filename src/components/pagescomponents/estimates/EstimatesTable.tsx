@@ -1,4 +1,5 @@
 import type { RefObject, Dispatch, SetStateAction } from "react";
+import { useSettings } from "@/hooks/useSettings";
 import { Search, Printer, Share2, MoreVertical, ArrowRightCircle } from "lucide-react";
 import type { EstimateRecord } from "./types";
 
@@ -27,6 +28,10 @@ export function EstimatesTable({
   setOpenRowMenuPosition,
   onConvertEstimateToSale,
 }: EstimatesTableProps) {
+  const [currency] = useSettings('settings.businessCurrency', { code: 'PKR', symbol: 'Rs' });
+  const [currencyDisplay] = useSettings<'abbreviation' | 'icon'>('settings.currencyDisplay', 'abbreviation');
+  const currencyStr = currencyDisplay === 'icon' ? currency.symbol : currency.code;
+
   return (
     <div
       className="bg-white rounded-md shadow-sm flex flex-col sticky top-0 z-10"
@@ -125,10 +130,10 @@ export function EstimatesTable({
                 <td className="px-4 py-3">{estimate.referenceNo}</td>
                 <td className="px-4 py-3">{estimate.partyName}</td>
                 <td className="px-4 py-3 text-right">
-                  Rs {estimate.amount.toFixed(2)}
+                  {currencyStr} {estimate.amount.toFixed(2)}
                 </td>
                 <td className="px-4 py-3 text-right">
-                  Rs {estimate.balance.toFixed(2)}
+                  {currencyStr} {estimate.balance.toFixed(2)}
                 </td>
                 <td className="px-4 py-3">
                   <span

@@ -1,4 +1,5 @@
 import { Search, Printer, Share2, MoreVertical } from "lucide-react";
+import { useSettings } from "@/hooks/useSettings";
 import type { SaleInvoiceViewRow } from "./types";
 import type { MutableRefObject, Dispatch, SetStateAction } from "react";
 
@@ -31,6 +32,10 @@ export function SaleInvoiceTable({
   visibleRows,
   statusMessage
 }: SaleInvoiceTableProps) {
+  const [currency] = useSettings('settings.businessCurrency', { code: 'PKR', symbol: 'Rs' });
+  const [currencyDisplay] = useSettings<'abbreviation' | 'icon'>('settings.currencyDisplay', 'abbreviation');
+  const currencyStr = currencyDisplay === 'icon' ? currency.symbol : currency.code;
+
   return (
     <div
       className="bg-white rounded-md shadow-sm flex flex-col sticky top-0 z-10"
@@ -144,8 +149,8 @@ export function SaleInvoiceTable({
                   </span>
                 </td>
                 <td className="px-4 py-3">{invoice.paymentType}</td>
-                <td className="px-4 py-3 text-right">Rs {invoice.amount}</td>
-                <td className="px-4 py-3 text-right">Rs {invoice.balance}</td>
+                <td className="px-4 py-3 text-right">{currencyStr} {invoice.amount}</td>
+                <td className="px-4 py-3 text-right">{currencyStr} {invoice.balance}</td>
                 <td className="px-4 py-3 relative">
                   <div className="flex items-center justify-center gap-2">
                     <button className="p-1.5 hover:bg-gray-100 rounded" title="Print">

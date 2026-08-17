@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useSettings } from "@/hooks/useSettings";
 import { ChevronDown, Search, Filter, MoreVertical } from "lucide-react";
 import type { BankAccount } from "./types";
 
@@ -8,6 +9,10 @@ interface AccountDetailProps {
 }
 
 export function AccountDetail({ account, onDeposit }: AccountDetailProps) {
+  const [currency] = useSettings('settings.businessCurrency', { code: 'PKR', symbol: 'Rs' });
+  const [currencyDisplay] = useSettings<'abbreviation' | 'icon'>('settings.currencyDisplay', 'abbreviation');
+  const currencyStr = currencyDisplay === 'icon' ? currency.symbol : currency.code;
+
   const [dropdownOpen, setDropdownOpen] = useState(false);
 
   const dropdownItems = [
@@ -104,7 +109,7 @@ export function AccountDetail({ account, onDeposit }: AccountDetailProps) {
             <div className="text-gray-600">{tx.date}</div>
             <div className="flex items-center justify-between">
               <span className={`font-medium ${Number(tx.amount) < 0 ? 'text-[#E53935]' : 'text-green-600'}`}>
-                Rs{" "}
+                {currencyStr}{" "}
                 {Math.abs(Number(tx.amount)).toLocaleString("en-IN", {
                   minimumFractionDigits: 2,
                 })}

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useSettings } from "@/hooks/useSettings";
 import { Search, Printer, MoreVertical } from "lucide-react";
 import { Card, CardContent } from "./ui";
 import type { ItemTransactionRow } from "./types";
@@ -30,6 +31,10 @@ export function TransactionsCard({
 }: TransactionsCardProps) {
   const [openRowMenuId, setOpenRowMenuId] = useState<string | null>(null);
   const [openRowMenuPosition, setOpenRowMenuPosition] = useState<{ left: number; top: number } | null>(null);
+
+  const [currency] = useSettings('settings.businessCurrency', { code: 'PKR', symbol: 'Rs' });
+  const [currencyDisplay] = useSettings<'abbreviation' | 'icon'>('settings.currencyDisplay', 'abbreviation');
+  const currencyStr = currencyDisplay === 'icon' ? currency.symbol : currency.code;
 
   return (
     <Card className="bg-white rounded-md flex flex-col flex-1 overflow-hidden shadow-sm p-0">
@@ -145,7 +150,7 @@ export function TransactionsCard({
                       {transaction.unit || ""}
                     </td>
                     <td className="px-4 py-2 text-right">
-                      Rs {Number(transaction.price).toFixed(2)}
+                      {currencyStr} {Number(transaction.price).toFixed(2)}
                     </td>
                     <td className="px-4 py-2">
                       <span

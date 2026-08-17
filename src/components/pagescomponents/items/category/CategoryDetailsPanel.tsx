@@ -1,4 +1,5 @@
 import { Search } from "lucide-react";
+import { useSettings } from "@/hooks/useSettings";
 import type { CategoryRecord } from "@/components/pagescomponents/items/products/types";
 import type { ItemRecord } from "./types";
 import { Card, CardContent } from "./ui";
@@ -18,6 +19,10 @@ export function CategoryDetailsPanel({
   onSetCategoryItemSearchTerm,
   onOpenMoveItemsDialog,
 }: Props) {
+  const [currency] = useSettings('settings.businessCurrency', { code: 'PKR', symbol: 'Rs' });
+  const [currencyDisplay] = useSettings<'abbreviation' | 'icon'>('settings.currencyDisplay', 'abbreviation');
+  const currencyStr = currencyDisplay === 'icon' ? currency.symbol : currency.code;
+
   return (
     <div className="flex-1 flex flex-col" style={{ marginRight: "4px" }}>
       {/* Header card */}
@@ -97,7 +102,7 @@ export function CategoryDetailsPanel({
                         {item.stockQuantity ?? 0}
                       </td>
                       <td className="px-4 py-3 text-right font-semibold text-[#43A047]">
-                        {item.stockValue != null ? `Rs ${item.stockValue.toFixed(2)}` : "—"}
+                        {item.stockValue != null ? `${currencyStr} ${item.stockValue.toFixed(2)}` : "—"}
                       </td>
                     </tr>
                   ))

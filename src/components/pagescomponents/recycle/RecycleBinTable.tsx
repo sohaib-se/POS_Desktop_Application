@@ -1,4 +1,5 @@
 import { Filter, Search } from "lucide-react";
+import { useSettings } from "@/hooks/useSettings";
 import {
   Table,
   TableBody,
@@ -19,6 +20,9 @@ interface RecycleBinTableProps {
 }
 
 export function RecycleBinTable({ items, isLoading, selectedIds, setSelectedIds }: RecycleBinTableProps) {
+  const [currency] = useSettings('settings.businessCurrency', { code: 'PKR', symbol: 'Rs' });
+  const [currencyDisplay] = useSettings<'abbreviation' | 'icon'>('settings.currencyDisplay', 'abbreviation');
+  const currencyStr = currencyDisplay === 'icon' ? currency.symbol : currency.code;
   
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
@@ -123,7 +127,7 @@ export function RecycleBinTable({ items, isLoading, selectedIds, setSelectedIds 
                   <TableCell className="text-sm">{item.party_name || '-'}</TableCell>
                   <TableCell className="text-sm">{item.txn_type}</TableCell>
                   <TableCell className="text-sm">{item.payment_type || '-'}</TableCell>
-                  <TableCell className="text-sm">{item.amount > 0 ? `Rs ${item.amount}` : '-'}</TableCell>
+                  <TableCell className="text-sm">{item.amount > 0 ? `${currencyStr} ${item.amount}` : '-'}</TableCell>
                   <TableCell className="text-sm">{item.deleted_on}</TableCell>
                 </TableRow>
               ))

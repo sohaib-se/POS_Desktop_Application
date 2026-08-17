@@ -1,4 +1,5 @@
 import { ChevronDown, FileText, ChevronRight, AlertCircle } from "lucide-react";
+import { useSettings } from "@/hooks/useSettings";
 import type { PosTab, PartyOption, BankOption } from "./types";
 
 interface RightPanelProps {
@@ -30,6 +31,10 @@ export function RightPanel({
   setCustomerDropdownOpen,
   filteredCustomers,
 }: RightPanelProps) {
+  const [currency] = useSettings('settings.businessCurrency', { code: 'PKR', symbol: 'Rs' });
+  const [currencyDisplay] = useSettings<'abbreviation' | 'icon'>('settings.currencyDisplay', 'abbreviation');
+  const currencyStr = currencyDisplay === 'icon' ? currency.symbol : currency.code;
+
   return (
     <div className="w-[380px] flex flex-col gap-2 shrink-0 overflow-hidden">
       {/* Top Section */}
@@ -121,7 +126,7 @@ export function RightPanel({
             </div>
             <div>
               <p className="text-base font-bold text-gray-800">
-                Total Rs {totalAmount.toFixed(2)}
+                Total {currencyStr} {totalAmount.toFixed(2)}
               </p>
               <p className="text-xs text-gray-500 mt-0.5">
                 Items: {activeTab.rows.filter((r) => r.itemId).length}, Quantity:{" "}
@@ -171,7 +176,7 @@ export function RightPanel({
                   : "border-gray-300"
               }`}
             >
-              <span className="text-sm font-medium text-gray-500 mr-2">Rs</span>
+              <span className="text-sm font-medium text-gray-500 mr-2">{currencyStr}</span>
               <input
                 type="text"
                 value={effectiveAmountReceived}
@@ -201,7 +206,7 @@ export function RightPanel({
             Change to Return:
           </span>
           <span className="text-lg font-bold text-gray-800">
-            Rs {changeToReturn.toFixed(2)}
+            {currencyStr} {changeToReturn.toFixed(2)}
           </span>
         </div>
       </div>

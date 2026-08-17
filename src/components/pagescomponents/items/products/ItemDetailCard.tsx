@@ -1,4 +1,5 @@
 import { SlidersHorizontal } from "lucide-react";
+import { useSettings } from "@/hooks/useSettings";
 import { Card } from "./ui";
 import type { Item } from "./types";
 
@@ -13,6 +14,10 @@ export function ItemDetailCard({
   onStockDetails,
   onAdjustItem,
 }: ItemDetailCardProps) {
+  const [currency] = useSettings('settings.businessCurrency', { code: 'PKR', symbol: 'Rs' });
+  const [currencyDisplay] = useSettings<'abbreviation' | 'icon'>('settings.currencyDisplay', 'abbreviation');
+  const currencyStr = currencyDisplay === 'icon' ? currency.symbol : currency.code;
+
   return (
     <Card
       className="bg-white rounded-md shadow-sm px-0 py-0"
@@ -44,13 +49,13 @@ export function ItemDetailCard({
             <span className="text-sm font-medium text-[#151B26]">
               SALE PRICE:{" "}
               <span className="text-[#43A047]">
-                Rs {selectedItem.salePrice.toFixed(2)}
+                {currencyStr} {selectedItem.salePrice.toFixed(2)}
               </span>
             </span>
             <span className="text-sm font-medium text-[#151B26]">
               PURCHASE PRICE:{" "}
               <span className="text-[#43A047]">
-                Rs {selectedItem.purchasePrice.toFixed(2)}
+                {currencyStr} {selectedItem.purchasePrice.toFixed(2)}
               </span>
             </span>
           </div>
@@ -83,7 +88,7 @@ export function ItemDetailCard({
             <span className="text-sm font-medium text-[#151B26]">
               STOCK VALUE:{" "}
               <span className="text-[#43A047]">
-                Rs {selectedItem.stockValue?.toLocaleString()}
+                {currencyStr} {selectedItem.stockValue?.toLocaleString()}
               </span>
             </span>
           </div>

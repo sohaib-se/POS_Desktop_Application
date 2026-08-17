@@ -1,4 +1,5 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui";
+import { useSettings } from "@/hooks/useSettings";
 import type { Item } from "./types";
 
 type StockDetailsModalProps = {
@@ -12,6 +13,10 @@ export function StockDetailsModal({
   onClose,
   selectedItem,
 }: StockDetailsModalProps) {
+  const [currency] = useSettings('settings.businessCurrency', { code: 'PKR', symbol: 'Rs' });
+  const [currencyDisplay] = useSettings<'abbreviation' | 'icon'>('settings.currencyDisplay', 'abbreviation');
+  const currencyStr = currencyDisplay === 'icon' ? currency.symbol : currency.code;
+
   return (
     <Dialog open={open} onOpenChange={(isOpen) => { if (!isOpen) onClose(); }}>
       <DialogContent className="max-w-sm">
@@ -65,7 +70,7 @@ export function StockDetailsModal({
                 Price Per {selectedItem.secondaryUnit || "Secondary Unit"}
               </span>
               <span className="text-sm font-semibold text-[#43A047]">
-                Rs{" "}
+                {currencyStr}{" "}
                 {selectedItem.conversionRate && selectedItem.conversionRate > 0
                   ? (selectedItem.salePrice / selectedItem.conversionRate).toFixed(2)
                   : "-"}
@@ -76,7 +81,7 @@ export function StockDetailsModal({
                 Wholesale Price
               </span>
               <span className="text-sm font-semibold text-[#43A047]">
-                Rs {selectedItem.wholesalePrice.toFixed(2)}
+                {currencyStr} {selectedItem.wholesalePrice.toFixed(2)}
               </span>
             </div>
             <div className="flex justify-between items-center border-t pt-2 pb-2">
@@ -85,7 +90,7 @@ export function StockDetailsModal({
                 {selectedItem.secondaryUnit || "Secondary Unit"}
               </span>
               <span className="text-sm font-semibold text-[#43A047]">
-                Rs{" "}
+                {currencyStr}{" "}
                 {selectedItem.conversionRate && selectedItem.conversionRate > 0
                   ? (selectedItem.wholesalePrice / selectedItem.conversionRate).toFixed(2)
                   : "-"}

@@ -1,4 +1,5 @@
 import { AlignJustify, Filter, MoreVertical, Info, Trash2 } from "lucide-react";
+import { useSettings } from "@/hooks/useSettings";
 import { AdjustCashModal } from "./AdjustCashModal";
 import { DetailsModal } from "./DetailsModal";
 
@@ -29,6 +30,10 @@ export function CashInHandView({
   handleDelete,
   isDeleting
 }: CashInHandViewProps) {
+  const [currency] = useSettings('settings.businessCurrency', { code: 'PKR', symbol: 'Rs' });
+  const [currencyDisplay] = useSettings<'abbreviation' | 'icon'>('settings.currencyDisplay', 'abbreviation');
+  const currencyStr = currencyDisplay === 'icon' ? currency.symbol : currency.code;
+
   return (
     <div className="h-full flex flex-col bg-[#D0DCE7] gap-1">
       {/* Header */}
@@ -38,7 +43,7 @@ export function CashInHandView({
             Cash In Hand
           </h2>
           <span className="text-base font-bold text-green-600">
-            Rs {totalCash.toLocaleString()}
+            {currencyStr} {totalCash.toLocaleString()}
           </span>
         </div>
         <button
@@ -96,7 +101,7 @@ export function CashInHandView({
                         : "text-red-500"
                         }`}
                     >
-                      Rs {tx.amount}
+                      {currencyStr} {tx.amount}
                     </td>
                     <td className="px-4 py-3 relative">
                       <button

@@ -14,6 +14,7 @@ export function ImportItemsSteps() {
       "Wholesale Price",
       "Purchase Price",
       "Minimum Wholesale Quantity",
+      "Low Threshold Quantity",
       "Opening Stock",
       "At Price",
       "As Of Date",
@@ -35,6 +36,7 @@ export function ImportItemsSteps() {
         "Wholesale Price": 90,
         "Purchase Price": 80,
         "Minimum Wholesale Quantity": 10,
+        "Low Threshold Quantity": 5,
         "Opening Stock": 50,
         "At Price": 80,
         "As Of Date": new Date().toISOString().split('T')[0],
@@ -45,8 +47,8 @@ export function ImportItemsSteps() {
 
     const worksheet = xlsx.utils.json_to_sheet(sampleData, { header: headers });
     
-    // Style the header row (row 1, cells A1 to P1)
-    const range = xlsx.utils.decode_range(worksheet['!ref'] || "A1:P2");
+    // Style the header row (row 1, cells A1 to Q1)
+    const range = xlsx.utils.decode_range(worksheet['!ref'] || "A1:Q2");
     for (let C = range.s.c; C <= range.e.c; ++C) {
       const address = xlsx.utils.encode_cell({ c: C, r: 0 }); // First row
       if (!worksheet[address]) continue;
@@ -81,6 +83,7 @@ export function ImportItemsSteps() {
       { wch: 15 }, // Wholesale Price
       { wch: 15 }, // Purchase Price
       { wch: 25 }, // Minimum Wholesale Quantity
+      { wch: 20 }, // Low Threshold Quantity
       { wch: 15 }, // Opening Stock
       { wch: 12 }, // At Price
       { wch: 15 }, // As Of Date

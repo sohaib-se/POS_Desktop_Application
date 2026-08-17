@@ -150,8 +150,10 @@ export function Sidebar({ currentView, onViewChange }: SidebarProps) {
         <div className="relative">
           <input
             type="text"
+            readOnly
+            onClick={() => window.dispatchEvent(new Event("open-global-search"))}
             placeholder="Open Anything (Ctrl+F)"
-            className="w-full bg-[#2a3142] text-gray-300 text-sm px-3 py-2 rounded-lg border border-gray-700 focus:outline-none focus:border-gray-500"
+            className="w-full bg-[#2a3142] text-gray-300 text-sm px-3 py-2 rounded-lg border border-gray-700 focus:outline-none focus:border-gray-500 cursor-pointer"
           />
           <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 text-xs">
             <ChevronRight className="w-4 h-4" />

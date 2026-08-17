@@ -14,6 +14,7 @@ export interface ImportedItem {
   "Wholesale Price": string | number;
   "Purchase Price": string | number;
   "Minimum Wholesale Quantity": string | number;
+  "Low Threshold Quantity": string | number;
   "Opening Stock": string | number;
   "At Price": string | number;
   "As Of Date": string;

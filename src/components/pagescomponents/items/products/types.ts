@@ -100,6 +100,7 @@ export type ItemTransactionRow = {
   status: "Paid" | "Unpaid" | "Open" | "Cancelled";
   itemId?: string;
   itemName: string;
+  rawTransaction?: any;
 };
 
 export type ItemTransactionLine = {

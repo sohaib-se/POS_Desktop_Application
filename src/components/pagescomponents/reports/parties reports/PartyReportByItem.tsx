@@ -1,3 +1,4 @@
+import { useSettings } from "@/hooks/useSettings";
 import { useCallback, useEffect, useState, useMemo } from "react";
 import { ChevronDown, Printer, ArrowLeft } from "lucide-react";
 import { getMonthKeyFromDate, formatDateDisplay, monthLabelForFilter, formatMonthLabel } from "../../saleinvoices/utils";
@@ -16,6 +17,10 @@ interface PartyItemData {
 }
 
 export function PartyReportByItem({ onBack }: PartyReportByItemProps) {
+  const [currency] = useSettings('settings.businessCurrency', { code: 'PKR', symbol: 'Rs' });
+  const [currencyDisplay] = useSettings<'abbreviation' | 'icon'>('settings.currencyDisplay', 'abbreviation');
+  const currencyStr = currencyDisplay === 'icon' ? currency.symbol : currency.code;
+
   const [loading, setLoading] = useState(true);
   
   // Filter state
@@ -480,11 +485,11 @@ export function PartyReportByItem({ onBack }: PartyReportByItemProps) {
                         <td className="px-4 py-3 text-gray-900 font-medium border-r border-white/50 text-center">{row.partyName}</td>
                         <td className="px-4 py-3 text-gray-900 border-r border-white/50 text-center">{row.saleQty}</td>
                         <td className="px-4 py-3 border-r border-white/50 text-gray-900 text-center">
-                          Rs {row.saleAmount.toLocaleString(undefined, {minimumFractionDigits: 2})}
+                          {currencyStr} {row.saleAmount.toLocaleString(undefined, {minimumFractionDigits: 2})}
                         </td>
                         <td className="px-4 py-3 text-gray-900 border-r border-white/50 text-center">{row.purchaseQty}</td>
                         <td className="px-4 py-3 border-r border-white/50 text-gray-900 text-center">
-                          Rs {row.purchaseAmount.toLocaleString(undefined, {minimumFractionDigits: 2})}
+                          {currencyStr} {row.purchaseAmount.toLocaleString(undefined, {minimumFractionDigits: 2})}
                         </td>
                       </tr>
                   ))
@@ -502,9 +507,9 @@ export function PartyReportByItem({ onBack }: PartyReportByItemProps) {
             </div>
             <div className="flex gap-16 ml-auto mr-12 text-center text-gray-900">
                 <div>{totalSaleQty}</div>
-                <div>Rs {totalSaleAmount.toLocaleString(undefined, {minimumFractionDigits: 2})}</div>
+                <div>{currencyStr} {totalSaleAmount.toLocaleString(undefined, {minimumFractionDigits: 2})}</div>
                 <div>{totalPurchaseQty}</div>
-                <div>Rs {totalPurchaseAmount.toLocaleString(undefined, {minimumFractionDigits: 2})}</div>
+                <div>{currencyStr} {totalPurchaseAmount.toLocaleString(undefined, {minimumFractionDigits: 2})}</div>
             </div>
           </div>
 

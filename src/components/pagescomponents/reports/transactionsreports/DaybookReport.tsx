@@ -1,3 +1,4 @@
+import { useSettings } from "@/hooks/useSettings";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft, Calendar, Search, Printer, Share2, MoreVertical, Pencil, Trash2 } from "lucide-react";
 import { formatDateDisplay } from "../../saleinvoices/utils";
@@ -25,6 +26,10 @@ interface TransactionRow {
 }
 
 export function DaybookReport({ onBack, onEditInvoice }: DaybookReportProps) {
+  const [currency] = useSettings('settings.businessCurrency', { code: 'PKR', symbol: 'Rs' });
+  const [currencyDisplay] = useSettings<'abbreviation' | 'icon'>('settings.currencyDisplay', 'abbreviation');
+  const currencyStr = currencyDisplay === 'icon' ? currency.symbol : currency.code;
+
   const [transactions, setTransactions] = useState<TransactionRow[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -282,7 +287,7 @@ export function DaybookReport({ onBack, onEditInvoice }: DaybookReportProps) {
             <span className="text-sm text-[#6B6B83]">Today's Total Sales</span>
           </div>
           <p className="text-xl font-bold text-[#1C1F2A]">
-            Rs {totalSales.toLocaleString()}
+            {currencyStr} {totalSales.toLocaleString()}
           </p>
         </div>
         
@@ -291,7 +296,7 @@ export function DaybookReport({ onBack, onEditInvoice }: DaybookReportProps) {
             <span className="text-sm text-[#3D7D50]">Today's Purchase Bill</span>
           </div>
           <p className="text-xl font-bold text-[#134D25]">
-            Rs {totalPurchases.toLocaleString()}
+            {currencyStr} {totalPurchases.toLocaleString()}
           </p>
         </div>
       </div>
@@ -403,8 +408,8 @@ export function DaybookReport({ onBack, onEditInvoice }: DaybookReportProps) {
                     <td className="px-4 py-3">{invoice.invoiceNo}</td>
                     <td className="px-4 py-3">{invoice.partyName}</td>
                     <td className="px-4 py-3">{invoice.paymentType}</td>
-                    <td className="px-4 py-3 text-right">Rs {invoice.amount.toLocaleString()}</td>
-                    <td className="px-4 py-3 text-right">Rs {invoice.balance.toLocaleString()}</td>
+                    <td className="px-4 py-3 text-right">{currencyStr} {invoice.amount.toLocaleString()}</td>
+                    <td className="px-4 py-3 text-right">{currencyStr} {invoice.balance.toLocaleString()}</td>
                     <td className="px-4 py-3 relative">
                       <div className="flex items-center justify-center gap-2">
                         <button className="p-1.5 hover:bg-gray-100 rounded" title="Print">

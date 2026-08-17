@@ -1,3 +1,4 @@
+import { useSettings } from "@/hooks/useSettings";
 import { useCallback, useEffect, useState, useMemo } from "react";
 import { ChevronDown, Printer, ArrowLeft } from "lucide-react";
 import type { Party } from "@/types";
@@ -7,6 +8,10 @@ interface AllPartiesReportProps {
 }
 
 export function AllPartiesReport({ onBack }: AllPartiesReportProps) {
+  const [currency] = useSettings('settings.businessCurrency', { code: 'PKR', symbol: 'Rs' });
+  const [currencyDisplay] = useSettings<'abbreviation' | 'icon'>('settings.currencyDisplay', 'abbreviation');
+  const currencyStr = currencyDisplay === 'icon' ? currency.symbol : currency.code;
+
   const [parties, setParties] = useState<Party[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedParties, setSelectedParties] = useState<number[]>([]);
@@ -266,20 +271,20 @@ export function AllPartiesReport({ onBack }: AllPartiesReportProps) {
                         <td className="px-4 py-3 text-gray-900 border-r border-white/50">{party.phone || '---'}</td>
                         <td className="px-4 py-3 text-right border-r border-white/50">
                           {receivable !== null ? (
-                            <span className="text-green-500 font-medium">Rs {receivable.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+                            <span className="text-green-500 font-medium">{currencyStr} {receivable.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
                           ) : (
                             <span className="text-gray-900">---</span>
                           )}
                         </td>
                         <td className="px-4 py-3 text-right border-r border-white/50">
                           {payable !== null ? (
-                            <span className="text-red-500 font-medium">Rs {payable.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+                            <span className="text-red-500 font-medium">{currencyStr} {payable.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
                           ) : (
                             <span className="text-gray-900">---</span>
                           )}
                         </td>
                         <td className="px-4 py-3 text-right text-gray-900">
-                          {party.creditLimit ? `Rs ${party.creditLimit.toLocaleString()}` : '---'}
+                          {party.creditLimit ? `${currencyStr} ${party.creditLimit.toLocaleString()}` : '---'}
                         </td>
                       </tr>
                     );
@@ -292,10 +297,10 @@ export function AllPartiesReport({ onBack }: AllPartiesReportProps) {
           {/* Footer Totals */}
           <div className="bg-white border-t border-gray-200 p-4 px-6 flex justify-between items-center text-[15px] sticky bottom-0">
             <div className="text-gray-600">
-              Total Receivable: <span className="text-green-500 ml-1">Rs {totalReceivable.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+              Total Receivable: <span className="text-green-500 ml-1">{currencyStr} {totalReceivable.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
             </div>
             <div className="text-gray-600">
-              Total Payable: <span className="text-red-500 ml-1">Rs {totalPayable.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+              Total Payable: <span className="text-red-500 ml-1">{currencyStr} {totalPayable.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
             </div>
           </div>
 

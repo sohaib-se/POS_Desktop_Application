@@ -1,7 +1,9 @@
-import { Search, Printer } from "lucide-react";
+import { useState } from "react";
+import { useSettings } from "@/hooks/useSettings";
+import { Search, Printer, MoreVertical } from "lucide-react";
 import { Card, CardContent } from "./ui";
 import type { ItemTransactionRow } from "./types";
-
+import { ItemTransactionContextMenu } from "./ItemTransactionContextMenu";
 type TransactionsCardProps = {
   filteredItemTransactions: ItemTransactionRow[];
   showTransactionSearch: boolean;
@@ -10,6 +12,9 @@ type TransactionsCardProps = {
   onSetTransactionSearchTerm: (term: string) => void;
   onPrintTransactions: () => void;
   onExportExcel: () => void;
+  onViewTransaction?: (transaction: ItemTransactionRow) => void;
+  onEditTransaction?: (transaction: ItemTransactionRow) => void;
+  onDeleteTransaction?: (transaction: ItemTransactionRow) => void;
 };
 
 export function TransactionsCard({
@@ -20,7 +25,17 @@ export function TransactionsCard({
   onSetTransactionSearchTerm,
   onPrintTransactions,
   onExportExcel,
+  onViewTransaction,
+  onEditTransaction,
+  onDeleteTransaction,
 }: TransactionsCardProps) {
+  const [openRowMenuId, setOpenRowMenuId] = useState<string | null>(null);
+  const [openRowMenuPosition, setOpenRowMenuPosition] = useState<{ left: number; top: number } | null>(null);
+
+  const [currency] = useSettings('settings.businessCurrency', { code: 'PKR', symbol: 'Rs' });
+  const [currencyDisplay] = useSettings<'abbreviation' | 'icon'>('settings.currencyDisplay', 'abbreviation');
+  const currencyStr = currencyDisplay === 'icon' ? currency.symbol : currency.code;
+
   return (
     <Card className="bg-white rounded-md flex flex-col flex-1 overflow-hidden shadow-sm p-0">
       <CardContent className="p-0">
@@ -97,6 +112,9 @@ export function TransactionsCard({
                 <th className="px-4 py-2 text-left font-semibold text-[#7B8A9A] text-xs tracking-wide align-middle">
                   STATUS{" "}
                 </th>
+                <th className="px-4 py-2 text-center font-semibold text-[#7B8A9A] text-xs tracking-wide align-middle w-12">
+                  {" "}
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -132,7 +150,7 @@ export function TransactionsCard({
                       {transaction.unit || ""}
                     </td>
                     <td className="px-4 py-2 text-right">
-                      Rs {Number(transaction.price).toFixed(2)}
+                      {currencyStr} {Number(transaction.price).toFixed(2)}
                     </td>
                     <td className="px-4 py-2">
                       <span
@@ -146,6 +164,33 @@ export function TransactionsCard({
                       >
                         {transaction.status}
                       </span>
+                    </td>
+                    <td className="px-4 py-2 text-center">
+                      <button
+                        className="p-1.5 hover:bg-gray-100 rounded"
+                        title="More actions"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          const targetRect = event.currentTarget.getBoundingClientRect();
+                          const menuWidth = 144;
+                          const menuHeight = 96;
+                          const nextLeft = Math.max(8, Math.min(targetRect.right - menuWidth, window.innerWidth - menuWidth - 8));
+                          const nextTop = targetRect.bottom + menuHeight > window.innerHeight
+                            ? Math.max(8, targetRect.top - menuHeight - 8)
+                            : targetRect.bottom + 8;
+
+                          setOpenRowMenuPosition((previousPosition) =>
+                            openRowMenuId === transaction.id && previousPosition
+                              ? null
+                              : { left: nextLeft, top: nextTop },
+                          );
+                          setOpenRowMenuId((previous) =>
+                            previous === transaction.id ? null : transaction.id,
+                          );
+                        }}
+                      >
+                        <MoreVertical className="w-4 h-4 text-gray-500" />
+                      </button>
                     </td>
                   </tr>
                 ))
@@ -163,6 +208,17 @@ export function TransactionsCard({
           </table>
         </div>
       </CardContent>
+
+      <ItemTransactionContextMenu
+        openRowMenuId={openRowMenuId}
+        openRowMenuPosition={openRowMenuPosition}
+        transactions={filteredItemTransactions}
+        setOpenRowMenuId={setOpenRowMenuId}
+        setOpenRowMenuPosition={setOpenRowMenuPosition}
+        openViewDialog={onViewTransaction}
+        onEditTransaction={onEditTransaction}
+        handleDeleteTransaction={onDeleteTransaction}
+      />
     </Card>
   );
 }

@@ -33,7 +33,8 @@ import { BackupToComputer } from "@/pages/backuptocomputer";
 import { BackupToDrive } from "@/pages/backuptodrive";
 import { RestoreBackup } from "@/pages/restorebackup";
 import { LaimsoftPos } from "@/pages/LaimsoftPos";
-import { BillPreviewPage } from "@/components/pagescomponents/previewbill/BillPreviewPage";
+import { GlobalSearch } from "@/components/common/GlobalSearch";
+import { AllTransactions } from "@/pages/AllTransactions";
 import type { SaleInvoiceEditData, ViewType } from "@/types";
 import type { BillPreviewSaleData } from "@/components/pagescomponents/previewbill/BillPreviewData";
 
@@ -76,7 +77,25 @@ function App() {
     useState<SaleInvoiceEditData | null>(null);
   const [isConvertingEstimate, setIsConvertingEstimate] = useState(false);
   const [settingsInitialTab, setSettingsInitialTab] = useState<string>("general");
-  const [billPreviewData, setBillPreviewData] = useState<BillPreviewSaleData | null>(null);
+  const [isGlobalSearchOpen, setIsGlobalSearchOpen] = useState(false);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === "f") {
+        e.preventDefault();
+        setIsGlobalSearchOpen(true);
+      }
+    };
+    
+    const handleOpenSearch = () => setIsGlobalSearchOpen(true);
+
+    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("open-global-search", handleOpenSearch);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("open-global-search", handleOpenSearch);
+    };
+  }, []);
 
   const isOverlayView = (view: ViewType) =>
     view === "add-sale" ||
@@ -167,10 +186,12 @@ function App() {
 
   const renderContent = (view: ViewType) => {
     switch (view) {
+      case "all-transactions":
+        return <AllTransactions />;
       case "home":
         return <Dashboard onViewChange={handleViewChange} onOpenReport={handleOpenReport} />;
       case "parties":
-        return <Parties onOpenSettings={handleOpenSettings} />;
+        return <Parties onOpenSettings={handleOpenSettings} onEditSaleInvoice={handleEditSaleInvoice} />;
       case "items":
         return <Items onViewChange={handleViewChange} />;
       case "griditems":
@@ -290,12 +311,14 @@ function App() {
         </div>
       )}
 
-      {currentView === "bill-preview" && billPreviewData && (
-        <BillPreviewPage
-          sale={billPreviewData}
-          onClose={handleCloseBillPreview}
-        />
-      )}
+      <GlobalSearch 
+        isOpen={isGlobalSearchOpen} 
+        onClose={() => setIsGlobalSearchOpen(false)} 
+        onNavigate={(view) => {
+          handleViewChange(view);
+          setIsGlobalSearchOpen(false);
+        }} 
+      />
     </>
   );
 }

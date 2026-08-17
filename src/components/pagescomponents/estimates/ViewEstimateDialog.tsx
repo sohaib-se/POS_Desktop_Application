@@ -1,4 +1,5 @@
 import { X } from "lucide-react";
+import { useSettings } from "@/hooks/useSettings";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import type { EstimateRecord } from "./types";
 
@@ -8,6 +9,10 @@ interface ViewEstimateDialogProps {
 }
 
 export function ViewEstimateDialog({ viewingRecord, setViewingRecord }: ViewEstimateDialogProps) {
+  const [currency] = useSettings('settings.businessCurrency', { code: 'PKR', symbol: 'Rs' });
+  const [currencyDisplay] = useSettings<'abbreviation' | 'icon'>('settings.currencyDisplay', 'abbreviation');
+  const currencyStr = currencyDisplay === 'icon' ? currency.symbol : currency.code;
+
   return (
     <Dialog
       open={Boolean(viewingRecord)}
@@ -49,7 +54,7 @@ export function ViewEstimateDialog({ viewingRecord, setViewingRecord }: ViewEsti
               </div>
               <div className="flex justify-between pb-2">
                 <span className="text-gray-500 text-sm">Amount</span>
-                <span className="font-bold text-gray-900">Rs {viewingRecord.amount.toFixed(2)}</span>
+                <span className="font-bold text-gray-900">{currencyStr} {viewingRecord.amount.toFixed(2)}</span>
               </div>
             </div>
           </div>

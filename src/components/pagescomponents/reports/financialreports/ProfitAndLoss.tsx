@@ -1,3 +1,4 @@
+import { useSettings } from "@/hooks/useSettings";
 import { useState, useEffect, useMemo } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import { parseLineItems } from '../../saleinvoices/utils';
@@ -16,7 +17,7 @@ const getCurrencySymbol = () => {
   } catch {
     // ignore
   }
-  return 'Rs ';
+  return `${currencyStr} `;
 };
 
 export function ProfitAndLoss({ onBack }: ProfitAndLossProps) {
@@ -29,7 +30,10 @@ export function ProfitAndLoss({ onBack }: ProfitAndLossProps) {
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const currencySymbol = getCurrencySymbol();
+    const [currency] = useSettings('settings.businessCurrency', { code: 'PKR', symbol: 'Rs' });
+  const [currencyDisplay] = useSettings<'abbreviation' | 'icon'>('settings.currencyDisplay', 'abbreviation');
+  const currencyStr = currencyDisplay === 'icon' ? currency.symbol : currency.code;
+
 
   useEffect(() => {
     const loadData = async () => {
@@ -123,7 +127,7 @@ export function ProfitAndLoss({ onBack }: ProfitAndLossProps) {
   }, [sales, purchases, expenses, items, dateFrom, dateTo]);
 
   const formatAmount = (value: number) =>
-    `${currencySymbol}${Math.abs(value).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    `${currencyStr}${Math.abs(value).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
   // Rows shown in the statement table, in the order they should appear.
   const rows: { label: string; amount: number; positive: boolean }[] = [

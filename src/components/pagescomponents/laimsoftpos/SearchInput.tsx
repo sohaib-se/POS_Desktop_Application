@@ -1,4 +1,5 @@
 import type React from "react";
+import { useSettings } from "@/hooks/useSettings";
 import { Search } from "lucide-react";
 import type { PosTab, ItemOption } from "./types";
 
@@ -27,6 +28,10 @@ export function SearchInput({
   setSearchSelectedIndex,
   handleSelectItem,
 }: SearchInputProps) {
+  const [currency] = useSettings('settings.businessCurrency', { code: 'PKR', symbol: 'Rs' });
+  const [currencyDisplay] = useSettings<'abbreviation' | 'icon'>('settings.currencyDisplay', 'abbreviation');
+  const currencyStr = currencyDisplay === 'icon' ? currency.symbol : currency.code;
+
   return (
     <div className="p-2 border-b border-gray-200">
       <div className="relative">
@@ -71,7 +76,7 @@ export function SearchInput({
                     )}
                   </div>
                   <span className="font-semibold text-gray-900">
-                    Rs {item.sale_price}
+                    {currencyStr} {item.sale_price}
                   </span>
                 </div>
               ))}

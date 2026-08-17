@@ -147,6 +147,9 @@ export function BulkUpdateTable({
                   <th className="px-4 py-2 text-left font-medium text-gray-600 min-w-[110px]">
                     AS OF DATE
                   </th>
+                  <th className="px-4 py-2 text-left font-medium text-gray-600 min-w-[110px]">
+                    LOW STOCK
+                  </th>
                 </>
               )}
               {activeTab === "info" && (
@@ -243,6 +246,14 @@ export function BulkUpdateTable({
                           type="text" 
                           value={getValue(item, 'mfgDate')} 
                           onChange={(e) => onItemEdit(item.id, 'mfgDate', e.target.value)}
+                          className={inputClasses} 
+                        />
+                      </td>
+                      <td className={tdClasses}>
+                        <input 
+                          type="number" 
+                          value={getValue(item, 'lowStock')} 
+                          onChange={(e) => onItemEdit(item.id, 'lowStock', Number(e.target.value))}
                           className={inputClasses} 
                         />
                       </td>

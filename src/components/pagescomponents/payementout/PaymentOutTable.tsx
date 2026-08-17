@@ -1,4 +1,5 @@
 import React, { useRef, useState } from "react";
+import { useSettings } from "@/hooks/useSettings";
 import { Search, Printer, Share2, MoreVertical } from "lucide-react";
 
 interface PaymentOutTableProps {
@@ -14,6 +15,10 @@ export function PaymentOutTable({
   setOpenRowMenuId,
   setOpenRowMenuPosition,
 }: PaymentOutTableProps) {
+  const [currency] = useSettings('settings.businessCurrency', { code: 'PKR', symbol: 'Rs' });
+  const [currencyDisplay] = useSettings<'abbreviation' | 'icon'>('settings.currencyDisplay', 'abbreviation');
+  const currencyStr = currencyDisplay === 'icon' ? currency.symbol : currency.code;
+
   const [showSearchInput, setShowSearchInput] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const searchInputRef = useRef<HTMLInputElement | null>(null);
@@ -121,10 +126,10 @@ export function PaymentOutTable({
                 <td className="px-4 py-3">{payment.reference || ""}</td>
                 <td className="px-4 py-3">{payment.partyName}</td>
                 <td className="px-4 py-3 text-right">
-                  Rs {payment.amount.toFixed(2)}
+                  {currencyStr} {payment.amount.toFixed(2)}
                 </td>
                 <td className="px-4 py-3 text-right">
-                  Rs {payment.amount.toFixed(2)}
+                  {currencyStr} {payment.amount.toFixed(2)}
                 </td>
                 <td className="px-4 py-3">{payment.paymentType}</td>
                 <td className="px-4 py-3 relative">

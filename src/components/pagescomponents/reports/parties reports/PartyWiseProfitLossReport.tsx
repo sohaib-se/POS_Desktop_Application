@@ -1,3 +1,4 @@
+import { useSettings } from "@/hooks/useSettings";
 import { useCallback, useEffect, useState, useMemo } from "react";
 import { ChevronDown, Printer, ArrowLeft } from "lucide-react";
 import { getMonthKeyFromDate, formatDateDisplay, monthLabelForFilter, formatMonthLabel } from "../../saleinvoices/utils";
@@ -27,6 +28,10 @@ interface TransactionData {
 type DisplayData = AggregateData | TransactionData;
 
 export function PartyWiseProfitLossReport({ onBack }: PartyWiseProfitLossReportProps) {
+  const [currency] = useSettings('settings.businessCurrency', { code: 'PKR', symbol: 'Rs' });
+  const [currencyDisplay] = useSettings<'abbreviation' | 'icon'>('settings.currencyDisplay', 'abbreviation');
+  const currencyStr = currencyDisplay === 'icon' ? currency.symbol : currency.code;
+
   const [loading, setLoading] = useState(true);
   
   // Filter state
@@ -412,11 +417,11 @@ export function PartyWiseProfitLossReport({ onBack }: PartyWiseProfitLossReportP
                                 <td className="px-4 py-3 text-gray-900 font-medium border-r border-white/50 text-center">{row.partyName}</td>
                                 <td className="px-4 py-3 text-gray-900 border-r border-white/50 text-center">{row.phoneNo || '---'}</td>
                                 <td className="px-4 py-3 border-r border-white/50 text-gray-900 text-center">
-                                Rs {row.totalSaleAmount.toLocaleString(undefined, {minimumFractionDigits: 2})}
+                                {currencyStr} {row.totalSaleAmount.toLocaleString(undefined, {minimumFractionDigits: 2})}
                                 </td>
                                 <td className="px-4 py-3 border-r border-white/50 text-center">
                                 <span className={row.profitOrLoss >= 0 ? "text-green-500 font-medium" : "text-red-500 font-medium"}>
-                                    Rs {row.profitOrLoss.toLocaleString(undefined, {minimumFractionDigits: 2})}
+                                    {currencyStr} {row.profitOrLoss.toLocaleString(undefined, {minimumFractionDigits: 2})}
                                 </span>
                                 </td>
                             </tr>
@@ -428,11 +433,11 @@ export function PartyWiseProfitLossReport({ onBack }: PartyWiseProfitLossReportP
                                 <td className="px-4 py-3 text-gray-900 font-medium border-r border-white/50 text-center">{row.date}</td>
                                 <td className="px-4 py-3 text-gray-900 border-r border-white/50 text-center">{row.invoiceNo || '---'}</td>
                                 <td className="px-4 py-3 border-r border-white/50 text-gray-900 text-center">
-                                Rs {row.saleAmount.toLocaleString(undefined, {minimumFractionDigits: 2})}
+                                {currencyStr} {row.saleAmount.toLocaleString(undefined, {minimumFractionDigits: 2})}
                                 </td>
                                 <td className="px-4 py-3 border-r border-white/50 text-center">
                                 <span className={row.profitOrLoss >= 0 ? "text-green-500 font-medium" : "text-red-500 font-medium"}>
-                                    Rs {row.profitOrLoss.toLocaleString(undefined, {minimumFractionDigits: 2})}
+                                    {currencyStr} {row.profitOrLoss.toLocaleString(undefined, {minimumFractionDigits: 2})}
                                 </span>
                                 </td>
                             </tr>
@@ -447,10 +452,10 @@ export function PartyWiseProfitLossReport({ onBack }: PartyWiseProfitLossReportP
           {/* Footer Totals */}
           <div className="bg-white border-t border-gray-200 p-4 px-6 flex justify-between items-center text-[15px] sticky bottom-0">
             <div className="text-gray-600">
-              Total Sale Amount: <span className="text-gray-900 ml-1">Rs {totalSale.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+              Total Sale Amount: <span className="text-gray-900 ml-1">{currencyStr} {totalSale.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
             </div>
             <div className="text-gray-600">
-              Total Profit(+) / Loss(-): <span className={totalProfit >= 0 ? "text-green-500 ml-1" : "text-red-500 ml-1"}>Rs {totalProfit.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+              Total Profit(+) / Loss(-): <span className={totalProfit >= 0 ? "text-green-500 ml-1" : "text-red-500 ml-1"}>{currencyStr} {totalProfit.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
             </div>
           </div>
 

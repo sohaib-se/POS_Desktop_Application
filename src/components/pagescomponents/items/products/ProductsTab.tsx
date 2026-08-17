@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useSettings } from "@/hooks/useSettings";
 import { Package, Plus } from "lucide-react";
 
 import type {
@@ -9,7 +10,6 @@ import type {
   UnitRecord,
   ItemTransactionRow,
   ItemTransactionLine,
-  ItemTransactionApiRecord,
   ItemContextMenuState,
   AdjustStockForm,
 } from "./types";
@@ -22,6 +22,11 @@ import { AddItemModal } from "./AddItemModal";
 import { DeleteItemModal } from "./DeleteItemModal";
 import { AdjustStockModal } from "./AdjustStockModal";
 import { StockDetailsModal } from "./StockDetailsModal";
+import { SaleInvoiceDialog } from "../../saleinvoices/SaleInvoiceDialog";
+import { PurchaseBillDialog } from "../../purchasebills/PurchaseBillDialog";
+import { AddSale } from "../../../../pages/AddSale";
+import { AddPurchase } from "../../../../pages/AddPurchase";
+import { useCallback } from "react";
 
 // ---- Helper functions ----
 
@@ -185,6 +190,10 @@ export function ProductsTab({
   onOpenUnitSelector,
 }: ProductsTabProps) {
   // ---- State ----
+  const [currency] = useSettings('settings.businessCurrency', { code: 'PKR', symbol: 'Rs' });
+  const [currencyDisplay] = useSettings<'abbreviation' | 'icon'>('settings.currencyDisplay', 'abbreviation');
+  const currencyStr = currencyDisplay === 'icon' ? currency.symbol : currency.code;
+
   const [itemList, setItemList] = useState<Item[]>([]);
   const [isItemsLoading, setIsItemsLoading] = useState(true);
   const cachedHasItems = localStorage.getItem("items_hasItems") !== "false";
@@ -211,6 +220,13 @@ export function ProductsTab({
   const [itemTransactions, setItemTransactions] = useState<ItemTransactionRow[]>([]);
   const [transactionSearchTerm, setTransactionSearchTerm] = useState("");
   const [showTransactionSearch, setShowTransactionSearch] = useState(false);
+
+  const [viewingSale, setViewingSale] = useState<any | null>(null);
+  const [viewingPurchase, setViewingPurchase] = useState<any | null>(null);
+  const [editingSale, setEditingSale] = useState<any | null>(null);
+  const [editingPurchase, setEditingPurchase] = useState<any | null>(null);
+  const [showAddSale, setShowAddSale] = useState(false);
+  const [showAddPurchase, setShowAddPurchase] = useState(false);
 
   const [showAdjustStockModal, setShowAdjustStockModal] = useState(false);
   const [adjustStockForm, setAdjustStockForm] = useState<AdjustStockForm>({
@@ -291,84 +307,112 @@ export function ProductsTab({
     void loadItems();
   }, []);
 
-  useEffect(() => {
-    const loadItemTransactions = async () => {
-      try {
-        const [saleRes, purchaseRes, adjustRes] = await Promise.all([
-          fetch("/api/sale_invoices"),
-          fetch("/api/purchase_bills"),
-          fetch("/api/adjust_stock_transactions"),
-        ]);
-        const saleInvoices = saleRes.ok
-          ? ((await saleRes.json()) as ItemTransactionApiRecord[])
-          : [];
-        const purchaseBills = purchaseRes.ok
-          ? ((await purchaseRes.json()) as ItemTransactionApiRecord[])
-          : [];
-        const adjustStockTx = adjustRes.ok
-          ? ((await adjustRes.json()) as Record<string, unknown>[])
-          : [];
+  const loadItemTransactions = useCallback(async () => {
+    try {
+      const [saleRes, purchaseRes, adjustRes] = await Promise.all([
+        fetch("/api/sale_invoices"),
+        fetch("/api/purchase_bills"),
+        fetch("/api/adjust_stock_transactions"),
+      ]);
+      const saleInvoices = saleRes.ok
+        ? (await saleRes.json()) as any[]
+        : [];
+      const purchaseBills = purchaseRes.ok
+        ? (await purchaseRes.json()) as any[]
+        : [];
+      const adjustStockTx = adjustRes.ok
+        ? ((await adjustRes.json()) as Record<string, unknown>[])
+        : [];
 
-        const nextTransactions = [...saleInvoices, ...purchaseBills].flatMap(
-          (invoice): ItemTransactionRow[] => {
-            const lineItems = parseLineItems(invoice.line_items_json);
-            const transactionType = normalizeTransactionType(
-              invoice.transaction_type
-            );
-            const balance = Number(invoice.balance ?? 0);
-            const status = normalizeTransactionStatus(invoice.status, balance);
-            return lineItems.map((lineItem, index) => ({
-              id: `${invoice.id}-${lineItem.id ?? index}`,
-              type: transactionType,
-              invoiceNo: invoice.invoice_no,
-              partyName: invoice.party_name,
-              date: invoice.date,
-              quantity: Number(lineItem.quantity ?? 0),
-              unit: lineItem.unit ?? "",
-              price: Number(lineItem.price ?? 0),
-              amount: Number(
-                lineItem.amount ??
-                  Number(lineItem.quantity ?? 0) * Number(lineItem.price ?? 0)
-              ),
-              balance,
-              status,
-              itemId: lineItem.itemId ?? undefined,
-              itemName: lineItem.name ?? "",
-            }));
-          }
-        );
+      const nextTransactions = [...saleInvoices, ...purchaseBills].flatMap(
+        (invoice): ItemTransactionRow[] => {
+          const lineItems = parseLineItems(invoice.line_items_json);
+          const transactionType = normalizeTransactionType(
+            invoice.transaction_type
+          );
+          const balance = Number(invoice.balance ?? 0);
+          const status = normalizeTransactionStatus(invoice.status, balance);
 
-        const adjustTransactions: ItemTransactionRow[] = adjustStockTx.map(
-          (adj) => ({
-            id: `adj-${adj.id as string}`,
-            type: adj.adjustment_type as ItemTransactionRow["type"],
-            invoiceNo: "",
-            partyName: "Stock Adjustment",
-            date: adj.date as string,
-            quantity: Number(adj.quantity ?? 0),
-            unit: (adj.unit as string) ?? "",
-            price: Number(adj.at_price ?? 0),
-            amount: Number(adj.quantity ?? 0) * Number(adj.at_price ?? 0),
-            balance: 0,
-            status: "Paid",
-            itemId: adj.item_id as string,
-            itemName: adj.item_name as string,
-          })
-        );
+          const rawTransaction = {
+            id: invoice.id,
+            invoiceNo: invoice.invoice_no,
+            date: invoice.date,
+            partyName: invoice.party_name,
+            partyId: invoice.party_id ?? undefined,
+            partyPhone: invoice.party_phone ?? undefined,
+            transaction: invoice.transaction_type,
+            paymentType: invoice.payment_type ?? invoice.payment_mode ?? "",
+            paymentMode: invoice.payment_mode ?? undefined,
+            amount: Number(invoice.amount ?? 0),
+            balance: Number(invoice.balance ?? 0),
+            subtotal: Number(invoice.subtotal ?? 0),
+            discountPercent: Number(invoice.discount_percent ?? 0),
+            discountAmount: Number(invoice.discount_amount ?? 0),
+            taxLabel: invoice.tax_label ?? undefined,
+            taxRate: Number(invoice.tax_rate ?? 0),
+            taxAmount: Number(invoice.tax_amount ?? 0),
+            roundOff: Boolean(invoice.round_off),
+            roundOffAmount: Number(invoice.round_off_amount ?? 0),
+            description: invoice.description ?? undefined,
+            lineItemsJson: invoice.line_items_json ?? null,
+          };
 
-        setItemTransactions(
-          [...nextTransactions, ...adjustTransactions].sort(
-            (a, b) =>
-              new Date(b.date).getTime() - new Date(a.date).getTime()
-          )
-        );
-      } catch (error) {
-        console.error(error);
-        setItemTransactions([]);
-      }
-    };
-    void loadItemTransactions();
+          return lineItems.map((lineItem, index) => ({
+            id: `${invoice.id}-${lineItem.id ?? index}`,
+            type: transactionType,
+            invoiceNo: invoice.invoice_no,
+            partyName: invoice.party_name,
+            date: invoice.date,
+            quantity: Number(lineItem.quantity ?? 0),
+            unit: lineItem.unit ?? "",
+            price: Number(lineItem.price ?? 0),
+            amount: Number(
+              lineItem.amount ??
+                Number(lineItem.quantity ?? 0) * Number(lineItem.price ?? 0)
+            ),
+            balance,
+            status,
+            itemId: lineItem.itemId ?? undefined,
+            itemName: lineItem.name ?? "",
+            rawTransaction,
+          }));
+        }
+      );
+
+      const adjustTransactions: ItemTransactionRow[] = adjustStockTx.map(
+        (adj) => ({
+          id: `adj-${adj.id as string}`,
+          type: adj.adjustment_type as ItemTransactionRow["type"],
+          invoiceNo: "",
+          partyName: "Stock Adjustment",
+          date: adj.date as string,
+          quantity: Number(adj.quantity ?? 0),
+          unit: (adj.unit as string) ?? "",
+          price: Number(adj.at_price ?? 0),
+          amount: Number(adj.quantity ?? 0) * Number(adj.at_price ?? 0),
+          balance: 0,
+          status: "Paid",
+          itemId: adj.item_id as string,
+          itemName: adj.item_name as string,
+          rawTransaction: { id: adj.id },
+        })
+      );
+
+      setItemTransactions(
+        [...nextTransactions, ...adjustTransactions].sort(
+          (a, b) =>
+            new Date(b.date).getTime() - new Date(a.date).getTime()
+        )
+      );
+    } catch (error) {
+      console.error(error);
+      setItemTransactions([]);
+    }
   }, []);
+
+  useEffect(() => {
+    void loadItemTransactions();
+  }, [loadItemTransactions]);
 
   useEffect(() => {
     setSelectedItem((prev) => {
@@ -519,11 +563,63 @@ export function ProductsTab({
         prev.map((item) => (item.id === updatedItem.id ? updatedItem : item))
       );
       setSelectedItem(updatedItem);
+      setAdjustStockForm((prev) => ({
+        ...prev,
+        qty: "",
+        details: "",
+      }));
       setShowAdjustStockModal(false);
+      void loadItemTransactions();
     } catch (error) {
       console.error(error);
     } finally {
       setIsSavingAdjustment(false);
+    }
+  };
+
+  const handleViewTransaction = (transaction: ItemTransactionRow) => {
+    if (transaction.type === "Sale") {
+      setViewingSale(transaction.rawTransaction);
+    } else if (transaction.type === "Purchase") {
+      setViewingPurchase(transaction.rawTransaction);
+    } else {
+      alert("Viewing stock adjustments directly is not yet supported.");
+    }
+  };
+
+  const handleEditTransaction = (transaction: ItemTransactionRow) => {
+    if (transaction.type === "Sale") {
+      setEditingSale(transaction.rawTransaction);
+      setShowAddSale(true);
+    } else if (transaction.type === "Purchase") {
+      setEditingPurchase(transaction.rawTransaction);
+      setShowAddPurchase(true);
+    } else {
+      alert("Editing stock adjustments directly is not yet supported.");
+    }
+  };
+
+  const handleDeleteTransaction = async (transaction: ItemTransactionRow) => {
+    const apiId = transaction.rawTransaction?.id;
+    if (!apiId) return;
+    const confirmMessage = `Are you sure you want to delete this ${transaction.type}?`;
+    if (!window.confirm(confirmMessage)) return;
+
+    try {
+      let endpoint = "";
+      if (transaction.type === "Sale") endpoint = `/api/sale_invoices/${apiId}`;
+      else if (transaction.type === "Purchase") endpoint = `/api/purchase_bills/${apiId}`;
+      else endpoint = `/api/adjust_stock_transactions/${apiId}`; 
+      
+      const res = await fetch(endpoint, { method: "DELETE" });
+      if (!res.ok && res.status !== 204) {
+        throw new Error("Failed to delete transaction");
+      }
+      
+      void loadItemTransactions();
+    } catch (error) {
+      console.error(error);
+      alert("Failed to delete the selected transaction.");
     }
   };
 
@@ -538,7 +634,7 @@ export function ProductsTab({
       <style>body{font-family:sans-serif;padding:20px}table{width:100%;border-collapse:collapse;margin-top:20px}th,td{border:1px solid #ddd;padding:8px;text-align:left}th{background:#f2f2f2}</style>
       </head><body><h2>Transactions - ${selectedItem.name}</h2>
       <table><thead><tr><th>Type</th><th>Number</th><th>Date</th><th>Total</th><th>Balance</th></tr></thead>
-      <tbody>${filteredItemTransactions.map((t) => `<tr><td>${t.type}</td><td>${t.invoiceNo || ""}</td><td>${t.date}</td><td>Rs ${t.amount.toFixed(2)}</td><td>Rs ${t.balance.toFixed(2)}</td></tr>`).join("")}</tbody>
+      <tbody>${filteredItemTransactions.map((t) => `<tr><td>${t.type}</td><td>${t.invoiceNo || ""}</td><td>${t.date}</td><td>${currencyStr} ${t.amount.toFixed(2)}</td><td>${currencyStr} ${t.balance.toFixed(2)}</td></tr>`).join("")}</tbody>
       </table></body></html>`;
     const iframeDoc = iframe.contentWindow?.document;
     if (iframeDoc) {
@@ -1001,6 +1097,9 @@ export function ProductsTab({
               onSetTransactionSearchTerm={setTransactionSearchTerm}
               onPrintTransactions={handlePrintTransactions}
               onExportExcel={handleExportExcel}
+              onViewTransaction={handleViewTransaction}
+              onEditTransaction={handleEditTransaction}
+              onDeleteTransaction={handleDeleteTransaction}
             />
           </>
         )}
@@ -1069,6 +1168,43 @@ export function ProductsTab({
         onCancel={() => setItemPendingDelete(null)}
         onConfirm={(item) => { void handleDeleteItem(item); }}
       />
+
+      {/* Transaction View Modals */}
+      <SaleInvoiceDialog
+        viewingInvoice={viewingSale}
+        setViewingInvoice={setViewingSale}
+      />
+      <PurchaseBillDialog
+        viewingInvoice={viewingPurchase}
+        setViewingInvoice={setViewingPurchase}
+      />
+
+      {/* Transaction Edit Modals */}
+      {showAddSale && (
+        <div className="fixed inset-0 z-[100]">
+          <AddSale
+            onClose={() => {
+              setShowAddSale(false);
+              setEditingSale(null);
+            }}
+            initialInvoice={editingSale}
+            onSave={() => void loadItemTransactions()}
+          />
+        </div>
+      )}
+
+      {showAddPurchase && (
+        <div className="fixed inset-0 z-[100]">
+          <AddPurchase
+            onClose={() => {
+              setShowAddPurchase(false);
+              setEditingPurchase(null);
+            }}
+            initialInvoice={editingPurchase}
+            onSave={() => void loadItemTransactions()}
+          />
+        </div>
+      )}
 
       <AdjustStockModal
         open={showAdjustStockModal}

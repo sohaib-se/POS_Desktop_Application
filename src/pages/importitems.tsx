@@ -76,6 +76,7 @@ export function ImportItems({ onViewChange }: ImportItemsProps = {}) {
           conversionRate: Number(item["Conversion Rate"]) || null,
           imgPath: item["Item Image"]?.toString().trim() || null,
           minStock: Number(item["Minimum Wholesale Quantity"]) || 0,
+          lowStock: item["Low Threshold Quantity"] ? Number(item["Low Threshold Quantity"]) : null,
           mfgDate: item["Manufacturing Date"]?.toString().trim() || null,
           expDate: item["Expiry Date"]?.toString().trim() || null,
           stockValue: (Number(item["Opening Stock"]) || 0) * (item["At Price"] ? Number(item["At Price"]) : Number(item["Purchase Price"]) || 0),
@@ -155,6 +156,7 @@ export function ImportItems({ onViewChange }: ImportItemsProps = {}) {
                     <th className="px-4 py-3 font-medium whitespace-nowrap">Wholesale Price</th>
                     <th className="px-4 py-3 font-medium whitespace-nowrap">Purchase Price</th>
                     <th className="px-4 py-3 font-medium whitespace-nowrap">Min Qty</th>
+                    <th className="px-4 py-3 font-medium whitespace-nowrap">Low Threshold</th>
                     <th className="px-4 py-3 font-medium whitespace-nowrap">Opening Stock</th>
                   </tr>
                 </thead>
@@ -171,6 +173,7 @@ export function ImportItems({ onViewChange }: ImportItemsProps = {}) {
                       <td className="px-4 py-3 whitespace-nowrap">{item["Wholesale Price"]}</td>
                       <td className="px-4 py-3 whitespace-nowrap">{item["Purchase Price"]}</td>
                       <td className="px-4 py-3 whitespace-nowrap">{item["Minimum Wholesale Quantity"]}</td>
+                      <td className="px-4 py-3 whitespace-nowrap">{item["Low Threshold Quantity"]}</td>
                       <td className="px-4 py-3 whitespace-nowrap">{item["Opening Stock"]}</td>
                     </tr>
                   ))}

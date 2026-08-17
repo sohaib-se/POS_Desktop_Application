@@ -210,5 +210,5 @@ export type ViewType =
   | 'utilities-import-parties'
   | 'utilities-export-items'
   | 'utilities-recycle-bin'
-  | 'bill-preview'
-  | 'edit-profile';
+  | 'edit-profile'
+  | 'all-transactions';

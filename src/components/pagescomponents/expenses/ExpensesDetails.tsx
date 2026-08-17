@@ -1,4 +1,5 @@
 import type { ExpenseCategory } from "@/types";
+import { useSettings } from "@/hooks/useSettings";
 import type { ExpenseItem, ExpenseRecord } from "./types";
 
 interface ExpensesDetailsProps {
@@ -24,6 +25,10 @@ export function ExpensesDetails({
   selectedExpenseItem,
   expenseRecordList,
 }: ExpensesDetailsProps) {
+  const [currency] = useSettings('settings.businessCurrency', { code: 'PKR', symbol: 'Rs' });
+  const [currencyDisplay] = useSettings<'abbreviation' | 'icon'>('settings.currencyDisplay', 'abbreviation');
+  const currencyStr = currencyDisplay === 'icon' ? currency.symbol : currency.code;
+
   const categoryRecords = selectedCategory
     ? expenseRecordList.filter(
         (r) => r.category_id === selectedCategory.id && Number(r.amount) > 0
@@ -95,7 +100,7 @@ export function ExpensesDetails({
                 </div>
                 <div className="text-right">
                   <p className="text-sm text-[#E53935]">
-                    Total : Rs {categoryTotal.toFixed(2)}
+                    Total : {currencyStr} {categoryTotal.toFixed(2)}
                   </p>
                 </div>
               </div>
@@ -163,12 +168,12 @@ export function ExpensesDetails({
                     {selectedExpenseItem.name.toUpperCase()}
                   </h2>
                   <p className="text-sm text-gray-500">
-                    Price : Rs {selectedExpenseItem.price.toFixed(2)}
+                    Price : {currencyStr} {selectedExpenseItem.price.toFixed(2)}
                   </p>
                 </div>
                 <div className="text-right">
                   <p className="text-sm text-[#E53935]">
-                    Total : Rs {itemTotal.toFixed(2)}
+                    Total : {currencyStr} {itemTotal.toFixed(2)}
                   </p>
                 </div>
               </div>

@@ -1,3 +1,4 @@
+import { useSettings } from "@/hooks/useSettings";
 import { useCallback, useEffect, useState, useMemo } from "react";
 import { Printer, ArrowLeft, Calendar, FileText } from "lucide-react";
 
@@ -52,6 +53,10 @@ const parseDateString = (dateStr: string | undefined | null) => {
 };
 
 export function StockInOutDetails({ onBack }: StockInOutDetailsProps) {
+  const [currency] = useSettings('settings.businessCurrency', { code: 'PKR', symbol: 'Rs' });
+  const [currencyDisplay] = useSettings<'abbreviation' | 'icon'>('settings.currencyDisplay', 'abbreviation');
+  const currencyStr = currencyDisplay === 'icon' ? currency.symbol : currency.code;
+
   const [loading, setLoading] = useState(true);
   
   // Date Filter State
@@ -385,11 +390,11 @@ export function StockInOutDetails({ onBack }: StockInOutDetailsProps) {
                           <td className="px-4 py-3 text-right text-gray-700 border-r border-gray-100">{row.beginningQuantity}</td>
                           <td className="px-4 py-3 text-right text-gray-700 border-r border-gray-100">{row.quantityIn}</td>
                           <td className="px-4 py-3 text-right text-gray-700 border-r border-gray-100">
-                              {row.purchaseAmount > 0 ? `Rs ${row.purchaseAmount.toLocaleString(undefined, {minimumFractionDigits: 2})}` : 'Rs 0.00'}
+                              {row.purchaseAmount > 0 ? `${currencyStr} ${row.purchaseAmount.toLocaleString(undefined, {minimumFractionDigits: 2})}` : `${currencyStr} 0.00`}
                           </td>
                           <td className="px-4 py-3 text-right text-gray-700 border-r border-gray-100">{row.quantityOut}</td>
                           <td className="px-4 py-3 text-right text-gray-700 border-r border-gray-100">
-                              {row.saleAmount > 0 ? `Rs ${row.saleAmount.toLocaleString(undefined, {minimumFractionDigits: 2})}` : 'Rs 0.00'}
+                              {row.saleAmount > 0 ? `${currencyStr} ${row.saleAmount.toLocaleString(undefined, {minimumFractionDigits: 2})}` : `${currencyStr} 0.00`}
                           </td>
                           <td className="px-4 py-3 text-right text-gray-800">{row.closingQuantity}</td>
                       </tr>
@@ -408,9 +413,9 @@ export function StockInOutDetails({ onBack }: StockInOutDetailsProps) {
           <div className="flex-1 flex">
               <div className="flex-1 text-right px-4 font-semibold text-gray-800">{totals.beginningQuantity}</div>
               <div className="flex-1 text-right px-4 font-semibold text-gray-800">{totals.quantityIn}</div>
-              <div className="flex-1 text-right px-4 font-semibold text-gray-800">Rs {totals.purchaseAmount.toLocaleString(undefined, {minimumFractionDigits: 2})}</div>
+              <div className="flex-1 text-right px-4 font-semibold text-gray-800">{currencyStr} {totals.purchaseAmount.toLocaleString(undefined, {minimumFractionDigits: 2})}</div>
               <div className="flex-1 text-right px-4 font-semibold text-gray-800">{totals.quantityOut}</div>
-              <div className="flex-1 text-right px-4 font-semibold text-gray-800">Rs {totals.saleAmount.toLocaleString(undefined, {minimumFractionDigits: 2})}</div>
+              <div className="flex-1 text-right px-4 font-semibold text-gray-800">{currencyStr} {totals.saleAmount.toLocaleString(undefined, {minimumFractionDigits: 2})}</div>
               <div className="flex-1 text-right px-4 font-semibold text-gray-800">{totals.closingQuantity}</div>
           </div>
         </div>

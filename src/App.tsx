@@ -36,6 +36,7 @@ import { LaimsoftPos } from "@/pages/LaimsoftPos";
 import { GlobalSearch } from "@/components/common/GlobalSearch";
 import { AllTransactions } from "@/pages/AllTransactions";
 import type { SaleInvoiceEditData, ViewType } from "@/types";
+import type { BillPreviewSaleData } from "@/components/pagescomponents/previewbill/BillPreviewData";
 
 function App() {
   const [isAppLocked, setIsAppLocked] = useState(true);
@@ -101,6 +102,7 @@ function App() {
     view === "add-purchase" ||
     view === "add-expense" ||
     view === "settings" ||
+    view === "bill-preview" ||
     view === "pos";
 
   const handleViewChange = (view: ViewType) => {
@@ -163,6 +165,18 @@ function App() {
   };
 
   const handleClosePos = () => {
+    setCurrentView(lastStandardView);
+  };
+
+  const handleOpenBillPreview = (data: BillPreviewSaleData) => {
+    setBillPreviewData(data);
+    setCurrentView("bill-preview");
+  };
+
+  const handleCloseBillPreview = () => {
+    setBillPreviewData(null);
+    setEditingSaleInvoice(null);
+    setIsConvertingEstimate(false);
     setCurrentView(lastStandardView);
   };
 
@@ -266,6 +280,7 @@ function App() {
         <div className="fixed inset-0 z-[100]">
           <AddSale
             onClose={handleCloseAddSale}
+            onPreview={handleOpenBillPreview}
             initialInvoice={editingSaleInvoice}
             isConversion={isConvertingEstimate}
           />

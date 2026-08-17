@@ -1,9 +1,14 @@
 import { EditableText } from "./SharedComponents";
 import { useCompanyDetails } from "./useCompanyDetails";
 import { BORDER, TEXT_DARK, TEXT_MUTED } from "./constants";
+import type { BillPreviewSaleData } from "../../../previewbill/BillPreviewData";
 
-export function FrenchElitePreview({ color }: { color?: string }) {
-  const { companyName, phone, email, logo, showCompanyName, showPhone, showEmail, showLogo , companyNameTextSize, invoiceTextSize } = useCompanyDetails();
+export function FrenchElitePreview({ color, sale, children }: { color?: string, sale?: BillPreviewSaleData, children?: React.ReactNode }) {
+  const { companyName, phone, email, logo, showCompanyName, showPhone, showEmail, showLogo, companyNameTextSize, invoiceTextSize } = useCompanyDetails();
+  
+  // NOTE: FrenchElitePreview currently uses hardcoded table rows and amounts for demonstration.
+  // However, we apply dynamic fields where possible.
+  const data = sale || {} as BillPreviewSaleData;
 
   const companyNameSize = companyNameTextSize === "Small" ? 14 : companyNameTextSize === "Large" ? 22 : 18;
   const invoiceFontSize = invoiceTextSize === "Small" ? 8.5 : invoiceTextSize === "Large" ? 11.5 : 10;
@@ -15,26 +20,28 @@ export function FrenchElitePreview({ color }: { color?: string }) {
 
   return (
     <div style={{ background: "#fff", padding: 20, fontFamily: "Inter, system-ui, sans-serif", border: "1px solid #000" }}>
-      
+
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
         <div>
           <div style={{ background: purpleBg, color: "#fff", fontSize: 24, fontWeight: 700, padding: "10px 40px", display: "inline-block", marginBottom: 20 }}>
             TAX INVOICE
           </div>
-          {showCompanyName && ( <div style={{ fontSize: companyNameSize, fontWeight: 700, color: purpleBg, marginBottom: 6 }}>{showCompanyName ? companyName : ""}</div> )}
-          {showPhone && ( <>
+          {showCompanyName && (<div style={{ fontSize: companyNameSize, fontWeight: 700, color: purpleBg, marginBottom: 6 }}>{showCompanyName ? companyName : ""}</div>)}
+          {showPhone && (<>
             <div style={{ fontSize: invoiceFontSize, color: TEXT_MUTED }}>Phone:</div>
             {showPhone && (<div style={{ fontSize: invoiceFontSize, color: TEXT_MUTED, marginBottom: 4 }}>{showPhone ? phone : ""}</div>)}
-          </> )}
-          {showEmail && ( <div style={{ fontSize: invoiceFontSize, color: TEXT_MUTED }}>Email: {email}</div> )}
+          </>)}
+          {showEmail && (<div style={{ fontSize: invoiceFontSize, color: TEXT_MUTED }}>Email: {email}</div>)}
         </div>
         {showLogo && (
           <div style={{ width: 100, height: 100, background: "transparent", display: "flex", alignItems: "center", justifyContent: "center", fontSize: invoiceFontSize, color: TEXT_MUTED, overflow: "hidden" }}>
-{logo ? <img src={logo} alt="Company Logo" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : null}
+            {logo ? <img src={logo} alt="Company Logo" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : null}
           </div>
         )}
       </div>
 
+      {children ? children : (
+        <>
       <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 20 }}>
         <div style={{ width: "30%" }}>
           <div style={{ fontSize: companyNameSize, color: purpleBg, marginBottom: 8 }}><EditableText textKey="lbl_inv_no" defaultText="Invoice No.:" /> #1</div>
@@ -98,18 +105,36 @@ export function FrenchElitePreview({ color }: { color?: string }) {
           <div style={{ fontSize: companyNameSize, color: purpleBg, marginBottom: 8 }}><EditableText textKey="lbl_amount_words_no_colon" defaultText="Invoice Amount In Words" /></div>
           <div style={{ fontSize: invoiceFontSize, color: TEXT_MUTED, marginBottom: 12 }}>One Lakh Two Thousand Four Hundred Fifty Two Rupees only</div>
 
-          <div style={{ fontSize: companyNameSize, color: purpleBg, marginBottom: 8 }}><EditableText textKey="lbl_terms_no_colon" defaultText="Terms And Conditions" /></div>
-          <div style={{ fontSize: invoiceFontSize, color: TEXT_MUTED, marginBottom: 20 }}>Thanks for doing business with us!</div>
+          {data.description && (
+            <>
+              <div style={{ fontSize: companyNameSize, color: purpleBg, marginBottom: 8 }}><EditableText textKey="lbl_desc_no_colon" defaultText="Description" /></div>
+              <div style={{ fontSize: invoiceFontSize, color: TEXT_MUTED, marginBottom: 12 }}>{data.description}</div>
+            </>
+          )}
+
+          {data.termsAndConditions !== undefined ? (
+            data.termsAndConditions && (
+              <>
+                <div style={{ fontSize: companyNameSize, color: purpleBg, marginBottom: 8 }}><EditableText textKey="lbl_terms_no_colon" defaultText="Terms And Conditions" /></div>
+                <div style={{ fontSize: invoiceFontSize, color: TEXT_MUTED, marginBottom: 20 }}>{data.termsAndConditions}</div>
+              </>
+            )
+          ) : (
+            <>
+              <div style={{ fontSize: companyNameSize, color: purpleBg, marginBottom: 8 }}><EditableText textKey="lbl_terms_no_colon" defaultText="Terms And Conditions" /></div>
+              <div style={{ fontSize: invoiceFontSize, color: TEXT_MUTED, marginBottom: 20 }}>Thanks for doing business with us!</div>
+            </>
+          )}
 
           <div style={{ fontSize: invoiceFontSize, color: TEXT_DARK, marginBottom: 6 }}><EditableText textKey="lbl_for" defaultText="For:" /> {showCompanyName ? companyName : ""}</div>
           {showLogo && (
-          <div style={{ width: 100, height: 100, background: "transparent", display: "inline-flex", alignItems: "center", justifyContent: "center", marginBottom: 6, fontSize: invoiceFontSize, color: TEXT_MUTED, overflow: "hidden" }}>
-{logo ? <img src={logo} alt="Company Logo" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : null}
-          </div>
-)}
+            <div style={{ width: 100, height: 100, background: "transparent", display: "inline-flex", alignItems: "center", justifyContent: "center", marginBottom: 6, fontSize: invoiceFontSize, color: TEXT_MUTED, overflow: "hidden" }}>
+              {logo ? <img src={logo} alt="Company Logo" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : null}
+            </div>
+          )}
           <div style={{ fontSize: 12, color: TEXT_DARK, fontWeight: 700 }}><EditableText textKey="lbl_auth_sig" defaultText="Authorized Signatory" /></div>
         </div>
-        
+
         <div style={{ width: 220, fontSize: invoiceFontSize }}>
           <div style={{ border: `1px solid ${BORDER}`, borderBottom: "none" }}>
             <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 8px", borderBottom: `1px solid ${BORDER}` }}><span><EditableText textKey="lbl_sub_total" defaultText="Sub Total" /></span><span>Rs 93,751.00</span></div>
@@ -127,6 +152,8 @@ export function FrenchElitePreview({ color }: { color?: string }) {
           </div>
         </div>
       </div>
+        </>
+      )}
     </div>
   );
 }

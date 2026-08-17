@@ -1,7 +1,10 @@
+import type { BillPreviewSaleData } from "../../../previewbill/BillPreviewData";
+import { DUMMY_REGULAR_SALE } from "./DummySaleData";
 import { BLUE, BORDER, TEXT_DARK, TEXT_MUTED } from "./constants";
 import { useCompanyDetails } from "./useCompanyDetails";
 
-export function RegularInvoicePreview({ color: _color }: { color?: string }) {
+export function RegularInvoicePreview({ color, sale }: { color?: string, sale?: BillPreviewSaleData }) {
+  const data = sale || DUMMY_REGULAR_SALE;
   const { companyName, phone, email, address, logo, showCompanyName, showPhone, showEmail, showAddress, showLogo , companyNameTextSize, invoiceTextSize } = useCompanyDetails();
 
   const companyNameSize = companyNameTextSize === "Small" ? 14 : companyNameTextSize === "Large" ? 22 : 18;
@@ -62,77 +65,67 @@ export function RegularInvoicePreview({ color: _color }: { color?: string }) {
         </div>
       </div>
 
-      <table style={{ width: "100%", fontSize: invoiceFontSize, borderCollapse: "collapse", marginBottom: 10 }}>
+        <>
+          <table style={{ width: "100%", fontSize: invoiceFontSize, borderCollapse: "collapse", marginBottom: 10 }}>
         <tbody>
           <tr style={{ border: `1px solid ${BORDER}` }}>
             <td style={{ ...td, borderRight: `1px solid ${BORDER}`, width: "50%", verticalAlign: "top" }}>
               <div style={{ fontWeight: 600, marginBottom: 3 }}>Bill To:</div>
-              <div style={{ color: BLUE }}>Classic enterprises</div>
-              <div style={{ color: TEXT_MUTED }}>Plot No. 1, Shop No. 8, Koramangala, Banglore, 560034</div>
-              <div style={{ color: TEXT_MUTED }}>Contact No.: 8888888888</div>
+              <div style={{ color: BLUE }}>{data.partyName}</div>
+              
+              {data.partyPhone ? <div style={{ color: TEXT_MUTED }}>Contact No.: {data.partyPhone}</div> : null}
             </td>
             <td style={{ ...td, verticalAlign: "top" }}>
               <div style={{ fontWeight: 600, marginBottom: 3 }}>Invoice Details:</div>
-              <div>Invoice No.: Inv. 101</div>
-              <div>Date: 02-07-2019</div>
-              <div>Time: 12:30 PM</div>
-              <div>Due Date: 17-07-2019</div>
+              <div>Invoice No.: {data.invoiceNo}</div>
+              <div>Date: {data.date}</div>
+              
+              <div>Due Date: {data.date}</div>
             </td>
           </tr>
         </tbody>
       </table>
 
-      <div style={{ fontSize: invoiceFontSize, marginBottom: 8 }}>
-        <div style={{ fontWeight: 600, marginBottom: 2 }}>Ship To:</div>
-        <div style={{ color: TEXT_MUTED }}>Mehta Textiles, Marathalli Road, Banglore, Karnataka, 560034</div>
-      </div>
+      
 
       <table style={{ width: "100%", fontSize: invoiceFontSize, borderCollapse: "collapse", marginBottom: 10 }}>
         <thead>
           <tr style={{ background: BLUE, color: "#fff" }}>
-            {["#", "Item name", "HSC/SAC", "Quantity", "Price/unit", "Discount", "GST", "Amount"].map((h) => (
-              <th key={h} style={th}>
-                {h}
-              </th>
+            {["#", "Item name", "HSN/SAC", "Quantity", "Price/unit"].map((h) => (
+              <th key={h} style={th}>{h}</th>
             ))}
+            {data.discountAmount > 0 && <th style={th}>Discount</th>}
+            {data.taxAmount > 0 && <th style={th}>GST</th>}
+            <th style={th}>Amount</th>
           </tr>
         </thead>
         <tbody>
-          <tr style={{ borderBottom: `1px solid ${BORDER}` }}>
-            <td style={td}>1</td>
-            <td style={td}>ITEM 1</td>
-            <td style={td}>1234</td>
-            <td style={td}>1+1</td>
-            <td style={td}>Rs 10.00</td>
-            <td style={td}>Rs 0.10 (1%)</td>
-            <td style={td}>Rs 0.50 (5%)</td>
-            <td style={td}>Rs 10.40</td>
-          </tr>
-          <tr style={{ borderBottom: `1px solid ${BORDER}` }}>
-            <td style={td}>2</td>
-            <td style={td}>ITEM 2</td>
-            <td style={td}>6325</td>
-            <td style={td}>1</td>
-            <td style={td}>Rs 30.00</td>
-            <td style={td}>Rs 0.00 (0%)</td>
-            <td style={td}>Rs 5.40 (18%)</td>
-            <td style={td}>Rs 35.40</td>
-          </tr>
+          {data.lineItems.map((item, idx) => (
+            <tr key={item.id ?? idx} style={{ borderBottom: `1px solid ${BORDER}` }}>
+              <td style={td}>{idx + 1}</td>
+              <td style={td}>{item.name}</td>
+              <td style={td}></td>
+              <td style={td}>{item.quantity} {item.unit !== "NONE" ? item.unit : ""}</td>
+              <td style={td}>Rs {item.price.toFixed(2)}</td>
+              {data.discountAmount > 0 && <td style={td}></td>}
+              {data.taxAmount > 0 && <td style={td}></td>}
+              <td style={td}>Rs {item.amount.toFixed(2)}</td>
+            </tr>
+          ))}
           <tr style={{ fontWeight: 600 }}>
-            <td style={td} colSpan={3}>
-              Total
-            </td>
-            <td style={td}>2 + 1</td>
+            <td style={td} colSpan={3}>Total</td>
+            <td style={td}>{data.lineItems.reduce((sum, i) => sum + i.quantity, 0)}</td>
             <td style={td} />
-            <td style={td}>Rs 0.10</td>
-            <td style={td}>Rs 5.90</td>
-            <td style={td}>Rs 45.80</td>
+            {data.discountAmount > 0 && <td style={td}>Rs {(data.discountAmount || 0).toFixed(2)}</td>}
+            {data.taxAmount > 0 && <td style={td}>Rs {(data.taxAmount || 0).toFixed(2)}</td>}
+            <td style={td}>Rs {data.subtotal.toFixed(2)}</td>
           </tr>
         </tbody>
       </table>
 
       <div style={{ display: "flex", gap: 10, marginBottom: 10 }}>
-        <table style={{ flex: 2, fontSize: invoiceFontSize, borderCollapse: "collapse", border: `1px solid ${BORDER}` }}>
+        {data.taxAmount > 0 && (
+          <table style={{ flex: 2, fontSize: invoiceFontSize, borderCollapse: "collapse", border: `1px solid ${BORDER}` }}>
           <thead>
             <tr style={{ background: "#f3f4f6" }}>
               {["HSN/ SAC", "Taxable amount(Rs)", "CGST", "SGST", "Total Tax Amount(Rs)"].map((h) => (
@@ -143,54 +136,56 @@ export function RegularInvoicePreview({ color: _color }: { color?: string }) {
             </tr>
           </thead>
           <tbody>
-            <tr>
-              <td style={td} />
-              <td style={td}>Rs 50.20</td>
-              <td style={td}>2.5% · Rs 1.26</td>
-              <td style={td}>2.5% · Rs 1.26</td>
-              <td style={td}>Rs 680,002.52</td>
-            </tr>
-            <tr>
-              <td style={td} />
-              <td style={td}>Rs 30.00</td>
-              <td style={td}>9.0% · Rs 2.70</td>
-              <td style={td}>9.0% · Rs 2.70</td>
-              <td style={td}>Rs 5.40</td>
-            </tr>
+            {data.taxAmount > 0 && (
+              <tr>
+                <td style={td} />
+                <td style={td}>Rs {data.subtotal.toFixed(2)}</td>
+                <td style={td}>{(data.taxRate * 100 / 2).toFixed(1)}% · Rs {(data.taxAmount / 2).toFixed(2)}</td>
+                <td style={td}>{(data.taxRate * 100 / 2).toFixed(1)}% · Rs {(data.taxAmount / 2).toFixed(2)}</td>
+                <td style={td}>Rs {data.taxAmount.toFixed(2)}</td>
+              </tr>
+            )}
             <tr style={{ fontWeight: 600 }}>
-              <td style={td}>Total</td>
-              <td style={td}>Rs 80.20</td>
-              <td style={td}>Rs 3.96</td>
-              <td style={td}>Rs 3.96</td>
-              <td style={td}>Rs 9.92</td>
+              <td style={{ ...td, borderBottom: "none" }}>Total</td>
+              <td style={{ ...td, borderBottom: "none" }}>Rs {data.subtotal.toFixed(2)}</td>
+              <td style={{ ...td, borderBottom: "none" }} />
+              <td style={{ ...td, borderBottom: "none" }} />
+              <td style={{ ...td, borderBottom: "none" }}>Rs {data.taxAmount.toFixed(2)}</td>
             </tr>
           </tbody>
         </table>
-        <div style={{ flex: 1, fontSize: invoiceFontSize, border: `1px solid ${BORDER}`, borderRadius: 4, padding: 6 }}>
+        )}
+        <div style={{ flex: 1, fontSize: invoiceFontSize, border: `1px solid ${BORDER}`, borderRadius: 4, padding: 6, marginBottom: 10 }}>
           <div style={{ marginBottom: 4 }}>
             <strong>Invoice Amount In Words:</strong>
             <div style={{ color: TEXT_MUTED }}>Forty Two Rupees and Thirty Two Paisa only</div>
           </div>
-          <div>Received: <strong>Rs 12.00</strong></div>
-          <div>Balance: <strong>Rs 30.32</strong></div>
-          <div>You Saved: <strong>Rs 111.60</strong></div>
+          <div>Received: <strong>Rs {data.received.toFixed(2)}</strong></div>
+          <div>Balance: <strong>Rs {data.balance.toFixed(2)}</strong></div>
+          {data.discountAmount > 0 && <div>You Saved: <strong>Rs {(data.discountAmount || 0).toFixed(2)}</strong></div>}
         </div>
       </div>
 
-      <table style={{ width: "100%", fontSize: invoiceFontSize, borderCollapse: "collapse", marginBottom: 10 }}>
-        <tbody>
-          <tr>
-            <td style={{ ...td, border: `1px solid ${BORDER}`, width: "50%", verticalAlign: "top" }}>
-              <div style={{ fontWeight: 600, marginBottom: 2 }}>Description:</div>
-              <div style={{ color: TEXT_MUTED }}>Sale Description</div>
-            </td>
-            <td style={{ ...td, border: `1px solid ${BORDER}`, verticalAlign: "top" }}>
-              <div style={{ fontWeight: 600, marginBottom: 2 }}>Terms &amp; Conditions:</div>
-              <div style={{ color: TEXT_MUTED }}>Thanks for doing business with us!</div>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+      {(data.description || data.termsAndConditions) && (
+        <table style={{ width: "100%", fontSize: invoiceFontSize, borderCollapse: "collapse", marginBottom: 10 }}>
+          <tbody>
+            <tr>
+              {data.description && (
+                <td style={{ ...td, border: `1px solid ${BORDER}`, width: data.termsAndConditions ? "50%" : "100%", verticalAlign: "top" }}>
+                  <div style={{ fontWeight: 600, marginBottom: 2 }}>Description:</div>
+                  {data.description}
+                </td>
+              )}
+              {data.termsAndConditions && (
+                <td style={{ ...td, border: `1px solid ${BORDER}`, width: data.description ? "50%" : "100%", verticalAlign: "top" }}>
+                  <div style={{ fontWeight: 600, marginBottom: 2 }}>Terms &amp; Conditions:</div>
+                  <div style={{ color: TEXT_MUTED }}>{data.termsAndConditions}</div>
+                </td>
+              )}
+            </tr>
+          </tbody>
+        </table>
+      )}
 
       <table style={{ width: "100%", fontSize: invoiceFontSize, borderCollapse: "collapse" }}>
         <tbody>
@@ -218,6 +213,7 @@ export function RegularInvoicePreview({ color: _color }: { color?: string }) {
           </tr>
         </tbody>
       </table>
+        </>
     </div>
   );
 }

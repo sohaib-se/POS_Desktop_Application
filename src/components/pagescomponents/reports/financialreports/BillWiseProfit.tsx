@@ -1,3 +1,4 @@
+import { useSettings } from "@/hooks/useSettings";
 import { ArrowLeft, Search, Filter, Printer, Download, Eye, X } from 'lucide-react';
 import { useState, useCallback, useEffect, useMemo } from 'react';
 import { getMonthKeyFromDate, parseLineItems, monthLabelForFilter } from '../../saleinvoices/utils';
@@ -17,6 +18,10 @@ interface SaleProfitData {
 }
 
 export function BillWiseProfit({ onBack }: BillWiseProfitProps) {
+  const [currency] = useSettings('settings.businessCurrency', { code: 'PKR', symbol: 'Rs' });
+  const [currencyDisplay] = useSettings<'abbreviation' | 'icon'>('settings.currencyDisplay', 'abbreviation');
+  const currencyStr = currencyDisplay === 'icon' ? currency.symbol : currency.code;
+
   const [loading, setLoading] = useState(false);
   const [rawSales, setRawSales] = useState<any[]>([]);
   const [rawItems, setRawItems] = useState<any[]>([]);
@@ -209,10 +214,10 @@ export function BillWiseProfit({ onBack }: BillWiseProfitProps) {
                     <td className="px-6 py-4 font-medium text-gray-900">{row.invoiceNo}</td>
                     <td className="px-6 py-4">{row.partyName}</td>
                     <td className="px-6 py-4 text-right text-gray-900 font-medium">
-                      Rs. {row.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      {currencyStr} {row.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </td>
                     <td className={`px-6 py-4 text-right font-medium ${row.profit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                      Rs. {row.profit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      {currencyStr} {row.profit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </td>
                     <td className="px-6 py-4 text-center">
                       <button
@@ -230,10 +235,10 @@ export function BillWiseProfit({ onBack }: BillWiseProfitProps) {
                 <tr>
                   <td colSpan={3} className="px-6 py-4 text-right uppercase text-xs text-gray-500">Totals</td>
                   <td className="px-6 py-4 text-right">
-                    Rs. {totalSales.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    {currencyStr} {totalSales.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </td>
                   <td className={`px-6 py-4 text-right ${totalProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                    Rs. {totalProfit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    {currencyStr} {totalProfit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </td>
                   <td className="px-6 py-4"></td>
                 </tr>
@@ -269,11 +274,11 @@ export function BillWiseProfit({ onBack }: BillWiseProfitProps) {
                 </div>
                 <div>
                   <p className="text-sm text-gray-500">Subtotal</p>
-                  <p className="font-medium">Rs. {Number(selectedInvoiceForDetails.subtotal || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+                  <p className="font-medium">{currencyStr} {Number(selectedInvoiceForDetails.subtotal || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-500">Discount</p>
-                  <p className="font-medium">Rs. {Number(selectedInvoiceForDetails.discount_amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+                  <p className="font-medium">{currencyStr} {Number(selectedInvoiceForDetails.discount_amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
                 </div>
               </div>
               
@@ -296,8 +301,8 @@ export function BillWiseProfit({ onBack }: BillWiseProfitProps) {
                       <tr key={idx}>
                         <td className="px-4 py-3">{itemName}</td>
                         <td className="px-4 py-3 text-right">{qty}</td>
-                        <td className="px-4 py-3 text-right">Rs. {price.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
-                        <td className="px-4 py-3 text-right font-medium">Rs. {(qty * price).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                        <td className="px-4 py-3 text-right">{currencyStr} {price.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                        <td className="px-4 py-3 text-right font-medium">{currencyStr} {(qty * price).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
                       </tr>
                     )
                   })}

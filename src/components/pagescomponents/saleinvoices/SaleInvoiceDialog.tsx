@@ -6,6 +6,7 @@ import {
 } from "@/components/ui/dialog";
 import type { SaleInvoiceViewRow } from "./types";
 import { parseLineItems } from "./utils";
+import { useSettings } from "@/hooks/useSettings";
 
 interface SaleInvoiceDialogProps {
   viewingInvoice: SaleInvoiceViewRow | null;
@@ -13,6 +14,10 @@ interface SaleInvoiceDialogProps {
 }
 
 export function SaleInvoiceDialog({ viewingInvoice, setViewingInvoice }: SaleInvoiceDialogProps) {
+  const [currency] = useSettings('settings.businessCurrency', { code: 'PKR', symbol: 'Rs' });
+  const [currencyDisplay] = useSettings<'abbreviation' | 'icon'>('settings.currencyDisplay', 'abbreviation');
+  const currencyStr = currencyDisplay === 'icon' ? currency.symbol : currency.code;
+
   return (
     <Dialog
       open={Boolean(viewingInvoice)}
@@ -51,30 +56,30 @@ export function SaleInvoiceDialog({ viewingInvoice, setViewingInvoice }: SaleInv
             <div className="grid grid-cols-3 gap-4">
               <div className="rounded-lg border border-gray-200 p-3">
                 <div className="text-gray-500">Subtotal</div>
-                <div className="font-semibold text-gray-900">Rs {Number(viewingInvoice.subtotal ?? 0).toLocaleString()}</div>
+                <div className="font-semibold text-gray-900">{currencyStr} {Number(viewingInvoice.subtotal ?? 0).toLocaleString()}</div>
               </div>
               <div className="rounded-lg border border-gray-200 p-3">
                 <div className="text-gray-500">Discount</div>
-                <div className="font-semibold text-gray-900">Rs {Number(viewingInvoice.discountAmount ?? 0).toLocaleString()}</div>
+                <div className="font-semibold text-gray-900">{currencyStr} {Number(viewingInvoice.discountAmount ?? 0).toLocaleString()}</div>
               </div>
               <div className="rounded-lg border border-gray-200 p-3">
                 <div className="text-gray-500">Tax</div>
-                <div className="font-semibold text-gray-900">{viewingInvoice.taxLabel ?? "NONE"} - Rs {Number(viewingInvoice.taxAmount ?? 0).toLocaleString()}</div>
+                <div className="font-semibold text-gray-900">{viewingInvoice.taxLabel ?? "NONE"} - {currencyStr} {Number(viewingInvoice.taxAmount ?? 0).toLocaleString()}</div>
               </div>
             </div>
 
             <div className="grid grid-cols-3 gap-4">
               <div className="rounded-lg border border-gray-200 p-3">
                 <div className="text-gray-500">Round Off</div>
-                <div className="font-semibold text-gray-900">Rs {Number(viewingInvoice.roundOffAmount ?? 0).toLocaleString()}</div>
+                <div className="font-semibold text-gray-900">{currencyStr} {Number(viewingInvoice.roundOffAmount ?? 0).toLocaleString()}</div>
               </div>
               <div className="rounded-lg border border-gray-200 p-3">
                 <div className="text-gray-500">Amount</div>
-                <div className="font-semibold text-gray-900">Rs {Number(viewingInvoice.amount).toLocaleString()}</div>
+                <div className="font-semibold text-gray-900">{currencyStr} {Number(viewingInvoice.amount).toLocaleString()}</div>
               </div>
               <div className="rounded-lg border border-gray-200 p-3">
                 <div className="text-gray-500">Balance</div>
-                <div className="font-semibold text-gray-900">Rs {Number(viewingInvoice.balance).toLocaleString()}</div>
+                <div className="font-semibold text-gray-900">{currencyStr} {Number(viewingInvoice.balance).toLocaleString()}</div>
               </div>
             </div>
 
@@ -105,8 +110,8 @@ export function SaleInvoiceDialog({ viewingInvoice, setViewingInvoice }: SaleInv
                           <td className="px-3 py-2 text-gray-900">{lineItem.name ?? "-"}</td>
                           <td className="px-3 py-2 text-right text-gray-700">{Number(lineItem.quantity ?? 0).toLocaleString()}</td>
                           <td className="px-3 py-2 text-gray-700">{lineItem.unit ?? "-"}</td>
-                          <td className="px-3 py-2 text-right text-gray-700">Rs {Number(lineItem.price ?? 0).toLocaleString()}</td>
-                          <td className="px-3 py-2 text-right text-gray-700">Rs {Number(lineItem.amount ?? 0).toLocaleString()}</td>
+                          <td className="px-3 py-2 text-right text-gray-700">{currencyStr} {Number(lineItem.price ?? 0).toLocaleString()}</td>
+                          <td className="px-3 py-2 text-right text-gray-700">{currencyStr} {Number(lineItem.amount ?? 0).toLocaleString()}</td>
                         </tr>
                       ))}
                     </tbody>

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useSettings } from "@/hooks/useSettings";
 import { Edit2, Mail, Search, Printer, MoreVertical, Pencil as PencilIcon, Trash2 as TrashIcon } from "lucide-react";
 import type { Party, Transaction, SaleInvoiceEditData, PurchaseBillEditData } from "@/types";
 import { AddPurchase } from "@/pages/AddPurchase";
@@ -55,6 +56,10 @@ export function PartyDetails({
   loadPartiesAndTransactions,
   onEditSaleInvoice,
 }: PartyDetailsProps) {
+  const [currency] = useSettings('settings.businessCurrency', { code: 'PKR', symbol: 'Rs' });
+  const [currencyDisplay] = useSettings<'abbreviation' | 'icon'>('settings.currencyDisplay', 'abbreviation');
+  const currencyStr = currencyDisplay === 'icon' ? currency.symbol : currency.code;
+
   const [openRowMenuId, setOpenRowMenuId] = useState<string | null>(null);
   const [openRowMenuPosition, setOpenRowMenuPosition] = useState<{ left: number; top: number } | null>(null);
 
@@ -185,7 +190,7 @@ export function PartyDetails({
                         : "text-gray-900"
                     }`}
                   >
-                    Rs {selectedPartyBalanceAmount}
+                    {currencyStr} {selectedPartyBalanceAmount}
                   </p>
                 </div>
               </div>
@@ -296,10 +301,10 @@ export function PartyDetails({
                         <td className="px-4 py-3 text-gray-700">{t.invoiceNo}</td>
                         <td className="px-4 py-3 text-gray-700">{t.date}</td>
                         <td className="px-4 py-3 text-right text-gray-700">
-                          Rs {t.amount.toFixed(2)}
+                          {currencyStr} {t.amount.toFixed(2)}
                         </td>
                         <td className="px-4 py-3 text-right text-gray-700">
-                          Rs {t.balance.toFixed(2)}
+                          {currencyStr} {t.balance.toFixed(2)}
                         </td>
                         <td className="px-2 py-3 text-center relative">
                           {!isReportView && (

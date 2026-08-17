@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useSettings } from "@/hooks/useSettings";
 import { SharedModal } from "./SharedModal";
 
 interface AdjustCashModalProps {
@@ -9,6 +10,10 @@ interface AdjustCashModalProps {
 }
 
 export function AdjustCashModal({ open, onClose, currentCash, onSuccess }: AdjustCashModalProps) {
+  const [currency] = useSettings('settings.businessCurrency', { code: 'PKR', symbol: 'Rs' });
+  const [currencyDisplay] = useSettings<'abbreviation' | 'icon'>('settings.currencyDisplay', 'abbreviation');
+  const currencyStr = currencyDisplay === 'icon' ? currency.symbol : currency.code;
+
   const [mode, setMode] = useState("add");
   const [amount, setAmount] = useState<number | string>("");
   const [date, setDate] = useState(new Date().toLocaleDateString("en-GB"));
@@ -76,7 +81,7 @@ export function AdjustCashModal({ open, onClose, currentCash, onSuccess }: Adjus
           </label>
           <div className="relative">
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-500 font-medium">
-              Rs
+              {currencyStr}
             </span>
             <input
               type="number"
@@ -88,7 +93,7 @@ export function AdjustCashModal({ open, onClose, currentCash, onSuccess }: Adjus
           <p className="text-sm text-gray-500 mt-1.5">
             Updated Cash:{" "}
             <span className="text-gray-800 font-medium">
-              Rs {updatedCash.toLocaleString()}
+              {currencyStr} {updatedCash.toLocaleString()}
             </span>
           </p>
         </div>

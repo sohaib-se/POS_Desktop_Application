@@ -1,9 +1,15 @@
+import { useSettings } from "@/hooks/useSettings";
+
 interface EstimatesSummaryProps {
   totalQuotations: number;
   totalConverted: number;
 }
 
 export function EstimatesSummary({ totalQuotations, totalConverted }: EstimatesSummaryProps) {
+  const [currency] = useSettings('settings.businessCurrency', { code: 'PKR', symbol: 'Rs' });
+  const [currencyDisplay] = useSettings<'abbreviation' | 'icon'>('settings.currencyDisplay', 'abbreviation');
+  const currencyStr = currencyDisplay === 'icon' ? currency.symbol : currency.code;
+
   return (
     <div
       className="p-4 bg-white rounded-md shadow-sm shrink-0"
@@ -17,13 +23,13 @@ export function EstimatesSummary({ totalQuotations, totalConverted }: EstimatesS
           </span>
         </div>
         <p className="text-xl font-bold text-[#1C1F2A]">
-          Rs {totalQuotations.toLocaleString()}
+          {currencyStr} {totalQuotations.toLocaleString()}
         </p>
         <div className="flex items-center gap-3 text-xs text-[#6B6B83] mt-1">
-          <span>Converted: Rs {totalConverted.toFixed(2)}</span>
+          <span>Converted: {currencyStr} {totalConverted.toFixed(2)}</span>
           <span>|</span>
           <span>
-            Open: Rs {(totalQuotations - totalConverted).toFixed(2)}
+            Open: {currencyStr} {(totalQuotations - totalConverted).toFixed(2)}
           </span>
         </div>
       </div>

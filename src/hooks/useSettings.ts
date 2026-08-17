@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 
-export function useSettings(key: string, defaultValue: boolean) {
-  const [value, setValue] = useState(() => {
+export function useSettings<T>(key: string, defaultValue: T) {
+  const [value, setValue] = useState<T>(() => {
     const saved = localStorage.getItem(key);
     return saved !== null ? JSON.parse(saved) : defaultValue;
   });
@@ -21,7 +21,7 @@ export function useSettings(key: string, defaultValue: boolean) {
     };
   }, [key]);
 
-  const updateValue = (newValue: boolean) => {
+  const updateValue = (newValue: T) => {
     setValue(newValue);
     localStorage.setItem(key, JSON.stringify(newValue));
     // Dispatch custom event so other components in the same window update

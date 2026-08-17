@@ -137,7 +137,8 @@ const DEFAULT_CURRENCY = ALL_CURRENCIES.find(c => c.code === "PKR") || ALL_CURRE
 export function GeneralTab() {
   const [currencyHovered, setCurrencyHovered] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
-  const [selectedCurrency, setSelectedCurrency] = useState(DEFAULT_CURRENCY);
+  const [selectedCurrency, setSelectedCurrency] = useSettings('settings.businessCurrency', DEFAULT_CURRENCY);
+  const [currencyDisplay, setCurrencyDisplay] = useSettings<'abbreviation' | 'icon'>('settings.currencyDisplay', 'abbreviation');
   const [searchQuery, setSearchQuery] = useState("");
 
   const [isShippingAddressEnabled, setIsShippingAddressEnabled] = useSettings('settings.isShippingAddressEnabled', true);
@@ -470,6 +471,34 @@ export function GeneralTab() {
                 </div>
               </>
             )}
+          </div>
+
+          {/* Currency Display Mode */}
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              padding: "12px 16px",
+              background: "transparent",
+              border: "1px solid transparent",
+              borderRadius: "10px",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <span style={{ fontSize: "14px", color: "#334155", fontWeight: 500 }}>Currency Display</span>
+              <Hint />
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <select 
+                value={currencyDisplay}
+                onChange={(e) => setCurrencyDisplay(e.target.value as 'abbreviation' | 'icon')}
+                style={{ ...selStyle, padding: "6px 8px", border: "1px solid #cbd5e1", borderRadius: "6px", background: "#f8fafc", fontSize: "13px" }}
+              >
+                <option value="abbreviation">Abbreviation (e.g. PKR)</option>
+                <option value="icon">Icon (e.g. ₨)</option>
+              </select>
+            </div>
           </div>
 
           <SettingToggleRow 

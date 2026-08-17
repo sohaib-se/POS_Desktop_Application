@@ -1,3 +1,4 @@
+import { useSettings } from "@/hooks/useSettings";
 import { useCallback, useEffect, useState, useMemo } from "react";
 import { Printer, ArrowLeft } from "lucide-react";
 
@@ -15,6 +16,10 @@ interface Item {
 }
 
 export function LowStockDetails({ onBack }: LowStockDetailsProps) {
+  const [currency] = useSettings('settings.businessCurrency', { code: 'PKR', symbol: 'Rs' });
+  const [currencyDisplay] = useSettings<'abbreviation' | 'icon'>('settings.currencyDisplay', 'abbreviation');
+  const currencyStr = currencyDisplay === 'icon' ? currency.symbol : currency.code;
+
   const [loading, setLoading] = useState(true);
   const [rawItems, setRawItems] = useState<Item[]>([]);
 
@@ -150,7 +155,7 @@ export function LowStockDetails({ onBack }: LowStockDetailsProps) {
                             <td className="px-4 py-3 text-gray-900 border-r border-white/50 text-left">{row.name}</td>
                             <td className="px-4 py-3 text-gray-900 border-r border-white/50 text-left">{row.category || '---'}</td>
                             <td className="px-4 py-3 border-r border-white/50 text-right text-gray-900">
-                               Rs {Number(row.purchase_price || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}
+                               {currencyStr} {Number(row.purchase_price || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}
                             </td>
                             <td className="px-4 py-3 border-r border-white/50 text-right text-gray-900">
                                {Number(row.min_stock || 0)}

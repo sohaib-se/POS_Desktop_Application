@@ -1,3 +1,4 @@
+import { useSettings } from "@/hooks/useSettings";
 import { useState, useEffect } from 'react';
 import { ArrowLeft, Search, Calendar } from 'lucide-react';
 
@@ -30,7 +31,7 @@ const getCurrencySymbol = () => {
   } catch {
     // ignore
   }
-  return 'Rs ';
+  return `${currencyStr} `;
 };
 
 export function CashFlow({ onBack }: CashFlowProps) {
@@ -39,7 +40,10 @@ export function CashFlow({ onBack }: CashFlowProps) {
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [loading, setLoading] = useState(true);
-  const currencySymbol = getCurrencySymbol();
+    const [currency] = useSettings('settings.businessCurrency', { code: 'PKR', symbol: 'Rs' });
+  const [currencyDisplay] = useSettings<'abbreviation' | 'icon'>('settings.currencyDisplay', 'abbreviation');
+  const currencyStr = currencyDisplay === 'icon' ? currency.symbol : currency.code;
+
 
   useEffect(() => {
     const fetchTransactions = async () => {
@@ -199,13 +203,13 @@ export function CashFlow({ onBack }: CashFlowProps) {
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-900 font-medium">{tx.name || '-'}</td>
                       <td className="px-6 py-4 text-sm text-green-600 font-medium text-right">
-                        {tx.inflow > 0 ? `${currencySymbol}${tx.inflow.toLocaleString(undefined, {minimumFractionDigits: 2})}` : '-'}
+                        {tx.inflow > 0 ? `${currencyStr}${tx.inflow.toLocaleString(undefined, {minimumFractionDigits: 2})}` : '-'}
                       </td>
                       <td className="px-6 py-4 text-sm text-red-600 font-medium text-right">
-                        {tx.outflow > 0 ? `${currencySymbol}${tx.outflow.toLocaleString(undefined, {minimumFractionDigits: 2})}` : '-'}
+                        {tx.outflow > 0 ? `${currencyStr}${tx.outflow.toLocaleString(undefined, {minimumFractionDigits: 2})}` : '-'}
                       </td>
                       <td className="px-6 py-4 text-sm text-blue-600 font-semibold text-right">
-                        {currencySymbol}{tx.runningCash.toLocaleString(undefined, {minimumFractionDigits: 2})}
+                        {currencyStr}{tx.runningCash.toLocaleString(undefined, {minimumFractionDigits: 2})}
                       </td>
                     </tr>
                   ))
@@ -218,13 +222,13 @@ export function CashFlow({ onBack }: CashFlowProps) {
                       Totals:
                     </td>
                     <td className="px-6 py-4 text-right text-green-600">
-                      {currencySymbol}{totalCashIn.toLocaleString(undefined, {minimumFractionDigits: 2})}
+                      {currencyStr}{totalCashIn.toLocaleString(undefined, {minimumFractionDigits: 2})}
                     </td>
                     <td className="px-6 py-4 text-right text-red-600">
-                      {currencySymbol}{totalCashOut.toLocaleString(undefined, {minimumFractionDigits: 2})}
+                      {currencyStr}{totalCashOut.toLocaleString(undefined, {minimumFractionDigits: 2})}
                     </td>
                     <td className="px-6 py-4 text-right text-blue-700">
-                      {currencySymbol}{finalRunningCash.toLocaleString(undefined, {minimumFractionDigits: 2})}
+                      {currencyStr}{finalRunningCash.toLocaleString(undefined, {minimumFractionDigits: 2})}
                     </td>
                   </tr>
                 </tfoot>

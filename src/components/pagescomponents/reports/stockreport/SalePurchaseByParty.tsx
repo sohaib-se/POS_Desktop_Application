@@ -1,3 +1,4 @@
+import { useSettings } from "@/hooks/useSettings";
 import { useCallback, useEffect, useState, useMemo } from "react";
 import { ChevronDown, Printer, ArrowLeft } from "lucide-react";
 import { getMonthKeyFromDate, formatDateDisplay, monthLabelForFilter, formatMonthLabel } from "../../saleinvoices/utils";
@@ -14,6 +15,10 @@ interface AggregateData {
 }
 
 export function SalePurchaseByParty({ onBack }: SalePurchaseByPartyProps) {
+  const [currency] = useSettings('settings.businessCurrency', { code: 'PKR', symbol: 'Rs' });
+  const [currencyDisplay] = useSettings<'abbreviation' | 'icon'>('settings.currencyDisplay', 'abbreviation');
+  const currencyStr = currencyDisplay === 'icon' ? currency.symbol : currency.code;
+
   const [loading, setLoading] = useState(true);
   
   // Filter state
@@ -385,14 +390,14 @@ export function SalePurchaseByParty({ onBack }: SalePurchaseByPartyProps) {
                             <td className="px-4 py-3 text-gray-900 border-r border-white/50 text-left">{row.partyName}</td>
                             <td className="px-4 py-3 border-r border-white/50 text-right">
                                {row.totalSaleAmount > 0 ? (
-                                   <span className="text-green-500">Rs {row.totalSaleAmount.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+                                   <span className="text-green-500">{currencyStr} {row.totalSaleAmount.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
                                ) : (
                                    <span className="text-gray-500">---</span>
                                )}
                             </td>
                             <td className="px-4 py-3 border-r border-white/50 text-right">
                                {row.totalPurchaseAmount > 0 ? (
-                                   <span className="text-red-500">Rs {row.totalPurchaseAmount.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+                                   <span className="text-red-500">{currencyStr} {row.totalPurchaseAmount.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
                                ) : (
                                    <span className="text-gray-500">---</span>
                                )}
@@ -408,10 +413,10 @@ export function SalePurchaseByParty({ onBack }: SalePurchaseByPartyProps) {
           {/* Footer Totals */}
           <div className="bg-white border-t border-gray-200 p-4 px-6 flex justify-between items-center text-[15px] sticky bottom-0 shadow-[0_-2px_4px_rgba(0,0,0,0.05)]">
             <div className="text-gray-600">
-              Total Sale Amount: <span className="text-green-500 ml-1">Rs {totalSale.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+              Total Sale Amount: <span className="text-green-500 ml-1">{currencyStr} {totalSale.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
             </div>
             <div className="text-gray-600">
-              Total Purchase Amount: <span className="text-red-500 ml-1">Rs {totalPurchase.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+              Total Purchase Amount: <span className="text-red-500 ml-1">{currencyStr} {totalPurchase.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
             </div>
           </div>
 

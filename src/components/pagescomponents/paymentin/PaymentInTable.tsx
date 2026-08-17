@@ -1,4 +1,5 @@
 import React from "react";
+import { useSettings } from "@/hooks/useSettings";
 import { Search, Printer, Share2, MoreVertical } from "lucide-react";
 
 interface PaymentInTableProps {
@@ -24,6 +25,10 @@ export function PaymentInTable({
   setOpenRowMenuPosition,
   setOpenRowMenuId,
 }: PaymentInTableProps) {
+  const [currency] = useSettings('settings.businessCurrency', { code: 'PKR', symbol: 'Rs' });
+  const [currencyDisplay] = useSettings<'abbreviation' | 'icon'>('settings.currencyDisplay', 'abbreviation');
+  const currencyStr = currencyDisplay === 'icon' ? currency.symbol : currency.code;
+
   return (
     <div
       className="bg-white rounded-md shadow-sm flex flex-col sticky top-0 z-10"
@@ -104,8 +109,8 @@ export function PaymentInTable({
                 <td className="px-4 py-3">{payment.date}</td>
                 <td className="px-4 py-3">{payment.reference || ""}</td>
                 <td className="px-4 py-3">{payment.partyName}</td>
-                <td className="px-4 py-3 text-right">Rs {payment.amount.toFixed(2)}</td>
-                <td className="px-4 py-3 text-right">Rs {payment.amount.toFixed(2)}</td>
+                <td className="px-4 py-3 text-right">{currencyStr} {payment.amount.toFixed(2)}</td>
+                <td className="px-4 py-3 text-right">{currencyStr} {payment.amount.toFixed(2)}</td>
                 <td className="px-4 py-3">{payment.paymentType}</td>
                 <td className="px-4 py-3 relative">
                   <div className="flex items-center justify-center gap-2">

@@ -1,3 +1,4 @@
+import { useSettings } from "@/hooks/useSettings";
 import { useCallback, useEffect, useState, useMemo } from "react";
 import { Printer, ArrowLeft } from "lucide-react";
 
@@ -14,6 +15,10 @@ interface Item {
 }
 
 export function StockDetails({ onBack }: StockDetailsProps) {
+  const [currency] = useSettings('settings.businessCurrency', { code: 'PKR', symbol: 'Rs' });
+  const [currencyDisplay] = useSettings<'abbreviation' | 'icon'>('settings.currencyDisplay', 'abbreviation');
+  const currencyStr = currencyDisplay === 'icon' ? currency.symbol : currency.code;
+
   const [loading, setLoading] = useState(true);
   const [rawItems, setRawItems] = useState<Item[]>([]);
 
@@ -162,13 +167,13 @@ export function StockDetails({ onBack }: StockDetailsProps) {
                             <td className="px-4 py-3 text-gray-900 border-r border-white/50 text-left">{row.name}</td>
                             <td className="px-4 py-3 text-gray-900 border-r border-white/50 text-left">{row.category || '---'}</td>
                             <td className="px-4 py-3 border-r border-white/50 text-right text-gray-900">
-                               Rs {price.toLocaleString(undefined, {minimumFractionDigits: 2})}
+                               {currencyStr} {price.toLocaleString(undefined, {minimumFractionDigits: 2})}
                             </td>
                             <td className="px-4 py-3 border-r border-white/50 text-right text-gray-900">
                                {qty}
                             </td>
                             <td className="px-4 py-3 border-r border-white/50 text-right font-medium text-gray-900">
-                               Rs {stockValue.toLocaleString(undefined, {minimumFractionDigits: 2})}
+                               {currencyStr} {stockValue.toLocaleString(undefined, {minimumFractionDigits: 2})}
                             </td>
                         </tr>
                       );
@@ -181,7 +186,7 @@ export function StockDetails({ onBack }: StockDetailsProps) {
           {/* Footer Totals */}
           <div className="bg-white border-t border-gray-200 p-4 px-6 flex justify-end items-center text-[15px] sticky bottom-0 shadow-[0_-2px_4px_rgba(0,0,0,0.05)]">
             <div className="text-gray-600 font-medium">
-              Total Stock Value: <span className="text-gray-900 ml-2">Rs {totalStockValue.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+              Total Stock Value: <span className="text-gray-900 ml-2">{currencyStr} {totalStockValue.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
             </div>
           </div>
 

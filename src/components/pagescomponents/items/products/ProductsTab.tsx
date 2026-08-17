@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useSettings } from "@/hooks/useSettings";
 import { Package, Plus } from "lucide-react";
 
 import type {
@@ -189,6 +190,10 @@ export function ProductsTab({
   onOpenUnitSelector,
 }: ProductsTabProps) {
   // ---- State ----
+  const [currency] = useSettings('settings.businessCurrency', { code: 'PKR', symbol: 'Rs' });
+  const [currencyDisplay] = useSettings<'abbreviation' | 'icon'>('settings.currencyDisplay', 'abbreviation');
+  const currencyStr = currencyDisplay === 'icon' ? currency.symbol : currency.code;
+
   const [itemList, setItemList] = useState<Item[]>([]);
   const [isItemsLoading, setIsItemsLoading] = useState(true);
   const cachedHasItems = localStorage.getItem("items_hasItems") !== "false";
@@ -629,7 +634,7 @@ export function ProductsTab({
       <style>body{font-family:sans-serif;padding:20px}table{width:100%;border-collapse:collapse;margin-top:20px}th,td{border:1px solid #ddd;padding:8px;text-align:left}th{background:#f2f2f2}</style>
       </head><body><h2>Transactions - ${selectedItem.name}</h2>
       <table><thead><tr><th>Type</th><th>Number</th><th>Date</th><th>Total</th><th>Balance</th></tr></thead>
-      <tbody>${filteredItemTransactions.map((t) => `<tr><td>${t.type}</td><td>${t.invoiceNo || ""}</td><td>${t.date}</td><td>Rs ${t.amount.toFixed(2)}</td><td>Rs ${t.balance.toFixed(2)}</td></tr>`).join("")}</tbody>
+      <tbody>${filteredItemTransactions.map((t) => `<tr><td>${t.type}</td><td>${t.invoiceNo || ""}</td><td>${t.date}</td><td>${currencyStr} ${t.amount.toFixed(2)}</td><td>${currencyStr} ${t.balance.toFixed(2)}</td></tr>`).join("")}</tbody>
       </table></body></html>`;
     const iframeDoc = iframe.contentWindow?.document;
     if (iframeDoc) {

@@ -26,7 +26,7 @@ function createEmptyTab(invoiceNo: string): PosTab {
     amountReceived: "0.00",
     isAmountReceivedDirty: false,
     customerSelectedId: null,
-    customerSearchText: "",
+    customerSearchText: "Cash Sale",
     searchQuery: "",
     selectedRowId: null,
     discountPercent: "",
@@ -371,12 +371,8 @@ export function LaimsoftPos({ onClose }: LaimsoftPosProps) {
   };
 
   const filteredCustomers = useMemo(() => {
-    if (!activeTab.customerSearchText) return parties.slice(0, 50);
-    const query = activeTab.customerSearchText.toLowerCase();
-    return parties
-      .filter((p) => p.name.toLowerCase().includes(query) || p.phone?.includes(query))
-      .slice(0, 50);
-  }, [parties, activeTab.customerSearchText]);
+    return parties.filter((p) => p.status !== "inactive");
+  }, [parties]);
 
   const handleSaveSale = async () => {
     if (isSaving) return;
@@ -574,6 +570,7 @@ export function LaimsoftPos({ onClose }: LaimsoftPosProps) {
         modalDescription={modalDescription}
         setModalDescription={setModalDescription}
         saveModal={saveModal}
+        items={items}
       />
     </div>
   );

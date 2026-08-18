@@ -49,70 +49,35 @@ export function RightPanel({
         </div>
 
         <div className="relative">
-          <div
-            className="flex items-center justify-between rounded border border-gray-300 px-3 py-2 bg-white hover:bg-gray-50 focus-within:ring-1 focus-within:ring-blue-500 cursor-text"
-            onClick={(e) => {
-              e.stopPropagation();
-              setCustomerDropdownOpen(true);
-              document.getElementById("customer-search-input")?.focus();
-            }}
-          >
-            <input
-              id="customer-search-input"
-              type="text"
-              value={activeTab.customerSearchText}
-              onChange={(e) => {
+          <select
+            id="customer-search-input"
+            value={activeTab.customerSelectedId || ""}
+            onChange={(e) => {
+              const val = e.target.value;
+              if (!val) {
                 updateTab({
-                  customerSearchText: e.target.value,
                   customerSelectedId: null,
+                  customerSearchText: "Cash Sale",
                 });
-                setCustomerDropdownOpen(true);
-              }}
-              placeholder="Search for a customer by name, phone number [F11]"
-              className="w-full text-sm outline-none bg-transparent text-gray-700 font-medium placeholder:text-gray-400 placeholder:font-normal"
-            />
-            <ChevronDown className="h-4 w-4 text-gray-400 pointer-events-none absolute right-3" />
-          </div>
-
-          {/* Customer Dropdown */}
-          {customerDropdownOpen && (
-            <div className="absolute top-full mt-1 left-0 right-0 bg-white border border-gray-300 rounded shadow-lg max-h-48 overflow-y-auto z-50">
-              <div
-                className="px-3 py-2 hover:bg-gray-50 cursor-pointer text-sm font-medium text-gray-700 border-b border-gray-100"
-                onClick={() => {
-                  updateTab({
-                    customerSearchText: "Cash Sale",
-                    customerSelectedId: null,
-                  });
-                  setCustomerDropdownOpen(false);
-                }}
-              >
-                Cash Sale (Default)
-              </div>
-              {filteredCustomers.length === 0 ? (
-                <div className="px-3 py-2 text-sm text-gray-400 italic">
-                  No customers found.
-                </div>
-              ) : (
-                filteredCustomers.map((p) => (
-                  <div
-                    key={p.id}
-                    className="px-3 py-2 hover:bg-blue-50 cursor-pointer flex justify-between text-sm text-gray-700"
-                    onClick={() => {
-                      updateTab({
-                        customerSearchText: `${p.name} - ${p.phone}`,
-                        customerSelectedId: p.id,
-                      });
-                      setCustomerDropdownOpen(false);
-                    }}
-                  >
-                    <span className="font-medium">{p.name}</span>
-                    <span className="text-gray-500">{p.phone}</span>
-                  </div>
-                ))
-              )}
-            </div>
-          )}
+              } else {
+                const partyId = parseInt(val, 10);
+                const party = filteredCustomers.find((p) => p.id === partyId);
+                updateTab({
+                  customerSelectedId: partyId,
+                  customerSearchText: party ? party.name : "",
+                });
+              }
+            }}
+            className="w-full appearance-none rounded border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-800 outline-none focus:ring-1 focus:ring-blue-500 bg-white"
+          >
+            <option value="">Cash Sale (Default)</option>
+            {filteredCustomers.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name} {p.phone ? `- ${p.phone}` : ""}
+              </option>
+            ))}
+          </select>
+          <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none shrink-0" />
         </div>
       </div>
 
@@ -134,13 +99,6 @@ export function RightPanel({
               </p>
             </div>
           </div>
-          <button className="flex flex-col items-end gap-0.5 text-sm font-semibold text-blue-600 hover:text-blue-700">
-            <div className="flex items-center">
-              Full Breakup
-              <ChevronRight className="h-4 w-4 ml-0.5" />
-            </div>
-            <span className="text-xs text-blue-500 font-medium">[Ctrl+F]</span>
-          </button>
         </div>
 
         {/* Payment Details */}

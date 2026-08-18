@@ -26,6 +26,7 @@ interface ModalsProps {
   modalDescription: string;
   setModalDescription: (val: string) => void;
   saveModal: () => void;
+  items?: any[];
 }
 
 export function Modals({
@@ -44,6 +45,7 @@ export function Modals({
   modalDescription,
   setModalDescription,
   saveModal,
+  items,
 }: ModalsProps) {
   const [currency] = useSettings('settings.businessCurrency', { code: 'PKR', symbol: 'Rs' });
   const [currencyDisplay] = useSettings<'abbreviation' | 'icon'>('settings.currencyDisplay', 'abbreviation');
@@ -101,9 +103,6 @@ export function Modals({
                 onChange={(e) => setModalQuantity(e.target.value)}
                 className="w-full border border-blue-400 rounded px-3 py-1.5 text-sm text-gray-800 outline-none ring-1 ring-blue-400/20"
               />
-              <button className="text-xs text-blue-500 font-medium hover:text-blue-600 mt-2">
-                Connect Weighing Scale {">"}
-              </button>
             </div>
           )}
 
@@ -116,10 +115,16 @@ export function Modals({
                   onChange={(e) => setModalUnit(e.target.value)}
                   className="w-full appearance-none border border-gray-300 rounded px-3 py-2 text-sm text-gray-800 outline-none focus:border-blue-400"
                 >
-                  <option value="Btl">BOTTLES (Btl)</option>
-                  <option value="Box">BOXES (Box)</option>
-                  <option value="Pc">PIECES (Pc)</option>
-                  <option value="Kg">KILOGRAMS (Kg)</option>
+                  {(() => {
+                    const item = items?.find((i) => i.id === selectedRow?.itemId);
+                    const units = [];
+                    if (item?.primary_unit) units.push(item.primary_unit);
+                    if (item?.secondary_unit) units.push(item.secondary_unit);
+                    if (units.length === 0) units.push("Btl"); // fallback
+                    return Array.from(new Set(units)).map((u, idx) => (
+                      <option key={idx} value={u}>{u}</option>
+                    ));
+                  })()}
                 </select>
                 <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-blue-500 pointer-events-none" />
               </div>

@@ -81,7 +81,7 @@ interface PartiesProps {
   onOpenSettings?: (tab?: string) => void;
 }
 
-export function Parties({ isReportView, onBack, onEditSaleInvoice, onOpenSettings }: PartiesProps = {}) {
+export function Parties({ isReportView, onBack, onEditSaleInvoice }: PartiesProps = {}) {
   const [currency] = useSettings('settings.businessCurrency', { code: 'PKR', symbol: 'Rs' });
   const [currencyDisplay] = useSettings<'abbreviation' | 'icon'>('settings.currencyDisplay', 'abbreviation');
   const currencyStr = currencyDisplay === 'icon' ? currency.symbol : currency.code;
@@ -193,6 +193,7 @@ export function Parties({ isReportView, onBack, onEditSaleInvoice, onOpenSetting
         balance: number;
         credit_limit?: number | null;
         type: 'customer' | 'supplier' | 'both';
+        status?: 'active' | 'inactive' | null;
       }>;
 
       const saleTransactions = saleInvoicesResponse.ok
@@ -249,7 +250,7 @@ export function Parties({ isReportView, onBack, onEditSaleInvoice, onOpenSetting
         balance: Number(party.balance ?? 0),
         creditLimit: party.credit_limit ? Number(party.credit_limit) : undefined,
         type: party.type,
-        status: party.status,
+        status: party.status || 'active',
       }));
 
       setParties(normalizedParties);

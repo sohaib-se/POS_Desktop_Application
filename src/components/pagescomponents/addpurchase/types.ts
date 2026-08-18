@@ -35,6 +35,7 @@ export interface PartyOption {
   phone: string;
   balance: number;
   type: "customer" | "supplier" | "both";
+  status?: 'active' | 'inactive';
 }
 
 export interface ItemOption {

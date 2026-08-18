@@ -1048,7 +1048,8 @@ function sqliteApiPlugin() {
                   shippingAddress: payload.shippingAddress ? String(payload.shippingAddress) : null,
                   balance: Number.isFinite(normalizedBalance) ? normalizedBalance : 0,
                   creditLimit: payload.creditLimit ? Number(payload.creditLimit) : null,
-                  type: payload.type ?? 'customer'
+                  type: payload.type ?? 'customer',
+                  status: payload.status ?? 'active'
                 };
 
                 repository.upsertParty(party);

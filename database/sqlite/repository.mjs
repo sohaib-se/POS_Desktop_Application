@@ -70,8 +70,8 @@ export function getNextPartyId() {
 export function upsertParty(party) {
   const db = openDatabase();
   db.prepare(`
-    INSERT INTO parties (id, name, phone, email, address, shipping_address, balance, credit_limit, type, updated_at)
-    VALUES (@id, @name, @phone, @email, @address, @shipping_address, @balance, @credit_limit, @type, datetime('now'))
+    INSERT INTO parties (id, name, phone, email, address, shipping_address, balance, credit_limit, type, status, updated_at)
+    VALUES (@id, @name, @phone, @email, @address, @shipping_address, @balance, @credit_limit, @type, @status, datetime('now'))
     ON CONFLICT(id) DO UPDATE SET
       name = excluded.name,
       phone = excluded.phone,
@@ -81,13 +81,15 @@ export function upsertParty(party) {
       balance = excluded.balance,
       credit_limit = excluded.credit_limit,
       type = excluded.type,
+      status = excluded.status,
       updated_at = datetime('now')
   `).run({
     ...party,
     email: party.email ?? null,
     address: party.address ?? null,
     shipping_address: party.shippingAddress ?? null,
-    credit_limit: party.creditLimit ?? null
+    credit_limit: party.creditLimit ?? null,
+    status: party.status ?? 'active'
   });
   db.close();
 }

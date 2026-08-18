@@ -309,6 +309,15 @@ function ensureUserProfileColumns(db) {
   }
 }
 
+function ensurePartyColumns(db) {
+  const columns = db.prepare(`PRAGMA table_info(parties)`).all();
+  const existingColumnNames = new Set(columns.map((column) => column.name));
+
+  if (!existingColumnNames.has('status')) {
+    db.exec('ALTER TABLE parties ADD COLUMN status TEXT NOT NULL DEFAULT \'active\'');
+  }
+}
+
 export function initDatabase() {
   const db = openDatabase();
   const schemaSql = fs.readFileSync(schemaPath, 'utf8');
@@ -320,6 +329,7 @@ export function initDatabase() {
   ensurePaymentOutRecordColumns(db);
   ensureExpenseRecordColumns(db);
   ensureExpenseCategoryColumns(db);
+  ensurePartyColumns(db);
   seedDefaultExpenseCategories(db);
   migratePaymentOutRecordsToExpenseRecords(db);
   ensureBankAccountColumns(db);

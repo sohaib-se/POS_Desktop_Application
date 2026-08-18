@@ -7,9 +7,10 @@ import { SetupPasscodeModal } from './SetupPasscodeModal';
 
 export interface EnterPasscodeScreenProps {
   onSuccess: () => void;
+  onCancel?: () => void;
 }
 
-export function EnterPasscodeScreen({ onSuccess }: EnterPasscodeScreenProps) {
+export function EnterPasscodeScreen({ onSuccess, onCancel }: EnterPasscodeScreenProps) {
   const [passcode, setPasscode] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -71,10 +72,16 @@ export function EnterPasscodeScreen({ onSuccess }: EnterPasscodeScreenProps) {
           
           {error && <p className="text-sm text-destructive">{error}</p>}
           
-          
-          <Button variant="link" className="text-muted-foreground mt-2" onClick={() => setShowForgotModal(true)}>
-            forgot passcode?
-          </Button>
+          <div className="flex gap-4 mt-2">
+            {onCancel && (
+              <Button variant="outline" className="text-muted-foreground" onClick={onCancel}>
+                Cancel
+              </Button>
+            )}
+            <Button variant="link" className="text-muted-foreground" onClick={() => setShowForgotModal(true)}>
+              forgot passcode?
+            </Button>
+          </div>
         </CardContent>
       </Card>
 

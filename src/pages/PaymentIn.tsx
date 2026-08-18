@@ -6,6 +6,8 @@ import { PaymentInTable } from "@/components/pagescomponents/paymentin/PaymentIn
 import { AddPaymentInModal } from "@/components/pagescomponents/paymentin/AddPaymentInModal";
 import { PaymentInRowMenu } from "@/components/pagescomponents/paymentin/PaymentInRowMenu";
 import { ViewPaymentInModal } from "@/components/pagescomponents/paymentin/ViewPaymentInModal";
+import { EnterPasscodeScreen } from "@/components/common/EnterPasscodeScreen";
+import { useSettings } from "@/hooks/useSettings";
 
 export function PaymentIn() {
   const [showAddPayment, setShowAddPayment] = useState(false);
@@ -30,6 +32,10 @@ export function PaymentIn() {
   const searchInputRef = useRef<HTMLInputElement>(null);
   const [openRowMenuId, setOpenRowMenuId] = useState<string | null>(null);
   const [openRowMenuPosition, setOpenRowMenuPosition] = useState<{ left: number; top: number } | null>(null);
+
+  const [isPasscodeEnabled] = useSettings('settings.isPasscodeEnabled', false);
+  const [isPasscodeForTransactionEnabled] = useSettings('settings.isPasscodeForTransactionEnabled', false);
+  const [passcodeAction, setPasscodeAction] = useState<{ type: 'edit' | 'delete', payload: string } | null>(null);
 
   const fetchData = () => {
     fetch('/api/payment_in_records')
@@ -81,6 +87,31 @@ export function PaymentIn() {
         alert("Failed to delete the selected transaction.");
       }
     }
+  };
+
+  const handleDeleteClick = (id: string) => {
+    if (isPasscodeEnabled && isPasscodeForTransactionEnabled) {
+      setPasscodeAction({ type: 'delete', payload: id });
+    } else {
+      handleDelete(id);
+    }
+  };
+
+  const handleEditClick = (show: boolean) => {
+    if (show && isPasscodeEnabled && isPasscodeForTransactionEnabled) {
+      setPasscodeAction({ type: 'edit', payload: '' });
+    } else {
+      setShowAddPayment(show);
+    }
+  };
+
+  const handlePasscodeSuccess = () => {
+    if (passcodeAction?.type === 'delete') {
+      handleDelete(passcodeAction.payload);
+    } else if (passcodeAction?.type === 'edit') {
+      setShowAddPayment(true);
+    }
+    setPasscodeAction(null);
   };
 
   const totalAmount = records.reduce((sum, p) => sum + p.amount, 0);
@@ -196,14 +227,21 @@ export function PaymentIn() {
         setViewingRecord={setViewingRecord}
         setOpenRowMenuId={setOpenRowMenuId}
         setOpenRowMenuPosition={setOpenRowMenuPosition}
-        setShowAddPayment={setShowAddPayment}
-        handleDelete={handleDelete}
+        setShowAddPayment={handleEditClick}
+        handleDelete={handleDeleteClick}
       />
 
       <ViewPaymentInModal
         viewingRecord={viewingRecord}
         setViewingRecord={setViewingRecord}
       />
+
+      {passcodeAction && (
+        <EnterPasscodeScreen
+          onSuccess={handlePasscodeSuccess}
+          onCancel={() => setPasscodeAction(null)}
+        />
+      )}
     </div>
   );
 }

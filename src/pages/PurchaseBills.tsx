@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useSettings } from "@/hooks/useSettings";
 import { AddPurchase } from "@/pages/AddPurchase";
 import type { PurchaseBillEditData } from "@/types";
 import type { PurchaseBillApiRow, PurchaseBillViewRow } from "../components/pagescomponents/purchasebills/types";
@@ -15,6 +16,7 @@ import { PurchaseBillSummary } from "../components/pagescomponents/purchasebills
 import { PurchaseBillTable } from "../components/pagescomponents/purchasebills/PurchaseBillTable";
 import { PurchaseBillContextMenu } from "../components/pagescomponents/purchasebills/PurchaseBillContextMenu";
 import { PurchaseBillDialog } from "../components/pagescomponents/purchasebills/PurchaseBillDialog";
+import { EnterPasscodeScreen } from "@/components/common/EnterPasscodeScreen";
 
 interface PurchaseBillsProps {
   onBack?: () => void;
@@ -33,6 +35,10 @@ export function PurchaseBills({ onBack }: PurchaseBillsProps = {}) {
   const [viewingInvoice, setViewingInvoice] = useState<PurchaseBillViewRow | null>(null);
   const [statusMessage, setStatusMessage] = useState("");
   const searchInputRef = useRef<HTMLInputElement | null>(null);
+
+  const [isPasscodeEnabled] = useSettings('settings.isPasscodeEnabled', false);
+  const [isPasscodeForTransactionEnabled] = useSettings('settings.isPasscodeForTransactionEnabled', false);
+  const [passcodeAction, setPasscodeAction] = useState<{ type: 'edit' | 'delete', payload: PurchaseBillViewRow } | null>(null);
 
   useEffect(() => {
     if (showSearchInput) {
@@ -219,6 +225,33 @@ export function PurchaseBills({ onBack }: PurchaseBillsProps = {}) {
     }
   };
 
+  const handleEditClick = (invoice: PurchaseBillViewRow) => {
+    if (isPasscodeEnabled && isPasscodeForTransactionEnabled) {
+      setPasscodeAction({ type: 'edit', payload: invoice });
+    } else {
+      setEditingInvoice(invoice as any);
+      setShowAddPurchase(true);
+    }
+  };
+
+  const handleDeleteClick = (invoice: PurchaseBillViewRow) => {
+    if (isPasscodeEnabled && isPasscodeForTransactionEnabled) {
+      setPasscodeAction({ type: 'delete', payload: invoice });
+    } else {
+      handleDeleteInvoice(invoice);
+    }
+  };
+
+  const handlePasscodeSuccess = () => {
+    if (passcodeAction?.type === 'edit') {
+      setEditingInvoice(passcodeAction.payload as any);
+      setShowAddPurchase(true);
+    } else if (passcodeAction?.type === 'delete') {
+      handleDeleteInvoice(passcodeAction.payload);
+    }
+    setPasscodeAction(null);
+  };
+
   return (
     <div className="h-full flex flex-col bg-[#D0DCE7] gap-1 overflow-y-auto">
       <PurchaseBillHeader
@@ -268,11 +301,8 @@ export function PurchaseBills({ onBack }: PurchaseBillsProps = {}) {
         openViewDialog={openViewDialog}
         setOpenRowMenuId={setOpenRowMenuId}
         setOpenRowMenuPosition={setOpenRowMenuPosition}
-        onEditInvoice={(invoice) => {
-          setEditingInvoice(invoice as any);
-          setShowAddPurchase(true);
-        }}
-        handleDeleteInvoice={handleDeleteInvoice}
+        onEditInvoice={handleEditClick}
+        handleDeleteInvoice={handleDeleteClick}
       />
 
       {showAddPurchase && (
@@ -288,6 +318,13 @@ export function PurchaseBills({ onBack }: PurchaseBillsProps = {}) {
             }}
           />
         </div>
+      )}
+
+      {passcodeAction && (
+        <EnterPasscodeScreen
+          onSuccess={handlePasscodeSuccess}
+          onCancel={() => setPasscodeAction(null)}
+        />
       )}
     </div>
   );

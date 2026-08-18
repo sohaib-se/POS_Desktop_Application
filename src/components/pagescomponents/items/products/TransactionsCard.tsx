@@ -4,6 +4,7 @@ import { Search, Printer, MoreVertical } from "lucide-react";
 import { Card, CardContent } from "./ui";
 import type { ItemTransactionRow } from "./types";
 import { ItemTransactionContextMenu } from "./ItemTransactionContextMenu";
+import { EnterPasscodeScreen } from "@/components/common/EnterPasscodeScreen";
 type TransactionsCardProps = {
   filteredItemTransactions: ItemTransactionRow[];
   showTransactionSearch: boolean;
@@ -35,6 +36,35 @@ export function TransactionsCard({
   const [currency] = useSettings('settings.businessCurrency', { code: 'PKR', symbol: 'Rs' });
   const [currencyDisplay] = useSettings<'abbreviation' | 'icon'>('settings.currencyDisplay', 'abbreviation');
   const currencyStr = currencyDisplay === 'icon' ? currency.symbol : currency.code;
+
+  const [isPasscodeEnabled] = useSettings('settings.isPasscodeEnabled', false);
+  const [isPasscodeForTransactionEnabled] = useSettings('settings.isPasscodeForTransactionEnabled', false);
+  const [passcodeAction, setPasscodeAction] = useState<{ type: 'edit' | 'delete', payload: ItemTransactionRow } | null>(null);
+
+  const handleEditClick = (transaction: ItemTransactionRow) => {
+    if (isPasscodeEnabled && isPasscodeForTransactionEnabled) {
+      setPasscodeAction({ type: 'edit', payload: transaction });
+    } else {
+      onEditTransaction?.(transaction);
+    }
+  };
+
+  const handleDeleteClick = (transaction: ItemTransactionRow) => {
+    if (isPasscodeEnabled && isPasscodeForTransactionEnabled) {
+      setPasscodeAction({ type: 'delete', payload: transaction });
+    } else {
+      onDeleteTransaction?.(transaction);
+    }
+  };
+
+  const handlePasscodeSuccess = () => {
+    if (passcodeAction?.type === 'edit' && onEditTransaction) {
+      onEditTransaction(passcodeAction.payload);
+    } else if (passcodeAction?.type === 'delete' && onDeleteTransaction) {
+      onDeleteTransaction(passcodeAction.payload);
+    }
+    setPasscodeAction(null);
+  };
 
   return (
     <Card className="bg-white rounded-md flex flex-col flex-1 overflow-hidden shadow-sm p-0">
@@ -216,9 +246,16 @@ export function TransactionsCard({
         setOpenRowMenuId={setOpenRowMenuId}
         setOpenRowMenuPosition={setOpenRowMenuPosition}
         openViewDialog={onViewTransaction}
-        onEditTransaction={onEditTransaction}
-        handleDeleteTransaction={onDeleteTransaction}
+        onEditTransaction={handleEditClick}
+        handleDeleteTransaction={handleDeleteClick}
       />
+
+      {passcodeAction && (
+        <EnterPasscodeScreen
+          onSuccess={handlePasscodeSuccess}
+          onCancel={() => setPasscodeAction(null)}
+        />
+      )}
     </Card>
   );
 }

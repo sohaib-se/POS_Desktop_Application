@@ -7,6 +7,7 @@ import { SaleInvoiceDialog } from "@/components/pagescomponents/saleinvoices/Sal
 import { PurchaseBillDialog } from "@/components/pagescomponents/purchasebills/PurchaseBillDialog";
 import { ViewPaymentInModal } from "@/components/pagescomponents/paymentin/ViewPaymentInModal";
 import { ViewPaymentOutDialog } from "@/components/pagescomponents/payementout/ViewPaymentOutDialog";
+import { EnterPasscodeScreen } from "@/components/common/EnterPasscodeScreen";
 import type { SaleInvoiceViewRow } from "@/components/pagescomponents/saleinvoices/types";
 import type { PurchaseBillViewRow } from "@/components/pagescomponents/purchasebills/types";
 
@@ -60,6 +61,9 @@ export function PartyDetails({
   const [currencyDisplay] = useSettings<'abbreviation' | 'icon'>('settings.currencyDisplay', 'abbreviation');
   const currencyStr = currencyDisplay === 'icon' ? currency.symbol : currency.code;
 
+  const [isPasscodeEnabled] = useSettings('settings.isPasscodeEnabled', false);
+  const [isPasscodeForTransactionEnabled] = useSettings('settings.isPasscodeForTransactionEnabled', false);
+
   const [openRowMenuId, setOpenRowMenuId] = useState<string | null>(null);
   const [openRowMenuPosition, setOpenRowMenuPosition] = useState<{ left: number; top: number } | null>(null);
 
@@ -70,6 +74,7 @@ export function PartyDetails({
   const [viewingPaymentIn, setViewingPaymentIn] = useState<any | null>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [viewingPaymentOut, setViewingPaymentOut] = useState<any | null>(null);
+  const [passcodeAction, setPasscodeAction] = useState<{ type: 'edit' | 'delete', payload: any } | null>(null);
 
   const handleDeleteTransaction = async (transaction: PartyTransactionRow) => {
     const confirmed = window.confirm(`Delete ${transaction.type} transaction ${transaction.invoiceNo || transaction.id}?`);
@@ -100,6 +105,48 @@ export function PartyDetails({
       setOpenRowMenuId(null);
       setOpenRowMenuPosition(null);
     }
+  };
+
+  const handleEditTransaction = (invoice: PartyTransactionRow) => {
+    if (invoice?.rawRow) {
+      const raw = invoice.rawRow;
+      if (invoice.type === 'Sale' && onEditSaleInvoice) {
+        onEditSaleInvoice({
+          id: raw.id, invoiceNo: raw.invoice_no, date: raw.date, partyName: raw.party_name,
+          partyId: raw.party_id, partyPhone: raw.party_phone,
+          paymentType: raw.payment_type || raw.payment_mode || "", paymentMode: raw.payment_mode,
+          amount: Number(raw.amount || 0), balance: Number(raw.balance || 0),
+          subtotal: Number(raw.subtotal || 0), discountPercent: Number(raw.discount_percent || 0),
+          discountAmount: Number(raw.discount_amount || 0), taxLabel: raw.tax_label,
+          taxRate: Number(raw.tax_rate || 0), taxAmount: Number(raw.tax_amount || 0),
+          roundOff: Boolean(raw.round_off), roundOffAmount: Number(raw.round_off_amount || 0),
+          description: raw.description, lineItemsJson: raw.line_items_json
+        });
+      } else if (invoice.type === 'Purchase') {
+        setEditingPurchaseInvoice({
+          id: raw.id, invoiceNo: raw.invoice_no, date: raw.date, partyName: raw.party_name,
+          partyId: raw.party_id, partyPhone: raw.party_phone,
+          paymentType: raw.payment_type || raw.payment_mode || "", paymentMode: raw.payment_mode,
+          amount: Number(raw.amount || 0), balance: Number(raw.balance || 0),
+          subtotal: Number(raw.subtotal || 0), discountPercent: Number(raw.discount_percent || 0),
+          discountAmount: Number(raw.discount_amount || 0), taxLabel: raw.tax_label,
+          taxRate: Number(raw.tax_rate || 0), taxAmount: Number(raw.tax_amount || 0),
+          roundOff: Boolean(raw.round_off), roundOffAmount: Number(raw.round_off_amount || 0),
+          description: raw.description, lineItemsJson: raw.line_items_json
+        });
+      } else {
+        alert(`Edit for ${invoice.type} is not directly supported from the party view yet.`);
+      }
+    }
+  };
+
+  const handlePasscodeSuccess = () => {
+    if (passcodeAction?.type === 'delete') {
+      handleDeleteTransaction(passcodeAction.payload);
+    } else if (passcodeAction?.type === 'edit') {
+      handleEditTransaction(passcodeAction.payload);
+    }
+    setPasscodeAction(null);
   };
 
   const selectedPartyBalanceLabel =
@@ -421,33 +468,10 @@ export function PartyDetails({
               onClick={() => {
                 const invoice = filteredPartyTransactions.find(t => t.id === openRowMenuId);
                 if (invoice?.rawRow) {
-                  const raw = invoice.rawRow;
-                  if (invoice.type === 'Sale' && onEditSaleInvoice) {
-                    onEditSaleInvoice({
-                      id: raw.id, invoiceNo: raw.invoice_no, date: raw.date, partyName: raw.party_name,
-                      partyId: raw.party_id, partyPhone: raw.party_phone,
-                      paymentType: raw.payment_type || raw.payment_mode || "", paymentMode: raw.payment_mode,
-                      amount: Number(raw.amount || 0), balance: Number(raw.balance || 0),
-                      subtotal: Number(raw.subtotal || 0), discountPercent: Number(raw.discount_percent || 0),
-                      discountAmount: Number(raw.discount_amount || 0), taxLabel: raw.tax_label,
-                      taxRate: Number(raw.tax_rate || 0), taxAmount: Number(raw.tax_amount || 0),
-                      roundOff: Boolean(raw.round_off), roundOffAmount: Number(raw.round_off_amount || 0),
-                      description: raw.description, lineItemsJson: raw.line_items_json
-                    });
-                  } else if (invoice.type === 'Purchase') {
-                    setEditingPurchaseInvoice({
-                      id: raw.id, invoiceNo: raw.invoice_no, date: raw.date, partyName: raw.party_name,
-                      partyId: raw.party_id, partyPhone: raw.party_phone,
-                      paymentType: raw.payment_type || raw.payment_mode || "", paymentMode: raw.payment_mode,
-                      amount: Number(raw.amount || 0), balance: Number(raw.balance || 0),
-                      subtotal: Number(raw.subtotal || 0), discountPercent: Number(raw.discount_percent || 0),
-                      discountAmount: Number(raw.discount_amount || 0), taxLabel: raw.tax_label,
-                      taxRate: Number(raw.tax_rate || 0), taxAmount: Number(raw.tax_amount || 0),
-                      roundOff: Boolean(raw.round_off), roundOffAmount: Number(raw.round_off_amount || 0),
-                      description: raw.description, lineItemsJson: raw.line_items_json
-                    });
+                  if (isPasscodeEnabled && isPasscodeForTransactionEnabled) {
+                    setPasscodeAction({ type: 'edit', payload: invoice });
                   } else {
-                    alert(`Edit for ${invoice.type} is not directly supported from the party view yet.`);
+                    handleEditTransaction(invoice);
                   }
                 }
                 setOpenRowMenuId(null);
@@ -462,11 +486,14 @@ export function PartyDetails({
               onClick={() => {
                 const invoice = filteredPartyTransactions.find(t => t.id === openRowMenuId);
                 if (invoice) {
-                  handleDeleteTransaction(invoice);
-                } else {
-                  setOpenRowMenuId(null);
-                  setOpenRowMenuPosition(null);
+                  if (isPasscodeEnabled && isPasscodeForTransactionEnabled) {
+                    setPasscodeAction({ type: 'delete', payload: invoice });
+                  } else {
+                    handleDeleteTransaction(invoice);
+                  }
                 }
+                setOpenRowMenuId(null);
+                setOpenRowMenuPosition(null);
               }}
             >
               <TrashIcon className="w-4 h-4" />
@@ -493,6 +520,13 @@ export function PartyDetails({
             }}
           />
         </div>
+      )}
+
+      {passcodeAction && (
+        <EnterPasscodeScreen
+          onSuccess={handlePasscodeSuccess}
+          onCancel={() => setPasscodeAction(null)}
+        />
       )}
     </div>
   );

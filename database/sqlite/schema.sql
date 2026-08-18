@@ -299,6 +299,7 @@ CREATE TABLE IF NOT EXISTS user_profile (
   pincode TEXT,
   logo TEXT,
   signature TEXT,
+  terms_conditions TEXT,
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );

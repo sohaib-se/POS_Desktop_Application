@@ -433,6 +433,14 @@ function ensurePasscodeTable(db) {
   }
 }
 
+function ensureUserProfileColumns(db) {
+  const rows = db.prepare('PRAGMA table_info(user_profile)').all();
+  const existingColumns = new Set(rows.map((row) => row.name));
+  if (!existingColumns.has('terms_conditions')) {
+    db.exec('ALTER TABLE user_profile ADD COLUMN terms_conditions TEXT');
+  }
+}
+
 export function openDatabase() {
   ensureDataDirectory();
   const db = new Database(dbPath);
@@ -458,6 +466,7 @@ export function openDatabase() {
   ensureExpenseRecordColumns(db);
   ensureEstimatesColumns(db);
   ensurePasscodeTable(db);
+  ensureUserProfileColumns(db);
   migratePaymentOutRecordsToExpenseRecords(db);
   ensureUnitsAndConversionRatesTables(db);
   ensureBankAccountColumns(db);

@@ -385,6 +385,9 @@ function sqliteApiPlugin() {
           // @ts-expect-error Runtime-only Node module used in Vite middleware.
           const repository = await import('./database/sqlite/repository.mjs');
 
+          const urlParts = req.url?.split('/').filter(Boolean) || [];
+          const id = urlParts.length > 0 ? urlParts[0] : null;
+
           if (req.method === 'GET') {
             const adjustments = repository.getStockAdjustments();
             res.statusCode = 200;
@@ -395,10 +398,26 @@ function sqliteApiPlugin() {
 
           if (req.method === 'POST') {
             const payload = await parseJsonBody(req);
-            const id = repository.addStockAdjustment(payload);
+            const newId = repository.addStockAdjustment(payload);
             res.statusCode = 201;
             res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({ ...payload, id: newId }));
+            return;
+          }
+
+          if (req.method === 'PUT' && id) {
+            const payload = await parseJsonBody(req);
+            repository.updateStockAdjustment(id, payload);
+            res.statusCode = 200;
+            res.setHeader('Content-Type', 'application/json');
             res.end(JSON.stringify({ ...payload, id }));
+            return;
+          }
+
+          if (req.method === 'DELETE' && id) {
+            repository.deleteStockAdjustment(id);
+            res.statusCode = 204;
+            res.end();
             return;
           }
 
@@ -1029,7 +1048,8 @@ function sqliteApiPlugin() {
                   shippingAddress: payload.shippingAddress ? String(payload.shippingAddress) : null,
                   balance: Number.isFinite(normalizedBalance) ? normalizedBalance : 0,
                   creditLimit: payload.creditLimit ? Number(payload.creditLimit) : null,
-                  type: payload.type ?? 'customer'
+                  type: payload.type ?? 'customer',
+                  status: payload.status ?? 'active'
                 };
 
                 repository.upsertParty(party);
@@ -1729,6 +1749,7 @@ function sqliteApiPlugin() {
                   atPrice: payload.atPrice !== undefined && payload.atPrice !== null ? Number(payload.atPrice) : null,
                   mfgDate: payload.mfgDate ? String(payload.mfgDate) : null,
                   expDate: payload.expDate ? String(payload.expDate) : null,
+                  status: payload.status ? String(payload.status).trim() : 'active',
                 };
 
                 const secondaryStock = Number(item.stockQuantity) * Number(item.conversionRate ?? 0);
@@ -1767,34 +1788,48 @@ function sqliteApiPlugin() {
               .find((itemRow: { id: string; img_path?: string | null }) => String(itemRow.id) === id);
             const existingImgPath = existingItem?.img_path ?? null;
 
-            const deleted = repository.deleteItem(id);
-            if (!deleted) {
-              res.statusCode = 404;
-              res.setHeader('Content-Type', 'application/json');
-              res.end(JSON.stringify({ message: 'Item not found.' }));
-              return;
-            }
-
             try {
-              if (existingImgPath) {
-                removeManagedImageFile(existingImgPath);
+              const deleted = repository.deleteItem(id);
+              if (!deleted) {
+                res.statusCode = 404;
+                res.setHeader('Content-Type', 'application/json');
+                res.end(JSON.stringify({ message: 'Item not found.' }));
+                return;
               }
-            } catch (error) {
-              console.error('Failed to remove item image on delete:', error);
-            }
 
-            res.statusCode = 204;
-            res.end();
+              try {
+                if (existingImgPath) {
+                  removeManagedImageFile(existingImgPath);
+                }
+              } catch (error) {
+                console.error('Failed to remove item image on delete:', error);
+              }
+
+              res.statusCode = 204;
+              res.end();
+            } catch (error: any) {
+              if (error.message === 'ITEM_IN_USE') {
+                res.statusCode = 409;
+                res.setHeader('Content-Type', 'application/json');
+                res.end(JSON.stringify({ message: 'delete all the transaction of item, if you want to delete the items' }));
+              } else {
+                res.statusCode = 500;
+                res.setHeader('Content-Type', 'application/json');
+                res.end(JSON.stringify({ message: 'Failed to process request.' }));
+              }
+            }
             return;
           }
 
           res.statusCode = 405;
           res.setHeader('Content-Type', 'application/json');
           res.end(JSON.stringify({ message: 'Method not allowed.' }));
-        } catch {
-          res.statusCode = 500;
-          res.setHeader('Content-Type', 'application/json');
-          res.end(JSON.stringify({ message: 'Failed to process request.' }));
+        } catch (error: any) {
+          if (!res.headersSent) {
+            res.statusCode = 500;
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({ message: 'Failed to process request.' }));
+          }
         }
       });
 

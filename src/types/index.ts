@@ -10,6 +10,7 @@ export interface Party {
   balance: number;
   creditLimit?: number;
   type: 'customer' | 'supplier' | 'both';
+  status?: 'active' | 'inactive';
 }
 
 export interface Item {

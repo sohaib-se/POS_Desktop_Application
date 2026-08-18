@@ -103,6 +103,8 @@ export function ProductList({
                   });
                 }}
                 className={`cursor-pointer border-b border-[#E3EAF2] ${
+                  item.status === 'inactive' ? 'opacity-50 grayscale' : ''
+                } ${
                   selectedItem?.id === item.id
                     ? "bg-[#E3F0FF] border-l-4 border-l-[#1976D2]"
                     : "hover:bg-[#F5F8FA]"

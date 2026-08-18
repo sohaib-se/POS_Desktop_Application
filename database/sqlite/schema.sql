@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS parties (
   balance REAL NOT NULL DEFAULT 0,
   credit_limit REAL,
   type TEXT NOT NULL CHECK (type IN ('customer', 'supplier', 'both')),
+  status TEXT NOT NULL DEFAULT 'active',
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
@@ -35,6 +36,7 @@ CREATE TABLE IF NOT EXISTS items (
   mfg_date TEXT,
   exp_date TEXT,
   location TEXT,
+  status TEXT NOT NULL DEFAULT 'active',
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );

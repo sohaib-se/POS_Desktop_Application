@@ -249,6 +249,7 @@ export function Parties({ isReportView, onBack, onEditSaleInvoice, onOpenSetting
         balance: Number(party.balance ?? 0),
         creditLimit: party.credit_limit ? Number(party.credit_limit) : undefined,
         type: party.type,
+        status: party.status,
       }));
 
       setParties(normalizedParties);
@@ -290,9 +291,13 @@ export function Parties({ isReportView, onBack, onEditSaleInvoice, onOpenSetting
 
 
 
-  const filteredParties = parties.filter((p) =>
-    p.name.toLowerCase().includes(searchTerm.toLowerCase()),
-  );
+  const filteredParties = parties
+    .filter((p) => p.name.toLowerCase().includes(searchTerm.toLowerCase()))
+    .sort((a, b) => {
+      if (a.status === 'inactive' && b.status !== 'inactive') return 1;
+      if (a.status !== 'inactive' && b.status === 'inactive') return -1;
+      return 0;
+    });
 
   const partyTransactions = (() => {
     const baseTransactions = [...partyTransactionsFromApi].filter(
@@ -611,6 +616,38 @@ export function Parties({ isReportView, onBack, onEditSaleInvoice, onOpenSetting
     }
   };
 
+  const handleToggleStatus = async (party: Party) => {
+    try {
+      const newStatus = party.status === "inactive" ? "active" : "inactive";
+      const payload = {
+        ...party,
+        status: newStatus,
+      };
+
+      const response = await fetch("/api/parties", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to update status");
+      }
+
+      setParties((prev) =>
+        prev.map((p) => (p.id === party.id ? { ...p, status: newStatus } : p))
+      );
+      
+      if (selectedParty?.id === party.id) {
+        setSelectedParty({ ...party, status: newStatus });
+      }
+    } catch (error) {
+      console.error(error);
+      alert("Failed to update party status.");
+    }
+  };
+
+
   const showEmptyState = !isLoading ? parties.length === 0 : !hasPartiesCache;
 
   return (
@@ -637,6 +674,7 @@ export function Parties({ isReportView, onBack, onEditSaleInvoice, onOpenSetting
             setSelectedParty={setSelectedParty}
             openEditPartyDialog={openEditPartyDialog}
             setPartyPendingDelete={setPartyPendingDelete}
+            onToggleStatus={handleToggleStatus}
             isReportView={isReportView}
           />
           <PartyDetails

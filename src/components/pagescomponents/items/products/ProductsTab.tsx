@@ -44,6 +44,7 @@ const getInitialAddItemFormState = (): AddItemFormState => ({
   asOfDate: new Date().toISOString().split("T")[0],
   mfgDate: "",
   expDate: "",
+  status: "active",
 });
 
 const mapItemApiRecord = (record: ItemApiRecord): Item => ({
@@ -62,11 +63,14 @@ const mapItemApiRecord = (record: ItemApiRecord): Item => ({
   salePrice: Number(record.sale_price ?? 0),
   wholesalePrice: Number(record.wholesale_price ?? 0),
   purchasePrice: Number(record.purchase_price ?? 0),
-  atPrice: record.at_price != null ? Number(record.at_price) : undefined,
   stockQuantity: Number(record.stock_quantity ?? 0),
   stockValue: Number(record.stock_value ?? 0),
-  mfgDate: record.mfg_date ?? null,
-  expDate: record.exp_date ?? null,
+  mfgDate: record.mfg_date,
+  expDate: record.exp_date,
+  atPrice: record.at_price ?? undefined,
+  status: record.status ?? 'active',
+  createdAt: record.created_at,
+  updatedAt: record.updated_at,
 });
 
 const getUnitIdFromLabel = (
@@ -462,6 +466,27 @@ export function ProductsTab({
     if (!selectedItem || !adjustStockForm.qty || isSavingAdjustment) return;
     setIsSavingAdjustment(true);
     try {
+      let oldStockChange = 0;
+      let oldValueChange = 0;
+      
+      if (adjustStockForm.id) {
+        const oldTx = itemTransactions.find(t => t.rawTransaction?.id === adjustStockForm.id);
+        if (oldTx) {
+          const oldQty = oldTx.quantity;
+          const oldPrice = oldTx.price;
+          let oldBaseQty = oldQty;
+          const oldIsSecondary = oldTx.unit === selectedItem.secondaryUnit;
+          if (oldIsSecondary && selectedItem.conversionRate) {
+            oldBaseQty = oldQty / selectedItem.conversionRate;
+          }
+          const oldIsAdd = oldTx.type === "Add Stock";
+          oldStockChange = oldIsAdd ? oldBaseQty : -oldBaseQty;
+          
+          const oldVal = oldQty * oldPrice;
+          oldValueChange = oldIsAdd ? oldVal : -oldVal;
+        }
+      }
+
       const qty = Number(adjustStockForm.qty);
       const atPrice = Number(adjustStockForm.atPrice) || 0;
       let baseQtyChange = qty;
@@ -471,14 +496,15 @@ export function ProductsTab({
       }
       const isAdd = adjustStockForm.type === "Add";
       const stockChange = isAdd ? baseQtyChange : -baseQtyChange;
-      const newStockQuantity = selectedItem.stockQuantity + stockChange;
+      
+      const newStockQuantity = selectedItem.stockQuantity - oldStockChange + stockChange;
       let newSecondaryStock = selectedItem.secondaryStock ?? 0;
       if (selectedItem.conversionRate) {
         newSecondaryStock = newStockQuantity * selectedItem.conversionRate;
       }
       const valueChange = qty * atPrice;
       const newValueChange = isAdd ? valueChange : -valueChange;
-      const newStockValue = selectedItem.stockValue + newValueChange;
+      const newStockValue = selectedItem.stockValue - oldValueChange + newValueChange;
       const finalStockValue = Math.max(0, newStockValue);
 
       const payload = {
@@ -498,6 +524,7 @@ export function ProductsTab({
         lowStock: selectedItem.lowStock,
         secondaryStock: newSecondaryStock,
         conversionRate: selectedItem.conversionRate,
+        status: selectedItem.status,
       };
 
       const response = await fetch("/api/items", {
@@ -517,35 +544,18 @@ export function ProductsTab({
         atPrice: atPrice,
         details: adjustStockForm.details,
       };
-      const adjustResponse = await fetch("/api/adjust_stock_transactions", {
-        method: "POST",
+      const endpoint = adjustStockForm.id 
+        ? `/api/adjust_stock_transactions/${adjustStockForm.id}`
+        : "/api/adjust_stock_transactions";
+      const method = adjustStockForm.id ? "PUT" : "POST";
+      
+      const adjustResponse = await fetch(endpoint, {
+        method: method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(adjustPayload),
       });
       if (adjustResponse.ok) {
-        const createdAdjustTx = (await adjustResponse.json()) as Record<string, unknown>;
-        const newTransaction: ItemTransactionRow = {
-          id: `adj-${createdAdjustTx.id as string}`,
-          type: createdAdjustTx.adjustmentType as ItemTransactionRow["type"],
-          invoiceNo: "",
-          partyName: "Stock Adjustment",
-          date: createdAdjustTx.date as string,
-          quantity: Number(createdAdjustTx.quantity ?? 0),
-          unit: (createdAdjustTx.unit as string) || "",
-          price: Number(createdAdjustTx.atPrice ?? 0),
-          amount:
-            Number(createdAdjustTx.quantity ?? 0) *
-            Number(createdAdjustTx.atPrice ?? 0),
-          balance: 0,
-          status: "Paid",
-          itemId: createdAdjustTx.itemId as string,
-          itemName: createdAdjustTx.itemName as string,
-        };
-        setItemTransactions((prev) =>
-          [newTransaction, ...prev].sort(
-            (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
-          )
-        );
+        void loadItemTransactions();
       }
 
       const createdItemPayload = (await response.json()) as Record<string, unknown>;
@@ -595,7 +605,18 @@ export function ProductsTab({
       setEditingPurchase(transaction.rawTransaction);
       setShowAddPurchase(true);
     } else {
-      alert("Editing stock adjustments directly is not yet supported.");
+      if (transaction.rawTransaction) {
+        setAdjustStockForm({
+          id: transaction.rawTransaction.id,
+          type: transaction.type === "Add Stock" ? "Add" : "Reduce",
+          date: transaction.date,
+          qty: String(transaction.quantity),
+          unit: transaction.unit,
+          atPrice: String(transaction.price),
+          details: transaction.rawTransaction.details || "",
+        });
+        setShowAdjustStockModal(true);
+      }
     }
   };
 
@@ -606,14 +627,66 @@ export function ProductsTab({
     if (!window.confirm(confirmMessage)) return;
 
     try {
-      let endpoint = "";
-      if (transaction.type === "Sale") endpoint = `/api/sale_invoices/${apiId}`;
-      else if (transaction.type === "Purchase") endpoint = `/api/purchase_bills/${apiId}`;
-      else endpoint = `/api/adjust_stock_transactions/${apiId}`; 
-      
-      const res = await fetch(endpoint, { method: "DELETE" });
-      if (!res.ok && res.status !== 204) {
-        throw new Error("Failed to delete transaction");
+      if (transaction.type === "Sale") {
+        const res = await fetch(`/api/sale_invoices/${apiId}`, { method: "DELETE" });
+        if (!res.ok && res.status !== 204) throw new Error("Failed to delete sale");
+      } else if (transaction.type === "Purchase") {
+        const res = await fetch(`/api/purchase_bills/${apiId}`, { method: "DELETE" });
+        if (!res.ok && res.status !== 204) throw new Error("Failed to delete purchase");
+      } else {
+        if (selectedItem) {
+          const isAdd = transaction.type === "Add Stock";
+          const qty = transaction.quantity;
+          const atPrice = transaction.price;
+          
+          let baseQtyChange = qty;
+          const isSecondary = transaction.unit === selectedItem.secondaryUnit;
+          if (isSecondary && selectedItem.conversionRate) {
+            baseQtyChange = qty / selectedItem.conversionRate;
+          }
+          const stockChange = isAdd ? -baseQtyChange : baseQtyChange; // Reverse
+          const newStockQuantity = selectedItem.stockQuantity + stockChange;
+          
+          let newSecondaryStock = selectedItem.secondaryStock ?? 0;
+          if (selectedItem.conversionRate) {
+            newSecondaryStock = newStockQuantity * selectedItem.conversionRate;
+          }
+          
+          const valueChange = qty * atPrice;
+          const newValueChange = isAdd ? -valueChange : valueChange; // Reverse
+          const newStockValue = selectedItem.stockValue + newValueChange;
+          const finalStockValue = Math.max(0, newStockValue);
+
+          const payload = {
+            id: selectedItem.id,
+            name: selectedItem.name,
+            code: selectedItem.code,
+            category: selectedItem.category,
+            salePrice: selectedItem.salePrice,
+            wholesalePrice: selectedItem.wholesalePrice,
+            purchasePrice: selectedItem.purchasePrice,
+            stockQuantity: newStockQuantity,
+            unit: selectedItem.unit,
+            primaryUnit: selectedItem.primaryUnit,
+            secondaryUnit: selectedItem.secondaryUnit,
+            stockValue: finalStockValue,
+            minStock: selectedItem.minStock,
+            lowStock: selectedItem.lowStock,
+            secondaryStock: newSecondaryStock,
+            conversionRate: selectedItem.conversionRate,
+            status: selectedItem.status,
+          };
+
+          const response = await fetch("/api/items", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+          if (!response.ok) throw new Error("Failed to revert stock");
+        }
+
+        const res = await fetch(`/api/adjust_stock_transactions/${apiId}`, { method: "DELETE" });
+        if (!res.ok && res.status !== 204) throw new Error("Failed to delete adjustment");
       }
       
       void loadItemTransactions();
@@ -716,6 +789,7 @@ export function ProductsTab({
       asOfDate: new Date().toISOString().split("T")[0],
       mfgDate: item.mfgDate ?? "",
       expDate: item.expDate ?? "",
+      status: item.status ?? "active",
     });
     setSelectedUnitId(matchedPrimaryUnitId || matchedUnitId);
     setBaseUnitId(matchedPrimaryUnitId || matchedUnitId);
@@ -756,6 +830,11 @@ export function ProductsTab({
       const response = await fetch(`/api/items/${item.id}`, {
         method: "DELETE",
       });
+      if (response.status === 409) {
+        const errorData = await response.json();
+        alert(errorData.message || "Item is in use and cannot be deleted.");
+        return;
+      }
       if (!response.ok) throw new Error("Failed to delete item");
       setItemList((prev) => prev.filter((entry) => entry.id !== item.id));
       if (item.category) {
@@ -769,9 +848,51 @@ export function ProductsTab({
       }
     } catch (error) {
       console.error(error);
+      alert("Failed to delete item.");
     } finally {
       setIsDeletingItem(false);
       setItemPendingDelete(null);
+    }
+  };
+
+  const handleToggleStatus = async (menu: ItemContextMenuState) => {
+    const item = menu.item;
+    const newStatus = item.status === "inactive" ? "active" : "inactive";
+    const payload = {
+      id: item.id,
+      name: item.name,
+      code: item.code,
+      category: item.category,
+      salePrice: item.salePrice,
+      wholesalePrice: item.wholesalePrice,
+      purchasePrice: item.purchasePrice,
+      atPrice: item.atPrice,
+      stockQuantity: item.stockQuantity,
+      unit: item.unit,
+      primaryUnit: item.primaryUnit,
+      secondaryUnit: item.secondaryUnit,
+      conversionRate: item.conversionRate,
+      imgPath: item.imgPath,
+      mfgDate: item.mfgDate,
+      expDate: item.expDate,
+      stockValue: item.stockValue,
+      minStock: item.minStock,
+      lowStock: item.lowStock,
+      status: newStatus,
+    };
+    try {
+      const response = await fetch("/api/items", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!response.ok) throw new Error("Failed to update status");
+      setItemList((prev) =>
+        prev.map((i) => (i.id === item.id ? { ...i, status: newStatus } : i))
+      );
+    } catch (error) {
+      console.error(error);
+      alert("Failed to update item status.");
     }
   };
 
@@ -823,6 +944,7 @@ export function ProductsTab({
       stockValue: openingStockValue,
       minStock: minWholesaleQty,
       lowStock: addItemForm.lowStockThreshold !== "" ? Number(addItemForm.lowStockThreshold) : null,
+      status: addItemForm.status,
     };
 
     setIsSavingItem(true);
@@ -1076,6 +1198,7 @@ export function ProductsTab({
           onDelete={(menu) => {
             setItemPendingDelete(menu.item);
           }}
+          onToggleStatus={handleToggleStatus}
           onClose={() => setItemContextMenu(null)}
         />
       )}

@@ -17,6 +17,7 @@ interface PartyListProps {
   setSelectedParty: (party: Party) => void;
   openEditPartyDialog: (party: Party) => void;
   setPartyPendingDelete: (party: Party) => void;
+  onToggleStatus?: (party: Party) => void;
   isReportView?: boolean;
 }
 
@@ -29,6 +30,7 @@ export function PartyList({
   setSelectedParty,
   openEditPartyDialog,
   setPartyPendingDelete,
+  onToggleStatus,
   isReportView,
 }: PartyListProps) {
   const [partyContextMenu, setPartyContextMenu] = useState<PartyContextMenuState | null>(null);
@@ -105,7 +107,7 @@ export function PartyList({
                     selectedParty?.id === party.id
                       ? "bg-blue-50 border-l-4 border-l-blue-500"
                       : "hover:bg-gray-50"
-                  }`}
+                  } ${party.status === 'inactive' ? 'opacity-50 grayscale' : ''}`}
                 >
                   <td className="px-4 py-3">
                     <span className="text-gray-900">{party.name}</span>
@@ -147,6 +149,17 @@ export function PartyList({
           >
             View/Edit
           </button>
+          {onToggleStatus && (
+            <button
+              onClick={() => {
+                onToggleStatus(partyContextMenu.party);
+                setPartyContextMenu(null);
+              }}
+              className="w-full rounded-sm px-2 py-1.5 text-left text-sm hover:bg-gray-100"
+            >
+              {partyContextMenu.party.status === 'inactive' ? 'Activate' : 'Deactivate'}
+            </button>
+          )}
           <button
             onClick={() => {
               setPartyContextMenu(null);

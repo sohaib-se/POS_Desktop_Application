@@ -28,7 +28,9 @@ export function CustomerSearchAndInvoice({
               onChange={(e) => setActiveTabCustomer(e.target.value)}
             >
               <option value="">Select Party</option>
-              {parties.map((party) => (
+              {parties
+                .filter(party => party.status !== 'inactive' || party.id.toString() === activeTab.customerSearch)
+                .map((party) => (
                 <option key={party.id} value={party.id}>
                   {party.name}
                 </option>

@@ -48,6 +48,7 @@ export interface PartyOption {
   phone: string;
   balance: number;
   type: "customer" | "supplier" | "both";
+  status?: 'active' | 'inactive';
 }
 
 export interface ItemOption {
@@ -62,6 +63,7 @@ export interface ItemOption {
   exp_date?: string | null;
   wholesale_price?: number;
   min_stock?: number | null;
+  status?: 'active' | 'inactive';
   stock_quantity?: number;
 }
 

@@ -261,8 +261,8 @@ export function AddPurchase({ onSave, onShare, onClose, initialInvoice }: AddPur
             return previousTabs;
           }
 
-          const defaultParty = sortedParties[0];
-          if (!defaultParty) {
+          const defaultParty = sortedParties.find(p => p.status !== 'inactive') || sortedParties[0];
+          if (!defaultParty || defaultParty.status === 'inactive') {
             return previousTabs;
           }
 

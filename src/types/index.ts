@@ -184,6 +184,7 @@ export type ViewType =
   | 'parties' 
   | 'items' 
   | 'griditems'
+  | 'bill-preview'
   | 'add-sale'
   | 'add-purchase'
   | 'add-expense'

@@ -91,83 +91,87 @@
   }
 }
 
-.animate-fadeIn {
-  animation: fadeIn 0.3s ease-out forwards;
+@layer utilities {
+  .animate-fadeIn {
+    animation: fadeIn 0.3s ease-out forwards;
+  }
+
+  .animate-slideIn {
+    animation: slideIn 0.3s ease-out forwards;
+  }
+
+  .animate-scaleIn {
+    animation: scaleIn 0.2s ease-out forwards;
+  }
+
+  .animate-dropdownExpand {
+    animation: dropdownExpand 0.3s ease-out forwards;
+  }
 }
 
-.animate-slideIn {
-  animation: slideIn 0.3s ease-out forwards;
-}
+@layer components {
+  /* Sidebar styles */
+  .sidebar-item {
+    @apply flex items-center gap-3 px-4 py-2.5 text-sm text-gray-300 hover:text-white hover:bg-white/10 rounded-lg transition-all duration-200 cursor-pointer;
+  }
 
-.animate-scaleIn {
-  animation: scaleIn 0.2s ease-out forwards;
-}
+  .sidebar-item.active {
+    @apply text-white bg-white/10 border-l-4 border-[var(--vyapar-red)];
+  }
 
-.animate-dropdownExpand {
-  animation: dropdownExpand 0.3s ease-out forwards;
-}
+  .sidebar-submenu {
+    @apply ml-4 pl-4 border-l border-gray-700;
+  }
 
-/* Sidebar styles */
-.sidebar-item {
-  @apply flex items-center gap-3 px-4 py-2.5 text-sm text-gray-300 hover:text-white hover:bg-white/10 rounded-lg transition-all duration-200 cursor-pointer;
-}
+  /* Card styles */
+  .stat-card {
+    @apply bg-white rounded-xl p-5 shadow-sm border border-gray-100 hover:shadow-md transition-shadow duration-200;
+  }
 
-.sidebar-item.active {
-  @apply text-white bg-white/10 border-l-4 border-[var(--vyapar-red)];
-}
+  /* Table styles */
+  .data-table {
+    @apply w-full text-sm;
+  }
 
-.sidebar-submenu {
-  @apply ml-4 pl-4 border-l border-gray-700;
-}
+  .data-table th {
+    @apply px-4 py-3 text-left font-medium text-gray-500 bg-gray-50 border-b border-gray-200;
+  }
 
-/* Card styles */
-.stat-card {
-  @apply bg-white rounded-xl p-5 shadow-sm border border-gray-100 hover:shadow-md transition-shadow duration-200;
-}
+  .data-table td {
+    @apply px-4 py-3 border-b border-gray-100 text-gray-700;
+  }
 
-/* Table styles */
-.data-table {
-  @apply w-full text-sm;
-}
+  .data-table tr:hover td {
+    @apply bg-gray-50;
+  }
 
-.data-table th {
-  @apply px-4 py-3 text-left font-medium text-gray-500 bg-gray-50 border-b border-gray-200;
-}
+  /* Button styles */
+  .btn-primary {
+    @apply bg-[var(--vyapar-red)] text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-colors duration-200 flex items-center gap-2;
+  }
 
-.data-table td {
-  @apply px-4 py-3 border-b border-gray-100 text-gray-700;
-}
+  .btn-secondary {
+    @apply bg-[var(--vyapar-blue)] text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors duration-200 flex items-center gap-2;
+  }
 
-.data-table tr:hover td {
-  @apply bg-gray-50;
-}
+  /* Input styles */
+  .input-field {
+    @apply w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--vyapar-red)] focus:border-transparent transition-all duration-200;
+  }
 
-/* Button styles */
-.btn-primary {
-  @apply bg-[var(--vyapar-red)] text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-colors duration-200 flex items-center gap-2;
-}
+  /* Modal overlay */
+  .modal-overlay {
+    @apply fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center;
+  }
 
-.btn-secondary {
-  @apply bg-[var(--vyapar-blue)] text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors duration-200 flex items-center gap-2;
-}
+  /* Tab styles */
+  .tab-btn {
+    @apply px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 border-b-2 border-transparent hover:border-gray-300 transition-all duration-200;
+  }
 
-/* Input styles */
-.input-field {
-  @apply w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--vyapar-red)] focus:border-transparent transition-all duration-200;
-}
-
-/* Modal overlay */
-.modal-overlay {
-  @apply fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center;
-}
-
-/* Tab styles */
-.tab-btn {
-  @apply px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 border-b-2 border-transparent hover:border-gray-300 transition-all duration-200;
-}
-
-.tab-btn.active {
-  @apply text-[var(--vyapar-red)] border-[var(--vyapar-red)];
+  .tab-btn.active {
+    @apply text-[var(--vyapar-red)] border-[var(--vyapar-red)];
+  }
 }
 @media print {
   body * {

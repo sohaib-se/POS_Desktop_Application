@@ -78,9 +78,10 @@ interface PartiesProps {
   isReportView?: boolean;
   onBack?: () => void;
   onEditSaleInvoice?: (invoice: SaleInvoiceEditData) => void;
+  onOpenSettings?: (tab?: string) => void;
 }
 
-export function Parties({ isReportView, onBack, onEditSaleInvoice }: PartiesProps = {}) {
+export function Parties({ isReportView, onBack, onEditSaleInvoice, onOpenSettings }: PartiesProps = {}) {
   const [currency] = useSettings('settings.businessCurrency', { code: 'PKR', symbol: 'Rs' });
   const [currencyDisplay] = useSettings<'abbreviation' | 'icon'>('settings.currencyDisplay', 'abbreviation');
   const currencyStr = currencyDisplay === 'icon' ? currency.symbol : currency.code;

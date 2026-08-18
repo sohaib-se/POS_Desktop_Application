@@ -71,7 +71,7 @@ export function RegularInvoicePreview({ color, sale }: { color?: string, sale?: 
           <tr style={{ border: `1px solid ${BORDER}` }}>
             <td style={{ ...td, borderRight: `1px solid ${BORDER}`, width: "50%", verticalAlign: "top" }}>
               <div style={{ fontWeight: 600, marginBottom: 3 }}>Bill To:</div>
-              <div style={{ color: BLUE }}>{data.partyName}</div>
+              <div style={{ color: color || BLUE }}>{data.partyName}</div>
               
               {data.partyPhone ? <div style={{ color: TEXT_MUTED }}>Contact No.: {data.partyPhone}</div> : null}
             </td>
@@ -90,7 +90,7 @@ export function RegularInvoicePreview({ color, sale }: { color?: string, sale?: 
 
       <table style={{ width: "100%", fontSize: invoiceFontSize, borderCollapse: "collapse", marginBottom: 10 }}>
         <thead>
-          <tr style={{ background: BLUE, color: "#fff" }}>
+          <tr style={{ background: color || BLUE, color: "#fff" }}>
             {["#", "Item name", "HSN/SAC", "Quantity", "Price/unit"].map((h) => (
               <th key={h} style={th}>{h}</th>
             ))}

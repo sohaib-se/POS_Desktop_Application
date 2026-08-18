@@ -37,6 +37,7 @@ import { GlobalSearch } from "@/components/common/GlobalSearch";
 import { AllTransactions } from "@/pages/AllTransactions";
 import type { SaleInvoiceEditData, ViewType } from "@/types";
 import type { BillPreviewSaleData } from "@/components/pagescomponents/previewbill/BillPreviewData";
+import { BillPreviewPage } from "@/components/pagescomponents/previewbill/BillPreviewPage";
 
 function App() {
   const [isAppLocked, setIsAppLocked] = useState(true);
@@ -78,6 +79,7 @@ function App() {
   const [isConvertingEstimate, setIsConvertingEstimate] = useState(false);
   const [settingsInitialTab, setSettingsInitialTab] = useState<string>("general");
   const [isGlobalSearchOpen, setIsGlobalSearchOpen] = useState(false);
+  const [billPreviewData, setBillPreviewData] = useState<BillPreviewSaleData | null>(null);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -86,7 +88,7 @@ function App() {
         setIsGlobalSearchOpen(true);
       }
     };
-    
+
     const handleOpenSearch = () => setIsGlobalSearchOpen(true);
 
     window.addEventListener("keydown", handleKeyDown);
@@ -311,13 +313,22 @@ function App() {
         </div>
       )}
 
-      <GlobalSearch 
-        isOpen={isGlobalSearchOpen} 
-        onClose={() => setIsGlobalSearchOpen(false)} 
+      {currentView === "bill-preview" && billPreviewData && (
+        <div className="fixed inset-0 z-[130] bg-white">
+          <BillPreviewPage
+            sale={billPreviewData}
+            onClose={handleCloseBillPreview}
+          />
+        </div>
+      )}
+
+      <GlobalSearch
+        isOpen={isGlobalSearchOpen}
+        onClose={() => setIsGlobalSearchOpen(false)}
         onNavigate={(view) => {
           handleViewChange(view);
           setIsGlobalSearchOpen(false);
-        }} 
+        }}
       />
     </>
   );

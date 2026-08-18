@@ -19,6 +19,7 @@ export function EditProfile({ onBack }: EditProfileProps) {
   const [pincode, setPincode] = useState("");
   const [logo, setLogo] = useState<string | null>(null);
   const [signature, setSignature] = useState<string | null>(null);
+  const [termsConditions, setTermsConditions] = useState("");
 
   const [toast, setToast] = useState<{message: string, type: 'success' | 'error'} | null>(null);
 
@@ -41,6 +42,7 @@ export function EditProfile({ onBack }: EditProfileProps) {
           setPincode(data.pincode || "");
           setLogo(data.logo || null);
           setSignature(data.signature || null);
+          setTermsConditions(data.terms_conditions || "");
         }
       })
       .catch(console.error);
@@ -60,7 +62,8 @@ export function EditProfile({ onBack }: EditProfileProps) {
           address: businessAddress,
           pincode,
           logo,
-          signature
+          signature,
+          termsConditions
         })
       });
       if (res.ok) {
@@ -95,6 +98,8 @@ export function EditProfile({ onBack }: EditProfileProps) {
               setPhoneNumber={setPhoneNumber}
               emailId={emailId}
               setEmailId={setEmailId}
+              termsConditions={termsConditions}
+              setTermsConditions={setTermsConditions}
             />
             <MoreDetails
               businessType={businessType}

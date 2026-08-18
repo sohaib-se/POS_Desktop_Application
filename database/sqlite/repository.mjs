@@ -1509,9 +1509,9 @@ export function updateUserProfile(profile) {
   const db = openDatabase();
   db.prepare(`
     INSERT INTO user_profile (
-      id, business_name, phone, email, address, business_type, category, pincode, logo, signature, updated_at
+      id, business_name, phone, email, address, business_type, category, pincode, logo, signature, terms_conditions, updated_at
     ) VALUES (
-      1, @businessName, @phone, @email, @address, @businessType, @category, @pincode, @logo, @signature, datetime('now')
+      1, @businessName, @phone, @email, @address, @businessType, @category, @pincode, @logo, @signature, @termsConditions, datetime('now')
     ) ON CONFLICT(id) DO UPDATE SET
       business_name = excluded.business_name,
       phone = excluded.phone,
@@ -1522,6 +1522,7 @@ export function updateUserProfile(profile) {
       pincode = excluded.pincode,
       logo = COALESCE(excluded.logo, user_profile.logo),
       signature = COALESCE(excluded.signature, user_profile.signature),
+      terms_conditions = excluded.terms_conditions,
       updated_at = excluded.updated_at
   `).run({
     businessName: profile.businessName || '',
@@ -1532,7 +1533,8 @@ export function updateUserProfile(profile) {
     category: profile.category || null,
     pincode: profile.pincode || null,
     logo: profile.logo || null,
-    signature: profile.signature || null
+    signature: profile.signature || null,
+    termsConditions: profile.termsConditions || null
   });
   db.close();
 }

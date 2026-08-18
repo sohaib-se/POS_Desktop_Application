@@ -2,142 +2,261 @@ import type { BillPreviewSaleData } from "../../../previewbill/BillPreviewData";
 import { DUMMY_REGULAR_SALE } from "./DummySaleData";
 import { EditableText, numberToWords } from "./SharedComponents";
 import { useCompanyDetails } from "./useCompanyDetails";
-import { TEXT_DARK } from "./constants";
+import { TEXT_DARK, resolveThemeColor } from "./constants";
 
-export function Theme1Preview({ color, sale }: { color?: string, sale?: BillPreviewSaleData }) {
+function withAlpha(hex: string, alpha: string) {
+  return `${hex}${alpha}`;
+}
+
+export function Theme1Preview({ color, sale }: { color?: string; sale?: BillPreviewSaleData }) {
   const data = sale || DUMMY_REGULAR_SALE;
-  const { companyName, phone, logo, showCompanyName, showPhone, showLogo, companyNameTextSize, invoiceTextSize } = useCompanyDetails();
+  const {
+    companyName,
+    phone,
+    logo,
+    showCompanyName,
+    showPhone,
+    showLogo,
+    companyNameTextSize,
+    invoiceTextSize,
+  } = useCompanyDetails();
 
-  const companyNameSize = companyNameTextSize === "Small" ? 14 : companyNameTextSize === "Large" ? 22 : 18;
-  const invoiceFontSize = invoiceTextSize === "Small" ? 8.5 : invoiceTextSize === "Large" ? 11.5 : 10;
+  const companyNameSize = companyNameTextSize === "Small" ? 18 : companyNameTextSize === "Large" ? 26 : 22;
+  const invoiceFontSize = invoiceTextSize === "Small" ? 11 : invoiceTextSize === "Large" ? 14 : 12.5;
 
-  const themeBg = color || "#a855f7"; // Purple
+  const themeBg = color || "#a855f7";
+  const borderColor = resolveThemeColor(themeBg); // black when white is selected
+  const barBg = withAlpha(borderColor, "33");
+  const linkColor = themeBg;
+
+  const d = data as any;
+  const shippingAddress: string | undefined = d.shippingAddress;
+  const time: string | undefined = d.time;
+  const dueDate: string | undefined = d.dueDate;
+  const taxBreakdown: Array<{ type: string; taxableAmount: number; rate: string; taxAmount: number }> | undefined = d.taxBreakdown;
+  const savedAmount: number | undefined = d.savedAmount;
+  const bankDetails: { bankName?: string; accountNo?: string; ifsc?: string; iban?: string } | undefined = d.bankDetails;
 
   return (
-    <div style={{ background: "#fff", padding: 30, fontFamily: "Inter, system-ui, sans-serif", border: "1px solid #e2e8f0" }}>
-      {/* Header */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20 }}>
-        {showLogo && (
-          <div style={{ width: 100, height: 100, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
-            {logo ? <img src={logo} alt="Company Logo" style={{ width: "100%", height: "100%", objectFit: "contain" }} /> : null}
+    <div style={{ display: "flex", justifyContent: "center", width: "100%" }}>
+      <div style={{ width: "115.5mm", minHeight: "163.35mm" }}>
+        <div
+          style={{
+            background: "#fff",
+            padding: 30,
+            fontFamily: "Inter, system-ui, sans-serif",
+            border: "1px solid #e2e8f0",
+            width: "210mm",
+            minHeight: "297mm",
+            boxSizing: "border-box",
+            transform: "scale(0.55)",
+            transformOrigin: "top left",
+          }}
+        >
+          {/* Header */}
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
+            {showLogo && (
+              <div style={{ width: 100, height: 100, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", background: "#f1f5f9" }}>
+                {logo ? <img src={logo} alt="Company Logo" style={{ width: "100%", height: "100%", objectFit: "contain" }} /> : null}
+              </div>
+            )}
+            <div style={{ textAlign: "right", flex: 1 }}>
+              <div style={{ fontSize: companyNameSize, fontWeight: 700, color: TEXT_DARK }}>{showCompanyName ? companyName : ""}</div>
+              {showPhone && (
+                <div style={{ fontSize: invoiceFontSize, color: linkColor, marginTop: 4, fontWeight: 600 }}>Ph. no.: {phone}</div>
+              )}
+            </div>
           </div>
-        )}
-        <div style={{ textAlign: "right", flex: 1 }}>
-          <div style={{ fontSize: companyNameSize, fontWeight: 700, color: TEXT_DARK }}>{showCompanyName ? companyName : ""}</div>
-          {showPhone && (<div style={{ fontSize: invoiceFontSize, color: TEXT_DARK, marginTop: 4 }}>Phone no.: {phone}</div>)}
-        </div>
-      </div>
-      
-      {/* Title */}
-      <div style={{ borderTop: `2px solid ${themeBg}`, borderBottom: `2px solid ${themeBg}`, textAlign: "center", padding: "6px 0", marginBottom: 20 }}>
-        <div style={{ fontWeight: 700, fontSize: 14, color: TEXT_DARK }}><EditableText textKey="title" defaultText="Invoice" /></div>
-      </div>
-      
-      {/* Bill To & Invoice Details */}
-      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 20 }}>
-        <div>
-          <div style={{ fontSize: invoiceFontSize, fontWeight: 700, color: TEXT_DARK, marginBottom: 4 }}><EditableText textKey="lbl_bill_to" defaultText="Bill To" /></div>
-          <div style={{ fontSize: invoiceFontSize, fontWeight: 600, color: TEXT_DARK }}>{data.partyName}</div>
-        </div>
-        <div style={{ textAlign: "right", fontSize: invoiceFontSize, color: TEXT_DARK }}>
-          <div style={{ fontWeight: 700, marginBottom: 4, color: TEXT_DARK }}><EditableText textKey="lbl_invoice_details" defaultText="Invoice Details" /></div>
-          <div style={{ marginBottom: 2 }}>Invoice No.: {data.invoiceNo}</div>
-          <div>Date: {data.date}</div>
-        </div>
-      </div>
 
-      {/* Table */}
-      <table style={{ width: "100%", fontSize: invoiceFontSize, borderCollapse: "collapse", marginBottom: 24 }}>
-        <thead>
-          <tr style={{ borderTop: `2px solid ${themeBg}`, borderBottom: `2px solid ${themeBg}` }}>
-            <th style={{ padding: "8px 4px", textAlign: "left", fontWeight: 700, color: TEXT_DARK }}>#</th>
-            <th style={{ padding: "8px 4px", textAlign: "left", fontWeight: 700, color: TEXT_DARK }}>Item name</th>
-            <th style={{ padding: "8px 4px", textAlign: "center", fontWeight: 700, color: TEXT_DARK }}>Quantity</th>
-            <th style={{ padding: "8px 4px", textAlign: "center", fontWeight: 700, color: TEXT_DARK }}>Unit</th>
-            <th style={{ padding: "8px 4px", textAlign: "right", fontWeight: 700, color: TEXT_DARK }}>Price/ Unit</th>
-            <th style={{ padding: "8px 4px", textAlign: "right", fontWeight: 700, color: TEXT_DARK }}>Amount</th>
-          </tr>
-        </thead>
-        <tbody>
-          {data.lineItems.map((item, idx) => (
-            <tr key={item.id ?? idx}>
-              <td style={{ padding: "8px 4px", color: TEXT_DARK }}>{idx + 1}</td>
-              <td style={{ padding: "8px 4px", color: TEXT_DARK }}>{item.name}</td>
-              <td style={{ padding: "8px 4px", textAlign: "center", color: TEXT_DARK }}>{item.quantity}</td>
-              <td style={{ padding: "8px 4px", textAlign: "center", color: TEXT_DARK }}>{item.unit !== "NONE" ? item.unit : ""}</td>
-              <td style={{ padding: "8px 4px", textAlign: "right", color: TEXT_DARK }}>Rs {item.price.toFixed(2)}</td>
-              <td style={{ padding: "8px 4px", textAlign: "right", color: TEXT_DARK }}>Rs {item.amount.toFixed(2)}</td>
-            </tr>
-          ))}
-        </tbody>
-        <tfoot>
-          <tr style={{ borderTop: `2px solid ${themeBg}`, borderBottom: `2px solid ${themeBg}`, fontWeight: 700 }}>
-            <td colSpan={2} style={{ padding: "8px 4px", color: TEXT_DARK }}>Total</td>
-            <td style={{ padding: "8px 4px", textAlign: "center", color: TEXT_DARK }}>{data.lineItems.reduce((sum, i) => sum + i.quantity, 0)}</td>
-            <td colSpan={2} style={{ padding: "8px 4px" }}></td>
-            <td style={{ padding: "8px 4px", textAlign: "right", color: TEXT_DARK }}>Rs {data.subtotal.toFixed(2)}</td>
-          </tr>
-        </tfoot>
-      </table>
+          {/* Title */}
+          <div style={{ textAlign: "center", padding: "8px 0", marginBottom: 16, borderTop: `1px solid ${borderColor}`, borderBottom: `1px solid ${borderColor}` }}>
+            <div style={{ fontWeight: 700, fontSize: 14, color: TEXT_DARK }}><EditableText textKey="title" defaultText="Sale" /></div>
+          </div>
 
-      {/* Footer Details */}
-      <div style={{ display: "flex", justifyContent: "space-between", fontSize: invoiceFontSize, alignItems: "flex-start" }}>
-        <div style={{ flex: 1, paddingRight: 20 }}>
-          <div style={{ fontWeight: 700, color: TEXT_DARK, marginBottom: 4 }}><EditableText textKey="lbl_amount_words_no_colon" defaultText="Invoice Amount In Words" /></div>
-          <div style={{ color: TEXT_DARK, marginBottom: 20 }}>{numberToWords(data.grandTotal)} Rupees only</div>
-          
+          {/* Bill To / Shipping To / Invoice Details */}
+          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 20, gap: 16 }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: invoiceFontSize, fontWeight: 700, color: TEXT_DARK, marginBottom: 4 }}><EditableText textKey="lbl_bill_to" defaultText="Bill To:" /></div>
+              <div style={{ fontSize: invoiceFontSize, fontWeight: 700, color: TEXT_DARK, marginBottom: 2 }}>{data.partyName}</div>
+              {d.partyAddress && <div style={{ fontSize: invoiceFontSize, color: TEXT_DARK, marginBottom: 2 }}>{d.partyAddress}</div>}
+              {d.partyPhone && <div style={{ fontSize: invoiceFontSize, color: TEXT_DARK }}>Contact No.: {d.partyPhone}</div>}
+            </div>
+
+            {shippingAddress && (
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: invoiceFontSize, fontWeight: 700, color: TEXT_DARK, marginBottom: 4 }}><EditableText textKey="lbl_shipping_to" defaultText="Shipping To" /></div>
+                <div style={{ fontSize: invoiceFontSize, color: TEXT_DARK }}>{shippingAddress}</div>
+              </div>
+            )}
+
+            <div style={{ flex: 1, display: "flex", justifyContent: "flex-end", fontSize: invoiceFontSize, color: TEXT_DARK }}>
+              <div style={{ textAlign: "left" }}>
+                <div style={{ fontWeight: 700, marginBottom: 4 }}><EditableText textKey="lbl_invoice_details" defaultText="Invoice Details" /></div>
+                <div style={{ marginBottom: 2 }}>Invoice No.: {data.invoiceNo}</div>
+                <div style={{ marginBottom: 2 }}>Date: {data.date}</div>
+                {time && <div style={{ marginBottom: 2 }}>Time: {time}</div>}
+                {dueDate && <div>Due Date: {dueDate}</div>}
+              </div>
+            </div>
+          </div>
+
+          {/* Items Table */}
+          <table style={{ width: "100%", fontSize: invoiceFontSize, borderCollapse: "collapse", marginBottom: 20 }}>
+            <thead>
+              <tr style={{ background: themeBg, borderBottom: `2px solid ${borderColor}` }}>
+                <th style={{ padding: "8px 4px", textAlign: "left", fontWeight: 700, color: "#fff" }}>#</th>
+                <th style={{ padding: "8px 4px", textAlign: "left", fontWeight: 700, color: "#fff" }}>Item name</th>
+                <th style={{ padding: "8px 4px", textAlign: "center", fontWeight: 700, color: "#fff" }}>Quantity</th>
+                <th style={{ padding: "8px 4px", textAlign: "right", fontWeight: 700, color: "#fff" }}>Price/unit</th>
+                <th style={{ padding: "8px 4px", textAlign: "right", fontWeight: 700, color: "#fff" }}>Discount</th>
+                <th style={{ padding: "8px 4px", textAlign: "right", fontWeight: 700, color: "#fff" }}>Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.lineItems.map((item, idx) => {
+                const it = item as any;
+                return (
+                  <tr key={item.id ?? idx} style={{ borderBottom: "1px solid #f1f5f9" }}>
+                    <td style={{ padding: "8px 4px", color: TEXT_DARK }}>{idx + 1}</td>
+                    <td style={{ padding: "8px 4px", color: linkColor, fontWeight: 600 }}>{item.name}</td>
+                    <td style={{ padding: "8px 4px", textAlign: "center", color: TEXT_DARK }}>{item.quantity}{item.unit !== "NONE" ? ` ${item.unit}` : ""}</td>
+                    <td style={{ padding: "8px 4px", textAlign: "right", color: TEXT_DARK }}>Rs {item.price.toFixed(2)}</td>
+                    <td style={{ padding: "8px 4px", textAlign: "right", color: TEXT_DARK }}>
+                      {it.discountAmount ? `Rs ${it.discountAmount.toFixed(2)}${it.discountPercent ? ` (${it.discountPercent}%)` : ""}` : "Rs 0.00"}
+                    </td>
+                    <td style={{ padding: "8px 4px", textAlign: "right", color: TEXT_DARK }}>Rs {item.amount.toFixed(2)}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+            <tfoot>
+              <tr style={{ borderTop: `2px solid ${borderColor}`, fontWeight: 700 }}>
+                <td colSpan={2} style={{ padding: "8px 4px", color: TEXT_DARK }}>Total</td>
+                <td style={{ padding: "8px 4px", textAlign: "center", color: TEXT_DARK }}>{data.lineItems.reduce((sum, i) => sum + i.quantity, 0)}</td>
+                <td />
+                <td style={{ padding: "8px 4px", textAlign: "right", color: TEXT_DARK }}>Rs {(data.discountAmount ?? 0).toFixed(2)}</td>
+                <td style={{ padding: "8px 4px", textAlign: "right", color: TEXT_DARK }}>Rs {data.subtotal.toFixed(2)}</td>
+              </tr>
+            </tfoot>
+          </table>
+
+          {/* Tax Breakdown + Amounts */}
+          <div style={{ display: "flex", gap: 16, marginBottom: 20 }}>
+            {taxBreakdown && taxBreakdown.length > 0 && (
+              <table style={{ flex: 1, fontSize: invoiceFontSize, borderCollapse: "collapse", alignSelf: "flex-start" }}>
+                <thead>
+                  <tr style={{ background: themeBg, borderBottom: `2px solid ${borderColor}` }}>
+                    <th style={{ padding: "6px 4px", textAlign: "left", color: "#fff", fontWeight: 700 }}>Tax type</th>
+                    <th style={{ padding: "6px 4px", textAlign: "right", color: "#fff", fontWeight: 700 }}>Taxable amount</th>
+                    <th style={{ padding: "6px 4px", textAlign: "right", color: "#fff", fontWeight: 700 }}>Rate</th>
+                    <th style={{ padding: "6px 4px", textAlign: "right", color: "#fff", fontWeight: 700 }}>Tax amount</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {taxBreakdown.map((row, idx) => (
+                    <tr key={idx}>
+                      <td style={{ padding: "6px 4px", color: TEXT_DARK }}>{row.type}</td>
+                      <td style={{ padding: "6px 4px", textAlign: "right", color: TEXT_DARK }}>Rs {row.taxableAmount.toFixed(2)}</td>
+                      <td style={{ padding: "6px 4px", textAlign: "right", color: TEXT_DARK }}>{row.rate}</td>
+                      <td style={{ padding: "6px 4px", textAlign: "right", color: TEXT_DARK }}>Rs {row.taxAmount.toFixed(2)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+
+            <div style={{ width: 260, fontSize: invoiceFontSize }}>
+              <div style={{ background: themeBg, color: "#fff", fontWeight: 700, padding: "6px 8px" }}>Amounts</div>
+              <div style={{ padding: "4px 8px", display: "flex", justifyContent: "space-between" }}>
+                <span>Sub Total</span><span>Rs {data.subtotal.toFixed(2)}</span>
+              </div>
+              {data.discountAmount > 0 && (
+                <div style={{ padding: "4px 8px", display: "flex", justifyContent: "space-between" }}>
+                  <span>Discount {data.discountPercent > 0 ? `(${data.discountPercent}%)` : ""}</span>
+                  <span>Rs {data.discountAmount.toFixed(2)}</span>
+                </div>
+              )}
+              {data.taxAmount > 0 && (
+                <div style={{ padding: "4px 8px", display: "flex", justifyContent: "space-between" }}>
+                  <span>{data.taxLabel || "Tax"}</span><span>Rs {data.taxAmount.toFixed(2)}</span>
+                </div>
+              )}
+              {data.roundOff && (
+                <div style={{ padding: "4px 8px", display: "flex", justifyContent: "space-between" }}>
+                  <span>Round off</span><span>Rs {data.roundOffAmount.toFixed(2)}</span>
+                </div>
+              )}
+              <div style={{ padding: "4px 8px", display: "flex", justifyContent: "space-between", fontWeight: 700, borderTop: `1px solid ${borderColor}`, borderBottom: `1px solid ${borderColor}` }}>
+                <span>Total</span><span>Rs {data.grandTotal.toFixed(2)}</span>
+              </div>
+              <div style={{ padding: "4px 8px", display: "flex", justifyContent: "space-between" }}>
+                <span>Received</span><span>Rs {data.received.toFixed(2)}</span>
+              </div>
+              <div style={{ padding: "4px 8px", display: "flex", justifyContent: "space-between" }}>
+                <span>Balance</span><span>Rs {data.balance.toFixed(2)}</span>
+              </div>
+              {typeof savedAmount === "number" && savedAmount > 0 && (
+                <div style={{ padding: "8px 8px 4px", display: "flex", justifyContent: "space-between", fontWeight: 700 }}>
+                  <span>You Saved</span><span>Rs {savedAmount.toFixed(2)}</span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Amount in Words */}
+          <div style={{ marginBottom: 12 }}>
+            <div style={{ background: barBg, fontWeight: 700, color: TEXT_DARK, padding: "6px 8px", fontSize: invoiceFontSize }}>
+              <EditableText textKey="lbl_amount_words_no_colon" defaultText="Invoice Amount In Words" />
+            </div>
+            <div style={{ padding: "6px 8px", color: TEXT_DARK, fontSize: invoiceFontSize }}>{numberToWords(data.grandTotal)} Rupees only</div>
+          </div>
+
+          {/* Description */}
           {data.description && (
-            <div style={{ marginBottom: 20 }}>
-              <div style={{ fontWeight: 700, color: TEXT_DARK, marginBottom: 4 }}><EditableText textKey="lbl_desc_no_colon" defaultText="Description" /></div>
-              <div style={{ color: TEXT_DARK }}>{data.description}</div>
+            <div style={{ marginBottom: 12 }}>
+              <div style={{ background: barBg, fontWeight: 700, color: TEXT_DARK, padding: "6px 8px", fontSize: invoiceFontSize }}>
+                <EditableText textKey="lbl_desc_no_colon" defaultText="Description" />
+              </div>
+              <div style={{ padding: "6px 8px", color: TEXT_DARK, fontSize: invoiceFontSize }}>{data.description}</div>
             </div>
           )}
-          
+
+          {/* Terms and Conditions */}
           {data.termsAndConditions && (
-            <div>
-              <div style={{ fontWeight: 700, color: TEXT_DARK, marginBottom: 4 }}><EditableText textKey="lbl_terms_upper" defaultText="TERMS AND CONDITIONS" /></div>
-              <div style={{ color: TEXT_DARK }}>{data.termsAndConditions}</div>
+            <div style={{ marginBottom: 12 }}>
+              <div style={{ background: barBg, fontWeight: 700, color: TEXT_DARK, padding: "6px 8px", fontSize: invoiceFontSize }}>
+                <EditableText textKey="lbl_terms_upper" defaultText="Terms and conditions" />
+              </div>
+              <div style={{ padding: "6px 8px", color: TEXT_DARK, fontSize: invoiceFontSize }}>{data.termsAndConditions}</div>
             </div>
           )}
-        </div>
-        <div style={{ width: 250 }}>
-          <div style={{ fontWeight: 700, color: TEXT_DARK, marginBottom: 8, textAlign: "center" }}><EditableText textKey="lbl_amounts" defaultText="Amounts" /></div>
-          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-            <span><EditableText textKey="lbl_sub_total" defaultText="Sub Total" /></span>
-            <span>Rs {data.subtotal.toFixed(2)}</span>
-          </div>
-          {data.discountAmount > 0 && (
-            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-              <span><EditableText textKey="lbl_discount" defaultText="Discount" /> {data.discountPercent > 0 ? `(${data.discountPercent}%)` : ""}</span>
-              <span>-Rs {data.discountAmount.toFixed(2)}</span>
+
+          {/* Bank Details */}
+          {bankDetails && (
+            <div style={{ marginBottom: 20 }}>
+              <div style={{ background: barBg, fontWeight: 700, color: TEXT_DARK, padding: "6px 8px", fontSize: invoiceFontSize }}>
+                <EditableText textKey="lbl_bank_details" defaultText="Bank Details" />
+              </div>
+              <div style={{ padding: "6px 8px", color: TEXT_DARK, fontSize: invoiceFontSize }}>
+                {bankDetails.bankName && <div>Bank Name: {bankDetails.bankName}</div>}
+                {bankDetails.accountNo && <div>Bank Account No.: {bankDetails.accountNo}</div>}
+                {bankDetails.ifsc && <div>Bank IFSC code: {bankDetails.ifsc}</div>}
+                {bankDetails.iban && <div>IBAN: {bankDetails.iban}</div>}
+              </div>
             </div>
           )}
-          {data.taxAmount > 0 && (
-            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-              <span>{data.taxLabel || "Tax"}</span>
-              <span>Rs {data.taxAmount.toFixed(2)}</span>
+
+          {/* Footer / Signatory */}
+          <div style={{ display: "flex", justifyContent: "flex-end" }}>
+            <div style={{ textAlign: "center", fontSize: invoiceFontSize }}>
+              <div style={{ color: TEXT_DARK, marginBottom: 8 }}>For : {showCompanyName ? companyName : ""}</div>
+              <div style={{ width: 100, height: 60, background: "#f1f5f9", margin: "0 auto 8px" }} />
+              <div style={{ fontWeight: 700, color: TEXT_DARK }}>Authorized Signatory</div>
             </div>
-          )}
-          {data.roundOff && (
-            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-              <span><EditableText textKey="lbl_round_off" defaultText="Round off" /></span>
-              <span>Rs {data.roundOffAmount.toFixed(2)}</span>
-            </div>
-          )}
-          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4, fontWeight: 700 }}>
-            <span><EditableText textKey="lbl_total" defaultText="Total" /></span>
-            <span>Rs {data.grandTotal.toFixed(2)}</span>
-          </div>
-          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-            <span><EditableText textKey="lbl_received_no_colon" defaultText="Received" /></span>
-            <span>Rs {data.received.toFixed(2)}</span>
-          </div>
-          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-            <span><EditableText textKey="lbl_balance_no_colon" defaultText="Balance" /></span>
-            <span>Rs {data.balance.toFixed(2)}</span>
           </div>
         </div>
       </div>
     </div>
   );
 }
+

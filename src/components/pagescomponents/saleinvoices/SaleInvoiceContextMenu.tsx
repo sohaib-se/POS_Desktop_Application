@@ -9,7 +9,7 @@ interface SaleInvoiceContextMenuProps {
   openViewDialog: (invoice: SaleInvoiceViewRow) => void;
   setOpenRowMenuId: (id: string | null) => void;
   setOpenRowMenuPosition: (pos: { left: number; top: number } | null) => void;
-  onEditInvoice: (invoice: SaleInvoiceEditData) => void;
+  onEditInvoice: (invoice: SaleInvoiceViewRow) => void;
   handleDeleteInvoice: (invoice: SaleInvoiceViewRow) => void;
 }
 
@@ -48,7 +48,7 @@ export function SaleInvoiceContextMenu({
       <button
         className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-gray-50"
         onClick={() => {
-          onEditInvoice(targetInvoice as any);
+          onEditInvoice(targetInvoice);
           setOpenRowMenuId(null);
           setOpenRowMenuPosition(null);
         }}

@@ -6,6 +6,7 @@ import type { SaleInvoiceEditData, PurchaseBillEditData } from "@/types";
 import { SaleInvoiceDialog } from "../../saleinvoices/SaleInvoiceDialog";
 import { PurchaseBillDialog } from "../../purchasebills/PurchaseBillDialog";
 import { AddPurchase } from "../../../../pages/AddPurchase";
+import { EnterPasscodeScreen } from "@/components/common/EnterPasscodeScreen";
 
 interface AllTransactionsReportProps {
   onBack: () => void;
@@ -50,6 +51,35 @@ export function AllTransactionsReport({ onBack, onEditInvoice }: AllTransactions
   const [viewingPurchase, setViewingPurchase] = useState<any | null>(null);
   const [editingPurchase, setEditingPurchase] = useState<PurchaseBillEditData | null>(null);
   const [showAddPurchase, setShowAddPurchase] = useState(false);
+
+  const [isPasscodeEnabled] = useSettings('settings.isPasscodeEnabled', false);
+  const [isPasscodeForTransactionEnabled] = useSettings('settings.isPasscodeForTransactionEnabled', false);
+  const [passcodeAction, setPasscodeAction] = useState<{ type: 'edit' | 'delete', payload: TransactionRow } | null>(null);
+
+  const handleEditClick = (tx: TransactionRow) => {
+    if (isPasscodeEnabled && isPasscodeForTransactionEnabled) {
+      setPasscodeAction({ type: 'edit', payload: tx });
+    } else {
+      handleEditTransaction(tx);
+    }
+  };
+
+  const handleDeleteClick = (tx: TransactionRow) => {
+    if (isPasscodeEnabled && isPasscodeForTransactionEnabled) {
+      setPasscodeAction({ type: 'delete', payload: tx });
+    } else {
+      handleDeleteTransaction(tx);
+    }
+  };
+
+  const handlePasscodeSuccess = () => {
+    if (passcodeAction?.type === 'edit') {
+      handleEditTransaction(passcodeAction.payload);
+    } else if (passcodeAction?.type === 'delete') {
+      handleDeleteTransaction(passcodeAction.payload);
+    }
+    setPasscodeAction(null);
+  };
 
   useEffect(() => {
     if (showSearchInput) {
@@ -544,7 +574,7 @@ export function AllTransactionsReport({ onBack, onEditInvoice }: AllTransactions
                 <button
                   className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-gray-50"
                   onClick={() => {
-                    handleEditTransaction(tx);
+                    handleEditClick(tx);
                     setOpenRowMenuId(null);
                   }}
                 >
@@ -553,7 +583,10 @@ export function AllTransactionsReport({ onBack, onEditInvoice }: AllTransactions
                 </button>
                 <button
                   className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50"
-                  onClick={() => handleDeleteTransaction(tx)}
+                  onClick={() => {
+                    handleDeleteClick(tx);
+                    setOpenRowMenuId(null);
+                  }}
                 >
                   <Trash2 className="w-4 h-4" />
                   Delete
@@ -582,6 +615,13 @@ export function AllTransactionsReport({ onBack, onEditInvoice }: AllTransactions
             }}
           />
         </div>
+      )}
+
+      {passcodeAction && (
+        <EnterPasscodeScreen
+          onSuccess={handlePasscodeSuccess}
+          onCancel={() => setPasscodeAction(null)}
+        />
       )}
     </div>
   );

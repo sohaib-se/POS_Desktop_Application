@@ -7,6 +7,8 @@ import { EstimatesSummary } from "../components/pagescomponents/estimates/Estima
 import { EstimatesTable } from "../components/pagescomponents/estimates/EstimatesTable";
 import { EstimateRowMenu } from "../components/pagescomponents/estimates/EstimateRowMenu";
 import { ViewEstimateDialog } from "../components/pagescomponents/estimates/ViewEstimateDialog";
+import { EnterPasscodeScreen } from "@/components/common/EnterPasscodeScreen";
+import { useSettings } from "@/hooks/useSettings";
 
 export function Estimates({ onConvertEstimateToSale }: { onConvertEstimateToSale?: (data: any) => void }) {
   const [showAddEstimate, setShowAddEstimate] = useState(false);
@@ -18,6 +20,10 @@ export function Estimates({ onConvertEstimateToSale }: { onConvertEstimateToSale
   const [openRowMenuId, setOpenRowMenuId] = useState<string | null>(null);
   const [openRowMenuPosition, setOpenRowMenuPosition] = useState<{ left: number; top: number } | null>(null);
   const [editingEstimate, setEditingEstimate] = useState<EstimateRecord | null>(null);
+
+  const [isPasscodeEnabled] = useSettings('settings.isPasscodeEnabled', false);
+  const [isPasscodeForTransactionEnabled] = useSettings('settings.isPasscodeForTransactionEnabled', false);
+  const [passcodeAction, setPasscodeAction] = useState<{ type: 'edit' | 'delete', payload: any } | null>(null);
 
   const handleEditEstimate = (estimate: EstimateRecord) => {
     setEditingEstimate(estimate);
@@ -86,6 +92,31 @@ export function Estimates({ onConvertEstimateToSale }: { onConvertEstimateToSale
     }
   };
 
+  const handleEditClick = (record: EstimateRecord) => {
+    if (isPasscodeEnabled && isPasscodeForTransactionEnabled) {
+      setPasscodeAction({ type: 'edit', payload: record });
+    } else {
+      handleEditEstimate(record);
+    }
+  };
+
+  const handleDeleteClick = (id: string) => {
+    if (isPasscodeEnabled && isPasscodeForTransactionEnabled) {
+      setPasscodeAction({ type: 'delete', payload: id });
+    } else {
+      handleDelete(id);
+    }
+  };
+
+  const handlePasscodeSuccess = () => {
+    if (passcodeAction?.type === 'edit') {
+      handleEditEstimate(passcodeAction.payload);
+    } else if (passcodeAction?.type === 'delete') {
+      handleDelete(passcodeAction.payload);
+    }
+    setPasscodeAction(null);
+  };
+
   const totalQuotations = records.reduce((sum, est) => sum + est.amount, 0);
   const totalConverted = records
     .filter((e) => e.status === "Converted")
@@ -129,8 +160,8 @@ export function Estimates({ onConvertEstimateToSale }: { onConvertEstimateToSale
         openRowMenuPosition={openRowMenuPosition}
         records={records}
         setViewingRecord={setViewingRecord}
-        onEditEstimate={handleEditEstimate}
-        handleDelete={handleDelete}
+        onEditEstimate={handleEditClick}
+        handleDelete={handleDeleteClick}
         setOpenRowMenuId={setOpenRowMenuId}
         setOpenRowMenuPosition={setOpenRowMenuPosition}
       />
@@ -139,6 +170,13 @@ export function Estimates({ onConvertEstimateToSale }: { onConvertEstimateToSale
         viewingRecord={viewingRecord}
         setViewingRecord={setViewingRecord}
       />
+
+      {passcodeAction && (
+        <EnterPasscodeScreen
+          onSuccess={handlePasscodeSuccess}
+          onCancel={() => setPasscodeAction(null)}
+        />
+      )}
     </>
   );
 }

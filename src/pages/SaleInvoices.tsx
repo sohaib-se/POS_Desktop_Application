@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useSettings } from "@/hooks/useSettings";
 import type { SaleInvoiceEditData, ViewType } from "@/types";
 import type {
   SaleInvoiceApiRow,
@@ -17,6 +18,7 @@ import { SaleInvoiceSummary } from "../components/pagescomponents/saleinvoices/S
 import { SaleInvoiceTable } from "../components/pagescomponents/saleinvoices/SaleInvoiceTable";
 import { SaleInvoiceContextMenu } from "../components/pagescomponents/saleinvoices/SaleInvoiceContextMenu";
 import { SaleInvoiceDialog } from "../components/pagescomponents/saleinvoices/SaleInvoiceDialog";
+import { EnterPasscodeScreen } from "@/components/common/EnterPasscodeScreen";
 
 interface SaleInvoicesProps {
   onViewChange: (view: ViewType) => void;
@@ -35,6 +37,10 @@ export function SaleInvoices({ onViewChange, onEditInvoice, onBack }: SaleInvoic
   const [viewingInvoice, setViewingInvoice] = useState<SaleInvoiceViewRow | null>(null);
   const [statusMessage, setStatusMessage] = useState("");
   const searchInputRef = useRef<HTMLInputElement | null>(null);
+
+  const [isPasscodeEnabled] = useSettings('settings.isPasscodeEnabled', false);
+  const [isPasscodeForTransactionEnabled] = useSettings('settings.isPasscodeForTransactionEnabled', false);
+  const [passcodeAction, setPasscodeAction] = useState<{ type: 'edit' | 'delete', payload: SaleInvoiceViewRow } | null>(null);
 
   useEffect(() => {
     if (showSearchInput) {
@@ -221,6 +227,31 @@ export function SaleInvoices({ onViewChange, onEditInvoice, onBack }: SaleInvoic
     }
   };
 
+  const handleEditClick = (invoice: SaleInvoiceViewRow) => {
+    if (isPasscodeEnabled && isPasscodeForTransactionEnabled) {
+      setPasscodeAction({ type: 'edit', payload: invoice });
+    } else {
+      onEditInvoice(invoice);
+    }
+  };
+
+  const handleDeleteClick = (invoice: SaleInvoiceViewRow) => {
+    if (isPasscodeEnabled && isPasscodeForTransactionEnabled) {
+      setPasscodeAction({ type: 'delete', payload: invoice });
+    } else {
+      handleDeleteInvoice(invoice);
+    }
+  };
+
+  const handlePasscodeSuccess = () => {
+    if (passcodeAction?.type === 'edit') {
+      onEditInvoice(passcodeAction.payload);
+    } else if (passcodeAction?.type === 'delete') {
+      handleDeleteInvoice(passcodeAction.payload);
+    }
+    setPasscodeAction(null);
+  };
+
   return (
     <div className="h-full flex flex-col bg-[#D0DCE7] gap-1 overflow-y-auto">
       <SaleInvoiceHeader onViewChange={onViewChange} onBack={onBack} />
@@ -267,9 +298,16 @@ export function SaleInvoices({ onViewChange, onEditInvoice, onBack }: SaleInvoic
         openViewDialog={openViewDialog}
         setOpenRowMenuId={setOpenRowMenuId}
         setOpenRowMenuPosition={setOpenRowMenuPosition}
-        onEditInvoice={onEditInvoice}
-        handleDeleteInvoice={handleDeleteInvoice}
+        onEditInvoice={handleEditClick}
+        handleDeleteInvoice={handleDeleteClick}
       />
+
+      {passcodeAction && (
+        <EnterPasscodeScreen
+          onSuccess={handlePasscodeSuccess}
+          onCancel={() => setPasscodeAction(null)}
+        />
+      )}
     </div>
   );
 }

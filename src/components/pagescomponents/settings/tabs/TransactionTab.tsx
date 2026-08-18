@@ -7,6 +7,7 @@ export function TransactionTab() {
   const [isTransactionDiscountEnabled, setIsTransactionDiscountEnabled] = useSettings('settings.isTransactionDiscountEnabled', true);
   const [isRoundOffTotalEnabled, setIsRoundOffTotalEnabled] = useSettings('settings.isRoundOffTotalEnabled', true);
   const [isCashSaleByDefault, setIsCashSaleByDefault] = useSettings('settings.isCashSaleByDefault', false);
+  const [isPasscodeForTransactionEnabled, setIsPasscodeForTransactionEnabled] = useSettings('settings.isPasscodeForTransactionEnabled', false);
 
   return (
     <div style={{ 
@@ -117,6 +118,8 @@ export function TransactionTab() {
                 Enable <span style={{ color: "#2563eb", fontWeight: 600 }}>Passcode</span> for <span style={{ color: "#2563eb", fontWeight: 600 }}>transaction</span> edit/delete
               </span>
             } 
+            checked={isPasscodeForTransactionEnabled}
+            onChange={setIsPasscodeForTransactionEnabled}
           />
         </Card>
 

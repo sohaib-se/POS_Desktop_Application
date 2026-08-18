@@ -1,7 +1,12 @@
 import { useState, useEffect, useMemo } from "react";
 import { ChevronDown } from "lucide-react";
+import { useSettings } from "@/hooks/useSettings";
 
 export function AllTransactions() {
+  const [currency] = useSettings('settings.businessCurrency', { code: 'PKR', symbol: 'Rs' });
+  const [currencyDisplay] = useSettings<'abbreviation' | 'icon'>('settings.currencyDisplay', 'abbreviation');
+  const currencyStr = currencyDisplay === 'icon' ? currency.symbol : currency.code;
+
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [filterType, setFilterType] = useState("All Transaction");
@@ -320,13 +325,13 @@ export function AllTransactions() {
                       <td className="px-4 py-3 text-sm text-gray-700 border-l border-gray-100">{tx.partyName}</td>
                       <td className="px-4 py-3 text-sm text-gray-700 border-l border-gray-100">{tx.date}</td>
                       <td className="px-4 py-3 text-sm text-gray-700 border-l border-gray-100 text-right">
-                        Rs {(tx.amount || 0).toFixed(2)}
+                        {currencyStr} {(tx.amount || 0).toFixed(2)}
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-700 border-l border-gray-100 text-right">
-                        Rs {(receivedPaid || 0).toFixed(2)}
+                        {currencyStr} {(receivedPaid || 0).toFixed(2)}
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-700 border-l border-gray-100 text-right">
-                        Rs {(tx.balance || 0).toFixed(2)}
+                        {currencyStr} {(tx.balance || 0).toFixed(2)}
                       </td>
                     </tr>
                   );

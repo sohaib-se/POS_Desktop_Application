@@ -1,5 +1,7 @@
+import { useState } from "react";
 import { AlignJustify, Filter, MoreVertical, Info, Trash2 } from "lucide-react";
 import { useSettings } from "@/hooks/useSettings";
+import { EnterPasscodeScreen } from "@/components/common/EnterPasscodeScreen";
 import { AdjustCashModal } from "./AdjustCashModal";
 import { DetailsModal } from "./DetailsModal";
 
@@ -33,6 +35,25 @@ export function CashInHandView({
   const [currency] = useSettings('settings.businessCurrency', { code: 'PKR', symbol: 'Rs' });
   const [currencyDisplay] = useSettings<'abbreviation' | 'icon'>('settings.currencyDisplay', 'abbreviation');
   const currencyStr = currencyDisplay === 'icon' ? currency.symbol : currency.code;
+
+  const [isPasscodeEnabled] = useSettings('settings.isPasscodeEnabled', false);
+  const [isPasscodeForTransactionEnabled] = useSettings('settings.isPasscodeForTransactionEnabled', false);
+  const [passcodeAction, setPasscodeAction] = useState<{ type: 'delete', payload: string } | null>(null);
+
+  const handleDeleteClick = (id: string) => {
+    if (isPasscodeEnabled && isPasscodeForTransactionEnabled) {
+      setPasscodeAction({ type: 'delete', payload: id });
+    } else {
+      handleDelete(id);
+    }
+  };
+
+  const handlePasscodeSuccess = () => {
+    if (passcodeAction?.type === 'delete') {
+      handleDelete(passcodeAction.payload);
+    }
+    setPasscodeAction(null);
+  };
 
   return (
     <div className="h-full flex flex-col bg-[#D0DCE7] gap-1">
@@ -151,7 +172,10 @@ export function CashInHandView({
             Details
           </button>
           <button
-            onClick={() => handleDelete(contextMenu.transaction.id)}
+            onClick={() => {
+              handleDeleteClick(contextMenu.transaction.id);
+              setContextMenu(null);
+            }}
             disabled={isDeleting}
             className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
           >
@@ -159,6 +183,13 @@ export function CashInHandView({
             Delete
           </button>
         </div>
+      )}
+
+      {passcodeAction && (
+        <EnterPasscodeScreen
+          onSuccess={handlePasscodeSuccess}
+          onCancel={() => setPasscodeAction(null)}
+        />
       )}
     </div>
   );

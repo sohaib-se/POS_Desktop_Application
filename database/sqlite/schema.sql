@@ -35,6 +35,7 @@ CREATE TABLE IF NOT EXISTS items (
   mfg_date TEXT,
   exp_date TEXT,
   location TEXT,
+  status TEXT NOT NULL DEFAULT 'active',
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );

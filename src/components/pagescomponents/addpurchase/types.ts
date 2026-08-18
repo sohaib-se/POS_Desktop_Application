@@ -47,6 +47,7 @@ export interface ItemOption {
   conversion_rate?: number | null;
   mfg_date?: string | null;
   exp_date?: string | null;
+  status?: 'active' | 'inactive';
 }
 
 export interface BankOption {

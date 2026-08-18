@@ -196,7 +196,6 @@ export function AddItemModal({
               />
             ) : null}
           </div>
-
           {/* Tabs */}
           <div className="flex gap-4 border-b border-gray-200">
             {(

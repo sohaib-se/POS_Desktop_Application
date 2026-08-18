@@ -45,6 +45,10 @@ function ensureItemColumns(db) {
   if (!existingColumnNames.has('location')) {
     db.exec('ALTER TABLE items ADD COLUMN location TEXT');
   }
+
+  if (!existingColumnNames.has('status')) {
+    db.exec('ALTER TABLE items ADD COLUMN status TEXT NOT NULL DEFAULT \'active\'');
+  }
 }
 
 function ensureSaleInvoiceColumns(db) {

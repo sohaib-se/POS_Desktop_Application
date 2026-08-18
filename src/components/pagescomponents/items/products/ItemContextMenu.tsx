@@ -5,6 +5,7 @@ type ItemContextMenuProps = {
   getContextMenuStyle: (x: number, y: number) => React.CSSProperties;
   onEdit: (menu: ItemContextMenuState) => void;
   onDelete: (menu: ItemContextMenuState) => void;
+  onToggleStatus?: (menu: ItemContextMenuState) => void;
   onClose: () => void;
 };
 
@@ -13,6 +14,7 @@ export function ItemContextMenu({
   getContextMenuStyle,
   onEdit,
   onDelete,
+  onToggleStatus,
   onClose,
 }: ItemContextMenuProps) {
   return (
@@ -29,6 +31,15 @@ export function ItemContextMenu({
         className="w-full rounded-sm px-2 py-1.5 text-left text-sm hover:bg-gray-100"
       >
         View/Edit
+      </button>
+      <button
+        onClick={() => {
+          if (onToggleStatus) onToggleStatus(itemContextMenu);
+          onClose();
+        }}
+        className="w-full rounded-sm px-2 py-1.5 text-left text-sm hover:bg-gray-100"
+      >
+        {itemContextMenu.item.status === 'inactive' ? 'Activate' : 'Deactivate'}
       </button>
       <button
         onClick={() => {

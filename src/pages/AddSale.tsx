@@ -58,6 +58,7 @@ export interface ItemOption {
   exp_date?: string | null;
   wholesale_price?: number;
   min_stock?: number | null;
+  status?: 'active' | 'inactive';
   stock_quantity?: number;
 }
 

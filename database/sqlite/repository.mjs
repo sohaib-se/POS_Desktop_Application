@@ -1033,10 +1033,10 @@ export function upsertItem(item) {
 
   db.prepare(`
     INSERT INTO items (
-      id, name, code, category, sale_price, wholesale_price, purchase_price, at_price, stock_quantity, unit, primary_unit, secondary_unit, secondary_stock, conversion_rate, img_path, stock_value, min_stock, low_stock, mfg_date, exp_date, location, updated_at
+      id, name, code, category, sale_price, wholesale_price, purchase_price, at_price, stock_quantity, unit, primary_unit, secondary_unit, secondary_stock, conversion_rate, img_path, stock_value, min_stock, low_stock, mfg_date, exp_date, location, status, updated_at
     )
     VALUES (
-      @id, @name, @code, @category, @salePrice, @wholesalePrice, @purchasePrice, @atPrice, @stockQuantity, @unit, @primaryUnit, @secondaryUnit, @secondaryStock, @conversionRate, @imgPath, @stockValue, @minStock, @lowStock, @mfgDate, @expDate, @location, datetime('now')
+      @id, @name, @code, @category, @salePrice, @wholesalePrice, @purchasePrice, @atPrice, @stockQuantity, @unit, @primaryUnit, @secondaryUnit, @secondaryStock, @conversionRate, @imgPath, @stockValue, @minStock, @lowStock, @mfgDate, @expDate, @location, @status, datetime('now')
     )
     ON CONFLICT(id) DO UPDATE SET
       name = excluded.name,
@@ -1059,6 +1059,7 @@ export function upsertItem(item) {
       mfg_date = excluded.mfg_date,
       exp_date = excluded.exp_date,
       location = excluded.location,
+      status = excluded.status,
       updated_at = datetime('now')
   `).run({
     ...item,
@@ -1079,7 +1080,8 @@ export function upsertItem(item) {
     lowStock: item.lowStock ?? null,
     mfgDate: resolvedMfgDate,
     expDate: resolvedExpDate,
-    location: item.location ?? null
+    location: item.location ?? null,
+    status: item.status ?? 'active'
   });
   syncCategoryItemCounts(db);
   db.close();
@@ -1087,7 +1089,30 @@ export function upsertItem(item) {
 
 export function deleteItem(id) {
   const db = openDatabase();
-  const row = db.prepare('SELECT * FROM items WHERE id = ?').get(String(id));
+  const idStr = String(id);
+
+  // Check if item is used in sale invoices
+  const sales = db.prepare(`SELECT id FROM sale_invoices WHERE line_items_json LIKE ? LIMIT 1`).get(`%"itemId":"${idStr}"%`);
+  if (sales) {
+    db.close();
+    throw new Error('ITEM_IN_USE');
+  }
+
+  // Check if item is used in purchase bills
+  const purchases = db.prepare(`SELECT id FROM purchase_bills WHERE line_items_json LIKE ? LIMIT 1`).get(`%"itemId":"${idStr}"%`);
+  if (purchases) {
+    db.close();
+    throw new Error('ITEM_IN_USE');
+  }
+
+  // Check if item is used in stock adjustments
+  const adjustments = db.prepare(`SELECT id FROM adjust_stock_transactions WHERE item_id = ? LIMIT 1`).get(idStr);
+  if (adjustments) {
+    db.close();
+    throw new Error('ITEM_IN_USE');
+  }
+
+  const row = db.prepare('SELECT * FROM items WHERE id = ?').get(idStr);
   if (row) {
     try {
       db.prepare(`
@@ -1095,7 +1120,7 @@ export function deleteItem(id) {
         VALUES (?, datetime('now'), 'items', ?, ?, 'Item', ?, ?, ?, '')
       `).run(
         Date.now().toString() + Math.floor(Math.random()*1000),
-        String(id),
+        idStr,
         JSON.stringify(row),
         row.code || '',
         row.name || '',
@@ -1105,7 +1130,7 @@ export function deleteItem(id) {
   }
   const result = db
     .prepare('DELETE FROM items WHERE id = ?')
-    .run(String(id));
+    .run(idStr);
   syncCategoryItemCounts(db);
   db.close();
   return result.changes > 0;
@@ -1428,6 +1453,44 @@ export function getStockAdjustments() {
   const rows = db.prepare('SELECT * FROM adjust_stock_transactions ORDER BY created_at DESC, date DESC').all();
   db.close();
   return rows;
+}
+
+export function updateStockAdjustment(id, data) {
+  const db = openDatabase();
+  db.prepare(`
+    UPDATE adjust_stock_transactions
+    SET
+      item_id = @itemId,
+      item_name = @itemName,
+      adjustment_type = @adjustmentType,
+      date = @date,
+      quantity = @quantity,
+      unit = @unit,
+      at_price = @atPrice,
+      details = @details,
+      updated_at = datetime('now')
+    WHERE id = @id
+  `).run({
+    id,
+    itemId: data.itemId,
+    itemName: data.itemName,
+    adjustmentType: data.adjustmentType,
+    date: data.date,
+    quantity: Number(data.quantity),
+    unit: data.unit || null,
+    atPrice: data.atPrice ? Number(data.atPrice) : null,
+    details: data.details || null
+  });
+  db.close();
+}
+
+export function deleteStockAdjustment(id) {
+  const db = openDatabase();
+  const info = db.prepare('DELETE FROM adjust_stock_transactions WHERE id = ?').run(String(id));
+  db.close();
+  if (info.changes === 0) {
+    throw new Error('Transaction not found');
+  }
 }
 
 export function getExpenseCategories() {

@@ -1,6 +1,6 @@
 import { EditableText } from "./SharedComponents";
 import { useCompanyDetails } from "./useCompanyDetails";
-import { TEXT_DARK, TEXT_MUTED } from "./constants";
+import { TEXT_DARK } from "./constants";
 import type { BillPreviewSaleData } from "../../../previewbill/BillPreviewData";
 import { DUMMY_THERMAL_SALE } from "./DummySaleData";
 

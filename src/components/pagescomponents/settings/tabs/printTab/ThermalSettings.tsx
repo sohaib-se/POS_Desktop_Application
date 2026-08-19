@@ -1,11 +1,9 @@
-import { useState } from "react";
 import { BLUE, BORDER, TEXT_LABEL, TEXT_MUTED } from "./constants";
 import {
   Divider,
   InfoCheckRow,
   InfoFieldRow,
   InfoLogoRow,
-  LabeledNumber,
   LabeledSelect,
   SectionTitle,
   TooltipContent,

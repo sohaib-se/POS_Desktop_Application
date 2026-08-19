@@ -4,7 +4,7 @@ import { TEXT_DARK, TEXT_MUTED } from "./constants";
 import type { BillPreviewSaleData } from "../../../previewbill/BillPreviewData";
 import { useContext } from "react";
 
-export function ThermalReceiptPreview({ sale, children }: { sale?: BillPreviewSaleData, children?: React.ReactNode }) {
+export function ThermalReceiptPreview({ children }: { sale?: BillPreviewSaleData, children?: React.ReactNode }) {
   const { companyName, phone, address, updateDetail, showCompanyName, showPhone, showAddress , companyNameTextSize, invoiceTextSize } = useCompanyDetails();
   const { isReadOnly } = useContext(PrintPreviewContext);
 
@@ -25,7 +25,7 @@ export function ThermalReceiptPreview({ sale, children }: { sale?: BillPreviewSa
         width: "100%",
         margin: "0 auto" }}
     >
-      {showCompanyName && ( <div style={{ border: "1px solid #000", textAlign: "center", fontWeight: 700 }}>{showCompanyName ? companyName : ""}</div> )}
+      {showCompanyName && ( <div style={{ border: "1px solid #000", textAlign: "center", fontWeight: 700, fontSize: companyNameSize }}>{showCompanyName ? companyName : ""}</div> )}
       {showPhone && ( <div style={{ textAlign: "center", color: TEXT_MUTED }}>Ph No: {showPhone ? phone : ""}</div> )}
       {children ? children : (
         <>

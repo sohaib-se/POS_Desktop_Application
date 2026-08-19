@@ -21,6 +21,7 @@ export function CashBank({ subView }: CashBankProps) {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; transaction: Transaction } | null>(null);
   const [detailsTransaction, setDetailsTransaction] = useState<Transaction | null>(null);
+  const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
   const fetchTransactions = async () => {
@@ -70,6 +71,30 @@ export function CashBank({ subView }: CashBankProps) {
     }
   };
 
+  const handleEdit = async (tx: Transaction, updatedAmount: number) => {
+    try {
+      const isCashIn = String(tx.type).toLowerCase().includes("increase") || String(tx.type).toLowerCase().includes("in");
+      const res = await fetch(`/api/cash_transactions?id=${tx.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          date: tx.date,
+          name: tx.name,
+          type: tx.type,
+          amount: Math.abs(updatedAmount),
+        }),
+      });
+      if (res.ok) {
+        fetchTransactions();
+        setEditingTransaction(null);
+      } else {
+        alert("Could not edit this transaction.");
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   if (subView === "bank-accounts") {
     return (
       <BankAccountsView setShowAddBank={setShowAddBank} />
@@ -88,7 +113,10 @@ export function CashBank({ subView }: CashBankProps) {
         setContextMenu={setContextMenu}
         detailsTransaction={detailsTransaction}
         setDetailsTransaction={setDetailsTransaction}
+        editingTransaction={editingTransaction}
+        setEditingTransaction={setEditingTransaction}
         handleDelete={handleDelete}
+        handleEdit={handleEdit}
         isDeleting={isDeleting}
       />
     );

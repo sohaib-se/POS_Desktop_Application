@@ -1,14 +1,14 @@
 import { useState, useEffect } from "react";
-import { Plus, MoreVertical } from "lucide-react";
+import { Plus } from "lucide-react";
 import type { BankAccount } from "../components/pagescomponents/bankaccounts/types";
 import { AddBankModal } from "../components/pagescomponents/bankaccounts/AddBankModal";
 import { BankToCashModal } from "../components/pagescomponents/bankaccounts/BankToCashModal";
 import { CashToBankModal } from "../components/pagescomponents/bankaccounts/CashToBankModal";
 import { BankToBankModal } from "../components/pagescomponents/bankaccounts/BankToBankModal";
-import { AdjustBankModal } from "../components/pagescomponents/bankaccounts/AdjustBankModal";
 import { EmptyState } from "../components/pagescomponents/bankaccounts/EmptyState";
 import { AccountListView } from "../components/pagescomponents/bankaccounts/AccountListView";
 import { AccountDetail } from "../components/pagescomponents/bankaccounts/AccountDetail";
+import { DepositWithdrawModal } from "../components/pagescomponents/bankaccounts/DepositWithdrawModal";
 
 export function BankAccounts() {
   const [accounts, setAccounts] = useState<BankAccount[]>([]);
@@ -21,6 +21,7 @@ export function BankAccounts() {
   const [hasAccountsCache, setHasAccountsCache] = useState(cachedHasAccounts);
 
   const [editingAccount, setEditingAccount] = useState<BankAccount | null>(null);
+  const [editingTx, setEditingTx] = useState<any | null>(null);
   const [contextMenu, setContextMenu] = useState<{ x: number, y: number, accountId: string } | null>(null);
 
   const fetchAccounts = async () => {
@@ -67,7 +68,19 @@ export function BankAccounts() {
 
   // Transfer / adjustment modals
   const [activeModal, setActiveModal] = useState<string | null>(null);
-  // activeModal: "Bank to Cash Transfer" | "Cash to Bank Transfer" | "Bank to Bank Transfer" | "Adjust Bank Balance"
+  // activeModal: "Bank to Cash Transfer" | "Cash to Bank Transfer" | "Bank to Bank Transfer"
+
+  const handleDeleteTransaction = async (txId: string) => {
+    if (!confirm("Are you sure you want to delete this transaction?")) return;
+    try {
+      const res = await fetch(`/api/bank_account_transactions/${txId}`, { method: "DELETE" });
+      if (res.ok) {
+        fetchAccounts();
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   const selectedAccount = accounts.find((a: BankAccount) => a.id === selectedId);
 
@@ -88,9 +101,6 @@ export function BankAccounts() {
             >
               <Plus className="w-4 h-4" />
               Add Bank
-            </button>
-            <button className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg disabled:opacity-50" disabled={isLoading}>
-              <MoreVertical className="w-5 h-5" />
             </button>
           </div>
         </div>
@@ -119,12 +129,25 @@ export function BankAccounts() {
               <AccountDetail
                 account={selectedAccount}
                 onDeposit={(action) => {
-                  if (action === "deposit") {
-                    setActiveModal("Bank to Cash Transfer");
+                  setActiveModal(action);
+                }}
+                onEditTransaction={(tx) => {
+                  setEditingTx(tx);
+                  if (String(tx.id).endsWith('-bank')) {
+                    if (tx.name.includes("Transfer to Cash") || tx.type === "Payment Out") {
+                      setActiveModal("Bank to Cash Transfer");
+                    } else if (tx.name.includes("Transfer from Cash") || tx.type === "Payment In") {
+                      setActiveModal("Cash to Bank Transfer");
+                    } else {
+                      setActiveModal("deposit");
+                    }
+                  } else if (String(tx.id).endsWith('-bank-in') || String(tx.id).endsWith('-bank-out')) {
+                    setActiveModal("Bank to Bank Transfer");
                   } else {
-                    setActiveModal(action);
+                    setActiveModal("deposit");
                   }
                 }}
+                onDeleteTransaction={handleDeleteTransaction}
               />
             )}
           </>
@@ -140,24 +163,47 @@ export function BankAccounts() {
       />
       <BankToCashModal
         open={activeModal === "Bank to Cash Transfer"}
-        onClose={() => setActiveModal(null)}
+        onClose={() => {
+          setActiveModal(null);
+          setEditingTx(null);
+        }}
         accounts={accounts}
+        onSuccess={fetchAccounts}
+        initialData={editingTx}
       />
       <CashToBankModal
         open={activeModal === "Cash to Bank Transfer"}
-        onClose={() => setActiveModal(null)}
+        onClose={() => {
+          setActiveModal(null);
+          setEditingTx(null);
+        }}
         accounts={accounts}
+        onSuccess={fetchAccounts}
+        initialData={editingTx}
       />
       <BankToBankModal
         open={activeModal === "Bank to Bank Transfer"}
-        onClose={() => setActiveModal(null)}
+        onClose={() => {
+          setActiveModal(null);
+          setEditingTx(null);
+        }}
         accounts={accounts}
+        onSuccess={fetchAccounts}
+        initialData={editingTx}
       />
-      <AdjustBankModal
-        open={activeModal === "Adjust Bank Balance"}
-        onClose={() => setActiveModal(null)}
-        accounts={accounts}
-      />
+
+      {selectedAccount && (
+        <DepositWithdrawModal
+          open={activeModal === "deposit"}
+          onClose={() => {
+            setActiveModal(null);
+            setEditingTx(null);
+          }}
+          account={selectedAccount}
+          onSuccess={fetchAccounts}
+          initialData={editingTx}
+        />
+      )}
 
       {contextMenu && (
         <div

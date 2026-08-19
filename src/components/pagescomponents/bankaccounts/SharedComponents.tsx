@@ -109,9 +109,10 @@ export interface ModalFooterProps {
   onCancel: () => void;
   onSave?: () => void;
   saveLabel?: string;
+  disabled?: boolean;
 }
 
-export function ModalFooter({ onCancel, onSave, saveLabel = "Save" }: ModalFooterProps) {
+export function ModalFooter({ onCancel, onSave, saveLabel = "Save", disabled }: ModalFooterProps) {
   return (
     <div className="flex justify-end gap-3 pt-4 mt-2">
       <button
@@ -122,7 +123,8 @@ export function ModalFooter({ onCancel, onSave, saveLabel = "Save" }: ModalFoote
       </button>
       <button
         onClick={onSave}
-        className="px-6 py-2 bg-[#E53935] text-white rounded-full text-sm font-medium hover:bg-red-600"
+        disabled={disabled}
+        className="px-6 py-2 bg-[#E53935] text-white rounded-full text-sm font-medium hover:bg-red-600 disabled:opacity-50"
       >
         {saveLabel}
       </button>

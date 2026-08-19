@@ -15,6 +15,7 @@ interface AddExpenseProps {
   onSave?: () => void;
   onShare?: () => void;
   onClose?: () => void;
+  initialExpense?: any;
 }
 
 let globalRowId = 3;
@@ -49,8 +50,45 @@ function createDefaultTab(id: number): ExpenseTab {
   };
 }
 
-export function AddExpense({ onSave, onShare, onClose }: AddExpenseProps) {
-  const [tabs, setTabs] = useState<ExpenseTab[]>([createDefaultTab(1)]);
+export function AddExpense({ onSave, onShare, onClose, initialExpense }: AddExpenseProps) {
+  const [tabs, setTabs] = useState<ExpenseTab[]>(() => {
+    if (initialExpense) {
+      let parsedItems: any[] = [];
+      try {
+        parsedItems = JSON.parse(initialExpense.line_items_json || "[]");
+      } catch (e) {}
+
+      const rows = parsedItems.length > 0 ? parsedItems.map((item: any) => ({
+        id: globalRowId++,
+        categoryId: item.itemId || "",
+        category: item.name || "",
+        note: String(item.quantity || ""),
+        paymentType: String(item.price || ""),
+        amount: String(item.amount || "")
+      })) : [createDefaultRow()];
+
+      const createdDate = initialExpense.created_at ? new Date(initialExpense.created_at) : new Date();
+      const dateStr = !isNaN(createdDate.getTime()) ? createdDate.toISOString().split("T")[0] : new Date().toISOString().split("T")[0];
+
+      return [{
+        id: 1,
+        label: `Expense #1`,
+        expenseCategoryId: initialExpense.category_id || "",
+        expenseDate: dateStr,
+        paymentType: initialExpense.payment_type || "Cash",
+        roundOff: initialExpense.round_off === 1,
+        rows,
+        description: initialExpense.description || "",
+        showDescriptionInput: !!initialExpense.description,
+        imageDataUrl: "",
+        imageFileName: "",
+        documentDataUrl: "",
+        documentFileName: "",
+        expenseRecordId: initialExpense.id
+      }];
+    }
+    return [createDefaultTab(1)];
+  });
   const [activeTabId, setActiveTabId] = useState(1);
   const [isOpenAnimated, setIsOpenAnimated] = useState(false);
   const [nextExpenseNo, setNextExpenseNo] = useState("1");
@@ -173,7 +211,7 @@ export function AddExpense({ onSave, onShare, onClose }: AddExpenseProps) {
 
   const activeTab = tabs.find((tab) => tab.id === activeTabId) ?? tabs[0];
   const tabIndex = tabs.findIndex((tab) => tab.id === activeTabId);
-  const displayedExpenseNo = String(Number(nextExpenseNo) + (tabIndex >= 0 ? tabIndex : 0));
+  const displayedExpenseNo = initialExpense?.expense_no ? String(initialExpense.expense_no) : String(Number(nextExpenseNo) + (tabIndex >= 0 ? tabIndex : 0));
   const displayedExpenseDate = activeTab.expenseDate;
 
   const totalAmount = useMemo(() => {
@@ -301,7 +339,8 @@ export function AddExpense({ onSave, onShare, onClose }: AddExpenseProps) {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          id: crypto.randomUUID(),
+          id: activeTab.expenseRecordId || crypto.randomUUID(),
+          isUpdate: !!activeTab.expenseRecordId,
           expenseNo: displayedExpenseNo,
           categoryId: activeTab.expenseCategoryId,
           categoryName: expenseCategoryName,

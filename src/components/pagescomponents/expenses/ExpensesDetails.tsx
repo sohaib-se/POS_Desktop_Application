@@ -1,12 +1,14 @@
 import type { ExpenseCategory } from "@/types";
 import { useSettings } from "@/hooks/useSettings";
 import type { ExpenseItem, ExpenseRecord } from "./types";
-
-interface ExpensesDetailsProps {
+import { useState, useEffect } from "react";
+import { ExpenseRecordContextMenu } from "./ExpenseRecordContextMenu";interface ExpensesDetailsProps {
   activeTab: "category" | "items";
   selectedCategory: ExpenseCategory | null;
   selectedExpenseItem: ExpenseItem | null;
   expenseRecordList: ExpenseRecord[];
+  onEditRecord?: (record: ExpenseRecord) => void;
+  onDeleteRecord?: (record: ExpenseRecord) => void;
 }
 
 function formatDate(dateStr: string): string {
@@ -24,10 +26,37 @@ export function ExpensesDetails({
   selectedCategory,
   selectedExpenseItem,
   expenseRecordList,
+  onEditRecord,
+  onDeleteRecord,
 }: ExpensesDetailsProps) {
   const [currency] = useSettings('settings.businessCurrency', { code: 'PKR', symbol: 'Rs' });
   const [currencyDisplay] = useSettings<'abbreviation' | 'icon'>('settings.currencyDisplay', 'abbreviation');
   const currencyStr = currencyDisplay === 'icon' ? currency.symbol : currency.code;
+
+  const [openRowMenuId, setOpenRowMenuId] = useState<string | null>(null);
+  const [openRowMenuPosition, setOpenRowMenuPosition] = useState<{ left: number; top: number } | null>(null);
+
+  useEffect(() => {
+    if (!openRowMenuId) return;
+    const closeMenu = () => {
+      setOpenRowMenuId(null);
+      setOpenRowMenuPosition(null);
+    };
+    window.addEventListener("click", closeMenu);
+    window.addEventListener("resize", closeMenu);
+    window.addEventListener("scroll", closeMenu, true);
+    return () => {
+      window.removeEventListener("click", closeMenu);
+      window.removeEventListener("resize", closeMenu);
+      window.removeEventListener("scroll", closeMenu, true);
+    };
+  }, [openRowMenuId]);
+
+  const handleContextMenu = (e: React.MouseEvent, record: ExpenseRecord) => {
+    e.preventDefault();
+    setOpenRowMenuId(record.id);
+    setOpenRowMenuPosition({ left: e.clientX, top: e.clientY });
+  };
 
   const categoryRecords = selectedCategory
     ? expenseRecordList.filter(
@@ -130,7 +159,8 @@ export function ExpensesDetails({
                     categoryRecords.map((record) => (
                       <tr
                         key={record.id}
-                        className="border-b border-gray-100 hover:bg-gray-50"
+                        onContextMenu={(e) => handleContextMenu(e, record)}
+                        className={`border-b border-gray-100 ${openRowMenuId === record.id ? "bg-gray-100" : "hover:bg-gray-50"} cursor-context-menu`}
                       >
                         <td className="px-4 py-3">
                           {formatDate(record.created_at)}
@@ -223,7 +253,8 @@ export function ExpensesDetails({
                       return (
                         <tr
                           key={record.id}
-                          className="border-b border-gray-100 hover:bg-gray-50"
+                          onContextMenu={(e) => handleContextMenu(e, record)}
+                          className={`border-b border-gray-100 ${openRowMenuId === record.id ? "bg-gray-100" : "hover:bg-gray-50"} cursor-context-menu`}
                         >
                           <td className="px-4 py-3">
                             {formatDate(record.created_at)}
@@ -253,6 +284,18 @@ export function ExpensesDetails({
             </div>
           </>
         )
+      )}
+
+      {openRowMenuId && openRowMenuPosition && (
+        <ExpenseRecordContextMenu
+          openRowMenuId={openRowMenuId}
+          openRowMenuPosition={openRowMenuPosition}
+          records={expenseRecordList}
+          setOpenRowMenuId={setOpenRowMenuId}
+          setOpenRowMenuPosition={setOpenRowMenuPosition}
+          onEditRecord={(record) => onEditRecord && onEditRecord(record)}
+          handleDeleteRecord={(record) => onDeleteRecord && onDeleteRecord(record)}
+        />
       )}
     </div>
   );

@@ -195,8 +195,8 @@ function sqliteApiPlugin() {
             const passcodeRow = repository.getPasscode();
             res.statusCode = 200;
             res.setHeader('Content-Type', 'application/json');
-            res.end(JSON.stringify({ 
-              isSet: !!passcodeRow?.code, 
+            res.end(JSON.stringify({
+              isSet: !!passcodeRow?.code,
               hasRecovery: !!(passcodeRow?.recovery_email || passcodeRow?.recovery_phone),
               hasEmail: !!passcodeRow?.recovery_email,
               hasPhone: !!passcodeRow?.recovery_phone
@@ -237,8 +237,8 @@ function sqliteApiPlugin() {
                 res.end(JSON.stringify({ success: false, message: 'Passcode not set.' }));
                 return;
               }
-              if ((payload.method === 'email' && current.recovery_email === payload.value) || 
-                  (payload.method === 'phone' && current.recovery_phone === payload.value)) {
+              if ((payload.method === 'email' && current.recovery_email === payload.value) ||
+                (payload.method === 'phone' && current.recovery_phone === payload.value)) {
                 repository.setPasscode(payload.newPasscode, current.recovery_email, current.recovery_phone);
                 res.statusCode = 200;
                 res.setHeader('Content-Type', 'application/json');
@@ -261,8 +261,8 @@ function sqliteApiPlugin() {
             }
 
             if (pathName === '/recovery/verify') {
-              if ((payload.method === 'email' && current?.recovery_email === payload.value) || 
-                  (payload.method === 'phone' && current?.recovery_phone === payload.value)) {
+              if ((payload.method === 'email' && current?.recovery_email === payload.value) ||
+                (payload.method === 'phone' && current?.recovery_phone === payload.value)) {
                 res.statusCode = 200;
                 res.setHeader('Content-Type', 'application/json');
                 res.end(JSON.stringify({ success: true }));
@@ -315,9 +315,9 @@ function sqliteApiPlugin() {
 
           if (req.method === 'PUT') {
             const payload = await parseJsonBody(req);
-            
+
             const currentProfile = repository.getUserProfile() || {};
-            
+
             // Handle image uploads
             let logoPath = payload.logo;
             if (logoPath && logoPath.startsWith('data:image')) {
@@ -363,7 +363,7 @@ function sqliteApiPlugin() {
 
             repository.updateUserProfile(updatedPayload);
             const updatedProfile = repository.getUserProfile();
-            
+
             res.statusCode = 200;
             res.setHeader('Content-Type', 'application/json');
             res.end(JSON.stringify(updatedProfile));
@@ -860,7 +860,7 @@ function sqliteApiPlugin() {
                 targetRoot: saleAttachmentsRoot,
               });
               createdImagePath = imageFile?.filePath ?? null;
-              
+
               const documentFile = saveDataUrlToAppData({
                 dataUrl: payload.documentDataUrl,
                 prefix: 'estimate_document',
@@ -899,8 +899,8 @@ function sqliteApiPlugin() {
               res.end(JSON.stringify(estimate));
               return;
             } catch (err) {
-              if (createdImagePath) { try { fs.unlinkSync(createdImagePath); } catch (e) {} }
-              if (createdDocumentPath) { try { fs.unlinkSync(createdDocumentPath); } catch (e) {} }
+              if (createdImagePath) { try { fs.unlinkSync(createdImagePath); } catch (e) { } }
+              if (createdDocumentPath) { try { fs.unlinkSync(createdDocumentPath); } catch (e) { } }
               console.error('Error saving estimate:', err);
               res.statusCode = 500;
               res.setHeader('Content-Type', 'application/json');
@@ -926,14 +926,14 @@ function sqliteApiPlugin() {
             try {
               const payload = await parseJsonBody(req);
               const lineItems = Array.isArray(payload.lineItems) ? payload.lineItems : [];
-              
+
               const imageFile = saveDataUrlToAppData({
                 dataUrl: payload.imageDataUrl,
                 prefix: 'estimate_image',
                 targetRoot: saleAttachmentsRoot,
               });
               createdImagePath = imageFile?.filePath ?? null;
-              
+
               const documentFile = saveDataUrlToAppData({
                 dataUrl: payload.documentDataUrl,
                 prefix: 'estimate_document',
@@ -971,8 +971,8 @@ function sqliteApiPlugin() {
               res.end(JSON.stringify({ ...estimate, id }));
               return;
             } catch (err) {
-              if (createdImagePath) { try { fs.unlinkSync(createdImagePath); } catch (e) {} }
-              if (createdDocumentPath) { try { fs.unlinkSync(createdDocumentPath); } catch (e) {} }
+              if (createdImagePath) { try { fs.unlinkSync(createdImagePath); } catch (e) { } }
+              if (createdDocumentPath) { try { fs.unlinkSync(createdDocumentPath); } catch (e) { } }
               console.error('Error updating estimate:', err);
               res.statusCode = 500;
               res.end(JSON.stringify({ message: 'Failed to update estimate.' }));
@@ -1382,7 +1382,7 @@ function sqliteApiPlugin() {
           if (req.method === 'POST') {
             try {
               const payload = await parseJsonBody(req);
-              
+
               const record = {
                 id: payload.id ? String(payload.id) : Date.now().toString(),
                 expense_no: payload.expenseNo || repository.getNextExpenseNo(),
@@ -1569,7 +1569,7 @@ function sqliteApiPlugin() {
         try {
           // @ts-expect-error Runtime-only Node module used in Vite middleware.
           const repository = await import('./database/sqlite/repository.mjs');
-          
+
           if (req.method === 'GET') {
             const rows = repository.getBarcodeGenerators();
             // Map rows to match the frontend BarcodeItem structure
@@ -2335,35 +2335,53 @@ function sqliteApiPlugin() {
               }
 
               try {
-                if (String(invoice.paymentMode).toLowerCase() === 'cash') {
-                  repository.addCashInHandTransaction({
-                    id: 'cash_' + invoice.id,
-                    date: invoice.date,
-                    name: invoice.partyName || 'Cash Sale',
-                    type: 'POS Sale',
-                    amount: invoice.amount
-                  });
-                } else if (String(invoice.paymentMode).toLowerCase() === 'credit' && invoice.partyId) {
+                const paymentModeLower = String(invoice.paymentMode).toLowerCase();
+                const balanceAmount = Number(invoice.balance || 0);
+                const totalAmount = Number(invoice.amount || 0);
+                const receivedAmount = Math.max(0, totalAmount - balanceAmount);
+                
+                console.log('[POS Sale] paymentMode:', invoice.paymentMode, '| amount:', totalAmount, '| balance:', balanceAmount, '| id:', invoice.id);
+
+                // ALWAYS update party balance if there's a partyId and a balance
+                if (invoice.partyId && balanceAmount > 0) {
                   const allParties = repository.getParties();
                   const party = allParties.find((p: any) => String(p.id) === String(invoice.partyId));
                   if (party) {
-                    party.balance = Number(party.balance || 0) + Number(invoice.balance || 0);
+                    party.balance = Number(party.balance || 0) + balanceAmount;
                     repository.upsertParty(party);
                   }
+                }
 
-                  const receivedAmount = Number(invoice.amount || 0) - Number(invoice.balance || 0);
+                if (paymentModeLower === 'cash' || paymentModeLower === 'credit') {
                   if (receivedAmount > 0) {
-                    repository.addCashInHandTransaction({
-                      id: 'cash_' + invoice.id + '_received',
+                    try {
+                      repository.addCashInHandTransaction({
+                        id: 'cash_pos_' + invoice.id + '_' + Date.now(),
+                        date: invoice.date,
+                        name: invoice.partyName || 'Cash Sale',
+                        type: 'POS Sale',
+                        amount: receivedAmount
+                      });
+                      console.log('[POS Sale] Cash transaction saved successfully');
+                    } catch (cashErr) {
+                      console.error('[POS Sale] addCashInHandTransaction failed:', cashErr);
+                    }
+                  }
+                } else {
+                  // Bank payment -> Bank Account transaction
+                  if (receivedAmount > 0) {
+                    repository.addBankAccountTransaction({
+                      id: 'bank_pos_' + invoice.id + '_' + Date.now(),
                       date: invoice.date,
-                      name: invoice.partyName,
+                      name: invoice.partyName || 'POS Sale',
                       type: 'POS Sale',
-                      amount: receivedAmount
+                      amount: receivedAmount,
+                      paymentType: invoice.paymentMode
                     });
                   }
                 }
               } catch (txError) {
-                console.error("Failed to update cash/credit balance:", txError);
+                console.error("[POS Sale] Failed to update cash/bank/party balance:", txError);
               }
 
               try {
@@ -2991,12 +3009,12 @@ function sqliteApiPlugin() {
           res.end(JSON.stringify({ message: 'Failed to process request.' }));
         }
       });
-      
+
       server.middlewares.use('/api/recycle_bin/restore', async (req, res) => {
         try {
           // @ts-expect-error Runtime-only Node module used in Vite middleware.
           const repository = await import('./database/sqlite/repository.mjs');
-          
+
           if (req.method === 'POST') {
             const chunks: Buffer[] = [];
             req.on('data', (chunk: Buffer | string) => chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk)));
@@ -3004,14 +3022,14 @@ function sqliteApiPlugin() {
               try {
                 const raw = Buffer.concat(chunks).toString('utf8');
                 const payload = raw ? JSON.parse(raw) : {};
-                
+
                 if (!payload.id) {
                   res.statusCode = 400;
                   res.setHeader('Content-Type', 'application/json');
                   res.end(JSON.stringify({ message: 'ID is required.' }));
                   return;
                 }
-                
+
                 const success = repository.restoreRecycleBinItem(payload.id);
                 if (success) {
                   res.statusCode = 200;
@@ -3022,7 +3040,7 @@ function sqliteApiPlugin() {
                   res.setHeader('Content-Type', 'application/json');
                   res.end(JSON.stringify({ message: 'Failed to restore item.' }));
                 }
-              } catch(e) {
+              } catch (e) {
                 res.statusCode = 400;
                 res.setHeader('Content-Type', 'application/json');
                 res.end(JSON.stringify({ message: 'Invalid payload.' }));
@@ -3030,11 +3048,11 @@ function sqliteApiPlugin() {
             });
             return;
           }
-          
+
           res.statusCode = 405;
           res.setHeader('Content-Type', 'application/json');
           res.end(JSON.stringify({ message: 'Method not allowed.' }));
-        } catch(e) {
+        } catch (e) {
           res.statusCode = 500;
           res.setHeader('Content-Type', 'application/json');
           res.end(JSON.stringify({ message: 'Server error.' }));
@@ -3045,7 +3063,7 @@ function sqliteApiPlugin() {
         try {
           // @ts-expect-error Runtime-only Node module used in Vite middleware.
           const repository = await import('./database/sqlite/repository.mjs');
-          
+
           if (req.method === 'DELETE') {
             repository.emptyRecycleBin();
             res.statusCode = 200;
@@ -3053,11 +3071,11 @@ function sqliteApiPlugin() {
             res.end(JSON.stringify({ message: 'Recycle bin emptied successfully.' }));
             return;
           }
-          
+
           res.statusCode = 405;
           res.setHeader('Content-Type', 'application/json');
           res.end(JSON.stringify({ message: 'Method not allowed.' }));
-        } catch(e) {
+        } catch (e) {
           res.statusCode = 500;
           res.setHeader('Content-Type', 'application/json');
           res.end(JSON.stringify({ message: 'Server error.' }));
@@ -3098,11 +3116,11 @@ function sqliteApiPlugin() {
             }
             return;
           }
-          
+
           res.statusCode = 405;
           res.setHeader('Content-Type', 'application/json');
           res.end(JSON.stringify({ message: 'Method not allowed.' }));
-        } catch(e) {
+        } catch (e) {
           res.statusCode = 500;
           res.setHeader('Content-Type', 'application/json');
           res.end(JSON.stringify({ message: 'Server error.' }));

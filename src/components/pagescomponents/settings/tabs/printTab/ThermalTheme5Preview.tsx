@@ -49,13 +49,13 @@ export function ThermalTheme5Preview({ sale }: { sale?: BillPreviewSaleData }) {
         </div>
         <div style={{ display: "flex", paddingLeft: 24, marginTop: 2 }}>
           <span style={{ width: 100 }}>Qty</span>
-          <span style={{ flex: 1, textAlign: "left" }}>MRP</span>
+          <span style={{ flex: 1, textAlign: "center" }}>MRP</span>
           <span style={rightCol}>Price</span>
           <span style={rightCol}>Amount</span>
         </div>
         <div style={{ display: "flex", paddingLeft: 24 }}>
           <span style={{ flex: 1 }}></span>
-          <span style={rightCol}>Final Amt</span>
+          <span style={rightCol}></span>
         </div>
       </div>
       
@@ -70,7 +70,7 @@ export function ThermalTheme5Preview({ sale }: { sale?: BillPreviewSaleData }) {
             </div>
             <div style={{ display: "flex", paddingLeft: 24, marginTop: 2 }}>
               <span style={{ width: 100 }}>{item.quantity} + 0{item.unit !== "NONE" ? item.unit : "Box"}</span>
-              <span style={{ flex: 1, textAlign: "left" }}>{item.price.toFixed(2)}</span>
+              <span style={{ flex: 1, textAlign: "center" }}>{item.price.toFixed(2)}</span>
               <span style={rightCol}>{item.price.toFixed(2)}</span>
               <span style={rightCol}>{item.amount.toFixed(2)}</span>
             </div>

@@ -49,7 +49,7 @@ export function ThermalTheme4Preview({ sale }: { sale?: BillPreviewSaleData }) {
         </div>
         <div style={{ display: "flex", paddingLeft: 24, marginTop: 2 }}>
           <span style={{ width: 100 }}>Qty</span>
-          <span style={{ flex: 1, textAlign: "left" }}>MRP</span>
+          <span style={{ flex: 1, textAlign: "center" }}>MRP</span>
           <span style={rightCol}>Price</span>
           <span style={rightCol}>Amount</span>
         </div>
@@ -66,14 +66,14 @@ export function ThermalTheme4Preview({ sale }: { sale?: BillPreviewSaleData }) {
             </div>
             <div style={{ display: "flex", paddingLeft: 24, marginTop: 2 }}>
               <span style={{ width: 100 }}>{item.quantity} + 0{item.unit !== "NONE" ? item.unit : "Box"}</span>
-              <span style={{ flex: 1, textAlign: "left" }}>{item.price.toFixed(2)}</span>
+              <span style={{ flex: 1, textAlign: "center" }}>{item.price.toFixed(2)}</span>
               <span style={rightCol}>{item.price.toFixed(2)}</span>
               <span style={rightCol}>{item.amount.toFixed(2)}</span>
             </div>
             
             <div style={{ display: "flex", width: "100%", justifyContent: "space-between", marginTop: 2, paddingLeft: 24, fontSize: invoiceFontSize * 0.85 }}>
-              <span style={{ flex: 1, textAlign: "right" }}>Final amount</span>
-              <span style={{ width: 10, textAlign: "center" }}>:</span>
+              <span style={{ flex: 1, textAlign: "right" }}></span>
+              <span style={{ width: 10, textAlign: "center" }}></span>
               <span style={{ width: 60, textAlign: "right" }}>{item.amount.toFixed(2)}</span>
             </div>
           </div>

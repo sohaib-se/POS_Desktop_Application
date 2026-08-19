@@ -66,8 +66,8 @@ export function ThermalTheme1Preview({ sale }: { sale?: BillPreviewSaleData }) {
             </div>
             
             <div style={{ display: "flex", width: "100%", justifyContent: "space-between", marginTop: 2, paddingLeft: 24, fontSize: invoiceFontSize * 0.85 }}>
-              <span style={{ flex: 1, textAlign: "right" }}>Final amount</span>
-              <span style={{ width: 10, textAlign: "center" }}>:</span>
+              <span style={{ flex: 1, textAlign: "right" }}></span>
+              <span style={{ width: 10, textAlign: "center" }}></span>
               <span style={{ width: 60, textAlign: "right" }}>{item.amount.toFixed(2)}</span>
             </div>
           </div>

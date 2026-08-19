@@ -223,6 +223,7 @@ export function AddSale({ onSave, onShare, onClose, onPreview, initialInvoice, i
   const [saveError, setSaveError] = useState("");
   const [showBarcodeModal, setShowBarcodeModal] = useState(false);
   const [stopSaleOnNegativeStock] = useSettings('settings.stopSaleOnNegativeStock', false);
+  const [isBarcodeScanEnabled] = useSettings('settings.isBarcodeScanEnabled', false);
   const imageInputRef = useRef<HTMLInputElement | null>(null);
   const documentInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -847,7 +848,7 @@ export function AddSale({ onSave, onShare, onClose, onPreview, initialInvoice, i
               startResize={startResize}
               totalQty={totalQty}
               totalAmount={totalAmount}
-              onBarcodeClick={() => setShowBarcodeModal(true)}
+              onBarcodeClick={isBarcodeScanEnabled ? () => setShowBarcodeModal(true) : undefined}
             />
 
             <AddSaleBottomActions

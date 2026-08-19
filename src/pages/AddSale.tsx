@@ -7,6 +7,7 @@ import { AddSaleCustomerHeader } from "@/components/pagescomponents/addsale/AddS
 import { AddSaleTable } from "@/components/pagescomponents/addsale/AddSaleTable";
 import { AddSaleBottomActions } from "@/components/pagescomponents/addsale/AddSaleBottomActions";
 import { BillPreviewPage } from "@/components/pagescomponents/previewbill/BillPreviewPage";
+import { BarcodeScanModal } from "@/components/pagescomponents/addsale/BarcodeScanModal";
 import { useSettings } from "@/hooks/useSettings";
 
 export interface SaleRow {
@@ -54,6 +55,7 @@ export interface PartyOption {
 export interface ItemOption {
   id: string;
   name: string;
+  code?: string;
   sale_price?: number;
   unit: string;
   primary_unit?: string | null;
@@ -219,7 +221,9 @@ export function AddSale({ onSave, onShare, onClose, onPreview, initialInvoice, i
   const [nextInvoiceNo, setNextInvoiceNo] = useState("1");
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
+  const [showBarcodeModal, setShowBarcodeModal] = useState(false);
   const [stopSaleOnNegativeStock] = useSettings('settings.stopSaleOnNegativeStock', false);
+  const [isBarcodeScanEnabled] = useSettings('settings.isBarcodeScanEnabled', false);
   const imageInputRef = useRef<HTMLInputElement | null>(null);
   const documentInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -747,6 +751,30 @@ export function AddSale({ onSave, onShare, onClose, onPreview, initialInvoice, i
     });
   };
 
+  const handleBarcodeModalSave = (newRows: Omit<SaleRow, "id">[]) => {
+    // Filter out existing empty rows (keep non-empty ones)
+    const existingNonEmpty = activeTab.rows.filter(
+      (r) => r.itemId || r.item || r.qty || r.pricePerUnit
+    );
+    const scannedRows: SaleRow[] = newRows.map((r) => ({ ...r, id: globalRowId++ }));
+    // Merge: for items already in table, increase qty; for new ones, append
+    const merged = [...existingNonEmpty];
+    for (const scanned of scannedRows) {
+      const existingIdx = merged.findIndex((r) => r.itemId === scanned.itemId);
+      if (existingIdx >= 0) {
+        const existing = merged[existingIdx];
+        const newQty = (parseFloat(existing.qty) || 0) + (parseFloat(scanned.qty) || 0);
+        merged[existingIdx] = { ...existing, qty: String(newQty) };
+      } else {
+        merged.push(scanned);
+      }
+    }
+    // Always have one trailing empty row
+    merged.push(createEmptyRow());
+    updateTab({ rows: merged });
+    setShowBarcodeModal(false);
+  };
+
   const totalQty = activeTab.rows.reduce((s, r) => s + (parseFloat(r.qty) || 0), 0);
   const totalAmount = activeTab.rows.reduce(
     (s, r) => s + (parseFloat(r.qty) || 0) * (parseFloat(r.pricePerUnit) || 0), 0
@@ -820,6 +848,7 @@ export function AddSale({ onSave, onShare, onClose, onPreview, initialInvoice, i
               startResize={startResize}
               totalQty={totalQty}
               totalAmount={totalAmount}
+              onBarcodeClick={isBarcodeScanEnabled ? () => setShowBarcodeModal(true) : undefined}
             />
 
             <AddSaleBottomActions
@@ -843,6 +872,15 @@ export function AddSale({ onSave, onShare, onClose, onPreview, initialInvoice, i
             />
           </div>{/* end scroll */}
         </>
+      )}
+
+      {/* Barcode Scan Modal */}
+      {showBarcodeModal && (
+        <BarcodeScanModal
+          items={items}
+          onSave={handleBarcodeModalSave}
+          onClose={() => setShowBarcodeModal(false)}
+        />
       )}
     </div>
   );

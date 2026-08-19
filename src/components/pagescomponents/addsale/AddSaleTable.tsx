@@ -10,6 +10,7 @@ interface AddSaleTableProps {
   startResize: (col: number, e: React.MouseEvent) => void;
   totalQty: number;
   totalAmount: number;
+  onBarcodeClick?: () => void;
 }
 
 export function AddSaleTable({
@@ -22,6 +23,7 @@ export function AddSaleTable({
   startResize,
   totalQty,
   totalAmount,
+  onBarcodeClick,
 }: AddSaleTableProps) {
   const fmt = (n: number) => n.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -54,9 +56,44 @@ export function AddSaleTable({
         </colgroup>
         <thead>
           <tr style={{ background: "#f3f6f9", borderTop: "1px solid #e5e7eb", borderBottom: "1px solid #e5e7eb" }}>
-            {/* # */}
-            <th style={{ position: "relative", padding: "8px 0", textAlign: "center", fontSize: 12, fontWeight: 600, color: "#6b7280", borderRight: "1px solid #e5e7eb", letterSpacing: "0.04em" }}>
-              #<ResizeHandle col={0} />
+            {/* Barcode Icon — shown only when barcode scan is enabled in settings */}
+            <th style={{ position: "relative", padding: onBarcodeClick ? "5px 6px" : "8px 0", textAlign: "center", fontSize: 12, fontWeight: 600, color: "#6b7280", borderRight: "1px solid #e5e7eb", letterSpacing: "0.04em" }}>
+              {onBarcodeClick ? (
+                <div
+                  onClick={onBarcodeClick}
+                  style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  border: "2px solid #374151",
+                  borderRadius: 5,
+                  padding: "3px 4px",
+                  background: "#fff",
+                  cursor: "pointer",
+                }}
+                  title="Barcode Scanner"
+                >
+                  {/* Barcode SVG Icon */}
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    {/* Left bracket */}
+                    <path d="M2 5.5V4a1 1 0 011-1h2" stroke="#374151" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+                    <path d="M2 18.5V20a1 1 0 001 1h2" stroke="#374151" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+                    {/* Right bracket */}
+                    <path d="M22 5.5V4a1 1 0 00-1-1h-2" stroke="#374151" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+                    <path d="M22 18.5V20a1 1 0 01-1 1h-2" stroke="#374151" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+                    {/* Barcode lines */}
+                    <line x1="6" y1="7" x2="6" y2="17" stroke="#374151" strokeWidth="1.5" strokeLinecap="round"/>
+                    <line x1="8.5" y1="7" x2="8.5" y2="17" stroke="#374151" strokeWidth="2.5" strokeLinecap="round"/>
+                    <line x1="11" y1="7" x2="11" y2="17" stroke="#374151" strokeWidth="1.5" strokeLinecap="round"/>
+                    <line x1="13" y1="7" x2="13" y2="17" stroke="#374151" strokeWidth="2.5" strokeLinecap="round"/>
+                    <line x1="15.5" y1="7" x2="15.5" y2="17" stroke="#374151" strokeWidth="1.5" strokeLinecap="round"/>
+                    <line x1="18" y1="7" x2="18" y2="17" stroke="#374151" strokeWidth="2.5" strokeLinecap="round"/>
+                  </svg>
+                </div>
+              ) : (
+                <span>#</span>
+              )}
+              <ResizeHandle col={0} />
             </th>
             {/* ITEM */}
             <th style={{ position: "relative", padding: "8px 10px", textAlign: "left", fontSize: 12, fontWeight: 600, color: "#6b7280", borderRight: "1px solid #e5e7eb", letterSpacing: "0.04em" }}>

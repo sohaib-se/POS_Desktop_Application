@@ -7,6 +7,7 @@ export function TransactionTab() {
   const [isTransactionDiscountEnabled, setIsTransactionDiscountEnabled] = useSettings('settings.isTransactionDiscountEnabled', true);
   const [isRoundOffTotalEnabled, setIsRoundOffTotalEnabled] = useSettings('settings.isRoundOffTotalEnabled', true);
   const [isCashSaleByDefault, setIsCashSaleByDefault] = useSettings('settings.isCashSaleByDefault', false);
+  const [isBarcodeScanEnabled, setIsBarcodeScanEnabled] = useSettings('settings.isBarcodeScanEnabled', false);
   const [isPasscodeForTransactionEnabled, setIsPasscodeForTransactionEnabled] = useSettings('settings.isPasscodeForTransactionEnabled', false);
 
   return (
@@ -110,7 +111,7 @@ export function TransactionTab() {
             checked={isCashSaleByDefault} 
             onChange={setIsCashSaleByDefault} 
           />
-          <SettingToggleRow label="Barcode Scan" hint={true} />
+          <SettingToggleRow label="Barcode Scan" hint={true} checked={isBarcodeScanEnabled} onChange={setIsBarcodeScanEnabled} />
           <SettingToggleRow label="Do not Show Invoice Preview" />
           <SettingToggleRow 
             label={

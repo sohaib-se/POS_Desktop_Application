@@ -1,7 +1,7 @@
 import { ChevronDown, Clock, Search } from "lucide-react";
 import { Hint } from "../shared/SharedComponents";
-import { selStyle, inputStyle } from "../shared/styles";
-import React, { useState, useMemo, useEffect } from "react";
+import { selStyle } from "../shared/styles";
+import { useState, useMemo, useEffect } from "react";
 import { currencies, countries } from "country-data-list";
 import { useSettings } from "../../../../hooks/useSettings";
 import { SetupPasscodeModal } from "../../../common/SetupPasscodeModal";
@@ -231,64 +231,16 @@ export function GeneralTab() {
             onChange={setIsShippingAddressEnabled} 
           />
           
-          {[
-            {
-              label: "Exp Date",
-              dateVal: "mm/yy",
-              placeholder: "Exp. Date",
-              checked: enableExpDate,
-              onChange: (e: React.ChangeEvent<HTMLInputElement>) => setEnableExpDate(e.target.checked)
-            },
-            {
-              label: "Mfg Date",
-              dateVal: "dd/mm/yy",
-              placeholder: "Mfg. Date",
-              checked: enableMfgDate,
-              onChange: (e: React.ChangeEvent<HTMLInputElement>) => setEnableMfgDate(e.target.checked)
-            },
-          ].map((row) => (
-            <div
-              key={row.label}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                padding: "12px 16px",
-                background: "transparent",
-                border: "1px solid #e2e8f0",
-                borderRadius: "10px",
-                flexWrap: "wrap",
-                gap: "12px"
-              }}
-            >
-              <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                <input
-                  type="checkbox"
-                  checked={row.checked}
-                  onChange={row.onChange}
-                  style={{
-                    accentColor: "#3b82f6",
-                    width: "16px",
-                    height: "16px",
-                    cursor: "pointer",
-                  }}
-                />
-                <span style={{ fontSize: "14px", color: "#334155", fontWeight: 500 }}>
-                  {row.label}
-                </span>
-              </div>
-              
-              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                <select style={{ ...selStyle, padding: "6px 8px", border: "1px solid #cbd5e1", borderRadius: "6px", background: "#f8fafc", fontSize: "12px" }}>
-                  <option>{row.dateVal}</option>
-                </select>
-                <input
-                  placeholder={row.placeholder}
-                  style={{ ...inputStyle, padding: "6px 8px", border: "1px solid #cbd5e1", borderRadius: "6px", width: "90px", fontSize: "13px" }}
-                />
-              </div>
-            </div>
-          ))}
+          <SettingToggleRow
+            label="Exp Date"
+            checked={enableExpDate}
+            onChange={setEnableExpDate}
+          />
+          <SettingToggleRow
+            label="Mfg Date"
+            checked={enableMfgDate}
+            onChange={setEnableMfgDate}
+          />
         </Card>
 
         {/* Application Card */}

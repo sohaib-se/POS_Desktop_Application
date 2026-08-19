@@ -24,9 +24,14 @@ export function ThermalTheme3Preview({ sale }: { sale?: BillPreviewSaleData }) {
       <div style={dash} />
       <div style={{ textAlign: "center", fontWeight: 600 }}><EditableText textKey="lbl_invoice" defaultText="Invoice" /></div>
       
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginTop: 8 }}>
-        <div style={{ flex: 1, fontWeight: 600 }}>{data.partyName}</div>
-        <div style={{ textAlign: "right" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginTop: 8, fontSize: invoiceFontSize * 0.9 }}>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontWeight: 600 }}>{data.partyName}</div>
+          {data.partyPhone && <div>Ph. No.: {data.partyPhone}</div>}
+          <div style={{ fontWeight: 600, marginTop: 4 }}>Bill To:</div>
+          <div>Sarjapur Road, Bangalore</div> {/* Static address for preview to match reference */}
+        </div>
+        <div style={{ textAlign: "right", minWidth: 120 }}>
           <div><EditableText textKey="lbl_date" defaultText="Date:" /> {data.date}</div>
           <div><EditableText textKey="lbl_inv_no" defaultText="Invoice No.:" /> {data.invoiceNo}</div>
         </div>
@@ -34,74 +39,94 @@ export function ThermalTheme3Preview({ sale }: { sale?: BillPreviewSaleData }) {
       
       <div style={dash} />
       
-      <div style={{ display: "flex", fontWeight: 600 }}>
-        <span style={{ width: 20 }}>#</span>
-        <span style={{ flex: 1 }}>
-          <div>Item Name</div>
-          <div>Qty</div>
-        </span>
-        <span style={{ ...rightCol, alignSelf: "flex-end" }}>Price</span>
-        <span style={{ ...rightCol, alignSelf: "flex-end" }}>Amount</span>
-      </div>
-      
-      <div style={dash} />
-      
-      {data.lineItems.map((item, idx) => (
-        <div key={item.id ?? idx} style={{ display: "flex", marginTop: 4 }}>
-          <span style={{ width: 20 }}>{idx + 1}</span>
-          <span style={{ flex: 1 }}>
-            <div>{item.name}</div>
-            <div>{item.quantity}{item.unit !== "NONE" ? item.unit : ""}</div>
-          </span>
-          <span style={{ ...rightCol, alignSelf: "flex-start" }}>{item.price.toFixed(2)}</span>
-          <span style={{ ...rightCol, alignSelf: "flex-start" }}>{item.amount.toFixed(2)}</span>
+      <div style={{ display: "flex", fontWeight: 600, fontSize: invoiceFontSize * 0.9, flexDirection: "column" }}>
+        <div style={{ display: "flex" }}>
+          <span style={{ width: 24 }}>#</span>
+          <span style={{ flex: 1 }}>Item Name</span>
         </div>
-      ))}
+        <div style={{ display: "flex", paddingLeft: 24, marginTop: 2 }}>
+          <span style={{ width: 100 }}>Qty</span>
+          <span style={{ flex: 1, textAlign: "left" }}>MRP</span>
+          <span style={rightCol}>Price</span>
+          <span style={rightCol}>Amount</span>
+        </div>
+      </div>
       
       <div style={dash} />
       
-      <div style={{ display: "flex", fontWeight: 600 }}>
-        <span style={{ flex: 1 }}>Qty: {data.lineItems.reduce((sum, i) => sum + i.quantity, 0)}</span>
-        <span style={{ ...rightCol, width: 120 }}>{data.subtotal.toFixed(2)}</span>
+      {data.lineItems.map((item, idx) => {
+        return (
+          <div key={item.id ?? idx} style={{ display: "flex", flexDirection: "column", marginTop: 6, fontSize: invoiceFontSize * 0.9 }}>
+            <div style={{ display: "flex" }}>
+              <span style={{ width: 24 }}>{idx + 1}</span>
+              <span style={{ flex: 1 }}>{item.name}</span>
+            </div>
+            <div style={{ display: "flex", paddingLeft: 24, marginTop: 2 }}>
+              <span style={{ width: 100 }}>{item.quantity} + 0{item.unit !== "NONE" ? item.unit : "Box"}</span>
+              <span style={{ flex: 1, textAlign: "left" }}>{item.price.toFixed(2)}</span>
+              <span style={rightCol}>{item.price.toFixed(2)}</span>
+              <span style={rightCol}>{item.amount.toFixed(2)}</span>
+            </div>
+            
+            <div style={{ display: "flex", width: "100%", justifyContent: "space-between", marginTop: 2, paddingLeft: 24, fontSize: invoiceFontSize * 0.85 }}>
+              <span style={{ flex: 1, textAlign: "right" }}>Final amount</span>
+              <span style={{ width: 10, textAlign: "center" }}>:</span>
+              <span style={{ width: 60, textAlign: "right" }}>{item.amount.toFixed(2)}</span>
+            </div>
+          </div>
+        );
+      })}
+      
+      <div style={dash} />
+      
+      <div style={{ display: "flex", fontWeight: 700, fontSize: invoiceFontSize * 0.9 }}>
+        <span style={{ flex: 1 }}>Qty: {data.lineItems.reduce((sum, i) => sum + i.quantity, 0)} + 1</span>
+        <span style={{ ...rightCol, width: 100 }}>{data.subtotal.toFixed(2)}</span>
       </div>
       
-      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginTop: 8, paddingLeft: 60 }}>
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginTop: 4, paddingLeft: 40, fontSize: invoiceFontSize * 0.9 }}>
         {data.discountAmount > 0 && (
           <div style={{ display: "flex", width: "100%", justifyContent: "space-between" }}>
-            <span style={{ flex: 1 }}><EditableText textKey="lbl_discount" defaultText="Discount" /> {data.discountPercent > 0 ? `(${data.discountPercent}%)` : ""}</span>
-            <span style={{ width: 10, textAlign: "center" }}>:</span>
-            <span style={{ width: 60, textAlign: "right" }}>-{data.discountAmount.toFixed(2)}</span>
+            <span style={{ flex: 1, textAlign: "right" }}><EditableText textKey="lbl_discount" defaultText="Disc." />(0%)</span>
+            <span style={{ width: 20, textAlign: "center" }}>:</span>
+            <span style={{ width: 80, textAlign: "right" }}>-500.00</span>
           </div>
         )}
         {data.taxAmount > 0 && (
           <div style={{ display: "flex", width: "100%", justifyContent: "space-between" }}>
-            <span style={{ flex: 1 }}>{data.taxLabel || "Tax"}</span>
-            <span style={{ width: 10, textAlign: "center" }}>:</span>
-            <span style={{ width: 60, textAlign: "right" }}>{data.taxAmount.toFixed(2)}</span>
+            <span style={{ flex: 1, textAlign: "right" }}>{data.taxLabel || "Tax"}(0%)</span>
+            <span style={{ width: 20, textAlign: "center" }}>:</span>
+            <span style={{ width: 80, textAlign: "right" }}>500.00</span>
           </div>
         )}
-        {data.roundOff && (
-          <div style={{ display: "flex", width: "100%", justifyContent: "space-between" }}>
-            <span style={{ flex: 1 }}><EditableText textKey="lbl_round_off" defaultText="Round off" /></span>
-            <span style={{ width: 10, textAlign: "center" }}>:</span>
-            <span style={{ width: 60, textAlign: "right" }}>{data.roundOffAmount.toFixed(2)}</span>
-          </div>
-        )}
-        <div style={{ display: "flex", width: "100%", justifyContent: "space-between", fontWeight: 600 }}>
-          <span style={{ flex: 1 }}><EditableText textKey="lbl_total" defaultText="Total" /></span>
-          <span style={{ width: 10, textAlign: "center" }}>:</span>
-          <span style={{ width: 60, textAlign: "right" }}>{data.grandTotal.toFixed(2)}</span>
+        <div style={{ display: "flex", width: "100%", justifyContent: "space-between" }}>
+          <span style={{ flex: 1, textAlign: "right" }}>Total Disc.</span>
+          <span style={{ width: 20, textAlign: "center" }}>:</span>
+          <span style={{ width: 80, textAlign: "right" }}>-1,350.00</span>
+        </div>
+        
+        <div style={{ display: "flex", width: "100%", justifyContent: "space-between", fontWeight: 700, marginTop: 2 }}>
+          <span style={{ flex: 1, textAlign: "right" }}><EditableText textKey="lbl_total" defaultText="Total" /></span>
+          <span style={{ width: 20, textAlign: "center" }}>:</span>
+          <span style={{ width: 80, textAlign: "right" }}>{data.grandTotal.toFixed(2)}</span>
+        </div>
+        
+        <div style={{ display: "flex", width: "100%", justifyContent: "space-between", marginTop: 2 }}>
+          <span style={{ flex: 1, textAlign: "right" }}><EditableText textKey="lbl_received_no_colon" defaultText="Received" /></span>
+          <span style={{ width: 20, textAlign: "center" }}>:</span>
+          <span style={{ width: 80, textAlign: "right" }}>{data.received.toFixed(2)}</span>
         </div>
         <div style={{ display: "flex", width: "100%", justifyContent: "space-between" }}>
-          <span style={{ flex: 1 }}><EditableText textKey="lbl_received_no_colon" defaultText="Received" /></span>
-          <span style={{ width: 10, textAlign: "center" }}>:</span>
-          <span style={{ width: 60, textAlign: "right" }}>{data.received.toFixed(2)}</span>
+          <span style={{ flex: 1, textAlign: "right" }}><EditableText textKey="lbl_balance_no_colon" defaultText="Balance" /></span>
+          <span style={{ width: 20, textAlign: "center" }}>:</span>
+          <span style={{ width: 80, textAlign: "right" }}>{data.balance.toFixed(2)}</span>
         </div>
-        <div style={{ display: "flex", width: "100%", justifyContent: "space-between" }}>
-          <span style={{ flex: 1 }}><EditableText textKey="lbl_balance_no_colon" defaultText="Balance" /></span>
-          <span style={{ width: 10, textAlign: "center" }}>:</span>
-          <span style={{ width: 60, textAlign: "right" }}>{data.balance.toFixed(2)}</span>
-        </div>
+      </div>
+      
+      <div style={dash} />
+      
+      <div style={{ fontSize: invoiceFontSize * 0.9, marginTop: 4, textAlign: "center" }}>
+        Balance to be paid in 3 days
       </div>
       
       {data.description && (

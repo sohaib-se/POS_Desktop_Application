@@ -12,9 +12,10 @@ import { ItemModals } from "../components/pagescomponents/expenses/ItemModals";
 
 interface ExpensesProps {
   onAddExpense?: () => void;
+  onEditExpenseRecord?: (record: ExpenseRecord) => void;
 }
 
-export function Expenses({ onAddExpense }: ExpensesProps) {
+export function Expenses({ onAddExpense, onEditExpenseRecord }: ExpensesProps) {
   const [expenseCategoryList, setExpenseCategoryList] =
     useState<ExpenseCategory[]>(expenseCategories);
   const [selectedCategory, setSelectedCategory] =
@@ -365,6 +366,24 @@ export function Expenses({ onAddExpense }: ExpensesProps) {
     }
   };
 
+  const handleDeleteRecord = async (record: ExpenseRecord) => {
+    if (!window.confirm("Are you sure you want to delete this expense record?")) return;
+    try {
+      const response = await fetch(`/api/expense_records/${record.id}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to delete expense record");
+      }
+
+      setExpenseRecordList((prev) => prev.filter((r) => r.id !== record.id));
+      window.dispatchEvent(new CustomEvent("expenses-refresh"));
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
   return (
     <div className="h-full flex flex-col bg-[#D0DCE7] gap-1">
       <ExpensesTabs activeTab={activeTab} setActiveTab={setActiveTab} />
@@ -391,6 +410,8 @@ export function Expenses({ onAddExpense }: ExpensesProps) {
           selectedCategory={selectedCategory}
           selectedExpenseItem={selectedExpenseItem}
           expenseRecordList={expenseRecordList}
+          onEditRecord={onEditExpenseRecord}
+          onDeleteRecord={handleDeleteRecord}
         />
       </div>
 

@@ -76,6 +76,7 @@ function App() {
   const [initialReport, setInitialReport] = useState<{ category: string; name: string } | null>(null);
   const [editingSaleInvoice, setEditingSaleInvoice] =
     useState<SaleInvoiceEditData | null>(null);
+  const [editingExpenseRecord, setEditingExpenseRecord] = useState<any | null>(null);
   const [isConvertingEstimate, setIsConvertingEstimate] = useState(false);
   const [settingsInitialTab, setSettingsInitialTab] = useState<string>("general");
   const [isGlobalSearchOpen, setIsGlobalSearchOpen] = useState(false);
@@ -154,7 +155,13 @@ function App() {
   };
 
   const handleCloseAddExpense = () => {
+    setEditingExpenseRecord(null);
     setCurrentView(lastStandardView);
+  };
+
+  const handleEditExpenseRecord = (record: any) => {
+    setEditingExpenseRecord(record);
+    setCurrentView("add-expense");
   };
 
   const handleCloseSettings = () => {
@@ -215,7 +222,10 @@ function App() {
         return <PaymentOut />;
       case "expenses":
         return (
-          <Expenses onAddExpense={() => handleViewChange("add-expense")} />
+          <Expenses
+            onAddExpense={() => handleViewChange("add-expense")}
+            onEditExpenseRecord={handleEditExpenseRecord}
+          />
         );
 
       case "bank-accounts":
@@ -297,7 +307,7 @@ function App() {
 
       {currentView === "add-expense" && (
         <div className="fixed inset-0 z-[100]">
-          <AddExpense onClose={handleCloseAddExpense} />
+          <AddExpense onClose={handleCloseAddExpense} initialExpense={editingExpenseRecord} />
         </div>
       )}
 

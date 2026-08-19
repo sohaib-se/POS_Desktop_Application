@@ -28,4 +28,5 @@ export interface ExpenseTab {
   imageFileName: string;
   documentDataUrl: string;
   documentFileName: string;
+  expenseRecordId?: string;
 }

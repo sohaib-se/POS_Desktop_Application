@@ -202,7 +202,7 @@ export function PrintTab() {
           style={{
             maxHeight: "calc(100vh - 32px)",
             height: "calc(100vh - 32px)",
-            overflowY: "auto",
+            overflowY: currentPrinter === "thermal" ? "auto" : "hidden",
             paddingRight: 8,
             display: "flex",
             flexDirection: "column",
@@ -215,16 +215,33 @@ export function PrintTab() {
               color: #000 !important;
               border-color: #000 !important;
             }
+            .print-scroll-area {
+              max-height: 100%;
+              overflow-y: auto;
+              overflow-x: hidden;
+              padding-right: 8px;
+              margin-right: -8px; /* Offset the padding visually */
+            }
+            /* Thin scrollbar for the bill area */
+            .print-scroll-area::-webkit-scrollbar {
+              width: 6px;
+            }
+            .print-scroll-area::-webkit-scrollbar-thumb {
+              background-color: #cbd5e1;
+              border-radius: 4px;
+            }
           `}</style>
           {currentPrinter === "regular" ? (
-            regularThemeIdx === 0 ? <RegularInvoicePreview color={themeColor} /> :
-            regularThemeIdx === 1 ? <TaxTheme1Preview color={themeColor} /> :
-            regularThemeIdx === 2 ? <TaxTheme2Preview color={themeColor} /> :
-            regularThemeIdx === 3 ? <TaxTheme3Preview color={themeColor} /> :
-            regularThemeIdx === 4 ? <Theme1Preview color={themeColor} /> :
-            regularThemeIdx === 5 ? <Theme2Preview color={themeColor} /> :
-            regularThemeIdx === 6 ? <Theme3Preview color={themeColor} /> :
-            <Theme4Preview color={themeColor} />
+            <>
+              {regularThemeIdx === 0 ? <RegularInvoicePreview color={themeColor} /> :
+              regularThemeIdx === 1 ? <TaxTheme1Preview color={themeColor} /> :
+              regularThemeIdx === 2 ? <TaxTheme2Preview color={themeColor} /> :
+              regularThemeIdx === 3 ? <TaxTheme3Preview color={themeColor} /> :
+              regularThemeIdx === 4 ? <Theme1Preview color={themeColor} /> :
+              regularThemeIdx === 5 ? <Theme2Preview color={themeColor} /> :
+              regularThemeIdx === 6 ? <Theme3Preview color={themeColor} /> :
+              <Theme4Preview color={themeColor} />}
+            </>
           ) : (
             thermalThemeIdx === 0 ? <ThermalTheme1Preview /> :
             thermalThemeIdx === 1 ? <ThermalTheme2Preview /> :

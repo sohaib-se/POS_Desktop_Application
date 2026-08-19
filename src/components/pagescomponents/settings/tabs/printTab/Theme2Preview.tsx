@@ -13,8 +13,8 @@ export function Theme2Preview({ color, sale }: { color?: string, sale?: BillPrev
   const data = sale || DUMMY_REGULAR_SALE;
   const { companyName, phone, logo, showCompanyName, showPhone, showLogo, companyNameTextSize, invoiceTextSize } = useCompanyDetails();
 
-  const companyNameSize = companyNameTextSize === "Small" ? 18 : companyNameTextSize === "Large" ? 26 : 22;
-  const invoiceFontSize = invoiceTextSize === "Small" ? 11 : invoiceTextSize === "Large" ? 14 : 12.5;
+  const companyNameSize = companyNameTextSize === "Small" ? 25 : companyNameTextSize === "Large" ? 40 : 33;
+  const invoiceFontSize = invoiceTextSize === "Small" ? 15.5 : invoiceTextSize === "Large" ? 21 : 18;
 
   const themeBg = color || "#a855f7"; // Purple
   const borderColor = resolveThemeColor(themeBg); // black when white is selected
@@ -32,9 +32,10 @@ export function Theme2Preview({ color, sale }: { color?: string, sale?: BillPrev
   const bankDetails: { bankName?: string; accountNo?: string; ifsc?: string; iban?: string } | undefined = d.bankDetails;
 
   return (
-    <div style={{ display: "flex", justifyContent: "center", width: "100%" }}>
-      <div style={{ width: "115.5mm", minHeight: "163.35mm" }}>
-        <div style={{ background: "#fff", padding: 30, fontFamily: "Inter, system-ui, sans-serif", border: "1px solid #e2e8f0", width: "210mm", minHeight: "297mm", boxSizing: "border-box", transform: "scale(0.55)", transformOrigin: "top left" }}>
+    <div style={{ display: "flex", justifyContent: "center", width: "100%", maxHeight: "100%" }}>
+      <div className="print-scroll-area" style={{ width: "calc(115.5mm + 8px)", maxHeight: "100%", overflowY: "auto", overflowX: "hidden", paddingRight: 4 }}>
+        <div style={{ width: "115.5mm", minHeight: "163.35mm" }}>
+        <div style={{ background: "#fff", padding: 30, fontFamily: "Inter, system-ui, sans-serif", border: "1px solid #e2e8f0", width: "210mm", minHeight: "297mm", boxSizing: "border-box", zoom: 0.55 }}>
           {/* Header */}
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
             {showLogo && (
@@ -234,6 +235,7 @@ export function Theme2Preview({ color, sale }: { color?: string, sale?: BillPrev
               <div style={{ fontWeight: 700, color: TEXT_DARK }}>Authorized Signatory</div>
             </div>
           </div>
+        </div>
         </div>
       </div>
     </div>

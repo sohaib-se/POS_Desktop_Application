@@ -15,4 +15,6 @@ export interface TransferModalProps {
   open: boolean;
   onClose: () => void;
   accounts: BankAccount[];
+  onSuccess?: () => void;
+  initialData?: any;
 }

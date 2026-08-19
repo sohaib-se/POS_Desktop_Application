@@ -1281,8 +1281,122 @@ export function deleteCashInHandTransaction(id) {
     .prepare('DELETE FROM cash_in_hand_transactions WHERE id = ?')
     .run(txId);
   db.prepare('DELETE FROM transactions WHERE id = ?').run(txId);
+
+  if (txId.endsWith('-cash')) {
+    const bankId = txId.replace('-cash', '-bank');
+    const bankTx = db.prepare('SELECT amount, bank_account_name FROM bank_account_transactions WHERE id = ?').get(bankId);
+    if (bankTx) {
+      db.prepare(`
+        UPDATE bank_accounts SET balance = balance - @amount WHERE name = @paymentType
+      `).run({
+        amount: bankTx.amount,
+        paymentType: bankTx.bank_account_name
+      });
+      db.prepare('DELETE FROM bank_account_transactions WHERE id = ?').run(bankId);
+      db.prepare('DELETE FROM transactions WHERE id = ?').run(bankId);
+    }
+  }
+
   db.close();
   return result.changes > 0;
+}
+
+export function updateCashInHandTransaction(id, entry) {
+  const db = openDatabase();
+  const txId = String(id);
+  const oldTx = db.prepare('SELECT * FROM cash_in_hand_transactions WHERE id = ?').get(txId);
+  if (!oldTx) {
+    db.close();
+    return false;
+  }
+
+  db.prepare(`
+    UPDATE cash_in_hand_transactions 
+    SET date = @date, name = @name, type = @type, amount = @amount, updated_at = datetime('now')
+    WHERE id = @id
+  `).run({
+    id: txId,
+    date: entry.date,
+    name: entry.name,
+    type: entry.type,
+    amount: Number(entry.amount)
+  });
+
+  db.prepare(`
+    UPDATE transactions 
+    SET type = @type, date = @date, party_name = @name, amount = @amount, updated_at = datetime('now')
+    WHERE id = @id
+  `).run({
+    id: txId,
+    type: entry.type,
+    date: entry.date,
+    name: entry.name,
+    amount: Number(entry.amount)
+  });
+
+  if (txId.endsWith('-cash')) {
+    const bankId = txId.replace('-cash', '-bank');
+    const bankTx = db.prepare('SELECT amount, bank_account_name FROM bank_account_transactions WHERE id = ?').get(bankId);
+    if (bankTx) {
+      // Revert old bank balance
+      db.prepare(`UPDATE bank_accounts SET balance = balance - @amount WHERE name = @paymentType`).run({
+        amount: bankTx.amount,
+        paymentType: bankTx.bank_account_name
+      });
+
+      // Figure out new bank amount
+      // Cash to Bank: Increase Cash (- amount) vs Bank Payment In (+ amount). Wait!
+      // In Cash To Bank: Cash is "Decrease Cash" (+ amount). Bank is "Payment In" (+ amount).
+      // In Bank To Cash: Cash is "Increase Cash" (+ amount). Bank is "Payment Out" (- amount).
+      // If we are editing cash, we just read the raw amount entered. 
+      // If type is Decrease Cash, bank gets Payment In (+ amount).
+      // If type is Increase Cash, bank gets Payment Out (- amount).
+      let bankType = '';
+      let bankAmount = 0;
+      let bankNameStr = bankTx.bank_account_name; // assuming paymentType doesn't change from cash UI
+
+      if (entry.type === 'Decrease Cash') {
+        bankType = 'Payment In';
+        bankAmount = Math.abs(Number(entry.amount));
+      } else {
+        bankType = 'Payment Out';
+        bankAmount = -Math.abs(Number(entry.amount));
+      }
+
+      // Update bank transaction
+      db.prepare(`
+        UPDATE bank_account_transactions 
+        SET date = @date, name = @name, type = @type, amount = @amount, updated_at = datetime('now')
+        WHERE id = @id
+      `).run({
+        id: bankId,
+        date: entry.date,
+        name: entry.name,
+        type: bankType,
+        amount: bankAmount
+      });
+      db.prepare(`
+        UPDATE transactions 
+        SET type = @type, date = @date, party_name = @name, amount = @amount, updated_at = datetime('now')
+        WHERE id = @id
+      `).run({
+        id: bankId,
+        type: bankType,
+        date: entry.date,
+        name: entry.name,
+        amount: bankAmount
+      });
+
+      // Apply new bank balance
+      db.prepare(`UPDATE bank_accounts SET balance = balance + @amount WHERE name = @paymentType`).run({
+        amount: bankAmount,
+        paymentType: bankNameStr
+      });
+    }
+  }
+
+  db.close();
+  return true;
 }
 
 export function getBankAccounts() {
@@ -1316,6 +1430,9 @@ export function addBankAccount(account) {
 
 export function updateBankAccount(id, account) {
   const db = openDatabase();
+  
+  const oldBank = db.prepare('SELECT name FROM bank_accounts WHERE id = ?').get(String(id));
+
   const result = db.prepare(`
     UPDATE bank_accounts
     SET name = @name,
@@ -1341,6 +1458,12 @@ export function updateBankAccount(id, account) {
     account_holder_name: account.account_holder_name || null,
     print_details: account.print_details ? 1 : 0
   });
+
+  if (oldBank && oldBank.name !== account.name) {
+    db.prepare('UPDATE bank_account_transactions SET bank_account_name = ? WHERE bank_account_name = ?').run(account.name, oldBank.name);
+    db.prepare('UPDATE transactions SET payment_type = ? WHERE payment_type = ?').run(account.name, oldBank.name);
+  }
+
   db.close();
   return result.changes > 0;
 }
@@ -1369,6 +1492,27 @@ export function deleteBankAccountTransaction(id) {
 
   const result = db.prepare('DELETE FROM bank_account_transactions WHERE id = ?').run(String(id));
   db.prepare('DELETE FROM transactions WHERE id = ?').run(String(id));
+
+  if (String(id).endsWith('-bank')) {
+    const cashId = String(id).replace('-bank', '-cash');
+    const cashTx = db.prepare('SELECT * FROM cash_in_hand_transactions WHERE id = ?').get(cashId);
+    if (cashTx) {
+      db.prepare('DELETE FROM cash_in_hand_transactions WHERE id = ?').run(cashId);
+      db.prepare('DELETE FROM transactions WHERE id = ?').run(cashId);
+    }
+  } else if (String(id).endsWith('-bank-in') || String(id).endsWith('-bank-out')) {
+    const isOut = String(id).endsWith('-bank-out');
+    const twinId = isOut ? String(id).replace('-bank-out', '-bank-in') : String(id).replace('-bank-in', '-bank-out');
+    const twinTx = db.prepare('SELECT amount, bank_account_name FROM bank_account_transactions WHERE id = ?').get(twinId);
+    if (twinTx) {
+      db.prepare(`UPDATE bank_accounts SET balance = balance - @amount WHERE name = @paymentType`).run({
+        amount: twinTx.amount,
+        paymentType: twinTx.bank_account_name
+      });
+      db.prepare('DELETE FROM bank_account_transactions WHERE id = ?').run(twinId);
+      db.prepare('DELETE FROM transactions WHERE id = ?').run(twinId);
+    }
+  }
 
   db.close();
   return result.changes > 0;
@@ -1410,6 +1554,152 @@ export function addBankAccountTransaction(entry) {
   });
 
   db.close();
+}
+
+export function updateBankAccountTransaction(id, entry) {
+  const db = openDatabase();
+  const tx = db.prepare('SELECT amount, bank_account_name FROM bank_account_transactions WHERE id = ?').get(String(id));
+  if (!tx) {
+    db.close();
+    return false;
+  }
+
+  db.prepare(`
+    UPDATE bank_account_transactions 
+    SET bank_account_name = @paymentType, date = @date, name = @name, type = @type, amount = @amount, updated_at = datetime('now')
+    WHERE id = @id
+  `).run({
+    id: String(id),
+    paymentType: entry.paymentType,
+    date: entry.date,
+    name: entry.name,
+    type: entry.type,
+    amount: Number(entry.amount)
+  });
+
+  db.prepare(`
+    UPDATE transactions 
+    SET type = @type, date = @date, party_name = @name, amount = @amount, payment_type = @paymentType, updated_at = datetime('now')
+    WHERE id = @id
+  `).run({
+    id: String(id),
+    type: entry.type,
+    date: entry.date,
+    name: entry.name,
+    amount: Number(entry.amount),
+    paymentType: entry.paymentType
+  });
+
+  // Revert the old transaction's effect on balance using stored bank name
+  db.prepare(`
+    UPDATE bank_accounts SET balance = balance - @amount WHERE name = @name
+  `).run({
+    amount: tx.amount,
+    name: tx.bank_account_name
+  });
+  
+  // Apply the new transaction's effect on balance using new bank name
+  db.prepare(`
+    UPDATE bank_accounts SET balance = balance + @amount WHERE name = @name
+  `).run({
+    amount: Number(entry.amount),
+    name: entry.paymentType
+  });
+
+  if (String(id).endsWith('-bank')) {
+    const cashId = String(id).replace('-bank', '-cash');
+    const cashTx = db.prepare('SELECT amount FROM cash_in_hand_transactions WHERE id = ?').get(cashId);
+    if (cashTx) {
+      let cashType = '';
+      let cashAmount = 0;
+      if (entry.type === 'Payment Out') { // Bank to cash
+        cashType = 'Increase Cash';
+        cashAmount = Math.abs(Number(entry.amount));
+      } else { // Cash to bank
+        cashType = 'Decrease Cash';
+        cashAmount = Math.abs(Number(entry.amount));
+      }
+      
+      db.prepare(`
+        UPDATE cash_in_hand_transactions 
+        SET date = @date, name = @name, type = @type, amount = @amount, updated_at = datetime('now')
+        WHERE id = @id
+      `).run({
+        id: cashId,
+        date: entry.date,
+        name: entry.name,
+        type: cashType,
+        amount: cashAmount
+      });
+
+      db.prepare(`
+        UPDATE transactions 
+        SET type = @type, date = @date, party_name = @name, amount = @amount, updated_at = datetime('now')
+        WHERE id = @id
+      `).run({
+        id: cashId,
+        type: cashType,
+        date: entry.date,
+        name: entry.name,
+        amount: cashAmount
+      });
+    }
+  } else if (String(id).endsWith('-bank-in') || String(id).endsWith('-bank-out')) {
+    const isOut = String(id).endsWith('-bank-out');
+    const twinId = isOut ? String(id).replace('-bank-out', '-bank-in') : String(id).replace('-bank-in', '-bank-out');
+    const twinTx = db.prepare('SELECT amount, bank_account_name FROM bank_account_transactions WHERE id = ?').get(twinId);
+    if (twinTx) {
+      // 1. Revert twin's old balance
+      db.prepare(`UPDATE bank_accounts SET balance = balance - @amount WHERE name = @name`).run({
+        amount: twinTx.amount,
+        name: twinTx.bank_account_name
+      });
+
+      // 2. Twin gets the opposite amount
+      const newTwinAmount = isOut ? Math.abs(Number(entry.amount)) : -Math.abs(Number(entry.amount));
+      const twinType = isOut ? 'Payment In' : 'Payment Out';
+      
+      // We don't automatically update twin's bank_account_name if user is editing,
+      // because we only show from/to in the modal, but the edit payload only sends the single bank name.
+      // Wait, in an ideal world we'd update both, but we'll just update amounts, date, and description for twin.
+      let twinName = entry.name;
+      if (!twinName || twinName.startsWith('Transfer')) {
+         // Auto-generate name for twin based on the edited bank
+         twinName = isOut ? `Transfer from ${entry.paymentType}` : `Transfer to ${entry.paymentType}`;
+      }
+
+      db.prepare(`
+        UPDATE bank_account_transactions 
+        SET date = @date, name = @name, amount = @amount, updated_at = datetime('now')
+        WHERE id = @id
+      `).run({
+        id: twinId,
+        date: entry.date,
+        name: twinName,
+        amount: newTwinAmount
+      });
+
+      db.prepare(`
+        UPDATE transactions 
+        SET date = @date, party_name = @name, amount = @amount, updated_at = datetime('now')
+        WHERE id = @id
+      `).run({
+        id: twinId,
+        date: entry.date,
+        name: twinName,
+        amount: newTwinAmount
+      });
+
+      // 3. Apply twin's new balance
+      db.prepare(`UPDATE bank_accounts SET balance = balance + @amount WHERE name = @name`).run({
+        amount: newTwinAmount,
+        name: twinTx.bank_account_name
+      });
+    }
+  }
+
+  db.close();
+  return true;
 }
 
 export function getBankAccountTransactions(bankName) {

@@ -527,6 +527,195 @@ function sqliteApiPlugin() {
         }
       });
 
+      server.middlewares.use('/api/bank_account_transactions', async (req, res) => {
+        try {
+          // @ts-expect-error Runtime-only Node module used in Vite middleware.
+          const repository = await import('./database/sqlite/repository.mjs');
+          
+          if (req.method === 'POST') {
+            const payload = await parseJsonBody(req);
+            
+            repository.addBankAccountTransaction(payload);
+            
+            res.statusCode = 201;
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({ success: true }));
+            return;
+          }
+
+          if (req.method === 'PUT') {
+            const requestUrl = new URL(req.url ?? '/', 'http://localhost');
+            const id = requestUrl.pathname.split('/').filter(Boolean)[0] || requestUrl.searchParams.get('id');
+            const payload = await parseJsonBody(req);
+            
+            repository.updateBankAccountTransaction(id, payload);
+            
+            res.statusCode = 200;
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({ success: true }));
+            return;
+          }
+
+          if (req.method === 'DELETE') {
+            const requestUrl = new URL(req.url ?? '/', 'http://localhost');
+            const id = requestUrl.pathname.split('/').filter(Boolean)[0] || requestUrl.searchParams.get('id');
+            
+            repository.deleteBankAccountTransaction(id);
+            
+            res.statusCode = 200;
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({ success: true }));
+            return;
+          }
+
+          res.statusCode = 405;
+          res.end('Method Not Allowed');
+        } catch (error) {
+          console.error(error);
+          res.statusCode = 500;
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify({ message: 'Internal server error.' }));
+        }
+      });
+
+      server.middlewares.use('/api/bank_to_cash_transfer', async (req, res) => {
+        try {
+          // @ts-expect-error Runtime-only Node module used in Vite middleware.
+          const repository = await import('./database/sqlite/repository.mjs');
+          
+          if (req.method === 'POST') {
+            const payload = await parseJsonBody(req);
+            
+            const baseId = Date.now().toString();
+            const bankTxId = baseId + "-bank";
+            // 1. Deduct from Bank
+            repository.addBankAccountTransaction({
+              id: bankTxId,
+              paymentType: payload.fromBank,
+              date: payload.date,
+              name: payload.description || 'Transfer to Cash',
+              type: 'Payment Out',
+              amount: -Number(payload.amount)
+            });
+
+            const cashTxId = baseId + "-cash";
+            // 2. Add to Cash In Hand
+            repository.addCashInHandTransaction({
+              id: cashTxId,
+              date: payload.date,
+              name: `Transfer from ${payload.fromBank}`,
+              type: 'Increase Cash',
+              amount: Number(payload.amount)
+            });
+
+            res.statusCode = 201;
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({ success: true }));
+            return;
+          }
+
+          res.statusCode = 405;
+          res.end('Method Not Allowed');
+        } catch (error) {
+          console.error(error);
+          res.statusCode = 500;
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify({ message: 'Internal server error.' }));
+        }
+      });
+
+      server.middlewares.use('/api/cash_to_bank_transfer', async (req, res) => {
+        try {
+          // @ts-expect-error Runtime-only Node module used in Vite middleware.
+          const repository = await import('./database/sqlite/repository.mjs');
+          
+          if (req.method === 'POST') {
+            const payload = await parseJsonBody(req);
+            
+            const baseId = Date.now().toString();
+            const cashTxId = baseId + "-cash";
+            // 1. Deduct from Cash In Hand
+            repository.addCashInHandTransaction({
+              id: cashTxId,
+              date: payload.date,
+              name: `Transfer to ${payload.toBank}`,
+              type: 'Decrease Cash',
+              amount: Number(payload.amount)
+            });
+
+            const bankTxId = baseId + "-bank";
+            // 2. Add to Bank
+            repository.addBankAccountTransaction({
+              id: bankTxId,
+              paymentType: payload.toBank,
+              date: payload.date,
+              name: payload.description || 'Transfer from Cash',
+              type: 'Payment In',
+              amount: Number(payload.amount)
+            });
+
+            res.statusCode = 201;
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({ success: true }));
+            return;
+          }
+
+          res.statusCode = 405;
+          res.end('Method Not Allowed');
+        } catch (error) {
+          console.error(error);
+          res.statusCode = 500;
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify({ message: 'Internal server error.' }));
+        }
+      });
+
+      server.middlewares.use('/api/bank_to_bank_transfer', async (req, res) => {
+        try {
+          // @ts-expect-error Runtime-only Node module used in Vite middleware.
+          const repository = await import('./database/sqlite/repository.mjs');
+          
+          if (req.method === 'POST') {
+            const payload = await parseJsonBody(req);
+            
+            const baseId = Date.now().toString();
+            
+            // 1. Deduct from Sender Bank
+            repository.addBankAccountTransaction({
+              id: baseId + "-bank-out",
+              paymentType: payload.fromBank,
+              date: payload.date,
+              name: payload.description || `Transfer to ${payload.toBank}`,
+              type: 'Payment Out',
+              amount: -Number(payload.amount)
+            });
+
+            // 2. Add to Receiver Bank
+            repository.addBankAccountTransaction({
+              id: baseId + "-bank-in",
+              paymentType: payload.toBank,
+              date: payload.date,
+              name: payload.description || `Transfer from ${payload.fromBank}`,
+              type: 'Payment In',
+              amount: Number(payload.amount)
+            });
+
+            res.statusCode = 201;
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({ success: true }));
+            return;
+          }
+
+          res.statusCode = 405;
+          res.end('Method Not Allowed');
+        } catch (error) {
+          console.error(error);
+          res.statusCode = 500;
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify({ message: 'Internal server error.' }));
+        }
+      });
+
       server.middlewares.use('/api/payment_in_records', async (req, res) => {
         try {
           // @ts-expect-error Runtime-only Node module used in Vite middleware.
@@ -3190,6 +3379,29 @@ function sqliteApiPlugin() {
                 res.end(JSON.stringify({ message: 'Invalid JSON payload.' }));
               }
             });
+            return;
+          }
+
+          if (req.method === 'PUT') {
+            const pathId = requestUrl.pathname.split('/').filter(Boolean)[0];
+            const queryId = requestUrl.searchParams.get('id');
+            const id = (pathId || queryId || '').trim();
+            if (!id) {
+              res.statusCode = 400;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify({ message: 'Transaction id is required.' }));
+              return;
+            }
+            const payload = await parseJsonBody(req);
+            repository.updateCashInHandTransaction(id, {
+              date: payload.date,
+              name: payload.name,
+              type: payload.type,
+              amount: Number(payload.amount),
+            });
+            res.statusCode = 200;
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({ success: true }));
             return;
           }
 

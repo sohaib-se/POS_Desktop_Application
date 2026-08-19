@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { AlignJustify, Filter, MoreVertical, Info, Trash2 } from "lucide-react";
+import { AlignJustify, Filter, MoreVertical, Info, Trash2, Pencil } from "lucide-react";
 import { useSettings } from "@/hooks/useSettings";
 import { EnterPasscodeScreen } from "@/components/common/EnterPasscodeScreen";
 import { AdjustCashModal } from "./AdjustCashModal";
@@ -15,7 +15,10 @@ interface CashInHandViewProps {
   setContextMenu: (menu: { x: number; y: number; transaction: any } | null) => void;
   detailsTransaction: any | null;
   setDetailsTransaction: (tx: any | null) => void;
+  editingTransaction: any | null;
+  setEditingTransaction: (tx: any | null) => void;
   handleDelete: (id: string) => void;
+  handleEdit: (tx: any, updatedAmount: number) => void;
   isDeleting: boolean;
 }
 
@@ -29,7 +32,10 @@ export function CashInHandView({
   setContextMenu,
   detailsTransaction,
   setDetailsTransaction,
+  editingTransaction,
+  setEditingTransaction,
   handleDelete,
+  handleEdit,
   isDeleting
 }: CashInHandViewProps) {
   const [currency] = useSettings('settings.businessCurrency', { code: 'PKR', symbol: 'Rs' });
@@ -39,6 +45,7 @@ export function CashInHandView({
   const [isPasscodeEnabled] = useSettings('settings.isPasscodeEnabled', false);
   const [isPasscodeForTransactionEnabled] = useSettings('settings.isPasscodeForTransactionEnabled', false);
   const [passcodeAction, setPasscodeAction] = useState<{ type: 'delete', payload: string } | null>(null);
+  const [editAmount, setEditAmount] = useState("");
 
   const handleDeleteClick = (id: string) => {
     if (isPasscodeEnabled && isPasscodeForTransactionEnabled) {
@@ -54,6 +61,16 @@ export function CashInHandView({
     }
     setPasscodeAction(null);
   };
+
+  const openEdit = (tx: any) => {
+    setEditingTransaction(tx);
+    setEditAmount(Math.abs(Number(tx.amount)).toString());
+    setContextMenu(null);
+  };
+
+  const isTransfer = (tx: any) =>
+    String(tx.id).endsWith('-cash') ||
+    String(tx.name || '').toLowerCase().includes('transfer');
 
   return (
     <div className="h-full flex flex-col bg-[#D0DCE7] gap-1">
@@ -155,6 +172,43 @@ export function CashInHandView({
         onClose={() => setDetailsTransaction(null)}
         transaction={detailsTransaction}
       />
+
+      {/* Edit Transfer Modal */}
+      {editingTransaction && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-sm">
+            <h2 className="text-base font-semibold text-gray-900 mb-1">Edit Transaction</h2>
+            <p className="text-xs text-gray-500 mb-4">
+              {editingTransaction.type} — {editingTransaction.name}
+              {isTransfer(editingTransaction) && (
+                <span className="ml-1 text-blue-500 font-medium">(Syncs with bank account)</span>
+              )}
+            </p>
+            <label className="block text-sm text-gray-600 mb-1">Amount</label>
+            <input
+              type="number"
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm mb-4 focus:outline-none focus:border-blue-400"
+              value={editAmount}
+              onChange={(e) => setEditAmount(e.target.value)}
+            />
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setEditingTransaction(null)}
+                className="px-4 py-2 text-sm rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => handleEdit(editingTransaction, Number(editAmount))}
+                className="px-4 py-2 text-sm rounded-lg bg-[#E53935] text-white hover:bg-red-600"
+              >
+                Save
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {contextMenu && (
         <div
           className="fixed z-50 w-36 bg-white rounded-lg shadow-xl border border-gray-100 py-1"
@@ -171,6 +225,15 @@ export function CashInHandView({
             <Info className="w-4 h-4" />
             Details
           </button>
+          {isTransfer(contextMenu.transaction) && (
+            <button
+              onClick={() => openEdit(contextMenu.transaction)}
+              className="w-full text-left px-4 py-2 text-sm text-blue-600 hover:bg-blue-50 flex items-center gap-2"
+            >
+              <Pencil className="w-4 h-4" />
+              Edit
+            </button>
+          )}
           <button
             onClick={() => {
               handleDeleteClick(contextMenu.transaction.id);

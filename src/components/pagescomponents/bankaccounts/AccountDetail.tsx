@@ -1,14 +1,17 @@
 import { useState } from "react";
 import { useSettings } from "@/hooks/useSettings";
-import { ChevronDown, Search, Filter, MoreVertical } from "lucide-react";
+import { ChevronDown, Filter, MoreVertical } from "lucide-react";
 import type { BankAccount } from "./types";
 
 interface AccountDetailProps {
   account: BankAccount;
   onDeposit: (action: string) => void;
+  onEditTransaction?: (tx: any) => void;
+  onDeleteTransaction?: (txId: string) => void;
 }
 
-export function AccountDetail({ account, onDeposit }: AccountDetailProps) {
+export function AccountDetail({ account, onDeposit, onEditTransaction, onDeleteTransaction }: AccountDetailProps) {
+  const [txContextMenu, setTxContextMenu] = useState<{ x: number, y: number, txId: string } | null>(null);
   const [currency] = useSettings('settings.businessCurrency', { code: 'PKR', symbol: 'Rs' });
   const [currencyDisplay] = useSettings<'abbreviation' | 'icon'>('settings.currencyDisplay', 'abbreviation');
   const currencyStr = currencyDisplay === 'icon' ? currency.symbol : currency.code;
@@ -19,11 +22,10 @@ export function AccountDetail({ account, onDeposit }: AccountDetailProps) {
     "Bank to Cash Transfer",
     "Cash to Bank Transfer",
     "Bank to Bank Transfer",
-    "Adjust Bank Balance",
   ];
 
   return (
-    <div className="flex-1 flex flex-col overflow-hidden">
+    <div className="flex-1 flex flex-col overflow-hidden" onClick={() => setTxContextMenu(null)}>
       {/* Header bar */}
       <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
         <h3 className="text-base font-semibold text-gray-900">
@@ -53,10 +55,7 @@ export function AccountDetail({ account, onDeposit }: AccountDetailProps) {
                     setDropdownOpen(false);
                     onDeposit(item);
                   }}
-                  className={`block w-full text-left px-4 py-2.5 text-sm hover:bg-gray-50 transition-colors ${item === "Adjust Bank Balance"
-                    ? "font-semibold text-gray-900"
-                    : "text-gray-700"
-                    }`}
+                  className="block w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
                 >
                   {item}
                 </button>
@@ -84,7 +83,6 @@ export function AccountDetail({ account, onDeposit }: AccountDetailProps) {
       <div className="flex-1 overflow-auto">
         <div className="flex items-center justify-between px-6 py-3">
           <h4 className="text-sm font-semibold text-gray-800">Transactions</h4>
-          <Search className="w-4 h-4 text-gray-400 cursor-pointer hover:text-gray-600" />
         </div>
 
         {/* Table header */}
@@ -114,13 +112,47 @@ export function AccountDetail({ account, onDeposit }: AccountDetailProps) {
                   minimumFractionDigits: 2,
                 })}
               </span>
-              <button className="text-gray-400 hover:text-gray-600 ml-2">
+              <button 
+                className="text-gray-400 hover:text-gray-600 ml-2"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setTxContextMenu({ x: e.clientX, y: e.clientY, txId: tx.id });
+                }}
+              >
                 <MoreVertical className="w-4 h-4" />
               </button>
             </div>
           </div>
         ))}
       </div>
+
+      {txContextMenu && (
+        <div
+          className="fixed bg-white border border-gray-200 shadow-xl rounded-md z-50 overflow-hidden w-32"
+          style={{ top: txContextMenu.y, left: txContextMenu.x - 100 }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button
+            className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+            onClick={() => {
+              const tx = account.transactions.find((t: any) => t.id === txContextMenu.txId);
+              if (tx) onEditTransaction?.(tx);
+              setTxContextMenu(null);
+            }}
+          >
+            Edit
+          </button>
+          <button
+            className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50"
+            onClick={() => {
+              onDeleteTransaction?.(txContextMenu.txId);
+              setTxContextMenu(null);
+            }}
+          >
+            Delete
+          </button>
+        </div>
+      )}
     </div>
   );
 }

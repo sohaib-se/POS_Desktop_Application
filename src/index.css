@@ -107,6 +107,15 @@
   .animate-dropdownExpand {
     animation: dropdownExpand 0.3s ease-out forwards;
   }
+
+  .animate-slide-in-right {
+    animation: slideInRight 0.3s ease-out forwards;
+  }
+}
+
+@keyframes slideInRight {
+  from { opacity: 0; transform: translateX(-60px); }
+  to { opacity: 1; transform: translateX(0); }
 }
 
 @layer components {

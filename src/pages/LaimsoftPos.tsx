@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import type { PosTab, PosRow, PartyOption, ItemOption, BankOption } from "../components/pagescomponents/laimsoftpos/types";
 import { TopHeaderBar } from "../components/pagescomponents/laimsoftpos/TopHeaderBar";
 import { SearchInput } from "../components/pagescomponents/laimsoftpos/SearchInput";
@@ -22,11 +22,11 @@ function createEmptyTab(invoiceNo: string): PosTab {
     invoiceNo,
     date: new Date().toISOString().split("T")[0],
     rows: [],
-    paymentMode: isCashSaleByDefault ? "Cash" : "Credit",
+    paymentMode: "Cash",
     amountReceived: "0.00",
     isAmountReceivedDirty: false,
     customerSelectedId: null,
-    customerSearchText: "Cash Sale",
+    customerSearchText: isCashSaleByDefault ? "Cash Sale" : "",
     searchQuery: "",
     selectedRowId: null,
     discountPercent: "",
@@ -41,6 +41,12 @@ export function LaimsoftPos({ onClose }: LaimsoftPosProps) {
   const [banks, setBanks] = useState<BankOption[]>([]);
   const [nextInvoiceNo, setNextInvoiceNo] = useState("1");
   const [isSaving, setIsSaving] = useState(false);
+  const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
+
+  const showToast = useCallback((message: string, type: "success" | "error" = "success") => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3000);
+  }, []);
 
   // Tabs State
   const [tabs, setTabs] = useState<PosTab[]>([createEmptyTab("1")]);
@@ -243,8 +249,9 @@ export function LaimsoftPos({ onClose }: LaimsoftPosProps) {
     return Math.max(0, received - totalAmount);
   }, [effectiveAmountReceived, totalAmount]);
 
+  const isCashSale = activeTab.customerSelectedId === null;
   const receivedLessThanTotal =
-    (Number(effectiveAmountReceived) || 0) < totalAmount;
+    isCashSale && (Number(effectiveAmountReceived) || 0) < totalAmount;
 
   const handleNewBill = () => {
     const newTab = createEmptyTab(nextInvoiceNo);
@@ -305,6 +312,35 @@ export function LaimsoftPos({ onClose }: LaimsoftPosProps) {
     setSearchFocused(true);
   };
 
+  const getCalculatedRow = (row: PosRow): PosRow => {
+    const matchedItem = items.find((item) => item.id === row.itemId);
+    if (!matchedItem) return row;
+
+    let nextPricePerUnit = row.pricePerUnit;
+    const qty = Number(row.qty) || 0;
+    const isSecondary = row.unit === matchedItem.secondary_unit;
+    const convRate = Number(matchedItem.conversion_rate) || 1;
+    const primaryQtyEquiv = isSecondary && convRate > 0 ? qty / convRate : qty;
+
+    let basePrice = Number(matchedItem.sale_price);
+
+    if (
+      Number.isFinite(Number(matchedItem.min_stock)) &&
+      Number(matchedItem.min_stock) > 0 &&
+      primaryQtyEquiv >= Number(matchedItem.min_stock)
+    ) {
+      basePrice = Number(matchedItem.wholesale_price || matchedItem.sale_price);
+    }
+
+    if (isSecondary && convRate > 0) {
+      nextPricePerUnit = String(basePrice / convRate);
+    } else {
+      nextPricePerUnit = String(basePrice);
+    }
+
+    return { ...row, pricePerUnit: nextPricePerUnit };
+  };
+
   const handleSelectItem = (item: ItemOption) => {
     const existingRowIndex = activeTab.rows.findIndex((r) => r.itemId === item.id);
 
@@ -313,9 +349,10 @@ export function LaimsoftPos({ onClose }: LaimsoftPosProps) {
       nextRows[existingRowIndex].qty = String(
         Number(nextRows[existingRowIndex].qty) + 1
       );
+      nextRows[existingRowIndex] = getCalculatedRow(nextRows[existingRowIndex]);
       updateTab({ rows: nextRows, searchQuery: "" });
     } else {
-      const newRow: PosRow = {
+      let newRow: PosRow = {
         id: globalRowId++,
         itemId: item.id,
         itemCode: item.code || "",
@@ -324,6 +361,7 @@ export function LaimsoftPos({ onClose }: LaimsoftPosProps) {
         unit: item.primary_unit || item.unit || "NONE",
         pricePerUnit: String(item.sale_price || 0),
       };
+      newRow = getCalculatedRow(newRow);
       updateTab({ rows: [...activeTab.rows, newRow], searchQuery: "" });
     }
 
@@ -332,9 +370,16 @@ export function LaimsoftPos({ onClose }: LaimsoftPosProps) {
   };
 
   const updateRow = (id: number, field: keyof PosRow, value: string) => {
-    const newRows = activeTab.rows.map((r) =>
-      r.id === id ? { ...r, [field]: value } : r
-    );
+    const newRows = activeTab.rows.map((r) => {
+      if (r.id === id) {
+        const updated = { ...r, [field]: value };
+        if (field === "qty" || field === "unit") {
+          return getCalculatedRow(updated);
+        }
+        return updated;
+      }
+      return r;
+    });
     updateTab({ rows: newRows });
   };
 
@@ -421,19 +466,27 @@ export function LaimsoftPos({ onClose }: LaimsoftPosProps) {
       : null;
 
     let receivedAmt = Number(effectiveAmountReceived) || 0;
-    if (receivedAmt === 0) {
+    if (receivedAmt === 0 && isCashSale) {
       receivedAmt = totalAmount;
     }
-    const balance = Math.max(0, totalAmount - receivedAmt);
+    const computedBalance = Math.max(0, totalAmount - receivedAmt);
+    const finalBalance = isCashSale ? 0 : computedBalance;
+    const finalPaymentType = isCashSale ? "Cash" : (finalBalance > 0 ? "Credit" : "Cash");
+
+    // Normalize paymentMode: POS only has Cash or Bank options, never Credit
+    // If state is somehow "Credit" (from old init), treat it as cash
+    const normalizedPaymentMode = activeTab.paymentMode.toLowerCase() === "cash" || activeTab.paymentMode.toLowerCase() === "credit"
+      ? "cash"
+      : activeTab.paymentMode; // bank name stays as-is
 
     const payload = {
       invoiceNo: activeTab.invoiceNo,
       date: activeTab.date,
-      partyId: selectedParty?.id || null,
-      partyName: selectedParty?.name || "Cash",
+      partyId: selectedParty?.id ? String(selectedParty.id) : null,
+      partyName: selectedParty ? selectedParty.name : "Cash Sale",
       partyPhone: selectedParty?.phone || null,
-      paymentType: "Cash",
-      paymentMode: activeTab.paymentMode,
+      paymentType: finalPaymentType,
+      paymentMode: normalizedPaymentMode,
       subtotal: subTotalAmount,
       discountPercent: Number(activeTab.discountPercent) || 0,
       discountAmount: Number(activeTab.discountAmount) || 0,
@@ -443,19 +496,17 @@ export function LaimsoftPos({ onClose }: LaimsoftPosProps) {
       roundOff: true,
       roundOffAmount: 0,
       amount: totalAmount,
-      balance: balance,
+      balance: finalBalance,
       description: activeTab.description || "POS Sale",
-      lineItemsJson: JSON.stringify(
-        validRows.map((r) => ({
-          itemId: r.itemId,
-          name: r.itemName,
-          size: "",
-          quantity: Number(r.qty) || 1,
-          unit: r.unit,
-          price: Number(r.pricePerUnit) || 0,
-          amount: (Number(r.qty) || 1) * (Number(r.pricePerUnit) || 0),
-        }))
-      ),
+      lineItems: validRows.map((r) => ({
+        id: String(Date.now() + Math.random()),
+        itemId: r.itemId,
+        name: r.itemName,
+        quantity: Number(r.qty) || 1,
+        unit: r.unit,
+        price: Number(r.pricePerUnit) || 0,
+        amount: (Number(r.qty) || 1) * (Number(r.pricePerUnit) || 0),
+      })),
     };
 
     try {
@@ -467,17 +518,33 @@ export function LaimsoftPos({ onClose }: LaimsoftPosProps) {
 
       if (!response.ok) throw new Error("Failed to save sale");
 
-      window.print();
+      const savedInvoice = (await response.json()) as { invoiceNo?: string; id?: string };
+      const nextInvNo = savedInvoice.invoiceNo 
+        ? String(Number(savedInvoice.invoiceNo) + 1)
+        : String(Number(activeTab.invoiceNo) + 1);
 
-      setNextInvoiceNo(String(Number(activeTab.invoiceNo) + 1));
+      setNextInvoiceNo(nextInvNo);
 
-      handleCloseTab(activeTabId);
-      if (tabs.length === 1) {
-        handleNewBill();
-      }
+      showToast(`Sale #${activeTab.invoiceNo} completed successfully!`, "success");
+
+      // Reset the POS for the next sale instead of closing
+      const isCashSaleByDefault = JSON.parse(localStorage.getItem('settings.isCashSaleByDefault') || 'false');
+      updateTab({
+        invoiceNo: nextInvNo,
+        customerSelectedId: null,
+        customerSearchText: isCashSaleByDefault ? "Cash Sale" : "",
+        rows: [],
+        amountReceived: "",
+        isAmountReceivedDirty: false,
+        paymentMode: "Cash",
+        discountPercent: "",
+        discountAmount: "",
+        searchQuery: "",
+        selectedRowId: null,
+      });
     } catch (error) {
       console.error(error);
-      alert("Failed to save sale");
+      showToast("Failed to save sale. Please try again.", "error");
     } finally {
       setIsSaving(false);
     }
@@ -501,6 +568,20 @@ export function LaimsoftPos({ onClose }: LaimsoftPosProps) {
         setCustomerDropdownOpen(false);
       }}
     >
+      {/* Toast Notification */}
+      {toast && (
+        <div
+          className={`fixed bottom-4 left-4 z-50 flex items-center gap-3 px-5 py-4 rounded-xl shadow-2xl text-white text-sm font-semibold transition-all duration-300 animate-slide-in-right ${
+            toast.type === "success"
+              ? "bg-gradient-to-r from-green-500 to-emerald-600"
+              : "bg-gradient-to-r from-red-500 to-rose-600"
+          }`}
+          style={{ minWidth: 280 }}
+        >
+          <span className="text-lg">{toast.type === "success" ? "✅" : "❌"}</span>
+          <span>{toast.message}</span>
+        </div>
+      )}
       <TopHeaderBar
         tabs={tabs}
         activeTabId={activeTabId}

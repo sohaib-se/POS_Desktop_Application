@@ -35,6 +35,15 @@ export function RightPanel({
   const [currencyDisplay] = useSettings<'abbreviation' | 'icon'>('settings.currencyDisplay', 'abbreviation');
   const currencyStr = currencyDisplay === 'icon' ? currency.symbol : currency.code;
 
+  const selectedPartyObj = filteredCustomers.find(
+    (p) => String(p.id) === String(activeTab.customerSelectedId)
+  );
+
+  const receivedVal = Number(effectiveAmountReceived) || 0;
+  const remainingAmount = Math.max(0, totalAmount - receivedVal);
+  const isCashSale = activeTab.customerSelectedId === null;
+  const isRemaining = remainingAmount > 0 && !isCashSale; // Only for credit sales
+
   return (
     <div className="w-[380px] flex flex-col gap-2 shrink-0 overflow-hidden">
       {/* Top Section */}
@@ -60,10 +69,9 @@ export function RightPanel({
                   customerSearchText: "Cash Sale",
                 });
               } else {
-                const partyId = parseInt(val, 10);
-                const party = filteredCustomers.find((p) => p.id === partyId);
+                const party = filteredCustomers.find((p) => String(p.id) === val);
                 updateTab({
-                  customerSelectedId: partyId,
+                  customerSelectedId: party ? party.id : null,
                   customerSearchText: party ? party.name : "",
                 });
               }
@@ -79,6 +87,15 @@ export function RightPanel({
           </select>
           <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none shrink-0" />
         </div>
+        
+        {selectedPartyObj && (
+          <div className="mt-2 text-[13px] font-medium text-gray-700 flex justify-between bg-gray-50 p-2 rounded border border-gray-200">
+            <span>Current Balance:</span>
+            <span className={Number(selectedPartyObj.balance) > 0 ? "text-red-600 font-bold" : "text-green-600 font-bold"}>
+              {currencyStr} {Number(selectedPartyObj.balance || 0).toFixed(2)}
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Middle Section */}
@@ -158,30 +175,26 @@ export function RightPanel({
 
         <div className="flex-1" />
 
-        {/* Change to Return */}
+        {/* Change to Return / Remaining */}
         <div className="px-4 py-3 flex items-center justify-between border-t border-gray-200 bg-gray-50/50">
           <span className="text-sm font-bold text-gray-700">
-            Change to Return:
+            {isRemaining ? "Remaining:" : "Change to Return:"}
           </span>
-          <span className="text-lg font-bold text-gray-800">
-            {currencyStr} {changeToReturn.toFixed(2)}
+          <span className={`text-lg font-bold ${isRemaining ? "text-red-600" : "text-gray-800"}`}>
+            {currencyStr} {isRemaining ? remainingAmount.toFixed(2) : changeToReturn.toFixed(2)}
           </span>
         </div>
       </div>
 
       {/* Bottom Actions */}
-      <div className="bg-white border border-gray-300 rounded shadow-sm p-3 space-y-2 shrink-0">
+      <div className="bg-white border border-gray-300 rounded shadow-sm p-3 shrink-0">
         <button
           onClick={handleSaveSale}
           disabled={isSaving || receivedLessThanTotal}
           className="w-full rounded border border-green-400/60 bg-green-200/50 py-3.5 text-sm font-bold text-green-800 hover:bg-green-300/50 transition-colors shadow-sm disabled:opacity-50"
         >
-          {isSaving ? "Saving..." : "Save & Print Bill"}{" "}
+          {isSaving ? "Saving..." : "Complete Sale"}{" "}
           <span className="font-normal text-green-700 ml-1">[Ctrl+P]</span>
-        </button>
-        <button className="w-full rounded border border-blue-200 bg-white py-3 text-sm font-semibold text-blue-700 hover:bg-gray-50 transition-colors shadow-sm">
-          Other/Credit Payments{" "}
-          <span className="font-normal text-blue-600 ml-1">[Ctrl+M]</span>
         </button>
       </div>
     </div>

@@ -1,4 +1,4 @@
-import { Plus, X, Settings, Minus, Square } from "lucide-react";
+import { Plus, X } from "lucide-react";
 import type { PosTab } from "./types";
 
 interface TopHeaderBarProps {
@@ -64,16 +64,6 @@ export function TopHeaderBar({
       </div>
 
       <div className="flex items-center text-gray-500 shrink-0">
-        <button className="p-2 hover:bg-gray-100">
-          <Settings className="h-4 w-4" />
-        </button>
-        <div className="h-4 w-px bg-gray-300 mx-1" />
-        <button className="p-2 hover:bg-gray-100">
-          <Minus className="h-4 w-4" />
-        </button>
-        <button className="p-2 hover:bg-gray-100">
-          <Square className="h-3.5 w-3.5" />
-        </button>
         <button
           className="p-2 hover:bg-red-500 hover:text-white"
           onClick={onClose}

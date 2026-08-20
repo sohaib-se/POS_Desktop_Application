@@ -1,12 +1,10 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import type { SaleInvoiceEditData } from "@/types";
-import type { BillPreviewSaleData } from "@/components/pagescomponents/previewbill/BillPreviewData";
 import { AddSaleTabBar } from "@/components/pagescomponents/addsale/AddSaleTabBar";
 import { AddSaleTopBar } from "@/components/pagescomponents/addsale/AddSaleTopBar";
 import { AddSaleCustomerHeader } from "@/components/pagescomponents/addsale/AddSaleCustomerHeader";
 import { AddSaleTable } from "@/components/pagescomponents/addsale/AddSaleTable";
 import { AddSaleBottomActions } from "@/components/pagescomponents/addsale/AddSaleBottomActions";
-import { BillPreviewPage } from "@/components/pagescomponents/previewbill/BillPreviewPage";
 import { BarcodeScanModal } from "@/components/pagescomponents/addsale/BarcodeScanModal";
 import { useSettings } from "@/hooks/useSettings";
 
@@ -39,8 +37,6 @@ export interface SaleTab {
   documentFileName: string;
   received: string;
   receivedAll: boolean;
-  isPreviewMode?: boolean;
-  previewData?: BillPreviewSaleData;
 }
 
 export interface PartyOption {
@@ -73,7 +69,6 @@ interface AddSaleProps {
   onSave?: () => void;
   onShare?: () => void;
   onClose?: () => void;
-  onPreview?: (data: BillPreviewSaleData) => void;
   initialInvoice?: SaleInvoiceEditData | null;
   isConversion?: boolean;
 }
@@ -212,7 +207,7 @@ function useColumnResize(initial: number[]) {
   return { widths, startResize };
 }
 
-export function AddSale({ onSave, onShare, onClose, onPreview, initialInvoice, isConversion }: AddSaleProps) {
+export function AddSale({ onSave, onShare, onClose, initialInvoice, isConversion }: AddSaleProps) {
   const [tabs, setTabs] = useState<SaleTab[]>([createDefaultTab(1)]);
   const [activeTabId, setActiveTabId] = useState(1);
   const [isOpenAnimated, setIsOpenAnimated] = useState(false);
@@ -279,7 +274,6 @@ export function AddSale({ onSave, onShare, onClose, onPreview, initialInvoice, i
         documentFileName: "",
         received: "",
         receivedAll: false,
-        isPreviewMode: false,
       },
     ]);
     setActiveTabId(1);
@@ -607,54 +601,6 @@ export function AddSale({ onSave, onShare, onClose, onPreview, initialInvoice, i
 
       onSave?.();
 
-      // Build preview data from the current tab state and invoke the preview callback.
-      if (onPreview) {
-        const receivedAmt = activeTab.paymentMode === "cash"
-          ? roundedValue
-          : (activeTab.receivedAll ? roundedValue : parseFloat(activeTab.received) || 0);
-        const balanceAmt = activeTab.paymentMode === "cash"
-          ? 0
-          : Math.max(0, roundedValue - receivedAmt);
-
-        // Use the actual invoice number returned by the API — not the React state
-        // variable (nextInvoiceNo at this point still holds the pre-bump value,
-        // but savedInvoice.invoiceNo is the authoritative value from the server).
-        const actualInvoiceNo = isEditing
-          ? (initialInvoice?.invoiceNo ?? nextInvoiceNo)
-          : (savedInvoice.invoiceNo ?? nextInvoiceNo);
-
-        const previewData: BillPreviewSaleData = {
-          invoiceNo: actualInvoiceNo,
-          date: activeTab.invoiceDate || displayedInvoiceDate,
-          partyName: selectedParty ? selectedParty.name : "Cash Sale",
-          partyPhone: activeTab.phoneNo || null,
-          paymentMode: activeTab.paymentMode,
-          subtotal,
-          discountPercent: Number(activeTab.discountPercent || 0),
-          discountAmount: discountAmountValue,
-          taxLabel: activeTab.tax,
-          taxRate: taxRateValue,
-          taxAmount: taxAmountValue,
-          roundOff: activeTab.roundOff,
-          roundOffAmount: roundOffAmountValue,
-          grandTotal: roundedValue,
-          received: receivedAmt,
-          balance: balanceAmt,
-          description: activeTab.description,
-          lineItems: validRows.map((row) => ({
-            id: row.id,
-            itemId: row.itemId,
-            name: row.item,
-            quantity: Number(row.qty) || 0,
-            unit: row.unit,
-            price: Number(row.pricePerUnit) || 0,
-            amount: (Number(row.qty) || 0) * (Number(row.pricePerUnit) || 0),
-          })),
-        };
-        updateTab({ isPreviewMode: true, previewData });
-        return;
-      }
-
       onClose?.();
 
     } catch (error) {
@@ -813,66 +759,55 @@ export function AddSale({ onSave, onShare, onClose, onPreview, initialInvoice, i
         onClose={onClose}
       />
 
-      {activeTab.isPreviewMode && activeTab.previewData ? (
-        <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
-          <BillPreviewPage
-            sale={activeTab.previewData}
-            onClose={() => updateTab({ isPreviewMode: false })}
-          />
-        </div>
-      ) : (
-        <>
-          <AddSaleTopBar
-            activeTab={activeTab}
-            updateTab={updateTab}
-          />
+      <AddSaleTopBar
+        activeTab={activeTab}
+        updateTab={updateTab}
+      />
 
-          {/* ── SCROLLABLE CONTENT ── */}
-          <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: 0 }}>
-            <AddSaleCustomerHeader
-              activeTab={activeTab}
-              parties={parties}
-              setActiveTabCustomer={setActiveTabCustomer}
-              updateTab={updateTab}
-              displayedInvoiceNo={displayedInvoiceNo}
-              displayedInvoiceDate={displayedInvoiceDate}
-            />
+      {/* ── SCROLLABLE CONTENT ── */}
+      <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: 0 }}>
+        <AddSaleCustomerHeader
+          activeTab={activeTab}
+          parties={parties}
+          setActiveTabCustomer={setActiveTabCustomer}
+          updateTab={updateTab}
+          displayedInvoiceNo={displayedInvoiceNo}
+          displayedInvoiceDate={displayedInvoiceDate}
+        />
 
-            <AddSaleTable
-              activeTab={activeTab}
-              items={items}
-              updateRowItem={updateRowItem}
-              updateRow={updateRow}
-              addRow={addRow}
-              widths={widths}
-              startResize={startResize}
-              totalQty={totalQty}
-              totalAmount={totalAmount}
-              onBarcodeClick={isBarcodeScanEnabled ? () => setShowBarcodeModal(true) : undefined}
-            />
+        <AddSaleTable
+          activeTab={activeTab}
+          items={items}
+          updateRowItem={updateRowItem}
+          updateRow={updateRow}
+          addRow={addRow}
+          widths={widths}
+          startResize={startResize}
+          totalQty={totalQty}
+          totalAmount={totalAmount}
+          onBarcodeClick={isBarcodeScanEnabled ? () => setShowBarcodeModal(true) : undefined}
+        />
 
-            <AddSaleBottomActions
-              activeTab={activeTab}
-              updateTab={updateTab}
-              updateDiscountPercent={updateDiscountPercent}
-              updateDiscountAmount={updateDiscountAmount}
-              imageInputRef={imageInputRef}
-              documentInputRef={documentInputRef}
-              handleAttachmentSelection={handleAttachmentSelection}
-              taxOptions={taxOptions}
-              taxAmount={taxAmount}
-              roundOffDiff={roundOffDiff}
-              roundedTotal={roundedTotal}
-              computedBalance={computedBalance}
-              saveError={saveError}
-              isSaving={isSaving}
-              handleSaveSale={handleSaveSale}
-              onShare={onShare}
-              isEditing={Boolean(initialInvoice)}
-            />
-          </div>{/* end scroll */}
-        </>
-      )}
+        <AddSaleBottomActions
+          activeTab={activeTab}
+          updateTab={updateTab}
+          updateDiscountPercent={updateDiscountPercent}
+          updateDiscountAmount={updateDiscountAmount}
+          imageInputRef={imageInputRef}
+          documentInputRef={documentInputRef}
+          handleAttachmentSelection={handleAttachmentSelection}
+          taxOptions={taxOptions}
+          taxAmount={taxAmount}
+          roundOffDiff={roundOffDiff}
+          roundedTotal={roundedTotal}
+          computedBalance={computedBalance}
+          saveError={saveError}
+          isSaving={isSaving}
+          handleSaveSale={handleSaveSale}
+          onShare={onShare}
+          isEditing={Boolean(initialInvoice)}
+        />
+      </div>{/* end scroll */}
 
       {/* Barcode Scan Modal */}
       {showBarcodeModal && (

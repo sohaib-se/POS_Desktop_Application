@@ -1,7 +1,7 @@
 import { EditableText } from "./SharedComponents";
 import { useCompanyDetails } from "./useCompanyDetails";
 import { BORDER, TEXT_DARK, TEXT_MUTED } from "./constants";
-import type { BillPreviewSaleData } from "../../../previewbill/BillPreviewData";
+import type { BillPreviewSaleData } from "./BillPreviewData";
 
 export function FrenchElitePreview({ color, sale, children }: { color?: string, sale?: BillPreviewSaleData, children?: React.ReactNode }) {
   const { companyName, phone, email, logo, showCompanyName, showPhone, showEmail, showLogo, companyNameTextSize, invoiceTextSize } = useCompanyDetails();

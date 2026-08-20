@@ -1,7 +1,7 @@
 import { EditableText, PrintPreviewContext } from "./SharedComponents";
 import { useCompanyDetails } from "./useCompanyDetails";
 import { TEXT_DARK, TEXT_MUTED } from "./constants";
-import type { BillPreviewSaleData } from "../../../previewbill/BillPreviewData";
+import type { BillPreviewSaleData } from "./BillPreviewData";
 import { useContext } from "react";
 
 export function ThermalReceiptPreview({ children }: { sale?: BillPreviewSaleData, children?: React.ReactNode }) {

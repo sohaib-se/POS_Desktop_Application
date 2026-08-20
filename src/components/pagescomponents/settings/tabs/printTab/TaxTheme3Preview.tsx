@@ -1,4 +1,4 @@
-import type { BillPreviewSaleData } from "../../../previewbill/BillPreviewData";
+import type { BillPreviewSaleData } from "./BillPreviewData";
 import { DUMMY_REGULAR_SALE } from "./DummySaleData";
 import { EditableText } from "./SharedComponents";
 import { useCompanyDetails } from "./useCompanyDetails";

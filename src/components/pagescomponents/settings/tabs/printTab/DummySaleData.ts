@@ -1,4 +1,4 @@
-import type { BillPreviewSaleData } from "../../../previewbill/BillPreviewData";
+import type { BillPreviewSaleData } from "./BillPreviewData";
 
 export const DUMMY_REGULAR_SALE: BillPreviewSaleData = {
   invoiceNo: "Inv. 101",

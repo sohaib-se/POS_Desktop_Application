@@ -1,7 +1,7 @@
 import { EditableText } from "./SharedComponents";
 import { useCompanyDetails } from "./useCompanyDetails";
 import { TEXT_DARK } from "./constants";
-import type { BillPreviewSaleData } from "../../../previewbill/BillPreviewData";
+import type { BillPreviewSaleData } from "./BillPreviewData";
 import { DUMMY_THERMAL_SALE } from "./DummySaleData";
 
 export function ThermalTheme4Preview({ sale }: { sale?: BillPreviewSaleData }) {

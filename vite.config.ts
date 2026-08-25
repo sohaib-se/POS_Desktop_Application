@@ -11,6 +11,7 @@ function sqliteApiPlugin() {
       const appDataRoot = path.join(process.cwd(), 'app_data');
       const itemsImagesRoot = path.join(appDataRoot, 'items_images');
       const saleAttachmentsRoot = path.join(appDataRoot, 'sale_attachments');
+      const paymentInAttachmentsRoot = path.join(appDataRoot, 'paymentin_attachments');
 
       const resolveManagedImagePath = (rawPath: unknown) => {
         if (!rawPath || typeof rawPath !== 'string') {
@@ -68,6 +69,40 @@ function sqliteApiPlugin() {
 
       const removeManagedAttachmentFile = (rawPath: unknown) => {
         const absolutePath = resolveManagedAttachmentPath(rawPath);
+        if (!absolutePath || !fs.existsSync(absolutePath)) {
+          return;
+        }
+
+        const stats = fs.statSync(absolutePath);
+        if (!stats.isFile()) {
+          return;
+        }
+
+        fs.unlinkSync(absolutePath);
+      };
+
+      const resolveManagedPaymentInAttachmentPath = (rawPath: unknown) => {
+        if (!rawPath || typeof rawPath !== 'string') {
+          return null;
+        }
+
+        const trimmedPath = rawPath.trim();
+        if (!trimmedPath.startsWith('/app_data/paymentin_attachments/')) {
+          return null;
+        }
+
+        const relativePath = trimmedPath.replace(/^\/app_data\//, '');
+        const absolutePath = path.join(appDataRoot, relativePath);
+
+        if (!absolutePath.startsWith(paymentInAttachmentsRoot)) {
+          return null;
+        }
+
+        return absolutePath;
+      };
+
+      const removeManagedPaymentInAttachmentFile = (rawPath: unknown) => {
+        const absolutePath = resolveManagedPaymentInAttachmentPath(rawPath);
         if (!absolutePath || !fs.existsSync(absolutePath)) {
           return;
         }
@@ -750,7 +785,7 @@ function sqliteApiPlugin() {
                 const imageFile = saveDataUrlToAppData({
                   dataUrl: payload.imageDataUrl,
                   prefix: 'payment_in_image',
-                  targetRoot: saleAttachmentsRoot,
+                  targetRoot: paymentInAttachmentsRoot,
                 });
                 createdImagePath = imageFile?.filePath ?? null;
               }
@@ -842,6 +877,10 @@ function sqliteApiPlugin() {
                   }
                 } catch (txError) {
                   console.error('Failed to delete cash/bank transaction:', txError);
+                }
+
+                if (existingRecord.attachment_image_path || existingRecord.attachmentImagePath) {
+                  removeManagedPaymentInAttachmentFile(existingRecord.attachment_image_path || existingRecord.attachmentImagePath);
                 }
               }
 

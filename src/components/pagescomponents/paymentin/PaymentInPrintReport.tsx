@@ -50,64 +50,58 @@ export function PaymentInPrintReport({
   };
 
   return (
-    <div className="hidden print:block print-area bg-white text-black p-8 font-sans">
-      <div className="text-center mb-6">
-        <h1 className="text-2xl font-bold mb-1">{businessProfile?.business_name || "Laimsoft"}</h1>
-        <p className="text-sm">Phone no.: {businessProfile?.phone_number || "3369322038"}</p>
+    <div className="print-area bg-white text-black font-sans w-full px-10 py-6">
+      {/* Business Header */}
+      <div className="text-center mb-4">
+        <h1 className="text-base font-bold">{businessProfile?.business_name || "Laimsoft"}</h1>
+        <p className="text-xs text-gray-600">Phone no.: {businessProfile?.phone_number || "3369322038"}</p>
       </div>
 
-      <div className="text-center mb-8">
-        <h2 className="text-xl font-bold underline inline-block">All Transactions Report</h2>
+      {/* Report Title */}
+      <div className="text-center mb-5">
+        <h2 className="text-lg font-bold underline inline-block">All Transactions Report</h2>
       </div>
 
-      <div className="mb-6 space-y-3">
-        <div className="flex gap-2 text-base">
-          <span className="font-bold">Party name:</span>
-          <span className="font-bold">All parties</span>
-        </div>
-        <div className="flex gap-2 text-base">
-          <span className="font-bold">Transaction type:</span>
-          <span className="font-bold">Payment-In</span>
-        </div>
-        <div className="flex gap-2 text-base">
-          <span className="font-bold">Month:</span>
-          <span className="font-bold">
-            {selectedMonth ? new Date(selectedMonth + '-01').toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : "All Time"}
-          </span>
-        </div>
+      {/* Meta Info */}
+      <div className="mb-4 space-y-1.5">
+        <p className="text-sm font-bold">Party name: All Parties</p>
+        <p className="text-sm font-bold">Transaction type: Payment-In</p>
+        <p className="text-sm font-bold">
+          Duration: {startDateStr && endDateStr ? `From ${startDateStr} to ${endDateStr}` : "All Time"}
+        </p>
       </div>
 
-      <table className="w-full text-sm mb-6 border-collapse">
-        <thead className="bg-[#D3D3D3]" style={{ WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }}>
-          <tr className="border-b border-black text-left">
-            <th className="py-1 px-2 font-bold whitespace-nowrap">DATE</th>
-            <th className="py-1 px-2 font-bold whitespace-nowrap">Ref No.</th>
-            <th className="py-1 px-2 font-bold">Party Name</th>
-            <th className="py-1 px-2 font-bold">TYPE</th>
-            <th className="py-1 px-2 font-bold text-center">TOTAL</th>
-            <th className="py-1 px-2 font-bold text-center">PAYMENT<br />TYPE</th>
-            <th className="py-1 px-2 font-bold text-center">Received</th>
+      {/* Table */}
+      <table className="w-full text-xs mb-4 border-collapse">
+        <thead style={{ backgroundColor: '#D3D3D3', WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>
+          <tr className="border border-gray-500 text-left">
+            <th className="py-1.5 px-2 font-bold border-r border-gray-500 whitespace-nowrap">DATE</th>
+            <th className="py-1.5 px-2 font-bold border-r border-gray-500 whitespace-nowrap">Receipt No.</th>
+            <th className="py-1.5 px-2 font-bold border-r border-gray-500">Party Name</th>
+            <th className="py-1.5 px-2 font-bold border-r border-gray-500">TYPE</th>
+            <th className="py-1.5 px-2 font-bold border-r border-gray-500 text-right">TOTAL</th>
+            <th className="py-1.5 px-2 font-bold border-r border-gray-500 text-center">PAYMENT<br />TYPE</th>
+            <th className="py-1.5 px-2 font-bold text-right">Received</th>
           </tr>
         </thead>
         <tbody>
           {records.map((record, idx) => (
-            <tr key={record.id || idx} className="border-b border-black text-sm">
-              <td className="py-1 px-2 whitespace-nowrap">{formatDate(record.date)}</td>
-              <td className="py-1 px-2">{record.receiptNo || record.receipt_no || ""}</td>
-              <td className="py-1 px-2">{record.partyName || record.party_name || ""}</td>
-              <td className="py-1 px-2">Payment-<br/>In</td>
-              <td className="py-1 px-2 text-center whitespace-nowrap">{currencyStr} {Number(record.amount || 0).toFixed(2)}</td>
-              <td className="py-1 px-2 text-center">{record.paymentType || record.payment_type || ""}</td>
-              <td className="py-1 px-2 text-center whitespace-nowrap">{currencyStr} {Number(record.amount || 0).toFixed(2)}</td>
+            <tr key={record.id || idx} className="border-b border-gray-300 text-xs">
+              <td className="py-1 px-2 whitespace-nowrap border-r border-gray-300">{formatDate(record.date)}</td>
+              <td className="py-1 px-2 border-r border-gray-300">{record.receiptNo || record.receipt_no || ""}</td>
+              <td className="py-1 px-2 border-r border-gray-300">{record.partyName || record.party_name || ""}</td>
+              <td className="py-1 px-2 border-r border-gray-300">Payment-In</td>
+              <td className="py-1 px-2 text-right whitespace-nowrap border-r border-gray-300">{currencyStr} {Number(record.amount || 0).toFixed(2)}</td>
+              <td className="py-1 px-2 text-center border-r border-gray-300">{record.paymentType || record.payment_type || ""}</td>
+              <td className="py-1 px-2 text-right whitespace-nowrap">{currencyStr} {Number(record.amount || 0).toFixed(2)}</td>
             </tr>
           ))}
         </tbody>
       </table>
 
-      <div className="flex justify-end pr-2">
-        <div className="text-xl font-bold">
-          Total: {currencyStr} {totalAmount.toFixed(2)}
-        </div>
+      {/* Total */}
+      <div className="flex justify-end">
+        <p className="text-sm font-bold">Total: {currencyStr} {totalAmount.toFixed(2)}</p>
       </div>
     </div>
   );

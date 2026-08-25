@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { X } from "lucide-react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { PaymentInHeader } from "@/components/pagescomponents/paymentin/PaymentInHeader";
 import { PaymentInFilters } from "@/components/pagescomponents/paymentin/PaymentInFilters";
@@ -14,6 +15,7 @@ import { useSettings } from "@/hooks/useSettings";
 export function PaymentIn() {
   const [showAddPayment, setShowAddPayment] = useState(false);
   const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
+  const [showPrintPreview, setShowPrintPreview] = useState(false);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [editingRecordId, setEditingRecordId] = useState<string | null>(null);
   const [parties, setParties] = useState<any[]>([]);
@@ -255,6 +257,122 @@ export function PaymentIn() {
   const totalAmount = filteredRecords.reduce((sum, p) => sum + p.amount, 0);
   const totalReceived = totalAmount;
 
+  const handlePrint = () => {
+    const formatDate = (dateStr: string) => {
+      if (!dateStr) return '';
+      if (dateStr.includes('/')) {
+        const parts = dateStr.split('/');
+        if (parts.length === 3) return `${parts[0].padStart(2,'0')}/${parts[1].padStart(2,'0')}/${parts[2]}`;
+      } else if (dateStr.includes('-')) {
+        const parts = dateStr.split('T')[0].split('-');
+        if (parts.length === 3 && parts[0].length === 4) return `${parts[2]}/${parts[1]}/${parts[0]}`;
+      }
+      return dateStr;
+    };
+
+    let startDateStr = '';
+    let endDateStr = '';
+    if (selectedMonth) {
+      const [year, month] = selectedMonth.split('-');
+      if (year && month) {
+        startDateStr = `01/${month}/${year}`;
+        const lastDay = new Date(parseInt(year), parseInt(month), 0).getDate();
+        endDateStr = `${lastDay}/${month}/${year}`;
+      }
+    }
+
+    const currencyStr = 'Rs';
+    const businessName = businessProfile?.business_name || 'Laimsoft';
+    const phoneNumber = businessProfile?.phone_number || '3369322038';
+
+    const rowsHtml = filteredRecords.map(record => `
+      <tr>
+        <td>${formatDate(record.date)}</td>
+        <td>${record.receiptNo || record.receipt_no || ''}</td>
+        <td>${record.partyName || record.party_name || ''}</td>
+        <td>Payment-In</td>
+        <td style="text-align:right">${currencyStr} ${Number(record.amount || 0).toFixed(2)}</td>
+        <td style="text-align:center">${record.paymentType || record.payment_type || ''}</td>
+        <td style="text-align:right">${currencyStr} ${Number(record.amount || 0).toFixed(2)}</td>
+      </tr>
+    `).join('');
+
+    const html = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="UTF-8" />
+        <title>All Transactions Report</title>
+        <style>
+          @page { margin: 12mm; }
+          * { box-sizing: border-box; margin: 0; padding: 0; }
+          body { font-family: Arial, sans-serif; font-size: 12px; color: #000; background: #fff; }
+          .header { text-align: center; margin-bottom: 14px; }
+          .header h1 { font-size: 15px; font-weight: bold; margin-bottom: 2px; }
+          .header p { font-size: 11px; color: #333; }
+          .title { text-align: center; margin-bottom: 14px; }
+          .title h2 { font-size: 16px; font-weight: bold; text-decoration: underline; }
+          .meta { margin-bottom: 12px; }
+          .meta p { font-size: 12px; font-weight: bold; margin-bottom: 4px; }
+          table { width: 100%; border-collapse: collapse; font-size: 11px; margin-bottom: 12px; }
+          thead tr { background-color: #D3D3D3; }
+          th { padding: 5px 6px; font-weight: bold; border: 1px solid #888; text-align: left; }
+          td { padding: 4px 6px; border-bottom: 1px solid #ccc; border-right: 1px solid #ccc; }
+          td:first-child { border-left: 1px solid #ccc; }
+          .total { text-align: right; font-size: 13px; font-weight: bold; margin-top: 8px; }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <h1>${businessName}</h1>
+          <p>Phone no.: ${phoneNumber}</p>
+        </div>
+        <div class="title"><h2>All Transactions Report</h2></div>
+        <div class="meta">
+          <p>Party name: All Parties</p>
+          <p>Transaction type: Payment-In</p>
+          <p>Duration: ${startDateStr && endDateStr ? 'From ' + startDateStr + ' to ' + endDateStr : 'All Time'}</p>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>DATE</th>
+              <th>Receipt No.</th>
+              <th>Party Name</th>
+              <th>TYPE</th>
+              <th style="text-align:right">TOTAL</th>
+              <th style="text-align:center">PAYMENT TYPE</th>
+              <th style="text-align:right">Received</th>
+            </tr>
+          </thead>
+          <tbody>${rowsHtml}</tbody>
+        </table>
+        <p class="total">Total: ${currencyStr} ${filteredRecords.reduce((s, r) => s + Number(r.amount || 0), 0).toFixed(2)}</p>
+      </body>
+      </html>
+    `;
+
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = 'none';
+    document.body.appendChild(iframe);
+    const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
+    if (iframeDoc) {
+      iframeDoc.open();
+      iframeDoc.write(html);
+      iframeDoc.close();
+      setTimeout(() => {
+        iframe.contentWindow?.focus();
+        iframe.contentWindow?.print();
+        setTimeout(() => document.body.removeChild(iframe), 1000);
+      }, 400);
+    }
+  };
+
   const partyOptions = parties.map(p => ({
     value: String(p.id),
     label: p.name,
@@ -374,6 +492,7 @@ export function PaymentIn() {
           openRowMenuId={openRowMenuId}
           setOpenRowMenuPosition={setOpenRowMenuPosition}
           setOpenRowMenuId={setOpenRowMenuId}
+          onPrintClick={() => setShowPrintPreview(true)}
         />
       )}
 
@@ -485,12 +604,51 @@ export function PaymentIn() {
         </DialogContent>
       </Dialog>
     </div>
-    <PaymentInPrintReport
-      records={filteredRecords}
-      selectedPartyName={selectedParty ? partyOptions.find((p) => p.value === selectedParty)?.label || "All Parties" : "All Parties"}
-      selectedMonth={selectedMonth}
-      businessProfile={businessProfile}
-    />
+    <Dialog open={showPrintPreview} onOpenChange={setShowPrintPreview}>
+      <DialogContent
+        showCloseButton={false}
+        className="rounded-xl border-0 bg-white p-0 shadow-xl flex flex-col print:shadow-none print:m-0 print:p-0 print:border-none"
+        style={{ width: '80vw', maxWidth: '80vw' }}
+      >
+        <div className="flex items-center justify-between p-4 border-b print:hidden">
+          <h2 className="text-xl font-bold">Preview</h2>
+          <button onClick={() => setShowPrintPreview(false)} className="text-gray-500 hover:text-gray-700">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+        <div className="overflow-visible print:overflow-visible">
+          <PaymentInPrintReport
+            records={filteredRecords}
+            selectedPartyName={selectedParty ? partyOptions.find((p) => p.value === selectedParty)?.label || "All Parties" : "All Parties"}
+            selectedMonth={selectedMonth}
+            businessProfile={businessProfile}
+          />
+        </div>
+        <div className="p-4 border-t flex justify-end gap-3 print:hidden">
+          <button className="rounded-full px-6 py-2 border border-red-500 text-red-500 font-medium text-sm hover:bg-red-50 transition-colors">
+            Open PDF
+          </button>
+          <button 
+            onClick={handlePrint}
+            className="rounded-full px-6 py-2 border border-red-500 text-red-500 font-medium text-sm hover:bg-red-50 transition-colors"
+          >
+            Print
+          </button>
+          <button className="rounded-full px-6 py-2 border border-red-500 text-red-500 font-medium text-sm hover:bg-red-50 transition-colors">
+            Save PDF
+          </button>
+          <button className="rounded-full px-6 py-2 border border-red-500 text-red-500 font-medium text-sm hover:bg-red-50 transition-colors">
+            Email PDF
+          </button>
+          <button 
+            onClick={() => setShowPrintPreview(false)}
+            className="rounded-full px-6 py-2 bg-red-500 text-white font-medium text-sm hover:bg-red-600 transition-colors"
+          >
+            Close
+          </button>
+        </div>
+      </DialogContent>
+    </Dialog>
     </>
   );
 }

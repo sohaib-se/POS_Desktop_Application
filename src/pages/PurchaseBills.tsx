@@ -8,7 +8,6 @@ import {
   getMonthKeyFromDate,
   formatDateDisplay,
   createCsvContent,
-  monthLabelForFilter,
 } from "../components/pagescomponents/purchasebills/utils";
 import { PurchaseBillHeader } from "../components/pagescomponents/purchasebills/PurchaseBillHeader";
 import { PurchaseBillFilters } from "../components/pagescomponents/purchasebills/PurchaseBillFilters";
@@ -29,7 +28,6 @@ export function PurchaseBills({ onBack }: PurchaseBillsProps = {}) {
   const [selectedMonthKey, setSelectedMonthKey] = useState<string>("");
   const [searchQuery, setSearchQuery] = useState("");
   const [showSearchInput, setShowSearchInput] = useState(false);
-  const [isMonthMenuOpen, setIsMonthMenuOpen] = useState(false);
   const [openRowMenuId, setOpenRowMenuId] = useState<string | null>(null);
   const [openRowMenuPosition, setOpenRowMenuPosition] = useState<{ left: number; top: number } | null>(null);
   const [viewingInvoice, setViewingInvoice] = useState<PurchaseBillViewRow | null>(null);
@@ -60,7 +58,6 @@ export function PurchaseBills({ onBack }: PurchaseBillsProps = {}) {
 
   useEffect(() => {
     const closeMenus = () => {
-      setIsMonthMenuOpen(false);
       setOpenRowMenuId(null);
       setOpenRowMenuPosition(null);
     };
@@ -114,13 +111,7 @@ export function PurchaseBills({ onBack }: PurchaseBillsProps = {}) {
             return previousMonthKey;
           }
 
-          const currentMonthKey = getMonthKeyFromDate(formatDateDisplay(new Date()));
-          const currentMonthExists = normalizedRows.some((row) => row.monthKey === currentMonthKey);
-          if (currentMonthExists) {
-            return currentMonthKey;
-          }
-
-          return normalizedRows[0]?.monthKey ?? "";
+          return getMonthKeyFromDate(formatDateDisplay(new Date()));
         });
       }
       setStatusMessage("");
@@ -152,10 +143,6 @@ export function PurchaseBills({ onBack }: PurchaseBillsProps = {}) {
     };
   }, [loadPurchaseBills]);
 
-  const monthOptions = useMemo(() => {
-    const uniqueMonths = new Set(invoiceRows.map((row) => row.monthKey));
-    return Array.from(uniqueMonths).sort((left, right) => right.localeCompare(left));
-  }, [invoiceRows]);
 
   const selectedMonthRows = useMemo(() => {
     if (!selectedMonthKey) {
@@ -171,15 +158,19 @@ export function PurchaseBills({ onBack }: PurchaseBillsProps = {}) {
       return selectedMonthRows;
     }
 
-    return selectedMonthRows.filter((row) => row.partyName.toLowerCase().includes(normalizedQuery));
+    return selectedMonthRows.filter((row) => {
+      const partyMatch = row.partyName.toLowerCase().includes(normalizedQuery);
+      const invoiceMatch = row.invoiceNo.toLowerCase().includes(normalizedQuery);
+      const amountMatch = row.amount.toString().toLowerCase().includes(normalizedQuery);
+      
+      return partyMatch || invoiceMatch || amountMatch;
+    });
   }, [searchQuery, selectedMonthRows]);
 
   const totalPurchase = visibleRows.reduce((sum, invoice) => sum + invoice.amount, 0);
   const totalPaid = visibleRows.filter((invoice) => invoice.balance === 0).reduce((sum, invoice) => sum + invoice.amount, 0);
   const totalUnpaid = visibleRows.reduce((sum, invoice) => sum + invoice.balance, 0);
 
-  const currentMonthKey = getMonthKeyFromDate(formatDateDisplay(new Date()));
-  const monthButtonLabel = selectedMonthKey === currentMonthKey ? "This Month" : monthLabelForFilter(selectedMonthKey);
 
   const handleDownloadCsv = () => {
     const csvContent = createCsvContent(selectedMonthRows);
@@ -260,11 +251,7 @@ export function PurchaseBills({ onBack }: PurchaseBillsProps = {}) {
       />
 
       <PurchaseBillFilters
-        monthButtonLabel={monthButtonLabel}
-        isMonthMenuOpen={isMonthMenuOpen}
-        setIsMonthMenuOpen={setIsMonthMenuOpen}
-        setOpenRowMenuId={setOpenRowMenuId}
-        monthOptions={monthOptions}
+        selectedMonthKey={selectedMonthKey}
         setSelectedMonthKey={setSelectedMonthKey}
       />
 
@@ -280,7 +267,6 @@ export function PurchaseBills({ onBack }: PurchaseBillsProps = {}) {
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
         searchInputRef={searchInputRef}
-        setIsMonthMenuOpen={setIsMonthMenuOpen}
         setOpenRowMenuId={setOpenRowMenuId}
         setOpenRowMenuPosition={setOpenRowMenuPosition}
         openRowMenuId={openRowMenuId}

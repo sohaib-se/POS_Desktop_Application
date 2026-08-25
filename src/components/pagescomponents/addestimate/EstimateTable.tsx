@@ -3,7 +3,14 @@ import type { MouseEvent } from "react";
 import type { SaleRow, SaleTab } from "./types";
 import { Trash2 } from "lucide-react";
 
-function ItemSearchCell({ row, items, updateRow, handleItemSelect }: any) {
+interface ItemSearchCellProps {
+  row: SaleRow;
+  items: any[];
+  updateRow: (rowId: number, field: keyof SaleRow | Partial<SaleRow>, value?: string) => void;
+  handleItemSelect: (rowId: number, itemName: string) => void;
+}
+
+function ItemSearchCell({ row, items, updateRow, handleItemSelect }: ItemSearchCellProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState(row.item);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -31,6 +38,7 @@ function ItemSearchCell({ row, items, updateRow, handleItemSelect }: any) {
         value={searchTerm}
         onChange={(e) => {
           setSearchTerm(e.target.value);
+          updateRow(row.id, "item", e.target.value);
           if (!isOpen) setIsOpen(true);
         }}
         onFocus={() => setIsOpen(true)}

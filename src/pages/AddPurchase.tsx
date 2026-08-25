@@ -13,6 +13,9 @@ import type {
   ItemOption,
   BankOption,
 } from "@/components/pagescomponents/addpurchase/types";
+import { AddPartyDialog } from "@/components/pagescomponents/parties/AddPartyDialog";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { toast } from "@/components/ui/Toast";
 
 interface AddPurchaseProps {
   onSave?: () => void;
@@ -160,6 +163,83 @@ export function AddPurchase({ onSave, onShare, onClose, initialInvoice }: AddPur
   const imageInputRef = useRef<HTMLInputElement | null>(null);
   const documentInputRef = useRef<HTMLInputElement | null>(null);
 
+  const [showAddParty, setShowAddParty] = useState(false);
+  const [showDiscardDialog, setShowDiscardDialog] = useState(false);
+  const [tabClosePendingId, setTabClosePendingId] = useState<number | null>(null);
+  const [partyBeingEdited, setPartyBeingEdited] = useState<any>(null);
+  const [activeTabParty, setActiveTabParty] = useState<"address" | "credit">("address");
+  const [showShippingAddress, setShowShippingAddress] = useState(false);
+  const [isSavingParty, setIsSavingParty] = useState(false);
+  const [showCreditLimitError, setShowCreditLimitError] = useState(false);
+  const [partyForm, setPartyForm] = useState({
+    name: "", phoneNumber: "", email: "", billingAddress: "", shippingAddress: "",
+    openingBalance: "", asOfDate: new Date().toLocaleDateString("en-IN"),
+    balanceType: "to-pay" as "to-pay" | "to-receive",
+    creditLimit: "no-limit" as "no-limit" | "custom", creditLimitAmount: "",
+  });
+
+  const resetPartyForm = () => {
+    setPartyForm({
+      name: "", phoneNumber: "", email: "", billingAddress: "", shippingAddress: "",
+      openingBalance: "", asOfDate: new Date().toLocaleDateString("en-IN"),
+      balanceType: "to-pay", creditLimit: "no-limit", creditLimitAmount: "",
+    });
+    setActiveTabParty("address");
+  };
+
+  const fetchParties = async () => {
+    try {
+      const res = await fetch("/api/parties");
+      if (res.ok) {
+        const data = await res.json();
+        const sortedParties = data.sort((a: any, b: any) => a.name.localeCompare(b.name));
+        setParties(sortedParties);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleSaveParty = async () => {
+    setIsSavingParty(true);
+    try {
+      const payload = {
+        name: partyForm.name,
+        phone: partyForm.phoneNumber,
+        email: partyForm.email || null,
+        address: partyForm.billingAddress || null,
+        shippingAddress: partyForm.shippingAddress || null,
+        balance: (Number(partyForm.openingBalance) || 0) * (partyForm.balanceType === "to-pay" ? -1 : 1),
+        creditLimit: partyForm.creditLimit === "custom" ? Number(partyForm.creditLimitAmount) : null,
+        type: "supplier"
+      };
+      const response = await fetch("/api/parties", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (response.ok) {
+        const newParty = await response.json();
+        if (newParty) {
+          setParties((prev) => {
+            const exists = prev.find(p => p.id === newParty.id);
+            return exists ? prev : [...prev, newParty].sort((a, b) => a.name.localeCompare(b.name));
+          });
+        }
+        setShowAddParty(false);
+        resetPartyForm();
+        if (newParty && newParty.id) {
+          updateTab({ customerSearch: String(newParty.id), phoneNo: newParty.phone ?? "" });
+        }
+        fetchParties();
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsSavingParty(false);
+    }
+  };
+
   useEffect(() => {
     const frame = requestAnimationFrame(() => setIsOpenAnimated(true));
     return () => cancelAnimationFrame(frame);
@@ -192,9 +272,9 @@ export function AddPurchase({ onSave, onShare, onClose, initialInvoice }: AddPur
               id: globalRowId++,
               itemId: lineItem.itemId ?? "",
               item: lineItem.name ?? "",
-              qty: String(lineItem.quantity ?? ""),
+              qty: String(Math.max(0, lineItem.quantity ?? 1)),
               unit: lineItem.unit ?? "NONE",
-              pricePerUnit: String(lineItem.price ?? ""),
+              pricePerUnit: String(Math.max(0, lineItem.price ?? 0)),
             })),
             createEmptyRow(),
           ]
@@ -256,22 +336,6 @@ export function AddPurchase({ onSave, onShare, onClose, initialInvoice }: AddPur
           ),
         );
 
-        setTabs((previousTabs) => {
-          if (!previousTabs.length || previousTabs[0].customerSearch) {
-            return previousTabs;
-          }
-
-          const defaultParty = sortedParties.find(p => p.status !== 'inactive') || sortedParties[0];
-          if (!defaultParty || defaultParty.status === 'inactive') {
-            return previousTabs;
-          }
-
-          return previousTabs.map((tab) => ({
-            ...tab,
-            customerSearch: String(defaultParty.id),
-            phoneNo: defaultParty.phone,
-          }));
-        });
       } catch (error) {
         console.error(error);
       }
@@ -293,7 +357,28 @@ export function AddPurchase({ onSave, onShare, onClose, initialInvoice }: AddPur
 
   const updateTab = (partial: Partial<PurchaseTab>) => {
     setTabs((prev) =>
-      prev.map((t) => (t.id === activeTabId ? { ...t, ...partial } : t))
+      prev.map((t) => {
+        if (t.id !== activeTabId) return t;
+
+        const nextTab = { ...t, ...partial };
+
+        if (partial.rows) {
+          const nextTotalAmount = nextTab.rows.reduce(
+            (s, r) => s + (parseFloat(r.qty) || 0) * (parseFloat(r.pricePerUnit) || 0),
+            0
+          );
+
+          if (nextTab.discountPercent && parseFloat(nextTab.discountPercent) > 0) {
+            const nextDiscountRs = (nextTotalAmount * parseFloat(nextTab.discountPercent)) / 100;
+            nextTab.discountRs = nextTotalAmount > 0 ? nextDiscountRs.toFixed(2) : "";
+          } else if (nextTab.discountRs && parseFloat(nextTab.discountRs) > 0) {
+            const percentValue = nextTotalAmount > 0 ? (parseFloat(nextTab.discountRs) / nextTotalAmount) * 100 : 0;
+            nextTab.discountPercent = nextTotalAmount > 0 ? percentValue.toFixed(2) : "";
+          }
+        }
+
+        return nextTab;
+      })
     );
   };
 
@@ -321,6 +406,7 @@ export function AddPurchase({ onSave, onShare, onClose, initialInvoice }: AddPur
           matchedItem && Number.isFinite(Number(matchedItem.purchase_price))
             ? String(Number(matchedItem.purchase_price ?? 0))
             : row.pricePerUnit,
+        qty: "1",
       };
     });
 
@@ -474,13 +560,42 @@ export function AddPurchase({ onSave, onShare, onClose, initialInvoice }: AddPur
         }),
       );
 
+      toast.success(isEditing ? "Purchase updated successfully!" : "Purchase saved successfully!");
+
+      setTabs(prev => {
+        const remaining = prev.filter(t => t.id !== activeTabId);
+        if (remaining.length === 0) {
+          setTimeout(() => { if (onClose) onClose(); }, 0);
+          return prev;
+        }
+        setActiveTabId(remaining[remaining.length - 1].id);
+        return remaining;
+      });
+
       onSave?.();
-      onClose?.();
     } catch (error) {
       console.error(error);
-      setSaveError("Failed to save the purchase. Please try again.");
+      toast.error("Failed to save the purchase. Please try again.");
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const hasUnsavedChanges = () => {
+    return tabs.some(t =>
+      t.customerSearch ||
+      t.rows.some(r => r.item || r.qty || r.pricePerUnit) ||
+      t.description ||
+      t.discountPercent ||
+      t.discountRs
+    );
+  };
+
+  const handleCloseRequest = () => {
+    if (hasUnsavedChanges()) {
+      setShowDiscardDialog(true);
+    } else {
+      if (onClose) onClose();
     }
   };
 
@@ -491,9 +606,18 @@ export function AddPurchase({ onSave, onShare, onClose, initialInvoice }: AddPur
     setActiveTabId(id);
   };
 
-  const closeTab = (id: number, e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (tabs.length === 1) return;
+  const tabHasUnsavedChanges = (tab: PurchaseTab) =>
+    !!(tab.customerSearch ||
+      tab.rows.some(r => r.item || r.qty || r.pricePerUnit) ||
+      tab.description ||
+      tab.discountPercent ||
+      tab.discountRs);
+
+  const doCloseTab = (id: number) => {
+    if (tabs.length === 1) {
+      if (onClose) onClose();
+      return;
+    }
     setTabs((prev) => {
       const remaining = prev.filter((t) => t.id !== id);
       if (activeTabId === id) setActiveTabId(remaining[remaining.length - 1].id);
@@ -501,7 +625,19 @@ export function AddPurchase({ onSave, onShare, onClose, initialInvoice }: AddPur
     });
   };
 
+  const closeTab = (id: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const tab = tabs.find(t => t.id === id);
+    if (tab && tabHasUnsavedChanges(tab)) {
+      setTabClosePendingId(id);
+    } else {
+      doCloseTab(id);
+    }
+  };
+
   const updateRow = (rowId: number, field: keyof PurchaseRow, value: string) => {
+    if ((field === "qty" || field === "pricePerUnit") && Number(value) < 0) return;
+
     const updatedRows = activeTab.rows.map((row) => {
       if (row.id !== rowId) return row;
 
@@ -559,6 +695,10 @@ export function AddPurchase({ onSave, onShare, onClose, initialInvoice }: AddPur
     });
   };
 
+  const removeRow = (rowId: number) => {
+    updateTab({ rows: activeTab.rows.filter((r) => r.id !== rowId) });
+  };
+
   const totalQty = activeTab.rows.reduce((s, r) => s + (parseFloat(r.qty) || 0), 0);
   const totalAmount = activeTab.rows.reduce(
     (s, r) => s + (parseFloat(r.qty) || 0) * (parseFloat(r.pricePerUnit) || 0), 0
@@ -575,24 +715,27 @@ export function AddPurchase({ onSave, onShare, onClose, initialInvoice }: AddPur
   const computedBalance = roundedTotal - (Number(activeTab.paid) || 0);
 
   return (
-    <div
-      style={{
-        height: "100%",
-        display: "flex",
-        flexDirection: "column",
-        background: "#D0DCE7",
-        opacity: isOpenAnimated ? 1 : 0,
-        transform: isOpenAnimated ? "translate3d(0, 0, 0) scale(1)" : "translate3d(-48px, 48px, 0) scale(0.99)",
-        transition: "opacity 120ms ease-out, transform 170ms cubic-bezier(0.2, 0.8, 0.2, 1)",
-      }}
-    >
-      <PurchaseTabBar
+    <>
+      <div
+        style={{
+          height: "100%",
+          display: "flex",
+          flexDirection: "column",
+          background: "#D0DCE7",
+          opacity: isOpenAnimated ? 1 : 0,
+          transform: isOpenAnimated ? "translate3d(0, 0, 0) scale(1)" : "translate3d(-48px, 48px, 0) scale(0.99)",
+          transition: "opacity 120ms ease-out, transform 170ms cubic-bezier(0.2, 0.8, 0.2, 1)",
+        }}
+      >
+        <PurchaseTabBar
         tabs={tabs}
         activeTabId={activeTabId}
         setActiveTabId={setActiveTabId}
         addTab={addTab}
         closeTab={closeTab}
-        onClose={onClose}
+        onClose={handleCloseRequest}
+        parties={parties}
+        displayedInvoiceNo={displayedInvoiceNo}
       />
       
       <PurchaseTopBar />
@@ -605,6 +748,7 @@ export function AddPurchase({ onSave, onShare, onClose, initialInvoice }: AddPur
           updateTab={updateTab}
           displayedInvoiceNo={displayedInvoiceNo}
           displayedInvoiceDate={displayedInvoiceDate}
+          setShowAddParty={setShowAddParty}
         />
         
         <PurchaseTable
@@ -615,6 +759,7 @@ export function AddPurchase({ onSave, onShare, onClose, initialInvoice }: AddPur
           items={items}
           updateRow={updateRow}
           addRow={addRow}
+          removeRow={removeRow}
           totalQty={totalQty}
           totalAmount={totalAmount}
           fmt={fmt}
@@ -644,6 +789,53 @@ export function AddPurchase({ onSave, onShare, onClose, initialInvoice }: AddPur
         isSaving={isSaving}
         initialInvoice={initialInvoice}
       />
+      
+      <AddPartyDialog
+        showAddParty={showAddParty}
+        setShowAddParty={setShowAddParty}
+        partyBeingEdited={partyBeingEdited}
+        setPartyBeingEdited={setPartyBeingEdited}
+        resetPartyForm={resetPartyForm}
+        partyForm={partyForm}
+        setPartyForm={setPartyForm}
+        activeTab={activeTabParty}
+        setActiveTab={setActiveTabParty}
+        showShippingAddress={showShippingAddress}
+        setShowShippingAddress={setShowShippingAddress}
+        handleSaveParty={handleSaveParty}
+        isSavingParty={isSavingParty}
+        partyPendingDelete={null}
+        setPartyPendingDelete={() => {}}
+        isDeletingParty={false}
+        handleDeleteParty={async () => {}}
+        showCreditLimitError={showCreditLimitError}
+        setShowCreditLimitError={setShowCreditLimitError}
+      />
     </div>
+
+      <ConfirmDialog
+        open={showDiscardDialog}
+        title="Discard Changes?"
+        message="You have unsaved changes. Are you sure you want to discard them? All unsaved changes will be lost."
+        confirmLabel="Discard"
+        cancelLabel="Cancel"
+        confirmColor="#e53935"
+        icon="warning"
+        onConfirm={() => { setShowDiscardDialog(false); if (onClose) onClose(); }}
+        onCancel={() => setShowDiscardDialog(false)}
+      />
+
+      <ConfirmDialog
+        open={tabClosePendingId !== null}
+        title="Discard Changes?"
+        message="This tab has unsaved changes. Are you sure you want to close it?"
+        confirmLabel="Discard"
+        cancelLabel="Cancel"
+        confirmColor="#e53935"
+        icon="warning"
+        onConfirm={() => { const id = tabClosePendingId!; setTabClosePendingId(null); doCloseTab(id); }}
+        onCancel={() => setTabClosePendingId(null)}
+      />
+    </>
   );
 }

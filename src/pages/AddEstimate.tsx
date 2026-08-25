@@ -7,8 +7,8 @@ import { EstimateTable } from "../components/pagescomponents/addestimate/Estimat
 import { BottomSection } from "../components/pagescomponents/addestimate/BottomSection";
 import { Footer } from "../components/pagescomponents/addestimate/Footer";
 import { AddPartyDialog } from "../components/pagescomponents/parties/AddPartyDialog";
-import { ConfirmDialog } from "../components/ConfirmDialog";
-import { toast } from "../components/Toast";
+import { ConfirmDialog } from "../components/ui/ConfirmDialog";
+import { toast } from "../components/ui/Toast";
 
 interface AddEstimateProps {
   onSave?: () => void;

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import "./App.css";
-import { Toaster } from "@/components/Toast";
+import { Toaster } from "@/components/ui/Toast";
 import { Sidebar } from "@/components/common/Sidebar";
 import { Header } from "@/components/common/Header";
 import { EnterPasscodeScreen } from "@/components/common/EnterPasscodeScreen";

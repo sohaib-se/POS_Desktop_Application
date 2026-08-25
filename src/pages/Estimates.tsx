@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { ConfirmDialog } from "../components/ConfirmDialog";
+import { ConfirmDialog } from "../components/ui/ConfirmDialog";
 import { AddEstimate } from "@/pages/AddEstimate";
 import type { EstimateRecord } from "../components/pagescomponents/estimates/types";
 import { EstimatesHeader } from "../components/pagescomponents/estimates/EstimatesHeader";

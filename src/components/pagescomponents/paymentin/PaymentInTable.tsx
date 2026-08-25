@@ -104,51 +104,59 @@ export function PaymentInTable({
             </tr>
           </thead>
           <tbody>
-            {records.map((payment) => (
-              <tr key={payment.id} className="border-b border-gray-100 hover:bg-gray-50">
-                <td className="px-4 py-3">{payment.date}</td>
-                <td className="px-4 py-3">{payment.receiptNo || ""}</td>
-                <td className="px-4 py-3">{payment.partyName}</td>
-                <td className="px-4 py-3 text-right">{currencyStr} {payment.amount.toFixed(2)}</td>
-                <td className="px-4 py-3 text-right">{currencyStr} {payment.amount.toFixed(2)}</td>
-                <td className="px-4 py-3">{payment.paymentType}</td>
-                <td className="px-4 py-3 relative">
-                  <div className="flex items-center justify-center gap-2">
-                    <button className="p-1.5 hover:bg-gray-100 rounded" title="Print">
-                      <Printer className="w-4 h-4 text-gray-500" />
-                    </button>
-                    <button className="p-1.5 hover:bg-gray-100 rounded" title="Share">
-                      <Share2 className="w-4 h-4 text-gray-500" />
-                    </button>
-                    <button
-                      className="p-1.5 hover:bg-gray-100 rounded"
-                      title="More actions"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        const targetRect = event.currentTarget.getBoundingClientRect();
-                        const menuWidth = 144;
-                        const menuHeight = 116; 
-                        const nextLeft = Math.max(8, Math.min(targetRect.right - menuWidth, window.innerWidth - menuWidth - 8));
-                        const nextTop = targetRect.bottom + menuHeight > window.innerHeight
-                          ? Math.max(8, targetRect.top - menuHeight - 8)
-                          : targetRect.bottom + 8;
-
-                        setOpenRowMenuPosition((previousPosition) =>
-                          openRowMenuId === payment.id && previousPosition
-                            ? null
-                            : { left: nextLeft, top: nextTop },
-                        );
-                        setOpenRowMenuId((previous) =>
-                          previous === payment.id ? null : payment.id,
-                        );
-                      }}
-                    >
-                      <MoreVertical className="w-4 h-4 text-gray-500" />
-                    </button>
-                  </div>
+            {records.length === 0 ? (
+              <tr>
+                <td colSpan={7} className="px-4 py-8 text-center text-gray-500">
+                  No transactions found for the selected month.
                 </td>
               </tr>
-            ))}
+            ) : (
+              records.map((payment) => (
+                <tr key={payment.id} className="border-b border-gray-100 hover:bg-gray-50">
+                  <td className="px-4 py-3">{payment.date}</td>
+                  <td className="px-4 py-3">{payment.receiptNo || ""}</td>
+                  <td className="px-4 py-3">{payment.partyName}</td>
+                  <td className="px-4 py-3 text-right">{currencyStr} {payment.amount.toFixed(2)}</td>
+                  <td className="px-4 py-3 text-right">{currencyStr} {payment.amount.toFixed(2)}</td>
+                  <td className="px-4 py-3">{payment.paymentType}</td>
+                  <td className="px-4 py-3 relative">
+                    <div className="flex items-center justify-center gap-2">
+                      <button className="p-1.5 hover:bg-gray-100 rounded" title="Print">
+                        <Printer className="w-4 h-4 text-gray-500" />
+                      </button>
+                      <button className="p-1.5 hover:bg-gray-100 rounded" title="Share">
+                        <Share2 className="w-4 h-4 text-gray-500" />
+                      </button>
+                      <button
+                        className="p-1.5 hover:bg-gray-100 rounded"
+                        title="More actions"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          const targetRect = event.currentTarget.getBoundingClientRect();
+                          const menuWidth = 144;
+                          const menuHeight = 116; 
+                          const nextLeft = Math.max(8, Math.min(targetRect.right - menuWidth, window.innerWidth - menuWidth - 8));
+                          const nextTop = targetRect.bottom + menuHeight > window.innerHeight
+                            ? Math.max(8, targetRect.top - menuHeight - 8)
+                            : targetRect.bottom + 8;
+
+                          setOpenRowMenuPosition((previousPosition) =>
+                            openRowMenuId === payment.id && previousPosition
+                              ? null
+                              : { left: nextLeft, top: nextTop },
+                          );
+                          setOpenRowMenuId((previous) =>
+                            previous === payment.id ? null : payment.id,
+                          );
+                        }}
+                      >
+                        <MoreVertical className="w-4 h-4 text-gray-500" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>

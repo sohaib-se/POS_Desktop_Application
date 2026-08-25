@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { PaymentInHeader } from "@/components/pagescomponents/paymentin/PaymentInHeader";
 import { PaymentInFilters } from "@/components/pagescomponents/paymentin/PaymentInFilters";
 import { PaymentInSummary } from "@/components/pagescomponents/paymentin/PaymentInSummary";
@@ -11,6 +12,7 @@ import { useSettings } from "@/hooks/useSettings";
 
 export function PaymentIn() {
   const [showAddPayment, setShowAddPayment] = useState(false);
+  const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
   const [parties, setParties] = useState<any[]>([]);
   const [selectedParty, setSelectedParty] = useState("");
   const [bankAccounts, setBankAccounts] = useState<any[]>([]);
@@ -112,11 +114,54 @@ export function PaymentIn() {
     }
   };
 
+  const resetAddPaymentForm = () => {
+    setPaymentType("Cash");
+    setAmount("");
+    setPaymentDate(new Date().toISOString().split('T')[0]);
+    setDescription("");
+    setShowDescription(false);
+    setImageDataUrl("");
+    if (parties.length > 0) setSelectedParty(String(parties[0].id));
+    if (fileInputRef.current) fileInputRef.current.value = "";
+    
+    if (records.length > 0) {
+      const maxReceipt = Math.max(...records.map(r => parseInt(r.receiptNo || '0', 10) || 0));
+      setReceiptNo(String(maxReceipt + 1));
+    } else {
+      setReceiptNo("1");
+    }
+  };
+
+  const handleOpenAddPayment = () => {
+    resetAddPaymentForm();
+    setShowAddPayment(true);
+  };
+
+  const handleCloseAddPayment = (open: boolean) => {
+    if (open) {
+      handleOpenAddPayment();
+    } else {
+      const hasChanges = amount !== "" || description !== "" || imageDataUrl !== "" || paymentType !== "Cash" || paymentDate !== new Date().toISOString().split('T')[0];
+      if (hasChanges) {
+        setShowDiscardConfirm(true);
+      } else {
+        setShowAddPayment(false);
+        resetAddPaymentForm();
+      }
+    }
+  };
+
+  const confirmDiscard = () => {
+    setShowDiscardConfirm(false);
+    setShowAddPayment(false);
+    resetAddPaymentForm();
+  };
+
   const handleEditClick = (show: boolean) => {
     if (show && isPasscodeEnabled && isPasscodeForTransactionEnabled) {
       setPasscodeAction({ type: 'edit', payload: '' });
     } else {
-      setShowAddPayment(show);
+      handleCloseAddPayment(show);
     }
   };
 
@@ -124,7 +169,7 @@ export function PaymentIn() {
     if (passcodeAction?.type === 'delete') {
       handleDelete(passcodeAction.payload);
     } else if (passcodeAction?.type === 'edit') {
-      setShowAddPayment(true);
+      handleOpenAddPayment();
     }
     setPasscodeAction(null);
   };
@@ -200,10 +245,7 @@ export function PaymentIn() {
       });
       if (response.ok) {
         setShowAddPayment(false);
-        setAmount("");
-        setDescription("");
-        setShowDescription(false);
-        setImageDataUrl("");
+        resetAddPaymentForm();
         fetchData();
       } else {
         alert("Failed to save payment in record.");
@@ -216,7 +258,7 @@ export function PaymentIn() {
 
   return (
     <div className="h-full flex flex-col bg-[#D0DCE7] gap-1 overflow-y-auto">
-      <PaymentInHeader onAddPaymentClick={() => setShowAddPayment(true)} />
+      <PaymentInHeader onAddPaymentClick={handleOpenAddPayment} />
 
       <PaymentInFilters 
         selectedMonth={selectedMonth}
@@ -228,21 +270,69 @@ export function PaymentIn() {
         totalReceived={totalReceived}
       />
 
-      <PaymentInTable
-        records={filteredRecords}
-        showSearchInput={showSearchInput}
-        searchQuery={searchQuery}
-        searchInputRef={searchInputRef}
-        setShowSearchInput={setShowSearchInput}
-        setSearchQuery={setSearchQuery}
-        openRowMenuId={openRowMenuId}
-        setOpenRowMenuPosition={setOpenRowMenuPosition}
-        setOpenRowMenuId={setOpenRowMenuId}
-      />
+      {records.length === 0 ? (
+        <div className="flex-1 bg-white rounded-md shadow-sm mx-1 flex flex-col items-center justify-center p-8">
+          <div className="w-40 h-40 bg-[#D3E8FF] rounded-full flex items-center justify-center relative mb-5">
+            <div className="relative">
+              <svg width="80" height="80" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect x="25" y="20" width="50" height="16" rx="4" fill="#90C3FC" />
+                <path d="M35 24 L38 30 L32 30 Z" fill="#FFFFFF" />
+                <rect x="45" y="26" width="22" height="4" rx="2" fill="#FFFFFF" />
+                
+                <rect x="15" y="42" width="60" height="18" rx="4" fill="#3B82F6" />
+                <rect x="23" y="46" width="10" height="10" rx="2" fill="#FFFFFF" />
+                <circle cx="28" cy="51" r="2" fill="#3B82F6" />
+                <rect x="40" y="49" width="28" height="4" rx="2" fill="#FFFFFF" />
+
+                <rect x="20" y="66" width="50" height="16" rx="4" fill="#90C3FC" />
+                <rect x="24" y="70" width="10" height="8" rx="1" fill="#FFFFFF" />
+                <rect x="25" y="74" width="8" height="2" fill="#90C3FC" />
+                <rect x="38" y="72" width="22" height="4" rx="2" fill="#FFFFFF" />
+              </svg>
+            </div>
+            <svg className="absolute top-6 left-2 w-5 h-5 text-white" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 2l2.4 7.6L22 12l-7.6 2.4L12 22l-2.4-7.6L2 12l7.6-2.4L12 2z" />
+            </svg>
+            <svg className="absolute bottom-8 left-3 w-3 h-3 text-white" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 2l2.4 7.6L22 12l-7.6 2.4L12 22l-2.4-7.6L2 12l7.6-2.4L12 2z" />
+            </svg>
+            <svg className="absolute top-1/2 right-1 w-4 h-4 text-white" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 2l2.4 7.6L22 12l-7.6 2.4L12 22l-2.4-7.6L2 12l7.6-2.4L12 2z" />
+            </svg>
+            <svg className="absolute top-2 right-10 w-2 h-2 text-white" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 2l2.4 7.6L22 12l-7.6 2.4L12 22l-2.4-7.6L2 12l7.6-2.4L12 2z" />
+            </svg>
+          </div>
+          <h3 className="text-[15px] font-bold text-[#2A2E3D] mb-1">
+            No Transactions to show
+          </h3>
+          <p className="text-[13px] text-[#8F9BB3] mb-6">
+            You haven't added any transactions yet.
+          </p>
+          <button
+            onClick={handleOpenAddPayment}
+            className="flex items-center gap-2 px-6 py-2.5 bg-[#E91E63] text-white text-[14px] font-semibold rounded-full shadow hover:bg-[#D81B60] transition-colors"
+          >
+            <span className="text-xl leading-none -mt-1">+</span> Add Payment-In
+          </button>
+        </div>
+      ) : (
+        <PaymentInTable
+          records={filteredRecords}
+          showSearchInput={showSearchInput}
+          searchQuery={searchQuery}
+          searchInputRef={searchInputRef}
+          setShowSearchInput={setShowSearchInput}
+          setSearchQuery={setSearchQuery}
+          openRowMenuId={openRowMenuId}
+          setOpenRowMenuPosition={setOpenRowMenuPosition}
+          setOpenRowMenuId={setOpenRowMenuId}
+        />
+      )}
 
       <AddPaymentInModal
         showAddPayment={showAddPayment}
-        setShowAddPayment={setShowAddPayment}
+        setShowAddPayment={handleCloseAddPayment}
         parties={parties}
         selectedParty={selectedParty}
         setSelectedParty={setSelectedParty}
@@ -289,6 +379,35 @@ export function PaymentIn() {
           onCancel={() => setPasscodeAction(null)}
         />
       )}
+
+      <Dialog open={showDiscardConfirm} onOpenChange={setShowDiscardConfirm}>
+        <DialogContent
+          showCloseButton={false}
+          className="w-[28rem] rounded-xl border-0 bg-white p-6 shadow-xl flex flex-col items-center text-center gap-4"
+        >
+          <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center text-red-600 mb-2">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+          </div>
+          <h3 className="text-xl font-bold text-gray-900">Discard Changes?</h3>
+          <p className="text-sm text-gray-500 mb-2">
+            You have unsaved changes. Are you sure you want to discard them? All unsaved changes will be lost.
+          </p>
+          <div className="flex items-center gap-3 w-full">
+            <button
+              onClick={() => setShowDiscardConfirm(false)}
+              className="flex-1 rounded-lg border border-gray-300 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={confirmDiscard}
+              className="flex-1 rounded-lg bg-red-600 py-2.5 text-sm font-bold text-white hover:bg-red-700 transition-colors"
+            >
+              Discard
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

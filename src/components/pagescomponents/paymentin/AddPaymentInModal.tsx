@@ -110,6 +110,13 @@ export function AddPaymentInModal(props: AddPaymentInModalProps) {
                       placeholder="Add description..." 
                       value={props.description}
                       onChange={e => props.setDescription(e.target.value)}
+                      onBlur={(e) => {
+                        if (!e.target.value.trim()) {
+                          props.setShowDescription(false);
+                          props.setDescription("");
+                        }
+                      }}
+                      autoFocus
                       className="w-full rounded border border-slate-300 bg-white p-3 text-[14px] text-slate-900 outline-none focus:border-[#1976D2]"
                       rows={2}
                     />

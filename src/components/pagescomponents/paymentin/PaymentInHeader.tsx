@@ -1,4 +1,4 @@
-import { ChevronDown, Plus } from "lucide-react";
+import { Plus } from "lucide-react";
 
 interface PaymentInHeaderProps {
   onAddPaymentClick: () => void;
@@ -9,7 +9,6 @@ export function PaymentInHeader({ onAddPaymentClick }: PaymentInHeaderProps) {
     <div className="p-4 bg-white flex items-center justify-between shrink-0 w-full">
       <div className="flex items-center gap-2">
         <h2 className="text-lg font-semibold text-gray-900">Payment-In</h2>
-        <ChevronDown className="w-4 h-4 text-gray-500" />
       </div>
       <button
         onClick={onAddPaymentClick}

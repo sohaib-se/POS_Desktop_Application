@@ -2,6 +2,7 @@ import { useState } from "react";
 import { AlignJustify, Filter, MoreVertical, Info, Trash2, Pencil } from "lucide-react";
 import { useSettings } from "@/hooks/useSettings";
 import { EnterPasscodeScreen } from "@/components/common/EnterPasscodeScreen";
+import { ConfirmDeleteModal } from "@/components/common/ConfirmDeleteModal";
 import { AdjustCashModal } from "./AdjustCashModal";
 import { DetailsModal } from "./DetailsModal";
 
@@ -46,12 +47,21 @@ export function CashInHandView({
   const [isPasscodeForTransactionEnabled] = useSettings('settings.isPasscodeForTransactionEnabled', false);
   const [passcodeAction, setPasscodeAction] = useState<{ type: 'delete', payload: string } | null>(null);
   const [editAmount, setEditAmount] = useState("");
+  const [editingAdjustTx, setEditingAdjustTx] = useState<any>(null);
+  const [deleteConfirmationId, setDeleteConfirmationId] = useState<string | null>(null);
 
   const handleDeleteClick = (id: string) => {
-    if (isPasscodeEnabled && isPasscodeForTransactionEnabled) {
-      setPasscodeAction({ type: 'delete', payload: id });
-    } else {
-      handleDelete(id);
+    setDeleteConfirmationId(id);
+  };
+
+  const confirmDelete = () => {
+    if (deleteConfirmationId) {
+      if (isPasscodeEnabled && isPasscodeForTransactionEnabled) {
+        setPasscodeAction({ type: 'delete', payload: deleteConfirmationId });
+      } else {
+        handleDelete(deleteConfirmationId);
+      }
+      setDeleteConfirmationId(null);
     }
   };
 
@@ -71,6 +81,9 @@ export function CashInHandView({
   const isTransfer = (tx: any) =>
     String(tx.id).endsWith('-cash') ||
     String(tx.name || '').toLowerCase().includes('transfer');
+
+  const isAdjustCash = (tx: any) =>
+    tx.type === 'Increase Cash' || tx.type === 'Decrease Cash';
 
   return (
     <div className="h-full flex flex-col bg-[#D0DCE7] gap-1">
@@ -162,10 +175,14 @@ export function CashInHandView({
       </div>
 
       <AdjustCashModal
-        open={showAdjustCash}
-        onClose={() => setShowAdjustCash(false)}
+        open={showAdjustCash || !!editingAdjustTx}
+        onClose={() => {
+          setShowAdjustCash(false);
+          setEditingAdjustTx(null);
+        }}
         currentCash={totalCash}
         onSuccess={fetchTransactions}
+        editingTransaction={editingAdjustTx}
       />
       <DetailsModal
         open={!!detailsTransaction}
@@ -215,19 +232,12 @@ export function CashInHandView({
           style={{ top: contextMenu.y, left: contextMenu.x }}
           onClick={(e) => e.stopPropagation()}
         >
-          <button
-            onClick={() => {
-              setDetailsTransaction(contextMenu.transaction);
-              setContextMenu(null);
-            }}
-            className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
-          >
-            <Info className="w-4 h-4" />
-            Details
-          </button>
-          {isTransfer(contextMenu.transaction) && (
+          {isAdjustCash(contextMenu.transaction) && (
             <button
-              onClick={() => openEdit(contextMenu.transaction)}
+              onClick={() => {
+                setEditingAdjustTx(contextMenu.transaction);
+                setContextMenu(null);
+              }}
               className="w-full text-left px-4 py-2 text-sm text-blue-600 hover:bg-blue-50 flex items-center gap-2"
             >
               <Pencil className="w-4 h-4" />
@@ -254,6 +264,15 @@ export function CashInHandView({
           onCancel={() => setPasscodeAction(null)}
         />
       )}
+
+      <ConfirmDeleteModal
+        isOpen={!!deleteConfirmationId}
+        onClose={() => setDeleteConfirmationId(null)}
+        onConfirm={confirmDelete}
+        title="Delete Transaction"
+        message="Are you sure you want to permanently delete this transaction? This action cannot be undone and will affect your cash balance."
+        isDeleting={isDeleting}
+      />
     </div>
   );
 }

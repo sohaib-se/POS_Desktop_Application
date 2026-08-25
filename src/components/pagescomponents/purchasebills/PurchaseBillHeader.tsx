@@ -1,4 +1,4 @@
-import { ChevronDown, Plus, ArrowLeft } from "lucide-react";
+import {Plus, ArrowLeft } from "lucide-react";
 
 interface PurchaseBillHeaderProps {
   onAddPurchase: () => void;
@@ -15,7 +15,6 @@ export function PurchaseBillHeader({ onAddPurchase, onBack }: PurchaseBillHeader
           </button>
         )}
         <h2 className="text-lg font-semibold text-gray-900">Purchase Bills</h2>
-        <ChevronDown className="w-4 h-4 text-gray-500" />
       </div>
       <button
         onClick={onAddPurchase}

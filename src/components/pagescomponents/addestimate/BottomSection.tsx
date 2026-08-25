@@ -44,6 +44,11 @@ export function BottomSection({
               style={{ border: "1px solid #d1d5db", borderRadius: 4, fontSize: 13, padding: "8px 10px", resize: "none", width: "100%", outline: "none" }}
               value={activeTab.description}
               onChange={(e) => updateTab({ description: e.target.value })}
+              onBlur={(e) => {
+                if (!e.target.value.trim()) {
+                  updateTab({ showDescriptionInput: false });
+                }
+              }}
             />
           ) : (
             <button onClick={() => updateTab({ showDescriptionInput: true })}
@@ -53,9 +58,22 @@ export function BottomSection({
             </button>
           )}
           {activeTab.image ? (
-            <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "#374151" }}>
-              <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 120 }}>{activeTab.image.name}</span>
-              <Trash2 size={14} style={{ cursor: "pointer", color: "#ef4444" }} onClick={() => updateTab({ image: null })} />
+            <div
+              style={{ position: "relative", width: 220, height: 140, border: "1px solid #e5e7eb", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}
+              onMouseEnter={(e) => { (e.currentTarget.lastChild as HTMLElement).style.opacity = "1"; }}
+              onMouseLeave={(e) => { (e.currentTarget.lastChild as HTMLElement).style.opacity = "0"; }}
+            >
+              <img src={URL.createObjectURL(activeTab.image)} style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain" }} alt="Attachment" />
+              <div
+                style={{
+                  position: "absolute", bottom: 0, left: 0, right: 0, height: 40, background: "rgba(0,0,0,0.55)",
+                  display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 16px",
+                  opacity: 0, transition: "opacity 0.2s ease-in-out", color: "#fff", fontSize: 12, fontWeight: 600, letterSpacing: "0.02em"
+                }}
+              >
+                <div style={{ cursor: "pointer" }} onClick={() => imageRef.current?.click()}>CHANGE</div>
+                <div style={{ cursor: "pointer" }} onClick={() => updateTab({ image: null })}>DELETE</div>
+              </div>
             </div>
           ) : (
             <button onClick={() => imageRef.current?.click()} style={{ background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 8, color: "#9ca3af", fontSize: 12, fontWeight: 600, letterSpacing: "0.05em", padding: 0 }}>
@@ -66,9 +84,34 @@ export function BottomSection({
           <input type="file" accept="image/*" style={{ display: "none" }} ref={imageRef} onChange={(e) => { if (e.target.files?.[0]) updateTab({ image: e.target.files[0] }) }} />
           
           {activeTab.document ? (
-            <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "#374151" }}>
-              <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 120 }}>{activeTab.document.name}</span>
-              <Trash2 size={14} style={{ cursor: "pointer", color: "#ef4444" }} onClick={() => updateTab({ document: null })} />
+            <div style={{ display: "flex", flexDirection: "column", gap: 8, width: 220 }}>
+              <div style={{ border: "1px dashed #d1d5db", padding: 8, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <div style={{ background: "#f8fafc", padding: "8px 10px", display: "flex", alignItems: "center", gap: 6, borderRadius: 2, width: "100%", overflow: "hidden" }}>
+                  <svg width="14" height="14" fill="none" stroke="#059669" strokeWidth="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /></svg>
+                  <span style={{ color: "#059669", fontSize: 11, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                    {activeTab.document.name} added successfully
+                  </span>
+                </div>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", justifyItems: "center", justifyContent: "space-between", padding: "0 4px" }}>
+                <Trash2 size={16} style={{ cursor: "pointer", color: "#f87171" }} onClick={() => updateTab({ document: null })} />
+                <div
+                  style={{ display: "flex", alignItems: "center", gap: 6, color: "#3b82f6", fontSize: 13, fontWeight: 500, cursor: "pointer" }}
+                  onClick={() => {
+                     if (activeTab.document) {
+                       const url = URL.createObjectURL(activeTab.document);
+                       const a = document.createElement('a');
+                       a.href = url;
+                       a.download = activeTab.document.name;
+                       a.click();
+                       URL.revokeObjectURL(url);
+                     }
+                  }}
+                >
+                  <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></svg>
+                  Download
+                </div>
+              </div>
             </div>
           ) : (
             <button onClick={() => docRef.current?.click()} style={{ background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 8, color: "#9ca3af", fontSize: 12, fontWeight: 600, letterSpacing: "0.05em", padding: 0 }}>

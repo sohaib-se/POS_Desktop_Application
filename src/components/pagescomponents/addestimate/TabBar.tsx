@@ -68,21 +68,19 @@ export function TabBar({ tabs, activeTabId, setActiveTabId, closeTab, addTab, on
               </>
             )}
             <span>{tab.label}</span>
-            {tabs.length > 1 && (
-              <button
-                onClick={(e) => closeTab(tab.id, e)}
-                style={{
-                  background: "none", border: "none", cursor: "pointer",
-                  padding: "2px 6px", borderRadius: 4,
-                  color: "#9ca3af", fontSize: 12, lineHeight: 1,
-                  display: "flex", alignItems: "center",
-                  marginLeft: "auto",
-                  marginRight: -10,
-                }}
-              >
-                ✕
-              </button>
-            )}
+            <button
+              onClick={(e) => closeTab(tab.id, e)}
+              style={{
+                background: "none", border: "none", cursor: "pointer",
+                padding: "2px 6px", borderRadius: 4,
+                color: "#9ca3af", fontSize: 12, lineHeight: 1,
+                display: "flex", alignItems: "center",
+                marginLeft: "auto",
+                marginRight: -10,
+              }}
+            >
+              ✕
+            </button>
           </div>
         );
       })}

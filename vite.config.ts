@@ -3130,7 +3130,7 @@ function sqliteApiPlugin() {
                       date: invoice.date,
                       name: invoice.partyName || 'Cash Purchase',
                       type: 'Purchase Bill',
-                      amount: paidAmount
+                      amount: -paidAmount
                     });
                   } else if (String(invoice.paymentMode).toLowerCase() !== 'credit') {
                     repository.addBankAccountTransaction({
@@ -3290,6 +3290,106 @@ function sqliteApiPlugin() {
               };
 
               repository.updatePurchaseBill(id, invoice);
+
+              // 1. REVERT OLD STATE
+              if (existingInvoice.party_id) {
+                try {
+                  const allParties = repository.getParties();
+                  const party = allParties.find((p: any) => String(p.id) === String(existingInvoice.party_id));
+                  if (party) {
+                    party.balance = Number(party.balance || 0) - Number(existingInvoice.balance || 0);
+                    repository.upsertParty(party);
+                  }
+                } catch (balanceError) {
+                  console.error('Failed to restore old party balance on edit:', balanceError);
+                }
+              }
+
+              try {
+                const oldPMode = String(existingInvoice.payment_mode).toLowerCase();
+                if (oldPMode === 'cash') {
+                  repository.deleteCashInHandTransaction('cash_purchase_' + id);
+                } else if (oldPMode !== 'credit') {
+                  repository.deleteBankAccountTransaction('bank_purchase_' + id);
+                }
+              } catch (txError) {
+                console.error('Failed to delete old cash/bank transaction on edit:', txError);
+              }
+
+              try {
+                const oldLineItems = JSON.parse(existingInvoice.line_items_json || '[]');
+                const allItems = repository.getItems();
+                for (const lineItem of oldLineItems) {
+                  if (!lineItem.itemId || !lineItem.quantity) continue;
+                  const dbItem = allItems.find((i: any) => String(i.id) === String(lineItem.itemId));
+                  if (!dbItem) continue;
+
+                  const isSecondary = lineItem.unit === dbItem.secondary_unit;
+                  repository.deductItemStock(
+                    lineItem.itemId,
+                    Number(lineItem.quantity),
+                    isSecondary,
+                    dbItem.conversion_rate
+                  );
+                }
+              } catch (stockError) {
+                console.error('Failed to restore old stock on edit:', stockError);
+              }
+
+              // 2. APPLY NEW STATE
+              try {
+                const paidAmount = Number(invoice.amount || 0) - Number(invoice.balance || 0);
+                if (paidAmount > 0) {
+                  if (String(invoice.paymentMode).toLowerCase() === 'cash') {
+                    repository.addCashInHandTransaction({
+                      id: 'cash_purchase_' + id,
+                      date: invoice.date,
+                      name: invoice.partyName || 'Cash Purchase',
+                      type: 'Purchase Bill',
+                      amount: -paidAmount
+                    });
+                  } else if (String(invoice.paymentMode).toLowerCase() !== 'credit') {
+                    repository.addBankAccountTransaction({
+                      id: 'bank_purchase_' + id,
+                      date: invoice.date,
+                      name: invoice.partyName || 'Bank Purchase',
+                      type: 'POS Purchase',
+                      amount: -paidAmount,
+                      paymentType: invoice.paymentMode
+                    });
+                  }
+                }
+
+                if (invoice.partyId) {
+                  const allParties = repository.getParties();
+                  const party = allParties.find((p: any) => String(p.id) === String(invoice.partyId));
+                  if (party) {
+                    party.balance = Number(party.balance || 0) + Number(invoice.balance || 0);
+                    repository.upsertParty(party);
+                  }
+                }
+              } catch (txError) {
+                console.error("Failed to apply new cash/bank/credit balance for purchase edit:", txError);
+              }
+
+              try {
+                const allItems = repository.getItems();
+                for (const lineItem of lineItems) {
+                  if (!lineItem.itemId || !lineItem.quantity) continue;
+                  const dbItem = allItems.find((i: any) => i.id === lineItem.itemId);
+                  if (!dbItem) continue;
+
+                  const isSecondary = lineItem.unit === dbItem.secondary_unit;
+                  repository.deductItemStock(
+                    lineItem.itemId,
+                    -lineItem.quantity,
+                    isSecondary,
+                    dbItem.conversion_rate
+                  );
+                }
+              } catch (stockError) {
+                console.error("Failed to add stock for purchase edit:", stockError);
+              }
 
               if (createdImagePath && existingInvoice.attachment_image_path && existingInvoice.attachment_image_path !== createdImagePath) {
                 removeManagedAttachmentFile(existingInvoice.attachment_image_path);

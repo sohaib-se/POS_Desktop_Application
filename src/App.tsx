@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import "./App.css";
+import { Toaster } from "@/components/ui/Toast";
 import { Sidebar } from "@/components/common/Sidebar";
 import { Header } from "@/components/common/Header";
 import { EnterPasscodeScreen } from "@/components/common/EnterPasscodeScreen";
@@ -277,6 +278,7 @@ function App() {
 
   return (
     <>
+      <Toaster />
       {isAppLocked && <EnterPasscodeScreen onSuccess={() => setIsAppLocked(false)} />}
       <div className="h-screen flex bg-gray-50 overflow-hidden">
         {/* Sidebar */}

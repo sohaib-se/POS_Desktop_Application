@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import type { SaleRow, SaleTab } from "../components/pagescomponents/addestimate/types";
 import { TabBar } from "../components/pagescomponents/addestimate/TabBar";
 import { TopBar } from "../components/pagescomponents/addestimate/TopBar";
@@ -7,6 +7,8 @@ import { EstimateTable } from "../components/pagescomponents/addestimate/Estimat
 import { BottomSection } from "../components/pagescomponents/addestimate/BottomSection";
 import { Footer } from "../components/pagescomponents/addestimate/Footer";
 import { AddPartyDialog } from "../components/pagescomponents/parties/AddPartyDialog";
+import { ConfirmDialog } from "../components/ui/ConfirmDialog";
+import { toast } from "../components/ui/Toast";
 
 interface AddEstimateProps {
   onSave?: () => void;
@@ -96,7 +98,10 @@ export function AddEstimate({ onSave, onShare, onClose, initialEstimate }: AddEs
   const [parties, setParties] = useState<any[]>([]);
   const [items, setItems] = useState<any[]>([]);
   const [showAddParty, setShowAddParty] = useState(false);
+  const [showDiscardDialog, setShowDiscardDialog] = useState(false);
+  const [tabClosePendingId, setTabClosePendingId] = useState<number | null>(null);
   const [partyBeingEdited, setPartyBeingEdited] = useState<any>(null);
+  const [globalNextEstimateNo, setGlobalNextEstimateNo] = useState("1");
   const [activeTabParty, setActiveTabParty] = useState<"address" | "credit">("address");
   const [showShippingAddress, setShowShippingAddress] = useState(false);
   const [isSavingParty, setIsSavingParty] = useState(false);
@@ -247,6 +252,7 @@ export function AddEstimate({ onSave, onShare, onClose, initialEstimate }: AddEs
           if (!initialEstimate) {
             const maxRef = estData.reduce((max: number, est: any) => Math.max(max, Number(est.referenceNo) || 0), 0);
             const nextEstimateNo = String(maxRef + 1);
+            setGlobalNextEstimateNo(nextEstimateNo);
             setTabs(prev => prev.map(t => t.id === 1 ? { ...t, estimateNo: nextEstimateNo, label: `Estimate #${nextEstimateNo}` } : t));
           }
         }
@@ -336,14 +342,37 @@ export function AddEstimate({ onSave, onShare, onClose, initialEstimate }: AddEs
 
       if (response.ok) {
         if (onSave) onSave();
-        if (onClose) onClose();
+        toast.success("Estimate saved successfully!");
+        
+        const newGlobalNext = String(Number(globalNextEstimateNo) + 1);
+        setGlobalNextEstimateNo(newGlobalNext);
+
+        setTabs(prev => {
+          const remaining = prev.filter(t => t.id !== activeTabId);
+          if (remaining.length === 0) {
+            setTimeout(() => { if (onClose) onClose(); }, 0);
+            return prev;
+          }
+          
+          const updatedRemaining = remaining.map(t => {
+            const nextEstNo = String(Number(t.estimateNo) + 1);
+            return {
+              ...t,
+              estimateNo: nextEstNo,
+              label: `Estimate #${nextEstNo}`
+            };
+          });
+          
+          setActiveTabId(updatedRemaining[updatedRemaining.length - 1].id);
+          return updatedRemaining;
+        });
       } else {
         const err = await response.json();
-        alert(err.message || "Failed to save estimate");
+        toast.error(err.message || "Failed to save estimate");
       }
     } catch (err) {
       console.error(err);
-      alert("Error saving estimate");
+      toast.error("Error saving estimate");
     }
   };
 
@@ -353,26 +382,62 @@ export function AddEstimate({ onSave, onShare, onClose, initialEstimate }: AddEs
     );
   };
 
+  const hasUnsavedChanges = () => {
+    return tabs.some(t =>
+      t.customerSearch ||
+      t.rows.some(r => r.item || r.qty || r.pricePerUnit) ||
+      t.description ||
+      t.discountPercent ||
+      t.discountRs
+    );
+  };
+
+  const handleCloseRequest = () => {
+    if (hasUnsavedChanges()) {
+      setShowDiscardDialog(true);
+    } else {
+      if (onClose) onClose();
+    }
+  };
+
   const addTab = () => {
     const id = globalTabId++;
     const newTab = createDefaultTab(id);
     
-    // Auto increment based on current tabs
-    const maxTabEstNo = tabs.reduce((max, t) => Math.max(max, Number(t.estimateNo) || 0), 0);
-    newTab.estimateNo = String(maxTabEstNo + 1);
+    newTab.estimateNo = globalNextEstimateNo;
+    newTab.label = `Estimate #${globalNextEstimateNo}`;
 
     setTabs((prev) => [...prev, newTab]);
     setActiveTabId(id);
   };
 
-  const closeTab = (id: number, e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (tabs.length === 1) return;
+  const tabHasUnsavedChanges = (tab: SaleTab) =>
+    !!(tab.customerSearch ||
+      tab.rows.some(r => r.item || r.qty || r.pricePerUnit) ||
+      tab.description ||
+      tab.discountPercent ||
+      tab.discountRs);
+
+  const doCloseTab = (id: number) => {
+    if (tabs.length === 1) {
+      if (onClose) onClose();
+      return;
+    }
     setTabs((prev) => {
       const remaining = prev.filter((t) => t.id !== id);
       if (activeTabId === id) setActiveTabId(remaining[remaining.length - 1].id);
       return remaining;
     });
+  };
+
+  const closeTab = (id: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const tab = tabs.find(t => t.id === id);
+    if (tab && tabHasUnsavedChanges(tab)) {
+      setTabClosePendingId(id);
+    } else {
+      doCloseTab(id);
+    }
   };
 
   const updateRow = (rowId: number, field: keyof SaleRow | Partial<SaleRow>, value?: string) => {
@@ -477,7 +542,7 @@ export function AddEstimate({ onSave, onShare, onClose, initialEstimate }: AddEs
         setActiveTabId={setActiveTabId}
         closeTab={closeTab}
         addTab={addTab}
-        onClose={onClose}
+        onClose={handleCloseRequest}
       />
 
       <TopBar />
@@ -543,6 +608,30 @@ export function AddEstimate({ onSave, onShare, onClose, initialEstimate }: AddEs
         setShowCreditLimitError={setShowCreditLimitError}
       />
     </div>
+
+      <ConfirmDialog
+        open={showDiscardDialog}
+        title="Discard Changes?"
+        message="You have unsaved changes. Are you sure you want to discard them? All unsaved changes will be lost."
+        confirmLabel="Discard"
+        cancelLabel="Cancel"
+        confirmColor="#e53935"
+        icon="warning"
+        onConfirm={() => { setShowDiscardDialog(false); if (onClose) onClose(); }}
+        onCancel={() => setShowDiscardDialog(false)}
+      />
+
+      <ConfirmDialog
+        open={tabClosePendingId !== null}
+        title="Discard Changes?"
+        message="This tab has unsaved changes. Are you sure you want to close it?"
+        confirmLabel="Discard"
+        cancelLabel="Cancel"
+        confirmColor="#e53935"
+        icon="warning"
+        onConfirm={() => { const id = tabClosePendingId!; setTabClosePendingId(null); doCloseTab(id); }}
+        onCancel={() => setTabClosePendingId(null)}
+      />
     </>
   );
 }

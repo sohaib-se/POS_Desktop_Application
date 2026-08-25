@@ -53,7 +53,7 @@ export interface ItemOption {
 
 export interface BankOption {
   id: number;
-  display_name: string;
+  name: string;
   bank_name?: string;
   balance: number;
 }

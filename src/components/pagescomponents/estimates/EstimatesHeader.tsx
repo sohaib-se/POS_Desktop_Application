@@ -1,4 +1,4 @@
-import { ChevronDown, Plus } from "lucide-react";
+import { Plus } from "lucide-react";
 
 interface EstimatesHeaderProps {
   onAddEstimate: () => void;
@@ -11,7 +11,6 @@ export function EstimatesHeader({ onAddEstimate }: EstimatesHeaderProps) {
         <h2 className="text-lg font-semibold text-gray-900">
           Estimate/Quotation
         </h2>
-        <ChevronDown className="w-4 h-4 text-gray-500" />
       </div>
       <button
         onClick={onAddEstimate}

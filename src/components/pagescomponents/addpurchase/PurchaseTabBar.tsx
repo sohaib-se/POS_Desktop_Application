@@ -1,5 +1,5 @@
 import React from "react";
-import type { PurchaseTab } from "./types";
+import type { PurchaseTab, PartyOption } from "./types";
 
 interface PurchaseTabBarProps {
   tabs: PurchaseTab[];
@@ -8,6 +8,8 @@ interface PurchaseTabBarProps {
   addTab: () => void;
   closeTab: (id: number, e: React.MouseEvent) => void;
   onClose?: () => void;
+  parties?: PartyOption[];
+  displayedInvoiceNo?: string;
 }
 
 export function PurchaseTabBar({
@@ -17,6 +19,8 @@ export function PurchaseTabBar({
   addTab,
   closeTab,
   onClose,
+  parties = [],
+  displayedInvoiceNo = "1",
 }: PurchaseTabBarProps) {
   return (
     <div
@@ -85,7 +89,11 @@ export function PurchaseTabBar({
                 />
               </>
             )}
-            <span>{tab.label}</span>
+            <span>
+              {tab.customerSearch
+                ? parties.find((p) => String(p.id) === tab.customerSearch)?.name || "New Purchase"
+                : `Bill #${displayedInvoiceNo}`}
+            </span>
             {tabs.length > 1 && (
               <button
                 onClick={(e) => closeTab(tab.id, e)}

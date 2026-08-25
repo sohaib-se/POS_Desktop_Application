@@ -415,6 +415,59 @@ function sqliteApiPlugin() {
         }
       });
 
+      // DELETE /api/delete_profile_image — permanently deletes logo or signature file + clears DB column
+      // NOTE: Cannot use /api/user_profile/image because /api/user_profile is registered first and
+      //       Connect middleware matches on prefix, so /api/user_profile/* would be intercepted.
+      server.middlewares.use('/api/delete_profile_image', async (req, res) => {
+        if (req.method !== 'DELETE') {
+          res.statusCode = 405;
+          res.end('Method Not Allowed');
+          return;
+        }
+        try {
+          // @ts-expect-error Runtime-only Node module used in Vite middleware.
+          const repository = await import('./database/sqlite/repository.mjs');
+          const payload = await parseJsonBody(req);
+          const field = payload?.field; // 'logo' | 'signature'
+
+          if (field !== 'logo' && field !== 'signature') {
+            res.statusCode = 400;
+            res.end(JSON.stringify({ message: 'field must be "logo" or "signature"' }));
+            return;
+          }
+
+          // Read stored file path before clearing
+          const currentProfile = repository.getUserProfile() || {};
+          const storedPath: string | null = currentProfile[field] || null;
+
+          // Physically delete the file if it lives inside app_data/user_images
+          if (storedPath) {
+            try {
+              const relativePath = storedPath.startsWith('/') ? storedPath.substring(1) : storedPath;
+              const absolutePath = path.join(process.cwd(), relativePath);
+              const userImagesRoot = path.join(process.cwd(), 'app_data', 'user_images');
+              if (absolutePath.startsWith(userImagesRoot) && fs.existsSync(absolutePath)) {
+                fs.unlinkSync(absolutePath);
+              }
+            } catch (e) {
+              console.error(`Error deleting ${field} file:`, e);
+            }
+          }
+
+          // Null the column in the database (bypasses COALESCE guard)
+          repository.clearUserProfileImage(field);
+
+          res.statusCode = 200;
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify({ success: true }));
+        } catch (error) {
+          console.error(error);
+          res.statusCode = 500;
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify({ message: 'Internal server error.' }));
+        }
+      });
+
       server.middlewares.use('/api/adjust_stock_transactions', async (req, res) => {
         try {
           // @ts-expect-error Runtime-only Node module used in Vite middleware.
@@ -3507,12 +3560,7 @@ function sqliteApiPlugin() {
                 const raw = Buffer.concat(chunks).toString('utf8');
                 const payload = raw ? JSON.parse(raw) : {};
 
-                if (!payload.name || !String(payload.name).trim()) {
-                  res.statusCode = 400;
-                  res.setHeader('Content-Type', 'application/json');
-                  res.end(JSON.stringify({ message: 'Name/description is required.' }));
-                  return;
-                }
+                // Removed validation: Description is now optional
 
                 if (!payload.amount || Number.isNaN(Number(payload.amount))) {
                   res.statusCode = 400;
@@ -3524,7 +3572,7 @@ function sqliteApiPlugin() {
                 const entry = {
                   id: payload.id ? String(payload.id) : Date.now().toString(),
                   date: String(payload.date || new Date().toLocaleDateString('en-GB')),
-                  name: String(payload.name).trim(),
+                  name: String(payload.name || '').trim() || 'Cash Adjustment',
                   type: String(payload.type).trim(),
                   amount: Number(payload.amount),
                 };

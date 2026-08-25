@@ -1,5 +1,34 @@
+import { useState, useEffect } from "react";
 import type { Dispatch, SetStateAction } from "react";
-import { Upload } from "lucide-react";
+import { Upload, Trash2 } from "lucide-react";
+import { ConfirmDeleteModal } from "../../common/ConfirmDeleteModal";
+
+const BUSINESS_CATEGORIES = [
+  "Book / Stationary store",
+  "Grocery",
+  "Electronics",
+  "Clothing & Apparel",
+  "Pharmacy / Medical",
+  "Bakery & Confectionery",
+  "Restaurant / Café",
+  "Hardware & Tools",
+  "Furniture & Home Decor",
+  "Jewelry & Accessories",
+  "Footwear",
+  "Auto Parts & Accessories",
+  "Sports & Fitness",
+  "Cosmetics & Beauty",
+  "Mobile & Telecom",
+  "Toys & Games",
+  "Agricultural Supplies",
+  "Textile & Fabric",
+  "Electrical & Lighting",
+  "Pet Supplies",
+  "Optician / Eye Care",
+  "Supermarket",
+  "Wholesale Distributor",
+  "Custom",
+];
 
 interface MoreDetailsProps {
   businessType: string;
@@ -12,6 +41,7 @@ interface MoreDetailsProps {
   setBusinessAddress: Dispatch<SetStateAction<string>>;
   signature: string | null;
   setSignature: Dispatch<SetStateAction<string | null>>;
+  onProfileSaved?: () => void;
 }
 
 export function MoreDetails({
@@ -25,7 +55,26 @@ export function MoreDetails({
   setBusinessAddress,
   signature,
   setSignature,
+  onProfileSaved,
 }: MoreDetailsProps) {
+  const isCustomCategory = !BUSINESS_CATEGORIES.slice(0, -1).includes(businessCategory) ||
+    businessCategory === "Custom";
+  const [customCategoryValue, setCustomCategoryValue] = useState(
+    isCustomCategory && businessCategory !== "Custom" ? businessCategory : ""
+  );
+
+  // Sync when parent loads the profile asynchronously
+  useEffect(() => {
+    const isCustom = !BUSINESS_CATEGORIES.slice(0, -1).includes(businessCategory) ||
+      businessCategory === "Custom";
+    if (isCustom && businessCategory && businessCategory !== "Custom") {
+      setCustomCategoryValue(businessCategory);
+    }
+  }, [businessCategory]);
+
+  const [deletingSignature, setDeletingSignature] = useState(false);
+  const [isConfirmSigOpen, setIsConfirmSigOpen] = useState(false);
+
   const handleSignatureChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -34,6 +83,27 @@ export function MoreDetails({
         setSignature(reader.result as string);
       };
       reader.readAsDataURL(file);
+    }
+  };
+
+  const handleDeleteSignature = async () => {
+    if (deletingSignature) return;
+    setDeletingSignature(true);
+    try {
+      const res = await fetch('/api/delete_profile_image', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ field: 'signature' }),
+      });
+      if (res.ok) {
+        setSignature(null);    // clear from UI immediately
+        onProfileSaved?.();    // refresh sidebar in App.tsx
+        setIsConfirmSigOpen(false);
+      }
+    } catch (err) {
+      console.error('Failed to delete signature:', err);
+    } finally {
+      setDeletingSignature(false);
     }
   };
 
@@ -55,8 +125,6 @@ export function MoreDetails({
             >
               <option value="Retail">Retail</option>
               <option value="Wholesale">Wholesale</option>
-              <option value="Service">Service</option>
-              <option value="Manufacturing">Manufacturing</option>
             </select>
           </div>
           <div>
@@ -64,16 +132,34 @@ export function MoreDetails({
               Business Category
             </label>
             <select
-              value={businessCategory}
-              onChange={(e) => setBusinessCategory(e.target.value)}
+              value={isCustomCategory ? "Custom" : businessCategory}
+              onChange={(e) => {
+                if (e.target.value === "Custom") {
+                  setBusinessCategory("Custom");
+                  setCustomCategoryValue("");
+                } else {
+                  setBusinessCategory(e.target.value);
+                  setCustomCategoryValue("");
+                }
+              }}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#E53935] focus:border-transparent"
             >
-              <option value="Book / Stationary store">Book / Stationary store</option>
-              <option value="Grocery">Grocery</option>
-              <option value="Electronics">Electronics</option>
-              <option value="Clothing">Clothing</option>
-              <option value="Other">Other</option>
+              {BUSINESS_CATEGORIES.map((cat) => (
+                <option key={cat} value={cat}>{cat}</option>
+              ))}
             </select>
+            {isCustomCategory && (
+              <input
+                type="text"
+                placeholder="Enter custom category"
+                value={customCategoryValue}
+                onChange={(e) => {
+                  setCustomCategoryValue(e.target.value);
+                  setBusinessCategory(e.target.value || "Custom");
+                }}
+                className="w-full mt-2 px-3 py-2 border border-gray-300 rounded-lg text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#E53935] focus:border-transparent"
+              />
+            )}
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -104,24 +190,67 @@ export function MoreDetails({
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Add Signature
           </label>
-          <label className="flex-1 border-2 border-dashed border-gray-300 rounded-lg p-2 flex flex-col items-center justify-center cursor-pointer hover:border-gray-400 transition-colors overflow-hidden group relative block">
-            <input 
-              type="file" 
-              accept="image/*" 
-              className="hidden" 
-              onChange={handleSignatureChange} 
+          <div className="relative group/sig flex-1 flex flex-col h-full min-h-[120px]">
+            <input
+              type="file"
+              accept="image/*"
+              className="hidden"
+              id="signature-upload"
+              onChange={handleSignatureChange}
             />
             {signature ? (
-              <img src={signature} alt="Signature" className="max-w-full max-h-full object-contain" />
+              <div className="flex-1 border-2 border-dashed border-gray-300 rounded-lg p-2 flex flex-col items-center justify-center relative overflow-hidden group/sigimg">
+                <img src={signature} alt="Signature" className="max-w-full max-h-full object-contain" />
+
+                {/* Overlay with Upload and Delete icons */}
+                <div className="absolute inset-0 bg-black/60 flex items-center justify-center gap-6 opacity-0 group-hover/sigimg:opacity-100 transition-opacity">
+                  <label
+                    htmlFor="signature-upload"
+                    className="cursor-pointer text-white hover:text-blue-300 transition-colors"
+                    title="Change signature"
+                  >
+                    <Upload className="w-8 h-8" />
+                  </label>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setIsConfirmSigOpen(true);
+                    }}
+                    disabled={deletingSignature}
+                    title="Delete signature permanently"
+                    className="text-white hover:text-red-400 transition-colors disabled:opacity-50"
+                  >
+                    {deletingSignature ? (
+                      <span className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin inline-block" />
+                    ) : (
+                      <Trash2 className="w-8 h-8" />
+                    )}
+                  </button>
+                </div>
+              </div>
             ) : (
-              <>
+              <label
+                htmlFor="signature-upload"
+                className="flex-1 border-2 border-dashed border-gray-300 rounded-lg p-2 flex flex-col items-center justify-center cursor-pointer hover:border-gray-400 transition-colors block"
+              >
                 <Upload className="w-8 h-8 text-gray-400 mb-2" />
                 <p className="text-sm text-gray-500">Upload Signature</p>
-              </>
+              </label>
             )}
-          </label>
+          </div>
         </div>
       </div>
+
+      <ConfirmDeleteModal
+        isOpen={isConfirmSigOpen}
+        onClose={() => setIsConfirmSigOpen(false)}
+        onConfirm={handleDeleteSignature}
+        title="Delete Signature"
+        message="Are you sure you want to delete the business signature? This action cannot be undone."
+        isDeleting={deletingSignature}
+      />
     </div>
   );
 }

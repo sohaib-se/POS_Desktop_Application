@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import "./App.css";
 import { Sidebar } from "@/components/common/Sidebar";
 import { Header } from "@/components/common/Header";
@@ -41,6 +41,25 @@ function App() {
   const [isAppLocked, setIsAppLocked] = useState(true);
   const [isInitializing, setIsInitializing] = useState(true);
 
+  // Business profile state shared between Sidebar and EditProfile
+  const [profileBusinessName, setProfileBusinessName] = useState("Laimsoft");
+  const [profileLogo, setProfileLogo] = useState<string | null>(null);
+
+  const fetchProfile = useCallback(async () => {
+    try {
+      const res = await fetch('/api/user_profile');
+      if (res.ok) {
+        const data = await res.json();
+        if (data) {
+          setProfileBusinessName(data.business_name || "Laimsoft");
+          setProfileLogo(data.logo || null);
+        }
+      }
+    } catch (e) {
+      // silently fail – sidebar will keep its defaults
+    }
+  }, []);
+
   useEffect(() => {
     let mounted = true;
     const checkLockStatus = async () => {
@@ -66,8 +85,9 @@ function App() {
       }
     };
     checkLockStatus();
+    fetchProfile();
     return () => { mounted = false; };
-  }, []);
+  }, [fetchProfile]);
 
   const [currentView, setCurrentView] = useState<ViewType>("home");
   const [lastStandardView, setLastStandardView] = useState<ViewType>("home");
@@ -245,7 +265,7 @@ function App() {
       case "utilities-recycle-bin":
         return <RecycleBin />;
       case "edit-profile":
-        return <EditProfile onBack={() => handleViewChange("home")} />;
+        return <EditProfile onBack={() => handleViewChange("home")} onProfileSaved={fetchProfile} />;
       default:
         return <Dashboard onViewChange={handleViewChange} onOpenReport={handleOpenReport} />;
     }
@@ -260,9 +280,7 @@ function App() {
       {isAppLocked && <EnterPasscodeScreen onSuccess={() => setIsAppLocked(false)} />}
       <div className="h-screen flex bg-gray-50 overflow-hidden print:h-auto print:overflow-visible print:block">
         {/* Sidebar */}
-        <div className="print:hidden h-full flex flex-col">
-          <Sidebar currentView={activeBaseView} onViewChange={handleViewChange} />
-        </div>
+        <Sidebar currentView={activeBaseView} onViewChange={handleViewChange} businessName={profileBusinessName} logo={profileLogo} />
 
         {/* Right Section */}
         <div className="flex-1 flex flex-col overflow-hidden print:overflow-visible print:block">

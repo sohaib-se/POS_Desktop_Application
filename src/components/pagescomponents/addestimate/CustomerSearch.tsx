@@ -47,7 +47,7 @@ export function CustomerSearch({ activeTab, updateTab, parties, setShowAddParty 
                 type="text"
                 value={open ? search : (selectedParty ? selectedParty.name : "")}
                 onChange={(e) => { setSearch(e.target.value); setOpen(true); }}
-                onFocus={() => { setOpen(true); setSearch(selectedParty ? selectedParty.name : ""); }}
+                onFocus={() => { setSearch(selectedParty ? selectedParty.name : ""); }}
                 onClick={() => { setOpen(true); setSearch(selectedParty ? selectedParty.name : ""); }}
                 placeholder="Search by Name/Phone"
                 style={{ border: "1.5px solid #3b82f6", borderRadius: 4, padding: "8px 30px 8px 12px", width: "100%", height: 38, fontSize: 13, color: "#1f2937", outline: "none" }}

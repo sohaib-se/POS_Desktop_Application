@@ -1,4 +1,4 @@
-import { Search, Pencil, Trash2 } from "lucide-react";
+import { Eye, Pencil, Trash2 } from "lucide-react";
 import type { EstimateRecord } from "./types";
 
 interface EstimateRowMenuProps {
@@ -44,18 +44,25 @@ export function EstimateRowMenu({
           setOpenRowMenuPosition(null);
         }}
       >
-        <Search className="w-4 h-4 text-gray-500" />
-        View
+        <Eye className="w-4 h-4 text-gray-500" />
+        Preview
       </button>
       <button
-        className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-gray-50"
+        className={`flex w-full items-center gap-2 px-3 py-2 text-left text-sm ${
+          targetItem.status === "Converted" 
+            ? "opacity-50 cursor-not-allowed text-gray-400" 
+            : "hover:bg-gray-50 text-gray-700"
+        }`}
+        disabled={targetItem.status === "Converted"}
         onClick={() => {
+          if (targetItem.status === "Converted") return;
           onEditEstimate(targetItem);
           setOpenRowMenuId(null);
           setOpenRowMenuPosition(null);
         }}
+        title={targetItem.status === "Converted" ? "Cannot edit a converted estimate" : ""}
       >
-        <Pencil className="w-4 h-4 text-gray-500" />
+        <Pencil className={`w-4 h-4 ${targetItem.status === "Converted" ? "text-gray-400" : "text-gray-500"}`} />
         Edit
       </button>
       <button

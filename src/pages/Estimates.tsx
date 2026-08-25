@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { ConfirmDialog } from "../components/ConfirmDialog";
 import { AddEstimate } from "@/pages/AddEstimate";
 import type { EstimateRecord } from "../components/pagescomponents/estimates/types";
 import { EstimatesHeader } from "../components/pagescomponents/estimates/EstimatesHeader";
@@ -20,10 +21,17 @@ export function Estimates({ onConvertEstimateToSale }: { onConvertEstimateToSale
   const [openRowMenuId, setOpenRowMenuId] = useState<string | null>(null);
   const [openRowMenuPosition, setOpenRowMenuPosition] = useState<{ left: number; top: number } | null>(null);
   const [editingEstimate, setEditingEstimate] = useState<EstimateRecord | null>(null);
+  
+  const getCurrentMonth = () => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  };
+  const [selectedMonth, setSelectedMonth] = useState(getCurrentMonth());
 
   const [isPasscodeEnabled] = useSettings('settings.isPasscodeEnabled', false);
   const [isPasscodeForTransactionEnabled] = useSettings('settings.isPasscodeForTransactionEnabled', false);
   const [passcodeAction, setPasscodeAction] = useState<{ type: 'edit' | 'delete', payload: any } | null>(null);
+  const [deletePendingId, setDeletePendingId] = useState<string | null>(null);
 
   const handleEditEstimate = (estimate: EstimateRecord) => {
     setEditingEstimate(estimate);
@@ -78,17 +86,15 @@ export function Estimates({ onConvertEstimateToSale }: { onConvertEstimateToSale
   }, []);
 
   const handleDelete = async (id: string) => {
-    if (window.confirm("Are you sure you want to delete this estimate?")) {
-      try {
-        const response = await fetch(`/api/estimates/${id}`, { method: "DELETE" });
-        if (!response.ok && response.status !== 204) {
-          throw new Error("Failed to delete estimate");
-        }
-        setRecords((prev) => prev.filter((r) => r.id !== id));
-      } catch (error) {
-        console.error("Delete error:", error);
-        alert("Failed to delete the selected estimate.");
+    try {
+      const response = await fetch(`/api/estimates/${id}`, { method: "DELETE" });
+      if (!response.ok && response.status !== 204) {
+        throw new Error("Failed to delete estimate");
       }
+      setRecords((prev) => prev.filter((r) => r.id !== id));
+    } catch (error) {
+      console.error("Delete error:", error);
+      alert("Failed to delete the selected estimate.");
     }
   };
 
@@ -104,9 +110,10 @@ export function Estimates({ onConvertEstimateToSale }: { onConvertEstimateToSale
     if (isPasscodeEnabled && isPasscodeForTransactionEnabled) {
       setPasscodeAction({ type: 'delete', payload: id });
     } else {
-      handleDelete(id);
+      setDeletePendingId(id);
     }
   };
+
 
   const handlePasscodeSuccess = () => {
     if (passcodeAction?.type === 'edit') {
@@ -117,8 +124,34 @@ export function Estimates({ onConvertEstimateToSale }: { onConvertEstimateToSale
     setPasscodeAction(null);
   };
 
-  const totalQuotations = records.reduce((sum, est) => sum + est.amount, 0);
-  const totalConverted = records
+  const filteredRecords = records.filter(record => {
+    let monthMatch = true;
+    if (selectedMonth) {
+      try {
+        const recordDate = new Date(record.date);
+        if (!isNaN(recordDate.getTime())) {
+          const recordMonth = `${recordDate.getFullYear()}-${String(recordDate.getMonth() + 1).padStart(2, '0')}`;
+          monthMatch = recordMonth === selectedMonth;
+        }
+      } catch {
+        // ignore invalid dates
+      }
+    }
+
+    let searchMatch = true;
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      const partyMatch = record.partyName?.toLowerCase().includes(query);
+      const invoiceMatch = record.referenceNo?.toLowerCase().includes(query) || 
+                           (record.convertedSaleNo && record.convertedSaleNo.toLowerCase().includes(query));
+      searchMatch = !!(partyMatch || invoiceMatch);
+    }
+
+    return monthMatch && searchMatch;
+  });
+
+  const totalQuotations = filteredRecords.reduce((sum, est) => sum + est.amount, 0);
+  const totalConverted = filteredRecords
     .filter((e) => e.status === "Converted")
     .reduce((sum, est) => sum + est.amount, 0);
 
@@ -126,13 +159,13 @@ export function Estimates({ onConvertEstimateToSale }: { onConvertEstimateToSale
     <>
       <div className="h-full flex flex-col bg-[#D0DCE7] gap-1 overflow-y-auto">
         <EstimatesHeader onAddEstimate={() => setShowAddEstimate(true)} />
-        <EstimatesFilters />
+        <EstimatesFilters selectedMonth={selectedMonth} onMonthChange={setSelectedMonth} />
         <EstimatesSummary
           totalQuotations={totalQuotations}
           totalConverted={totalConverted}
         />
         <EstimatesTable
-          records={records}
+          records={filteredRecords}
           showSearchInput={showSearchInput}
           setShowSearchInput={setShowSearchInput}
           searchQuery={searchQuery}
@@ -150,7 +183,7 @@ export function Estimates({ onConvertEstimateToSale }: { onConvertEstimateToSale
           <AddEstimate 
             initialEstimate={editingEstimate}
             onClose={() => { setShowAddEstimate(false); setEditingEstimate(null); }} 
-            onSave={() => { fetchEstimates(); setShowAddEstimate(false); setEditingEstimate(null); }} 
+            onSave={() => { fetchEstimates(); }} 
           />
         </div>
       )}
@@ -158,7 +191,7 @@ export function Estimates({ onConvertEstimateToSale }: { onConvertEstimateToSale
       <EstimateRowMenu
         openRowMenuId={openRowMenuId}
         openRowMenuPosition={openRowMenuPosition}
-        records={records}
+        records={filteredRecords}
         setViewingRecord={setViewingRecord}
         onEditEstimate={handleEditClick}
         handleDelete={handleDeleteClick}
@@ -177,6 +210,18 @@ export function Estimates({ onConvertEstimateToSale }: { onConvertEstimateToSale
           onCancel={() => setPasscodeAction(null)}
         />
       )}
+
+      <ConfirmDialog
+        open={!!deletePendingId}
+        title="Delete Estimate?"
+        message="Are you sure you want to delete this estimate? This action cannot be undone."
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        confirmColor="#e53935"
+        icon="danger"
+        onConfirm={() => { if (deletePendingId) handleDelete(deletePendingId); setDeletePendingId(null); }}
+        onCancel={() => setDeletePendingId(null)}
+      />
     </>
   );
 }

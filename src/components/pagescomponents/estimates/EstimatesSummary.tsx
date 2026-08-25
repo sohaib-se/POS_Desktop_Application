@@ -18,9 +18,6 @@ export function EstimatesSummary({ totalQuotations, totalConverted }: EstimatesS
       <div className="max-w-sm bg-[#F6F0FB] rounded-xl p-4 border border-[#E8D7F6]">
         <div className="flex items-center justify-between mb-1">
           <span className="text-sm text-[#6B6B83]">Total Quotations</span>
-          <span className="flex items-center gap-1 text-xs text-[#E53935] bg-[#FCE8EA] px-2 py-0.5 rounded-full">
-            509.09% ↓
-          </span>
         </div>
         <p className="text-xl font-bold text-[#1C1F2A]">
           {currencyStr} {totalQuotations.toLocaleString()}

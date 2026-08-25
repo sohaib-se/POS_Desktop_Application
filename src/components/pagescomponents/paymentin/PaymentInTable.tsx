@@ -12,6 +12,7 @@ interface PaymentInTableProps {
   openRowMenuId: string | null;
   setOpenRowMenuPosition: React.Dispatch<React.SetStateAction<{ left: number; top: number } | null>>;
   setOpenRowMenuId: React.Dispatch<React.SetStateAction<string | null>>;
+  onPrintClick?: () => void;
 }
 
 export function PaymentInTable({
@@ -24,6 +25,7 @@ export function PaymentInTable({
   openRowMenuId,
   setOpenRowMenuPosition,
   setOpenRowMenuId,
+  onPrintClick,
 }: PaymentInTableProps) {
   const [currency] = useSettings('settings.businessCurrency', { code: 'PKR', symbol: 'Rs' });
   const [currencyDisplay] = useSettings<'abbreviation' | 'icon'>('settings.currencyDisplay', 'abbreviation');
@@ -72,7 +74,10 @@ export function PaymentInTable({
             </button>
           )}
           <button
-            onClick={() => window.print()}
+            onClick={() => {
+              if (onPrintClick) onPrintClick();
+              else window.print();
+            }}
             className="p-1.5 hover:bg-[#F7F9FB] rounded"
             title="Print"
           >

@@ -73,7 +73,6 @@ export function CashBank({ subView }: CashBankProps) {
 
   const handleEdit = async (tx: Transaction, updatedAmount: number) => {
     try {
-      const isCashIn = String(tx.type).toLowerCase().includes("increase") || String(tx.type).toLowerCase().includes("in");
       const res = await fetch(`/api/cash_transactions?id=${tx.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },

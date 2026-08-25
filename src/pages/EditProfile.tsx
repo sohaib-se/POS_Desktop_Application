@@ -7,9 +7,10 @@ import { EditProfileFooter } from "../components/pagescomponents/editprofile/Edi
 
 interface EditProfileProps {
   onBack?: () => void;
+  onProfileSaved?: () => void;
 }
 
-export function EditProfile({ onBack }: EditProfileProps) {
+export function EditProfile({ onBack, onProfileSaved }: EditProfileProps) {
   const [businessName, setBusinessName] = useState("");
   const [businessType, setBusinessType] = useState("Retail");
   const [businessCategory, setBusinessCategory] = useState("Book / Stationary store");
@@ -68,6 +69,7 @@ export function EditProfile({ onBack }: EditProfileProps) {
       });
       if (res.ok) {
         showToast("Profile saved successfully", "success");
+        onProfileSaved?.();
       } else {
         showToast("Failed to save profile", "error");
       }
@@ -88,7 +90,7 @@ export function EditProfile({ onBack }: EditProfileProps) {
 
       <div className="flex-1 overflow-y-auto">
         <div className="p-6 space-y-6">
-          <LogoSection logo={logo} setLogo={setLogo} />
+          <LogoSection logo={logo} setLogo={setLogo} onProfileSaved={onProfileSaved} />
           
           <div className="grid grid-cols-3 gap-8">
             <BusinessDetails
@@ -112,6 +114,7 @@ export function EditProfile({ onBack }: EditProfileProps) {
               setBusinessAddress={setBusinessAddress}
               signature={signature}
               setSignature={setSignature}
+              onProfileSaved={onProfileSaved}
             />
           </div>
         </div>

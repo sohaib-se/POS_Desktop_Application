@@ -1894,6 +1894,15 @@ export function updateUserProfile(profile) {
   db.close();
 }
 
+export function clearUserProfileImage(field) {
+  const allowed = ['logo', 'signature'];
+  if (!allowed.includes(field)) throw new Error(`Invalid field: ${field}`);
+  const db = openDatabase();
+  // Direct UPDATE — bypasses the COALESCE guard in updateUserProfile
+  db.prepare(`UPDATE user_profile SET ${field} = NULL, updated_at = datetime('now') WHERE id = 1`).run();
+  db.close();
+}
+
 export function getBarcodeGenerators() {
   const db = openDatabase();
   try {

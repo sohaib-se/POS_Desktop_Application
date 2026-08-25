@@ -146,6 +146,38 @@ export function addPaymentInRecord(record) {
   db.close();
 }
 
+export function updatePaymentInRecord(record) {
+  const db = openDatabase();
+  db.prepare(`
+    UPDATE payment_in_records SET
+      receipt_no = @receiptNo,
+      date = @date,
+      party_name = @partyName,
+      party_id = @partyId,
+      amount = @amount,
+      payment_type = @paymentType,
+      reference = @reference,
+      description = @description,
+      attachment_image_path = @attachmentImagePath,
+      attachment_image_name = @attachmentImageName,
+      attachment_document_path = @attachmentDocumentPath,
+      attachment_document_name = @attachmentDocumentName,
+      updated_at = datetime('now')
+    WHERE id = @id
+  `).run({
+    ...record,
+    partyId: record.partyId ?? null,
+    receiptNo: record.receiptNo ?? null,
+    reference: record.reference ?? null,
+    description: record.description ?? null,
+    attachmentImagePath: record.attachmentImagePath ?? null,
+    attachmentImageName: record.attachmentImageName ?? null,
+    attachmentDocumentPath: record.attachmentDocumentPath ?? null,
+    attachmentDocumentName: record.attachmentDocumentName ?? null,
+  });
+  db.close();
+}
+
 export function getPaymentInRecordById(id) {
   const db = openDatabase();
   const row = db.prepare('SELECT * FROM payment_in_records WHERE id = ?').get(String(id));

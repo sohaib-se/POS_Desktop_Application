@@ -1,4 +1,4 @@
-import { ChevronDown, FileText, ChevronRight, AlertCircle } from "lucide-react";
+import { ChevronDown, FileText, AlertCircle } from "lucide-react";
 import { useSettings } from "@/hooks/useSettings";
 import type { PosTab, PartyOption, BankOption } from "./types";
 
@@ -12,8 +12,6 @@ interface RightPanelProps {
   receivedLessThanTotal: boolean;
   isSaving: boolean;
   handleSaveSale: () => void;
-  customerDropdownOpen: boolean;
-  setCustomerDropdownOpen: (open: boolean) => void;
   filteredCustomers: PartyOption[];
 }
 
@@ -27,8 +25,6 @@ export function RightPanel({
   receivedLessThanTotal,
   isSaving,
   handleSaveSale,
-  customerDropdownOpen,
-  setCustomerDropdownOpen,
   filteredCustomers,
 }: RightPanelProps) {
   const [currency] = useSettings('settings.businessCurrency', { code: 'PKR', symbol: 'Rs' });

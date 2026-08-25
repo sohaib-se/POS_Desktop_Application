@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useSettings } from "@/hooks/useSettings";
 import { SharedModal } from "./SharedModal";
-import { Calendar } from "lucide-react";
+import { Calendar, AlertCircle } from "lucide-react";
 
 interface AdjustCashModalProps {
   open: boolean;
@@ -25,6 +25,7 @@ export function AdjustCashModal({ open, onClose, currentCash, onSuccess, editing
   });
   const [description, setDescription] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (open) {
@@ -64,6 +65,19 @@ export function AdjustCashModal({ open, onClose, currentCash, onSuccess, editing
 
   const handleSave = async () => {
     if (!amount) return;
+    
+    const numAmount = Number(amount);
+    if (numAmount < 0) {
+      setError("Amount cannot be negative.");
+      return;
+    }
+    
+    if (mode === "reduce" && numAmount > baseCash) {
+      setError(`Cannot reduce cash by more than the available balance (${currencyStr} ${baseCash.toLocaleString()}).`);
+      return;
+    }
+
+    setError(null);
     setIsSaving(true);
     try {
       const type = mode === "add" ? "Increase Cash" : "Decrease Cash";
@@ -126,8 +140,14 @@ export function AdjustCashModal({ open, onClose, currentCash, onSuccess, editing
           <div className="relative">
             <input
               type="number"
+              min="0"
               value={amount}
-              onChange={(e) => setAmount(e.target.value)}
+              onChange={(e) => {
+                const val = e.target.value;
+                if (Number(val) < 0) return;
+                setAmount(val);
+                setError(null);
+              }}
               className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-100"
             />
           </div>
@@ -171,6 +191,13 @@ export function AdjustCashModal({ open, onClose, currentCash, onSuccess, editing
           />
         </div>
       </div>
+      
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm flex items-start gap-2">
+          <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
+          <p>{error}</p>
+        </div>
+      )}
 
       <div className="flex justify-end gap-3 pt-5 mt-2">
         <button

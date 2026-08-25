@@ -8,6 +8,7 @@ import { AddPaymentInModal } from "@/components/pagescomponents/paymentin/AddPay
 import { PaymentInRowMenu } from "@/components/pagescomponents/paymentin/PaymentInRowMenu";
 import { ViewPaymentInModal } from "@/components/pagescomponents/paymentin/ViewPaymentInModal";
 import { EnterPasscodeScreen } from "@/components/common/EnterPasscodeScreen";
+import { PaymentInPrintReport } from "@/components/pagescomponents/paymentin/PaymentInPrintReport";
 import { useSettings } from "@/hooks/useSettings";
 
 export function PaymentIn() {
@@ -20,6 +21,7 @@ export function PaymentIn() {
   const [bankAccounts, setBankAccounts] = useState<any[]>([]);
   const [records, setRecords] = useState<any[]>([]);
   const [viewingRecord, setViewingRecord] = useState<any>(null);
+  const [businessProfile, setBusinessProfile] = useState<any>(null);
   
   const [paymentType, setPaymentType] = useState("Cash");
   const [amount, setAmount] = useState("");
@@ -62,6 +64,10 @@ export function PaymentIn() {
     fetch('/api/bank_accounts')
       .then(res => res.json())
       .then(data => setBankAccounts(data))
+      .catch(console.error);
+    fetch('/api/user_profile')
+      .then(res => res.json())
+      .then(data => setBusinessProfile(data))
       .catch(console.error);
   };
 
@@ -297,7 +303,8 @@ export function PaymentIn() {
   };
 
   return (
-    <div className="h-full flex flex-col bg-[#D0DCE7] gap-1 overflow-y-auto">
+    <>
+    <div className="print:hidden h-full flex flex-col bg-[#D0DCE7] gap-1 overflow-y-auto">
       <PaymentInHeader onAddPaymentClick={handleOpenAddPayment} />
 
       <PaymentInFilters 
@@ -478,5 +485,12 @@ export function PaymentIn() {
         </DialogContent>
       </Dialog>
     </div>
+    <PaymentInPrintReport
+      records={filteredRecords}
+      selectedPartyName={selectedParty ? partyOptions.find((p) => p.value === selectedParty)?.label || "All Parties" : "All Parties"}
+      selectedMonth={selectedMonth}
+      businessProfile={businessProfile}
+    />
+    </>
   );
 }

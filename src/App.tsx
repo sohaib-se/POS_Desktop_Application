@@ -258,17 +258,21 @@ function App() {
   return (
     <>
       {isAppLocked && <EnterPasscodeScreen onSuccess={() => setIsAppLocked(false)} />}
-      <div className="h-screen flex bg-gray-50 overflow-hidden">
+      <div className="h-screen flex bg-gray-50 overflow-hidden print:h-auto print:overflow-visible print:block">
         {/* Sidebar */}
-        <Sidebar currentView={activeBaseView} onViewChange={handleViewChange} />
+        <div className="print:hidden h-full flex flex-col">
+          <Sidebar currentView={activeBaseView} onViewChange={handleViewChange} />
+        </div>
 
         {/* Right Section */}
-        <div className="flex-1 flex flex-col overflow-hidden">
+        <div className="flex-1 flex flex-col overflow-hidden print:overflow-visible print:block">
           {/* Header */}
-          <Header onViewChange={handleViewChange} />
+          <div className="print:hidden">
+            <Header onViewChange={handleViewChange} />
+          </div>
 
           {/* Content Area */}
-          <div className="flex-1 overflow-hidden">
+          <div className="flex-1 overflow-hidden print:overflow-visible print:block">
             {renderContent(activeBaseView)}
           </div>
         </div>

@@ -118,48 +118,48 @@ export function MoreDetails({
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Business Type
             </label>
-              <select
-                value={businessType}
-                onChange={(e) => setBusinessType(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#E53935] focus:border-transparent"
-              >
-                <option value="Retail">Retail</option>
-                <option value="Wholesale">Wholesale</option>
-              </select>
+            <select
+              value={businessType}
+              onChange={(e) => setBusinessType(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#E53935] focus:border-transparent"
+            >
+              <option value="Retail">Retail</option>
+              <option value="Wholesale">Wholesale</option>
+            </select>
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Business Category
             </label>
-              <select
-                value={isCustomCategory ? "Custom" : businessCategory}
+            <select
+              value={isCustomCategory ? "Custom" : businessCategory}
+              onChange={(e) => {
+                if (e.target.value === "Custom") {
+                  setBusinessCategory("Custom");
+                  setCustomCategoryValue("");
+                } else {
+                  setBusinessCategory(e.target.value);
+                  setCustomCategoryValue("");
+                }
+              }}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#E53935] focus:border-transparent"
+            >
+              {BUSINESS_CATEGORIES.map((cat) => (
+                <option key={cat} value={cat}>{cat}</option>
+              ))}
+            </select>
+            {isCustomCategory && (
+              <input
+                type="text"
+                placeholder="Enter custom category"
+                value={customCategoryValue}
                 onChange={(e) => {
-                  if (e.target.value === "Custom") {
-                    setBusinessCategory("Custom");
-                    setCustomCategoryValue("");
-                  } else {
-                    setBusinessCategory(e.target.value);
-                    setCustomCategoryValue("");
-                  }
+                  setCustomCategoryValue(e.target.value);
+                  setBusinessCategory(e.target.value || "Custom");
                 }}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#E53935] focus:border-transparent"
-              >
-                {BUSINESS_CATEGORIES.map((cat) => (
-                  <option key={cat} value={cat}>{cat}</option>
-                ))}
-              </select>
-              {isCustomCategory && (
-                <input
-                  type="text"
-                  placeholder="Enter custom category"
-                  value={customCategoryValue}
-                  onChange={(e) => {
-                    setCustomCategoryValue(e.target.value);
-                    setBusinessCategory(e.target.value || "Custom");
-                  }}
-                  className="w-full mt-2 px-3 py-2 border border-gray-300 rounded-lg text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#E53935] focus:border-transparent"
-                />
-              )}
+                className="w-full mt-2 px-3 py-2 border border-gray-300 rounded-lg text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#E53935] focus:border-transparent"
+              />
+            )}
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -201,7 +201,7 @@ export function MoreDetails({
             {signature ? (
               <div className="flex-1 border-2 border-dashed border-gray-300 rounded-lg p-2 flex flex-col items-center justify-center relative overflow-hidden group/sigimg">
                 <img src={signature} alt="Signature" className="max-w-full max-h-full object-contain" />
-                
+
                 {/* Overlay with Upload and Delete icons */}
                 <div className="absolute inset-0 bg-black/60 flex items-center justify-center gap-6 opacity-0 group-hover/sigimg:opacity-100 transition-opacity">
                   <label

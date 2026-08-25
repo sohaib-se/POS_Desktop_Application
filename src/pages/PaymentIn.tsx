@@ -14,6 +14,7 @@ export function PaymentIn() {
   const [showAddPayment, setShowAddPayment] = useState(false);
   const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [editingRecordId, setEditingRecordId] = useState<string | null>(null);
   const [parties, setParties] = useState<any[]>([]);
   const [selectedParty, setSelectedParty] = useState("");
   const [bankAccounts, setBankAccounts] = useState<any[]>([]);
@@ -121,6 +122,7 @@ export function PaymentIn() {
   };
 
   const resetAddPaymentForm = () => {
+    setEditingRecordId(null);
     setPaymentType("Cash");
     setAmount("");
     setPaymentDate(new Date().toISOString().split('T')[0]);
@@ -163,11 +165,36 @@ export function PaymentIn() {
     resetAddPaymentForm();
   };
 
-  const handleEditClick = (show: boolean) => {
+  const handleEditClick = (show: boolean, record?: any) => {
     if (show && isPasscodeEnabled && isPasscodeForTransactionEnabled) {
-      setPasscodeAction({ type: 'edit', payload: '' });
+      setPasscodeAction({ type: 'edit', payload: record ? record.id : '' });
     } else {
-      handleCloseAddPayment(show);
+      if (show && record) {
+        setEditingRecordId(record.id);
+        setPaymentType(record.paymentType || record.payment_type || "Cash");
+        setAmount(String(record.amount || ""));
+        setReceiptNo(record.receiptNo || record.receipt_no || "");
+        
+        let formattedDate = new Date().toISOString().split('T')[0];
+        if (record.date) {
+            if (record.date.includes('/')) {
+                const parts = record.date.split('/');
+                if (parts.length === 3) {
+                    formattedDate = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+                }
+            } else if (record.date.includes('-')) {
+                formattedDate = record.date.split('T')[0];
+            }
+        }
+        setPaymentDate(formattedDate);
+        setDescription(record.description || "");
+        setShowDescription(!!record.description);
+        setImageDataUrl(record.attachment_image_path || record.attachmentImagePath || "");
+        setSelectedParty(String(record.partyId || record.party_id || ""));
+        setShowAddPayment(true);
+      } else {
+        handleCloseAddPayment(show);
+      }
     }
   };
 
@@ -175,7 +202,12 @@ export function PaymentIn() {
     if (passcodeAction?.type === 'delete') {
       executeDelete(passcodeAction.payload);
     } else if (passcodeAction?.type === 'edit') {
-      handleOpenAddPayment();
+      if (passcodeAction.payload) {
+        const record = records.find(r => r.id === passcodeAction.payload);
+        handleEditClick(true, record);
+      } else {
+        handleOpenAddPayment();
+      }
     }
     setPasscodeAction(null);
   };
@@ -244,8 +276,10 @@ export function PaymentIn() {
       imageDataUrl: imageDataUrl || undefined,
     };
     try {
-      const response = await fetch('/api/payment_in_records', {
-        method: 'POST',
+      const method = editingRecordId ? 'PUT' : 'POST';
+      const url = editingRecordId ? `/api/payment_in_records?id=${editingRecordId}` : '/api/payment_in_records';
+      const response = await fetch(url, {
+        method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });

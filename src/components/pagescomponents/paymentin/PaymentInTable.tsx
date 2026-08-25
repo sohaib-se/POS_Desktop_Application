@@ -1,6 +1,6 @@
 import React from "react";
 import { useSettings } from "@/hooks/useSettings";
-import { Search, Printer, Share2, MoreVertical } from "lucide-react";
+import { Search, Printer, MoreVertical } from "lucide-react";
 
 interface PaymentInTableProps {
   records: any[];
@@ -121,12 +121,7 @@ export function PaymentInTable({
                   <td className="px-4 py-3">{payment.paymentType}</td>
                   <td className="px-4 py-3 relative">
                     <div className="flex items-center justify-center gap-2">
-                      <button className="p-1.5 hover:bg-gray-100 rounded" title="Print">
-                        <Printer className="w-4 h-4 text-gray-500" />
-                      </button>
-                      <button className="p-1.5 hover:bg-gray-100 rounded" title="Share">
-                        <Share2 className="w-4 h-4 text-gray-500" />
-                      </button>
+
                       <button
                         className="p-1.5 hover:bg-gray-100 rounded"
                         title="More actions"

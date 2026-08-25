@@ -847,6 +847,127 @@ function sqliteApiPlugin() {
             return;
           }
 
+          if (req.method === 'PUT') {
+            const pathId = requestUrl.pathname.split('/').filter(Boolean)[0];
+            const queryId = requestUrl.searchParams.get('id');
+            const id = (pathId || queryId || '').trim();
+
+            if (!id) {
+              res.statusCode = 400;
+              res.end(JSON.stringify({ message: 'ID required' }));
+              return;
+            }
+
+            try {
+              const payload = await parseJsonBody(req);
+              const existingRecord = repository.getPaymentInRecordById(id);
+
+              if (!existingRecord) {
+                res.statusCode = 404;
+                res.end(JSON.stringify({ message: 'Record not found' }));
+                return;
+              }
+
+              let updatedImagePath = existingRecord.attachment_image_path || existingRecord.attachmentImagePath;
+
+              if (payload.imageDataUrl && payload.imageDataUrl !== updatedImagePath && payload.imageDataUrl.startsWith('data:')) {
+                if (updatedImagePath) {
+                  removeManagedPaymentInAttachmentFile(updatedImagePath);
+                }
+                const imageFile = saveDataUrlToAppData({
+                  dataUrl: payload.imageDataUrl,
+                  prefix: 'payment_in_image',
+                  targetRoot: paymentInAttachmentsRoot,
+                });
+                updatedImagePath = imageFile?.filePath ?? null;
+              } else if (payload.imageDataUrl === null || payload.imageDataUrl === '') {
+                if (updatedImagePath) {
+                  removeManagedPaymentInAttachmentFile(updatedImagePath);
+                  updatedImagePath = null;
+                }
+              }
+
+              if (existingRecord.party_id) {
+                try {
+                  const allParties = repository.getParties();
+                  const party = allParties.find((p: any) => String(p.id) === String(existingRecord.party_id));
+                  if (party) {
+                    party.balance = Number(party.balance || 0) + Number(existingRecord.amount || 0);
+                    repository.upsertParty(party);
+                  }
+                } catch (balanceError) {
+                  console.error('Failed to restore party balance:', balanceError);
+                }
+              }
+
+              try {
+                const pMode = String(existingRecord.payment_type).toLowerCase();
+                if (pMode === 'cash') {
+                  repository.deleteCashInHandTransaction('cash_payment_in_' + id);
+                } else if (pMode) {
+                  repository.deleteBankAccountTransaction('bank_payment_in_' + id);
+                }
+              } catch (txError) {
+                console.error('Failed to delete cash/bank transaction:', txError);
+              }
+
+              const record = {
+                id,
+                receiptNo: payload.receiptNo ?? existingRecord.receipt_no,
+                date: payload.date ?? existingRecord.date,
+                partyName: payload.partyName ?? existingRecord.party_name,
+                partyId: payload.partyId ?? existingRecord.party_id,
+                amount: Number(payload.amount ?? existingRecord.amount),
+                paymentType: payload.paymentType ?? existingRecord.payment_type,
+                reference: payload.reference ?? existingRecord.reference,
+                description: payload.description ?? existingRecord.description,
+                attachmentImagePath: updatedImagePath,
+                attachmentImageName: existingRecord.attachment_image_name || existingRecord.attachmentImageName,
+                attachmentDocumentPath: existingRecord.attachment_document_path || existingRecord.attachmentDocumentPath,
+                attachmentDocumentName: existingRecord.attachment_document_name || existingRecord.attachmentDocumentName,
+              };
+
+              repository.updatePaymentInRecord(record);
+
+              if (record.partyId) {
+                const allParties = repository.getParties();
+                const party = allParties.find((p: any) => String(p.id) === String(record.partyId));
+                if (party) {
+                  party.balance = Number(party.balance || 0) - Number(record.amount || 0);
+                  repository.upsertParty(party);
+                }
+              }
+
+              if (String(record.paymentType).toLowerCase() === 'cash') {
+                repository.addCashInHandTransaction({
+                  id: 'cash_payment_in_' + record.id,
+                  date: record.date,
+                  name: record.partyName,
+                  type: 'Payment In',
+                  amount: record.amount
+                });
+              } else if (record.paymentType) {
+                repository.addBankAccountTransaction({
+                  id: 'bank_payment_in_' + record.id,
+                  date: record.date,
+                  name: record.partyName,
+                  type: 'Payment In',
+                  amount: record.amount,
+                  paymentType: record.paymentType
+                });
+              }
+
+              res.statusCode = 200;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify(record));
+            } catch (error) {
+              console.error('PUT /api/payment_in_records error:', error);
+              res.statusCode = 400;
+              res.end(JSON.stringify({ message: 'Bad Request' }));
+            }
+            return;
+          }
+
           if (req.method === 'DELETE') {
             const pathId = requestUrl.pathname.split('/').filter(Boolean)[0];
             const queryId = requestUrl.searchParams.get('id');

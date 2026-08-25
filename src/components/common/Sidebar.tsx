@@ -19,6 +19,8 @@ import type { ViewType } from "@/types";
 interface SidebarProps {
   currentView: ViewType;
   onViewChange: (view: ViewType) => void;
+  businessName?: string;
+  logo?: string | null;
 }
 
 interface MenuItem {
@@ -113,7 +115,7 @@ const menuItems: MenuItem[] = [
 
 import { useSettings } from "@/hooks/useSettings";
 
-export function Sidebar({ currentView, onViewChange }: SidebarProps) {
+export function Sidebar({ currentView, onViewChange, businessName = "Laimsoft", logo }: SidebarProps) {
   const [expandedMenus, setExpandedMenus] = useState<string[]>(["sale-invoices"]);
   const [isEstimationEnabled] = useSettings('settings.isEstimationEnabled', true);
 
@@ -257,12 +259,18 @@ export function Sidebar({ currentView, onViewChange }: SidebarProps) {
           className="flex items-center justify-between text-gray-300 hover:text-white cursor-pointer transition-colors"
         >
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white text-xs font-bold">
-              L
+            <div className="w-8 h-8 rounded-full overflow-hidden flex items-center justify-center flex-shrink-0 bg-gradient-to-br from-blue-500 to-purple-600">
+              {logo ? (
+                <img src={logo} alt="Logo" className="w-full h-full object-cover" />
+              ) : (
+                <span className="text-white text-xs font-bold">
+                  {businessName.charAt(0).toUpperCase()}
+                </span>
+              )}
             </div>
-            <span className="text-sm">Laimsoft</span>
+            <span className="text-sm truncate max-w-[120px]">{businessName}</span>
           </div>
-          <ChevronRight className="w-4 h-4" />
+          <ChevronRight className="w-4 h-4 flex-shrink-0" />
         </div>
       </div>
     </div>

@@ -3560,12 +3560,7 @@ function sqliteApiPlugin() {
                 const raw = Buffer.concat(chunks).toString('utf8');
                 const payload = raw ? JSON.parse(raw) : {};
 
-                if (!payload.name || !String(payload.name).trim()) {
-                  res.statusCode = 400;
-                  res.setHeader('Content-Type', 'application/json');
-                  res.end(JSON.stringify({ message: 'Name/description is required.' }));
-                  return;
-                }
+                // Removed validation: Description is now optional
 
                 if (!payload.amount || Number.isNaN(Number(payload.amount))) {
                   res.statusCode = 400;
@@ -3577,7 +3572,7 @@ function sqliteApiPlugin() {
                 const entry = {
                   id: payload.id ? String(payload.id) : Date.now().toString(),
                   date: String(payload.date || new Date().toLocaleDateString('en-GB')),
-                  name: String(payload.name).trim(),
+                  name: String(payload.name || '').trim() || 'Cash Adjustment',
                   type: String(payload.type).trim(),
                   amount: Number(payload.amount),
                 };

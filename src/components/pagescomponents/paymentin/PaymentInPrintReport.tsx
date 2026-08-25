@@ -50,7 +50,10 @@ export function PaymentInPrintReport({
   };
 
   return (
-    <div className="print-area bg-white text-black font-sans w-full px-10 py-6">
+    // Fixed print-safe width (≈ A4 width @96dpi) instead of inheriting the
+    // dialog's 80vw, so on-screen preview, native print, and html2pdf
+    // capture all render at the same consistent size.
+    <div className="print-area bg-white text-black font-sans w-full max-w-[794px] mx-auto px-10 py-6">
       {/* Business Header */}
       <div className="text-center mb-4">
         <h1 className="text-base font-bold">{businessProfile?.business_name || "Laimsoft"}</h1>

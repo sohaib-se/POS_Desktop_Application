@@ -1,6 +1,4 @@
 import { useState, useRef, useEffect } from "react";
-import { X } from "lucide-react";
-import html2pdf from "html2pdf.js";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { PaymentInHeader } from "@/components/pagescomponents/paymentin/PaymentInHeader";
 import { PaymentInFilters } from "@/components/pagescomponents/paymentin/PaymentInFilters";
@@ -10,7 +8,7 @@ import { AddPaymentInModal } from "@/components/pagescomponents/paymentin/AddPay
 import { PaymentInRowMenu } from "@/components/pagescomponents/paymentin/PaymentInRowMenu";
 import { ViewPaymentInModal } from "@/components/pagescomponents/paymentin/ViewPaymentInModal";
 import { EnterPasscodeScreen } from "@/components/common/EnterPasscodeScreen";
-import { PaymentInPrintReport } from "@/components/pagescomponents/paymentin/PaymentInPrintReport";
+import { PaymentInPrintPreviewModal } from "@/components/pagescomponents/paymentin/PaymentInPrintPreviewModal";
 import { useSettings } from "@/hooks/useSettings";
 
 export function PaymentIn() {
@@ -257,32 +255,6 @@ export function PaymentIn() {
 
   const totalAmount = filteredRecords.reduce((sum, p) => sum + p.amount, 0);
   const totalReceived = totalAmount;
-
-  const getPdfOptions = () => ({
-    margin: 10,
-    filename: 'PaymentInReport.pdf',
-    image: { type: 'jpeg', quality: 1 },
-    html2canvas: { scale: 2, useCORS: true, windowWidth: 794 },
-    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-  });
-
-  const handleOpenPDF = () => {
-    const element = document.querySelector('.print-area') as HTMLElement;
-    if (element) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (html2pdf as any)().set(getPdfOptions()).from(element).output('bloburl').then((url: string) => {
-        window.open(url, '_blank');
-      });
-    }
-  };
-
-  const handleSavePDF = () => {
-    const element = document.querySelector('.print-area') as HTMLElement;
-    if (element) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (html2pdf as any)().set(getPdfOptions()).from(element).save();
-    }
-  };
 
   const partyOptions = parties.map(p => ({
     value: String(p.id),
@@ -563,54 +535,14 @@ export function PaymentIn() {
           </DialogContent>
         </Dialog>
       </div>
-      <Dialog open={showPrintPreview} onOpenChange={setShowPrintPreview}>
-        <DialogContent
-          showCloseButton={false}
-          className="print-dialog-content rounded-xl border-0 bg-white p-0 shadow-xl flex flex-col print:shadow-none print:m-0 print:p-0 print:border-none"
-          style={{ width: '50vw', maxWidth: '50vw' }}
-        >
-          <div className="flex items-center justify-between p-4 border-b print:hidden">
-            <h2 className="text-xl font-bold">Preview</h2>
-            <button onClick={() => setShowPrintPreview(false)} className="text-gray-500 hover:text-gray-700">
-              <X className="w-5 h-5" />
-            </button>
-          </div>
-          <div className="overflow-visible print:overflow-visible">
-            <PaymentInPrintReport
-              records={filteredRecords}
-              selectedPartyName={selectedParty ? partyOptions.find((p) => p.value === selectedParty)?.label || "All Parties" : "All Parties"}
-              selectedMonth={selectedMonth}
-              businessProfile={businessProfile}
-            />
-          </div>
-          <div className="p-4 border-t flex justify-end gap-3 print:hidden">
-            <button
-              onClick={handleOpenPDF}
-              className="rounded-full px-6 py-2 border border-red-500 text-red-500 font-medium text-sm hover:bg-red-50 transition-colors"
-            >
-              Open PDF
-            </button>
-            <button
-              onClick={() => window.print()}
-              className="rounded-full px-6 py-2 border border-red-500 text-red-500 font-medium text-sm hover:bg-red-50 transition-colors"
-            >
-              Print
-            </button>
-            <button
-              onClick={handleSavePDF}
-              className="rounded-full px-6 py-2 border border-red-500 text-red-500 font-medium text-sm hover:bg-red-50 transition-colors"
-            >
-              Save PDF
-            </button>
-            <button
-              onClick={() => setShowPrintPreview(false)}
-              className="rounded-full px-6 py-2 bg-red-500 text-white font-medium text-sm hover:bg-red-600 transition-colors"
-            >
-              Close
-            </button>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <PaymentInPrintPreviewModal
+        showPrintPreview={showPrintPreview}
+        setShowPrintPreview={setShowPrintPreview}
+        records={filteredRecords}
+        selectedPartyName={selectedParty ? partyOptions.find((p) => p.value === selectedParty)?.label || "All Parties" : "All Parties"}
+        selectedMonth={selectedMonth}
+        businessProfile={businessProfile}
+      />
     </>
   );
 }

@@ -9,7 +9,6 @@ interface PaymentInPrintReportProps {
 
 export function PaymentInPrintReport({
   records,
-  selectedPartyName,
   selectedMonth,
   businessProfile,
 }: PaymentInPrintReportProps) {
@@ -17,14 +16,12 @@ export function PaymentInPrintReport({
   const [currencyDisplay] = useSettings<'abbreviation' | 'icon'>('settings.currencyDisplay', 'abbreviation');
   const currencyStr = currencyDisplay === 'icon' ? currency.symbol : currency.code;
 
-  let startDateStr = "";
-  let endDateStr = "";
+  let monthDisplay = "All Time";
   if (selectedMonth) {
     const [year, month] = selectedMonth.split('-');
     if (year && month) {
-      startDateStr = `01/${month}/${year}`;
-      const lastDay = new Date(parseInt(year), parseInt(month), 0).getDate();
-      endDateStr = `${lastDay}/${month}/${year}`;
+      const date = new Date(parseInt(year), parseInt(month) - 1);
+      monthDisplay = date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
     }
   }
 
@@ -57,7 +54,7 @@ export function PaymentInPrintReport({
       {/* Business Header */}
       <div className="text-center mb-4">
         <h1 className="text-base font-bold">{businessProfile?.business_name || "Laimsoft"}</h1>
-        <p className="text-xs text-gray-600">Phone no.: {businessProfile?.phone_number || "3369322038"}</p>
+        <p className="text-xs text-gray-600">Phone no.: {businessProfile?.phone || ""}</p>
       </div>
 
       {/* Report Title */}
@@ -70,7 +67,7 @@ export function PaymentInPrintReport({
         <p className="text-sm font-bold">Party name: All Parties</p>
         <p className="text-sm font-bold">Transaction type: Payment-In</p>
         <p className="text-sm font-bold">
-          Duration: {startDateStr && endDateStr ? `From ${startDateStr} to ${endDateStr}` : "All Time"}
+          Month: {monthDisplay}
         </p>
       </div>
 

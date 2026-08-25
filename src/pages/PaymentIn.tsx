@@ -20,8 +20,7 @@ export function PaymentIn() {
   const [paymentType, setPaymentType] = useState("Cash");
   const [amount, setAmount] = useState("");
   const [receiptNo, setReceiptNo] = useState("1");
-  const [referenceNo, setReferenceNo] = useState("");
-  const [paymentDate, setPaymentDate] = useState(new Date().toLocaleDateString('en-GB'));
+  const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split('T')[0]);
   const [description, setDescription] = useState("");
   const [showDescription, setShowDescription] = useState(false);
   const [imageDataUrl, setImageDataUrl] = useState("");
@@ -36,6 +35,13 @@ export function PaymentIn() {
   const [isPasscodeEnabled] = useSettings('settings.isPasscodeEnabled', false);
   const [isPasscodeForTransactionEnabled] = useSettings('settings.isPasscodeForTransactionEnabled', false);
   const [passcodeAction, setPasscodeAction] = useState<{ type: 'edit' | 'delete', payload: string } | null>(null);
+
+  const [selectedMonth, setSelectedMonth] = useState<string>(() => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    return `${year}-${month}`;
+  });
 
   const fetchData = () => {
     fetch('/api/payment_in_records')
@@ -58,6 +64,15 @@ export function PaymentIn() {
   useEffect(() => {
     fetchData();
   }, []);
+
+  useEffect(() => {
+    if (records.length > 0) {
+      const maxReceipt = Math.max(...records.map(r => parseInt(r.receiptNo || '0', 10) || 0));
+      setReceiptNo(String(maxReceipt + 1));
+    } else {
+      setReceiptNo("1");
+    }
+  }, [records]);
 
   useEffect(() => {
     const closeMenus = () => {
@@ -114,9 +129,42 @@ export function PaymentIn() {
     setPasscodeAction(null);
   };
 
-  const totalAmount = records.reduce((sum, p) => sum + p.amount, 0);
+  const filteredRecords = records.filter(record => {
+    if (!selectedMonth) return true;
+    
+    const [selYear, selMonth] = selectedMonth.split('-');
+    const targetMonth = parseInt(selMonth, 10);
+    const targetYear = parseInt(selYear, 10);
+
+    let month = -1;
+    let year = -1;
+
+    if (record.date) {
+      const dateStr = String(record.date);
+      if (dateStr.includes('/')) {
+        const parts = dateStr.split('/');
+        if (parts.length === 3) {
+          month = parseInt(parts[1], 10);
+          year = parseInt(parts[2], 10);
+        }
+      } else if (dateStr.includes('-')) {
+        const parts = dateStr.split('T')[0].split('-');
+        if (parts.length === 3) {
+          if (parts[0].length === 4) {
+            year = parseInt(parts[0], 10);
+            month = parseInt(parts[1], 10);
+          } else {
+            month = parseInt(parts[1], 10);
+            year = parseInt(parts[2], 10);
+          }
+        }
+      }
+    }
+    return month === targetMonth && year === targetYear;
+  });
+
+  const totalAmount = filteredRecords.reduce((sum, p) => sum + p.amount, 0);
   const totalReceived = totalAmount;
-  const totalOpen = parties.reduce((sum, p) => sum + Number(p.balance || 0), 0);
 
   const partyOptions = parties.map(p => ({
     value: String(p.id),
@@ -140,7 +188,7 @@ export function PaymentIn() {
       partyName: party ? party.name : "Cash Sale",
       amount: Number(amount),
       paymentType,
-      reference: referenceNo,
+      reference: "",
       description: showDescription ? description : "",
       imageDataUrl: imageDataUrl || undefined,
     };
@@ -153,7 +201,6 @@ export function PaymentIn() {
       if (response.ok) {
         setShowAddPayment(false);
         setAmount("");
-        setReferenceNo("");
         setDescription("");
         setShowDescription(false);
         setImageDataUrl("");
@@ -171,16 +218,18 @@ export function PaymentIn() {
     <div className="h-full flex flex-col bg-[#D0DCE7] gap-1 overflow-y-auto">
       <PaymentInHeader onAddPaymentClick={() => setShowAddPayment(true)} />
 
-      <PaymentInFilters />
+      <PaymentInFilters 
+        selectedMonth={selectedMonth}
+        setSelectedMonth={setSelectedMonth}
+      />
 
       <PaymentInSummary
         totalAmount={totalAmount}
         totalReceived={totalReceived}
-        totalOpen={totalOpen}
       />
 
       <PaymentInTable
-        records={records}
+        records={filteredRecords}
         showSearchInput={showSearchInput}
         searchQuery={searchQuery}
         searchInputRef={searchInputRef}
@@ -202,8 +251,6 @@ export function PaymentIn() {
         paymentType={paymentType}
         setPaymentType={setPaymentType}
         bankAccounts={bankAccounts}
-        referenceNo={referenceNo}
-        setReferenceNo={setReferenceNo}
         showDescription={showDescription}
         setShowDescription={setShowDescription}
         description={description}

@@ -95,7 +95,7 @@ export function PaymentInTable({
           <thead className="bg-gray-50 sticky top-0 z-10">
             <tr>
               <th className="px-4 py-3 text-left font-medium text-gray-600">Date</th>
-              <th className="px-4 py-3 text-left font-medium text-gray-600">Ref. no.</th>
+              <th className="px-4 py-3 text-left font-medium text-gray-600">Receipt No.</th>
               <th className="px-4 py-3 text-left font-medium text-gray-600">Party Name</th>
               <th className="px-4 py-3 text-right font-medium text-gray-600">Total Amount</th>
               <th className="px-4 py-3 text-right font-medium text-gray-600">Received</th>
@@ -107,7 +107,7 @@ export function PaymentInTable({
             {records.map((payment) => (
               <tr key={payment.id} className="border-b border-gray-100 hover:bg-gray-50">
                 <td className="px-4 py-3">{payment.date}</td>
-                <td className="px-4 py-3">{payment.reference || ""}</td>
+                <td className="px-4 py-3">{payment.receiptNo || ""}</td>
                 <td className="px-4 py-3">{payment.partyName}</td>
                 <td className="px-4 py-3 text-right">{currencyStr} {payment.amount.toFixed(2)}</td>
                 <td className="px-4 py-3 text-right">{currencyStr} {payment.amount.toFixed(2)}</td>

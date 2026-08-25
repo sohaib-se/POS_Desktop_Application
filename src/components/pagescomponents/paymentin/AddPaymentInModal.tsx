@@ -1,6 +1,6 @@
 import React from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { Calculator, Settings, X, ChevronDown, FilePlus2, Camera, Calendar } from "lucide-react";
+import { X, ChevronDown, FilePlus2, Camera } from "lucide-react";
 
 interface AddPaymentInModalProps {
   showAddPayment: boolean;
@@ -13,8 +13,6 @@ interface AddPaymentInModalProps {
   paymentType: string;
   setPaymentType: (val: string) => void;
   bankAccounts: any[];
-  referenceNo: string;
-  setReferenceNo: (val: string) => void;
   showDescription: boolean;
   setShowDescription: (val: boolean) => void;
   description: string;
@@ -45,21 +43,6 @@ export function AddPaymentInModal(props: AddPaymentInModalProps) {
                 Payment-In
               </h2>
               <div className="flex items-center gap-3">
-                <button
-                  type="button"
-                  className="flex h-8 w-8 items-center justify-center rounded hover:bg-slate-100 text-slate-500"
-                  aria-label="Calculator"
-                >
-                  <Calculator className="h-5 w-5" />
-                </button>
-                <button
-                  type="button"
-                  className="relative flex h-8 w-8 items-center justify-center rounded hover:bg-slate-100 text-slate-500"
-                  aria-label="Settings"
-                >
-                  <Settings className="h-5 w-5" />
-                  <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-[#E53935]" />
-                </button>
                 <button
                   type="button"
                   onClick={() => props.setShowAddPayment(false)}
@@ -113,18 +96,6 @@ export function AddPaymentInModal(props: AddPaymentInModalProps) {
                     <ChevronDown className="absolute right-3 top-3.5 h-4 w-4 text-slate-400 pointer-events-none" />
                   </div>
 
-                  <div className="relative w-full">
-                    <label className="absolute -top-2 left-3 bg-white px-1 text-[11px] font-medium text-slate-500 z-10">
-                      Reference No
-                    </label>
-                    <input
-                      type="text"
-                      value={props.referenceNo}
-                      onChange={e => props.setReferenceNo(e.target.value)}
-                      className="h-11 w-full rounded border border-slate-300 bg-white px-3 text-[14px] text-slate-900 outline-none focus:border-[#1976D2]"
-                    />
-                  </div>
-
                   {!props.showDescription ? (
                     <button
                       type="button"
@@ -144,15 +115,47 @@ export function AddPaymentInModal(props: AddPaymentInModalProps) {
                     />
                   )}
 
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => props.fileInputRef.current?.click()}
-                      className="flex h-8 w-8 items-center justify-center text-slate-400 border border-slate-300 rounded hover:bg-slate-50"
-                      aria-label="Add attachment"
-                    >
-                      <Camera className="h-5 w-5" />
-                    </button>
+                  <div>
+                    {!props.imageDataUrl ? (
+                      <button
+                        type="button"
+                        onClick={() => props.fileInputRef.current?.click()}
+                        className="relative flex h-8 w-8 mt-2 items-center justify-center text-slate-400 hover:text-slate-600"
+                        aria-label="Add attachment"
+                      >
+                        <Camera className="h-7 w-7" />
+                        <span className="absolute -top-1 -left-1 bg-white rounded-full text-slate-400">
+                          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                        </span>
+                      </button>
+                    ) : (
+                      <div className="relative group w-[180px] h-[120px] rounded overflow-hidden mt-2 border border-slate-200">
+                        <img 
+                          src={props.imageDataUrl} 
+                          alt="Attachment preview" 
+                          className="w-full h-full object-cover" 
+                        />
+                        <div className="absolute inset-x-0 bottom-0 bg-[#2d3748]/80 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-between px-3 py-1.5">
+                          <button 
+                            type="button"
+                            onClick={() => props.fileInputRef.current?.click()}
+                            className="text-[11px] font-bold text-white tracking-wide hover:text-gray-200"
+                          >
+                            CHANGE
+                          </button>
+                          <button 
+                            type="button"
+                            onClick={() => {
+                              props.setImageDataUrl("");
+                              if (props.fileInputRef.current) props.fileInputRef.current.value = "";
+                            }}
+                            className="text-[11px] font-bold text-white tracking-wide hover:text-gray-200"
+                          >
+                            DELETE
+                          </button>
+                        </div>
+                      </div>
+                    )}
                     <input 
                       type="file" 
                       accept="image/*" 
@@ -167,7 +170,6 @@ export function AddPaymentInModal(props: AddPaymentInModalProps) {
                         }
                       }} 
                     />
-                    {props.imageDataUrl && <span className="text-[12px] text-slate-500">Image attached</span>}
                   </div>
                 </div>
 
@@ -193,12 +195,11 @@ export function AddPaymentInModal(props: AddPaymentInModalProps) {
                       </label>
                       <div className="relative">
                         <input
-                          type="text"
+                          type="date"
                           value={props.paymentDate}
                           onChange={e => props.setPaymentDate(e.target.value)}
-                          className="h-8 w-full border-0 border-b border-slate-300 bg-transparent px-0 pr-8 text-[14px] text-slate-900 outline-none focus:border-[#1976D2]"
+                          className="h-8 w-full border-0 border-b border-slate-300 bg-transparent px-0 text-[14px] text-slate-900 outline-none focus:border-[#1976D2]"
                         />
-                        <Calendar className="absolute right-0 top-1.5 h-4 w-4 text-slate-400" />
                       </div>
                     </div>
                   </div>
@@ -222,18 +223,6 @@ export function AddPaymentInModal(props: AddPaymentInModalProps) {
               <div className="flex items-center justify-between">
                 <div />
                 <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    className="inline-flex h-9 items-center rounded-md border border-slate-300 bg-white px-5 text-[14px] font-medium text-slate-700 shadow-sm hover:bg-slate-50"
-                  >
-                    Share
-                  </button>
-                  <button
-                    type="button"
-                    className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-slate-300 bg-white text-slate-700 shadow-sm hover:bg-slate-50"
-                  >
-                    <ChevronDown className="h-4 w-4" />
-                  </button>
                   <button
                     type="button"
                     onClick={props.handleSave}

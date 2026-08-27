@@ -245,6 +245,7 @@ CREATE TABLE IF NOT EXISTS bank_account_transactions (
   name TEXT NOT NULL,
   type TEXT NOT NULL,
   amount REAL NOT NULL,
+  attachment_image_path TEXT,
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );

@@ -781,6 +781,17 @@ function sqliteApiPlugin() {
             
             const baseId = Date.now().toString();
             const bankTxId = baseId + "-bank";
+            
+            let attachmentImagePath = null;
+            if (payload.imageDataUrl && payload.imageDataUrl.startsWith('data:')) {
+              const imageFile = saveDataUrlToAppData({
+                dataUrl: payload.imageDataUrl,
+                prefix: 'bank_account_attachment',
+                targetRoot: bankAccountAttachmentsRoot,
+              });
+              if (imageFile) attachmentImagePath = imageFile.filePath;
+            }
+
             // 1. Deduct from Bank
             repository.addBankAccountTransaction({
               id: bankTxId,
@@ -788,7 +799,8 @@ function sqliteApiPlugin() {
               date: payload.date,
               name: payload.description || 'Transfer to Cash',
               type: 'Payment Out',
-              amount: -Number(payload.amount)
+              amount: -Number(payload.amount),
+              attachmentImagePath
             });
 
             const cashTxId = baseId + "-cash";
@@ -837,6 +849,17 @@ function sqliteApiPlugin() {
             });
 
             const bankTxId = baseId + "-bank";
+            
+            let attachmentImagePath = null;
+            if (payload.imageDataUrl && payload.imageDataUrl.startsWith('data:')) {
+              const imageFile = saveDataUrlToAppData({
+                dataUrl: payload.imageDataUrl,
+                prefix: 'bank_account_attachment',
+                targetRoot: bankAccountAttachmentsRoot,
+              });
+              if (imageFile) attachmentImagePath = imageFile.filePath;
+            }
+
             // 2. Add to Bank
             repository.addBankAccountTransaction({
               id: bankTxId,
@@ -844,7 +867,8 @@ function sqliteApiPlugin() {
               date: payload.date,
               name: payload.description || 'Transfer from Cash',
               type: 'Payment In',
-              amount: Number(payload.amount)
+              amount: Number(payload.amount),
+              attachmentImagePath
             });
 
             res.statusCode = 201;
@@ -873,6 +897,16 @@ function sqliteApiPlugin() {
             
             const baseId = Date.now().toString();
             
+            let attachmentImagePath = null;
+            if (payload.imageDataUrl && payload.imageDataUrl.startsWith('data:')) {
+              const imageFile = saveDataUrlToAppData({
+                dataUrl: payload.imageDataUrl,
+                prefix: 'bank_account_attachment',
+                targetRoot: bankAccountAttachmentsRoot,
+              });
+              if (imageFile) attachmentImagePath = imageFile.filePath;
+            }
+            
             // 1. Deduct from Sender Bank
             repository.addBankAccountTransaction({
               id: baseId + "-bank-out",
@@ -880,7 +914,8 @@ function sqliteApiPlugin() {
               date: payload.date,
               name: payload.description || `Transfer to ${payload.toBank}`,
               type: 'Payment Out',
-              amount: -Number(payload.amount)
+              amount: -Number(payload.amount),
+              attachmentImagePath
             });
 
             // 2. Add to Receiver Bank
@@ -890,7 +925,8 @@ function sqliteApiPlugin() {
               date: payload.date,
               name: payload.description || `Transfer from ${payload.fromBank}`,
               type: 'Payment In',
-              amount: Number(payload.amount)
+              amount: Number(payload.amount),
+              attachmentImagePath
             });
 
             res.statusCode = 201;

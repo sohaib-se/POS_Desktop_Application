@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Modal, Input, Select, ImageUpload, ModalFooter } from "./SharedComponents";
 import type { TransferModalProps } from "./types";
 
@@ -7,8 +7,25 @@ export function BankToCashModal({ open, onClose, accounts, onSuccess, initialDat
   const [amount, setAmount] = useState("");
   const [description, setDescription] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+  const [imageDataUrl, setImageDataUrl] = useState("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   const today = new Date().toLocaleDateString("en-GB").replace(/\//g, "/");
+  const [date, setDate] = useState("");
+
+  const toYMD = (dmy: string) => {
+    if (!dmy || !dmy.includes("/")) return dmy;
+    const parts = dmy.split("/");
+    if (parts.length === 3) return `${parts[2]}-${parts[1]}-${parts[0]}`;
+    return dmy;
+  };
+
+  const toDMY = (ymd: string) => {
+    if (!ymd || !ymd.includes("-")) return ymd;
+    const parts = ymd.split("-");
+    if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
+    return ymd;
+  };
 
   useEffect(() => {
     if (open) {
@@ -16,10 +33,14 @@ export function BankToCashModal({ open, onClose, accounts, onSuccess, initialDat
         setFrom(initialData.paymentType || accounts[0]?.name || "");
         setAmount(Math.abs(Number(initialData.amount)).toString());
         setDescription(initialData.name || "");
+        setImageDataUrl(initialData.attachment_image_path || "");
+        setDate(initialData.date || today);
       } else {
         setFrom(accounts[0]?.name || "");
         setAmount("");
         setDescription("");
+        setImageDataUrl("");
+        setDate(today);
       }
     }
   }, [open, accounts, initialData]);
@@ -44,7 +65,8 @@ export function BankToCashModal({ open, onClose, accounts, onSuccess, initialDat
             type: "Payment Out",
             name: description || "Transfer to Cash",
             amount: -Number(amount),
-            date: initialData.date || today
+            date: date,
+            imageDataUrl: imageDataUrl
           })
         });
         if (res.ok) {
@@ -61,7 +83,8 @@ export function BankToCashModal({ open, onClose, accounts, onSuccess, initialDat
             fromBank: from,
             amount: Number(amount),
             description,
-            date: today
+            date: date,
+            imageDataUrl: imageDataUrl
           })
         });
         if (res.ok) {
@@ -98,7 +121,12 @@ export function BankToCashModal({ open, onClose, accounts, onSuccess, initialDat
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
           />
-          <Input label="Adjustment Date" value={initialData ? (initialData.date || today) : today} readOnly />
+          <Input 
+            type="date" 
+            label="Adjustment Date" 
+            value={toYMD(date)} 
+            onChange={(e) => setDate(toDMY(e.target.value))} 
+          />
         </div>
         <div className="grid grid-cols-2 gap-4">
           <div>
@@ -113,7 +141,13 @@ export function BankToCashModal({ open, onClose, accounts, onSuccess, initialDat
               className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-blue-400 resize-none"
             />
           </div>
-          <ImageUpload />
+          <div>
+            <ImageUpload 
+              imageDataUrl={imageDataUrl} 
+              setImageDataUrl={setImageDataUrl} 
+              fileInputRef={fileInputRef} 
+            />
+          </div>
         </div>
       </div>
       <ModalFooter onCancel={onClose} onSave={handleSave} disabled={isSaving} />

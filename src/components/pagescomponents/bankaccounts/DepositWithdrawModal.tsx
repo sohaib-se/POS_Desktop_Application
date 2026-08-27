@@ -1,8 +1,7 @@
 import { useState, useEffect, useRef } from "react";
-import { Modal, Input, ModalFooter } from "./SharedComponents";
+import { Modal, Input, ModalFooter, ImageUpload } from "./SharedComponents";
 import type { BankAccount } from "./types";
 import { useSettings } from "@/hooks/useSettings";
-import { Camera } from "lucide-react";
 
 interface DepositWithdrawModalProps {
   open: boolean;
@@ -24,7 +23,23 @@ export function DepositWithdrawModal({ open, onClose, account, onSuccess, initia
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isSaving, setIsSaving] = useState(false);
 
+  const [date, setDate] = useState("");
+
   const today = new Date().toLocaleDateString("en-GB").replace(/\//g, "/");
+
+  const toYMD = (dmy: string) => {
+    if (!dmy || !dmy.includes("/")) return dmy;
+    const parts = dmy.split("/");
+    if (parts.length === 3) return `${parts[2]}-${parts[1]}-${parts[0]}`;
+    return dmy;
+  };
+
+  const toDMY = (ymd: string) => {
+    if (!ymd || !ymd.includes("-")) return ymd;
+    const parts = ymd.split("-");
+    if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
+    return ymd;
+  };
 
   useEffect(() => {
     if (open) {
@@ -34,11 +49,13 @@ export function DepositWithdrawModal({ open, onClose, account, onSuccess, initia
         setAmount(Math.abs(Number(initialData.amount)).toString());
         setDescription(initialData.name || "");
         setImageDataUrl(initialData.attachment_image_path || "");
+        setDate(initialData.date || today);
       } else {
         setType("deposit");
         setAmount("");
         setDescription("");
         setImageDataUrl("");
+        setDate(today);
       }
     }
   }, [open, initialData]);
@@ -51,7 +68,7 @@ export function DepositWithdrawModal({ open, onClose, account, onSuccess, initia
   const updatedCash = baseBalance + (type === "deposit" ? Number(amount || 0) : -Number(amount || 0));
 
   const handleSave = async () => {
-    if (!amount || Number(amount) <= 0 || !description) return;
+    if (!amount || Number(amount) <= 0) return;
     setIsSaving(true);
     try {
       const url = initialData ? `/api/bank_account_transactions/${initialData.id}` : `/api/bank_account_transactions`;
@@ -65,7 +82,7 @@ export function DepositWithdrawModal({ open, onClose, account, onSuccess, initia
           type: type === "deposit" ? "Payment In" : "Payment Out",
           name: description,
           amount: type === "deposit" ? Number(amount) : -Number(amount),
-          date: initialData?.date || today,
+          date: date,
           imageDataUrl: imageDataUrl,
         }),
       });
@@ -122,76 +139,31 @@ export function DepositWithdrawModal({ open, onClose, account, onSuccess, initia
           Updated Cash: <span className="font-semibold">{currencyStr} {updatedCash.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</span>
         </div>
 
-        <Input label="Adjustment Date" value={today} readOnly />
+        <Input 
+          type="date" 
+          label="Adjustment Date" 
+          value={toYMD(date)} 
+          onChange={(e) => setDate(toDMY(e.target.value))} 
+        />
 
         <div>
           <label className="block text-sm text-gray-600 mb-1">
-            Description<span className="text-red-500 ml-0.5">*</span>
+            Description
           </label>
           <textarea
             placeholder="Enter Description"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             rows={3}
-            required
             className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-100 resize-none"
           />
         </div>
 
         <div>
-          {!imageDataUrl ? (
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              className="relative flex h-8 w-8 mt-2 items-center justify-center text-slate-400 hover:text-slate-600"
-              aria-label="Add attachment"
-            >
-              <Camera className="h-7 w-7" />
-              <span className="absolute -top-1 -left-1 bg-white rounded-full text-slate-400">
-                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-              </span>
-            </button>
-          ) : (
-            <div className="relative group w-[180px] h-[120px] rounded overflow-hidden mt-2 border border-slate-200">
-              <img 
-                src={imageDataUrl} 
-                alt="Attachment preview" 
-                className="w-full h-full object-cover" 
-              />
-              <div className="absolute inset-x-0 bottom-0 bg-[#2d3748]/80 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-between px-3 py-1.5">
-                <button 
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="text-[11px] font-bold text-white tracking-wide hover:text-gray-200"
-                >
-                  CHANGE
-                </button>
-                <button 
-                  type="button"
-                  onClick={() => {
-                    setImageDataUrl("");
-                    if (fileInputRef.current) fileInputRef.current.value = "";
-                  }}
-                  className="text-[11px] font-bold text-white tracking-wide hover:text-gray-200"
-                >
-                  DELETE
-                </button>
-              </div>
-            </div>
-          )}
-          <input 
-            type="file" 
-            accept="image/*" 
-            ref={fileInputRef} 
-            className="hidden" 
-            onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (file) {
-                const reader = new FileReader();
-                reader.onloadend = () => setImageDataUrl(reader.result as string);
-                reader.readAsDataURL(file);
-              }
-            }} 
+          <ImageUpload 
+            imageDataUrl={imageDataUrl} 
+            setImageDataUrl={setImageDataUrl} 
+            fileInputRef={fileInputRef} 
           />
         </div>
       </div>

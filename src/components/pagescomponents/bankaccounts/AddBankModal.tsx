@@ -19,7 +19,6 @@ export function AddBankModal({ open, onClose, onSuccess, initialData }: AddBankM
   const [swiftCode, setSwiftCode] = useState("");
   const [iban, setIban] = useState("");
   const [accountHolderName, setAccountHolderName] = useState("");
-  const [printDetails, setPrintDetails] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const today = new Date().toLocaleDateString("en-GB").replace(/\//g, "/");
 
@@ -33,7 +32,6 @@ export function AddBankModal({ open, onClose, onSuccess, initialData }: AddBankM
         setSwiftCode(initialData.swift_code || "");
         setIban(initialData.iban || "");
         setAccountHolderName(initialData.account_holder_name || "");
-        setPrintDetails(Boolean(initialData.print_details));
         setShowMore(Boolean(initialData.accountNumber || initialData.swift_code || initialData.iban || initialData.bankName || initialData.account_holder_name));
       } else {
         setName("");
@@ -43,7 +41,6 @@ export function AddBankModal({ open, onClose, onSuccess, initialData }: AddBankM
         setSwiftCode("");
         setIban("");
         setAccountHolderName("");
-        setPrintDetails(false);
         setShowMore(false);
       }
     }
@@ -65,8 +62,7 @@ export function AddBankModal({ open, onClose, onSuccess, initialData }: AddBankM
           bank_name: bankName,
           swift_code: swiftCode,
           iban,
-          account_holder_name: accountHolderName,
-          print_details: printDetails
+          account_holder_name: accountHolderName
         }),
       });
       if (res.ok) {
@@ -135,22 +131,6 @@ export function AddBankModal({ open, onClose, onSuccess, initialData }: AddBankM
           </div>
         )}
 
-        {/* Checkbox */}
-        <div className="flex items-center gap-2">
-          <input
-            type="checkbox"
-            id="printDetails"
-            checked={printDetails}
-            onChange={(e) => setPrintDetails(e.target.checked)}
-            className="rounded border-gray-300 w-4 h-4"
-          />
-          <label htmlFor="printDetails" className="text-sm text-gray-700">
-            Print Bank Details on Invoices
-          </label>
-          <span className="w-4 h-4 rounded-full border border-gray-300 text-gray-400 text-xs flex items-center justify-center cursor-help">
-            i
-          </span>
-        </div>
       </div>
 
       <ModalFooter onCancel={onClose} onSave={handleSave} saveLabel={isSaving ? "Saving..." : "Save Details"} />

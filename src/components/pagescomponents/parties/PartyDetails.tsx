@@ -7,6 +7,9 @@ import { SaleInvoiceDialog } from "@/components/pagescomponents/saleinvoices/Sal
 import { PurchaseBillDialog } from "@/components/pagescomponents/purchasebills/PurchaseBillDialog";
 import { ViewPaymentInModal } from "@/components/pagescomponents/paymentin/ViewPaymentInModal";
 import { ViewPaymentOutDialog } from "@/components/pagescomponents/payementout/ViewPaymentOutDialog";
+import { ViewEstimateDialog } from "@/components/pagescomponents/estimates/ViewEstimateDialog";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { AddEstimate } from "@/pages/AddEstimate";
 import { EnterPasscodeScreen } from "@/components/common/EnterPasscodeScreen";
 import type { SaleInvoiceViewRow } from "@/components/pagescomponents/saleinvoices/types";
 import type { PurchaseBillViewRow } from "@/components/pagescomponents/purchasebills/types";
@@ -97,24 +100,27 @@ export function PartyDetails({
   }, [showTransactionSearch, transactionSearchTerm, setShowTransactionSearch]);
 
   const [editingPurchaseInvoice, setEditingPurchaseInvoice] = useState<PurchaseBillEditData | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [editingEstimate, setEditingEstimate] = useState<any | null>(null);
   const [viewingSaleInvoice, setViewingSaleInvoice] = useState<SaleInvoiceViewRow | null>(null);
   const [viewingPurchaseBill, setViewingPurchaseBill] = useState<PurchaseBillViewRow | null>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [viewingPaymentIn, setViewingPaymentIn] = useState<any | null>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [viewingPaymentOut, setViewingPaymentOut] = useState<any | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [viewingEstimate, setViewingEstimate] = useState<any | null>(null);
   const [passcodeAction, setPasscodeAction] = useState<{ type: 'edit' | 'delete', payload: any } | null>(null);
+  const [deletePendingTransaction, setDeletePendingTransaction] = useState<PartyTransactionRow | null>(null);
 
-  const handleDeleteTransaction = async (transaction: PartyTransactionRow) => {
-    const confirmed = window.confirm(`Delete ${transaction.type} transaction ${transaction.invoiceNo || transaction.id}?`);
-    if (!confirmed) return;
-
+  const performDeleteTransaction = async (transaction: PartyTransactionRow) => {
     try {
       let endpoint = '';
       if (transaction.type === 'Sale') endpoint = `/api/sale_invoices/${transaction.id}`;
       else if (transaction.type === 'Purchase') endpoint = `/api/purchase_bills/${transaction.id}`;
       else if (transaction.type === 'Payment-In') endpoint = `/api/payment_in_records/${transaction.id}`;
       else if (transaction.type === 'Payment-Out') endpoint = `/api/payment_out_records/${transaction.id}`;
+      else if (transaction.type === 'Estimate') endpoint = `/api/estimates/${transaction.id}`;
       else {
         alert('Cannot delete this type of transaction directly.');
         return;
@@ -126,6 +132,9 @@ export function PartyDetails({
       }
       if (loadPartiesAndTransactions) {
         await loadPartiesAndTransactions();
+      }
+      if (transaction.type === 'Estimate') {
+        window.dispatchEvent(new CustomEvent("estimates-refresh"));
       }
     } catch (error) {
       console.error(error);
@@ -163,6 +172,8 @@ export function PartyDetails({
           roundOff: Boolean(raw.round_off), roundOffAmount: Number(raw.round_off_amount || 0),
           description: raw.description, lineItemsJson: raw.line_items_json
         });
+      } else if (invoice.type === 'Estimate') {
+        setEditingEstimate(raw);
       } else {
         alert(`Edit for ${invoice.type} is not directly supported from the party view yet.`);
       }
@@ -171,7 +182,7 @@ export function PartyDetails({
 
   const handlePasscodeSuccess = () => {
     if (passcodeAction?.type === 'delete') {
-      handleDeleteTransaction(passcodeAction.payload);
+      performDeleteTransaction(passcodeAction.payload);
     } else if (passcodeAction?.type === 'edit') {
       handleEditTransaction(passcodeAction.payload);
     }
@@ -458,97 +469,112 @@ export function PartyDetails({
             }}
           />
           <div
-            className="fixed z-50 w-36 overflow-hidden rounded-lg border border-gray-200 bg-white shadow-lg"
+            className="fixed z-50 w-36 overflow-hidden rounded-lg border border-gray-200 bg-white shadow-lg py-1"
             style={{ left: openRowMenuPosition.left, top: openRowMenuPosition.top }}
             onClick={(e) => e.stopPropagation()}
           >
-            <button
-              className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-gray-50"
-              onClick={() => {
-                const invoice = filteredPartyTransactions.find(t => t.id === openRowMenuId);
-                if (invoice?.rawRow) {
-                  const raw = invoice.rawRow;
-                  if (invoice.type === 'Sale') {
-                    setViewingSaleInvoice({
-                      id: raw.id, invoiceNo: raw.invoice_no, date: raw.date, partyName: raw.party_name,
-                      partyId: raw.party_id, partyPhone: raw.party_phone, transaction: raw.transaction_type,
-                      paymentType: raw.payment_type || raw.payment_mode || "", paymentMode: raw.payment_mode,
-                      amount: Number(raw.amount || 0), balance: Number(raw.balance || 0), monthKey: "",
-                      subtotal: Number(raw.subtotal || 0), discountPercent: Number(raw.discount_percent || 0),
-                      discountAmount: Number(raw.discount_amount || 0), taxLabel: raw.tax_label,
-                      taxRate: Number(raw.tax_rate || 0), taxAmount: Number(raw.tax_amount || 0),
-                      roundOff: Boolean(raw.round_off), roundOffAmount: Number(raw.round_off_amount || 0),
-                      description: raw.description, lineItemsJson: raw.line_items_json
-                    });
-                  } else if (invoice.type === 'Purchase') {
-                    setViewingPurchaseBill({
-                      id: raw.id, invoiceNo: raw.invoice_no, date: raw.date, partyName: raw.party_name,
-                      partyId: raw.party_id, partyPhone: raw.party_phone, transaction: raw.transaction_type,
-                      paymentType: raw.payment_type || raw.payment_mode || "", paymentMode: raw.payment_mode,
-                      amount: Number(raw.amount || 0), balance: Number(raw.balance || 0), monthKey: "",
-                      subtotal: Number(raw.subtotal || 0), discountPercent: Number(raw.discount_percent || 0),
-                      discountAmount: Number(raw.discount_amount || 0), taxLabel: raw.tax_label,
-                      taxRate: Number(raw.tax_rate || 0), taxAmount: Number(raw.tax_amount || 0),
-                      roundOff: Boolean(raw.round_off), roundOffAmount: Number(raw.round_off_amount || 0),
-                      description: raw.description, lineItemsJson: raw.line_items_json
-                    });
-                  } else if (invoice.type === 'Payment-In') {
-                    setViewingPaymentIn({
-                      id: raw.id, type: raw.transaction_type, receiptNo: raw.receipt_no, date: raw.date,
-                      partyName: raw.party_name, paymentMode: raw.payment_mode, amount: Number(raw.amount || 0),
-                      description: raw.description, monthKey: "", status: raw.status, partyId: raw.party_id
-                    });
-                  } else if (invoice.type === 'Payment-Out') {
-                    setViewingPaymentOut({
-                      id: raw.id, type: raw.transaction_type, receiptNo: raw.receipt_no, date: raw.date,
-                      partyName: raw.party_name, paymentMode: raw.payment_mode, amount: Number(raw.amount || 0),
-                      description: raw.description, monthKey: "", status: raw.status, partyId: raw.party_id
-                    });
-                  }
-                }
-                setOpenRowMenuId(null);
-                setOpenRowMenuPosition(null);
-              }}
-            >
-              <Search className="w-4 h-4 text-gray-500" />
-              View
-            </button>
-            <button
-              className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-gray-50"
-              onClick={() => {
-                const invoice = filteredPartyTransactions.find(t => t.id === openRowMenuId);
-                if (invoice?.rawRow) {
-                  if (isPasscodeEnabled && isPasscodeForTransactionEnabled) {
-                    setPasscodeAction({ type: 'edit', payload: invoice });
-                  } else {
-                    handleEditTransaction(invoice);
-                  }
-                }
-                setOpenRowMenuId(null);
-                setOpenRowMenuPosition(null);
-              }}
-            >
-              <PencilIcon className="w-4 h-4 text-gray-500" />
-              Edit
-            </button>
-            <button
-              className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50"
-              onClick={() => {
-                const invoice = filteredPartyTransactions.find(t => t.id === openRowMenuId);
-                if (invoice) {
-                  if (isPasscodeEnabled && isPasscodeForTransactionEnabled) {
-                    setPasscodeAction({ type: 'delete', payload: invoice });
-                  } else {
-                    handleDeleteTransaction(invoice);
-                  }
-                }
-                setOpenRowMenuId(null);
-                setOpenRowMenuPosition(null);
-              }}
-            >
-              <TrashIcon className="w-4 h-4" />
-              Delete
-            </button>
+            {(() => {
+              const invoice = filteredPartyTransactions.find(t => t.id === openRowMenuId);
+              const isConvertedEstimate = invoice?.type === 'Estimate' && invoice?.status === 'Converted';
+              
+              return (
+                <>
+                  <button
+                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-gray-50"
+                    onClick={() => {
+                      if (invoice?.rawRow) {
+                        const raw = invoice.rawRow;
+                        if (invoice.type === 'Sale') {
+                          setViewingSaleInvoice({
+                            id: raw.id, invoiceNo: raw.invoice_no, date: raw.date, partyName: raw.party_name,
+                            partyId: raw.party_id, partyPhone: raw.party_phone, transaction: raw.transaction_type,
+                            paymentType: raw.payment_type || raw.payment_mode || "", paymentMode: raw.payment_mode,
+                            amount: Number(raw.amount || 0), balance: Number(raw.balance || 0), monthKey: "",
+                            subtotal: Number(raw.subtotal || 0), discountPercent: Number(raw.discount_percent || 0),
+                            discountAmount: Number(raw.discount_amount || 0), taxLabel: raw.tax_label,
+                            taxRate: Number(raw.tax_rate || 0), taxAmount: Number(raw.tax_amount || 0),
+                            roundOff: Boolean(raw.round_off), roundOffAmount: Number(raw.round_off_amount || 0),
+                            description: raw.description, lineItemsJson: raw.line_items_json
+                          });
+                        } else if (invoice.type === 'Purchase') {
+                          setViewingPurchaseBill({
+                            id: raw.id, invoiceNo: raw.invoice_no, date: raw.date, partyName: raw.party_name,
+                            partyId: raw.party_id, partyPhone: raw.party_phone, transaction: raw.transaction_type,
+                            paymentType: raw.payment_type || raw.payment_mode || "", paymentMode: raw.payment_mode,
+                            amount: Number(raw.amount || 0), balance: Number(raw.balance || 0), monthKey: "",
+                            subtotal: Number(raw.subtotal || 0), discountPercent: Number(raw.discount_percent || 0),
+                            discountAmount: Number(raw.discount_amount || 0), taxLabel: raw.tax_label,
+                            taxRate: Number(raw.tax_rate || 0), taxAmount: Number(raw.tax_amount || 0),
+                            roundOff: Boolean(raw.round_off), roundOffAmount: Number(raw.round_off_amount || 0),
+                            description: raw.description, lineItemsJson: raw.line_items_json
+                          });
+                        } else if (invoice.type === 'Payment-In') {
+                          setViewingPaymentIn({
+                            id: raw.id, type: raw.transaction_type, receiptNo: raw.receipt_no, date: raw.date,
+                            partyName: raw.party_name, paymentMode: raw.payment_mode, amount: Number(raw.amount || 0),
+                            description: raw.description, monthKey: "", status: raw.status, partyId: raw.party_id
+                          });
+                        } else if (invoice.type === 'Payment-Out') {
+                          setViewingPaymentOut({
+                            id: raw.id, type: raw.transaction_type, receiptNo: raw.receipt_no, date: raw.date,
+                            partyName: raw.party_name, paymentMode: raw.payment_mode, amount: Number(raw.amount || 0),
+                            description: raw.description, monthKey: "", status: raw.status, partyId: raw.party_id
+                          });
+                        } else if (invoice.type === 'Estimate') {
+                          setViewingEstimate(raw);
+                        }
+                      }
+                      setOpenRowMenuId(null);
+                      setOpenRowMenuPosition(null);
+                    }}
+                  >
+                    <Search className="w-4 h-4 text-gray-500" />
+                    View
+                  </button>
+                  <button
+                    className={`flex w-full items-center gap-2 px-3 py-2 text-left text-sm ${
+                      isConvertedEstimate
+                        ? "opacity-50 cursor-not-allowed text-gray-400"
+                        : "hover:bg-gray-50 text-gray-700"
+                    }`}
+                    disabled={isConvertedEstimate}
+                    title={isConvertedEstimate ? "Cannot edit a converted estimate" : ""}
+                    onClick={() => {
+                      if (isConvertedEstimate) return;
+                      if (invoice?.rawRow) {
+                        if (isPasscodeEnabled && isPasscodeForTransactionEnabled) {
+                          setPasscodeAction({ type: 'edit', payload: invoice });
+                        } else {
+                          handleEditTransaction(invoice);
+                        }
+                      }
+                      setOpenRowMenuId(null);
+                      setOpenRowMenuPosition(null);
+                    }}
+                  >
+                    <PencilIcon className={`w-4 h-4 ${isConvertedEstimate ? 'text-gray-400' : 'text-gray-500'}`} />
+                    Edit
+                  </button>
+                  <button
+                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50"
+                    onClick={() => {
+                      if (invoice) {
+                        if (isPasscodeEnabled && isPasscodeForTransactionEnabled) {
+                          setPasscodeAction({ type: 'delete', payload: invoice });
+                        } else {
+                          setDeletePendingTransaction(invoice);
+                        }
+                      }
+                      setOpenRowMenuId(null);
+                      setOpenRowMenuPosition(null);
+                    }}
+                  >
+                    <TrashIcon className="w-4 h-4" />
+                    Delete
+                  </button>
+                </>
+              );
+            })()}
           </div>
         </>
       )}
@@ -558,6 +584,34 @@ export function PartyDetails({
       <PurchaseBillDialog viewingInvoice={viewingPurchaseBill} setViewingInvoice={setViewingPurchaseBill} />
       <ViewPaymentInModal viewingRecord={viewingPaymentIn} setViewingRecord={setViewingPaymentIn} />
       <ViewPaymentOutDialog viewingRecord={viewingPaymentOut} setViewingRecord={setViewingPaymentOut} />
+      <ViewEstimateDialog viewingRecord={viewingEstimate} setViewingRecord={setViewingEstimate} />
+
+      <ConfirmDialog
+        open={!!deletePendingTransaction}
+        title={`Delete ${deletePendingTransaction?.type || 'Transaction'}?`}
+        message={`Are you sure you want to delete this ${deletePendingTransaction?.type || 'transaction'}? This action cannot be undone.`}
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        onConfirm={() => {
+          if (deletePendingTransaction) performDeleteTransaction(deletePendingTransaction);
+          setDeletePendingTransaction(null);
+        }}
+        onCancel={() => setDeletePendingTransaction(null)}
+      />
+
+      {editingEstimate && (
+        <div className="fixed inset-0 z-[100]">
+          <AddEstimate
+            initialEstimate={editingEstimate}
+            onClose={() => setEditingEstimate(null)}
+            onSave={() => {
+              setEditingEstimate(null);
+              if (loadPartiesAndTransactions) loadPartiesAndTransactions();
+              window.dispatchEvent(new CustomEvent("estimates-refresh"));
+            }}
+          />
+        </div>
+      )}
 
       {editingPurchaseInvoice && (
         <div className="fixed inset-0 z-[100]">

@@ -1,25 +1,25 @@
-import { Search, Pencil, Trash2 } from "lucide-react";
+import { Pencil, Trash2, Eye } from "lucide-react";
 
 interface PaymentOutRowMenuProps {
   openRowMenuId: string | null;
   openRowMenuPosition: { left: number; top: number } | null;
   records: any[];
-  setViewingRecord: (record: any) => void;
-  setShowAddPayment: (show: boolean) => void;
+  setShowAddPayment: (show: boolean, record?: any) => void;
   handleDelete: (id: string) => void;
   setOpenRowMenuId: (id: string | null) => void;
   setOpenRowMenuPosition: (pos: { left: number; top: number } | null) => void;
+  onPrint: (record: any) => void;
 }
 
 export function PaymentOutRowMenu({
   openRowMenuId,
   openRowMenuPosition,
   records,
-  setViewingRecord,
   setShowAddPayment,
   handleDelete,
   setOpenRowMenuId,
   setOpenRowMenuPosition,
+  onPrint,
 }: PaymentOutRowMenuProps) {
   if (!openRowMenuId || !openRowMenuPosition) return null;
 
@@ -38,18 +38,18 @@ export function PaymentOutRowMenu({
       <button
         className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-gray-50"
         onClick={() => {
-          setViewingRecord(targetItem);
+          onPrint(targetItem);
           setOpenRowMenuId(null);
           setOpenRowMenuPosition(null);
         }}
       >
-        <Search className="w-4 h-4 text-gray-500" />
-        View
+        <Eye className="w-4 h-4 text-gray-500" />
+        Preview
       </button>
       <button
         className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-gray-50"
         onClick={() => {
-          setShowAddPayment(true);
+          setShowAddPayment(true, targetItem);
           setOpenRowMenuId(null);
           setOpenRowMenuPosition(null);
         }}

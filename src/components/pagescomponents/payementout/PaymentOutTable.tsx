@@ -1,12 +1,13 @@
 import React, { useRef, useState } from "react";
 import { useSettings } from "@/hooks/useSettings";
-import { Search, Printer, Share2, MoreVertical } from "lucide-react";
+import { Search, Printer, MoreVertical } from "lucide-react";
 
 interface PaymentOutTableProps {
   records: any[];
   openRowMenuId: string | null;
   setOpenRowMenuId: React.Dispatch<React.SetStateAction<string | null>>;
   setOpenRowMenuPosition: React.Dispatch<React.SetStateAction<{ left: number; top: number } | null>>;
+  onPrintClick?: () => void;
 }
 
 export function PaymentOutTable({
@@ -14,6 +15,7 @@ export function PaymentOutTable({
   openRowMenuId,
   setOpenRowMenuId,
   setOpenRowMenuPosition,
+  onPrintClick,
 }: PaymentOutTableProps) {
   const [currency] = useSettings('settings.businessCurrency', { code: 'PKR', symbol: 'Rs' });
   const [currencyDisplay] = useSettings<'abbreviation' | 'icon'>('settings.currencyDisplay', 'abbreviation');
@@ -71,7 +73,7 @@ export function PaymentOutTable({
             </button>
           )}
           <button
-            onClick={() => window.print()}
+            onClick={() => { if (onPrintClick) onPrintClick(); }}
             className="p-1.5 hover:bg-[#F7F9FB] rounded"
             title="Print"
           >
@@ -97,7 +99,7 @@ export function PaymentOutTable({
                 Date
               </th>
               <th className="px-4 py-3 text-left font-medium text-gray-600">
-                Ref. no.
+                Receipt No.
               </th>
               <th className="px-4 py-3 text-left font-medium text-gray-600">
                 Party Name
@@ -123,7 +125,7 @@ export function PaymentOutTable({
                 className="border-b border-gray-100 hover:bg-gray-50"
               >
                 <td className="px-4 py-3">{payment.date}</td>
-                <td className="px-4 py-3">{payment.reference || ""}</td>
+                <td className="px-4 py-3">{payment.paymentNo || ""}</td>
                 <td className="px-4 py-3">{payment.partyName}</td>
                 <td className="px-4 py-3 text-right">
                   {currencyStr} {payment.amount.toFixed(2)}
@@ -134,12 +136,6 @@ export function PaymentOutTable({
                 <td className="px-4 py-3">{payment.paymentType}</td>
                 <td className="px-4 py-3 relative">
                   <div className="flex items-center justify-center gap-2">
-                    <button className="p-1.5 hover:bg-gray-100 rounded" title="Print">
-                      <Printer className="w-4 h-4 text-gray-500" />
-                    </button>
-                    <button className="p-1.5 hover:bg-gray-100 rounded" title="Share">
-                      <Share2 className="w-4 h-4 text-gray-500" />
-                    </button>
                     <button
                       className="p-1.5 hover:bg-gray-100 rounded"
                       title="More actions"

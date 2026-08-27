@@ -12,6 +12,7 @@ function sqliteApiPlugin() {
       const itemsImagesRoot = path.join(appDataRoot, 'items_images');
       const saleAttachmentsRoot = path.join(appDataRoot, 'sale_attachments');
       const paymentInAttachmentsRoot = path.join(appDataRoot, 'paymentin_attachments');
+      const paymentOutAttachmentsRoot = path.join(appDataRoot, 'paymentout_attachments');
 
       const resolveManagedImagePath = (rawPath: unknown) => {
         if (!rawPath || typeof rawPath !== 'string') {
@@ -103,6 +104,40 @@ function sqliteApiPlugin() {
 
       const removeManagedPaymentInAttachmentFile = (rawPath: unknown) => {
         const absolutePath = resolveManagedPaymentInAttachmentPath(rawPath);
+        if (!absolutePath || !fs.existsSync(absolutePath)) {
+          return;
+        }
+
+        const stats = fs.statSync(absolutePath);
+        if (!stats.isFile()) {
+          return;
+        }
+
+        fs.unlinkSync(absolutePath);
+      };
+
+      const resolveManagedPaymentOutAttachmentPath = (rawPath: unknown) => {
+        if (!rawPath || typeof rawPath !== 'string') {
+          return null;
+        }
+
+        const trimmedPath = rawPath.trim();
+        if (!trimmedPath.startsWith('/app_data/paymentout_attachments/')) {
+          return null;
+        }
+
+        const relativePath = trimmedPath.replace(/^\/app_data\//, '');
+        const absolutePath = path.join(appDataRoot, relativePath);
+
+        if (!absolutePath.startsWith(paymentOutAttachmentsRoot)) {
+          return null;
+        }
+
+        return absolutePath;
+      };
+
+      const removeManagedPaymentOutAttachmentFile = (rawPath: unknown) => {
+        const absolutePath = resolveManagedPaymentOutAttachmentPath(rawPath);
         if (!absolutePath || !fs.existsSync(absolutePath)) {
           return;
         }
@@ -1109,7 +1144,7 @@ function sqliteApiPlugin() {
                 const imageFile = saveDataUrlToAppData({
                   dataUrl: payload.imageDataUrl,
                   prefix: 'payment_out_image',
-                  targetRoot: saleAttachmentsRoot,
+                  targetRoot: paymentOutAttachmentsRoot,
                 });
                 createdImagePath = imageFile?.filePath ?? null;
               }
@@ -1168,6 +1203,127 @@ function sqliteApiPlugin() {
             return;
           }
 
+          if (req.method === 'PUT') {
+            const pathId = requestUrl.pathname.split('/').filter(Boolean)[0];
+            const queryId = requestUrl.searchParams.get('id');
+            const id = (pathId || queryId || '').trim();
+
+            if (!id) {
+              res.statusCode = 400;
+              res.end(JSON.stringify({ message: 'ID required' }));
+              return;
+            }
+
+            try {
+              const payload = await parseJsonBody(req);
+              const existingRecord = repository.getPaymentOutRecordById(id);
+
+              if (!existingRecord) {
+                res.statusCode = 404;
+                res.end(JSON.stringify({ message: 'Record not found' }));
+                return;
+              }
+
+              let updatedImagePath = existingRecord.attachment_image_path || existingRecord.attachmentImagePath;
+
+              if (payload.imageDataUrl && payload.imageDataUrl !== updatedImagePath && payload.imageDataUrl.startsWith('data:')) {
+                if (updatedImagePath) {
+                  removeManagedPaymentOutAttachmentFile(updatedImagePath);
+                }
+                const imageFile = saveDataUrlToAppData({
+                  dataUrl: payload.imageDataUrl,
+                  prefix: 'payment_out_image',
+                  targetRoot: paymentOutAttachmentsRoot,
+                });
+                updatedImagePath = imageFile?.filePath ?? null;
+              } else if (payload.imageDataUrl === null || payload.imageDataUrl === '') {
+                if (updatedImagePath) {
+                  removeManagedPaymentOutAttachmentFile(updatedImagePath);
+                  updatedImagePath = null;
+                }
+              }
+
+              if (existingRecord.party_id) {
+                try {
+                  const allParties = repository.getParties();
+                  const party = allParties.find((p: any) => String(p.id) === String(existingRecord.party_id));
+                  if (party) {
+                    party.balance = Number(party.balance || 0) - Number(existingRecord.amount || 0);
+                    repository.upsertParty(party);
+                  }
+                } catch (balanceError) {
+                  console.error('Failed to restore party balance:', balanceError);
+                }
+              }
+
+              try {
+                const pMode = String(existingRecord.payment_type).toLowerCase();
+                if (pMode === 'cash') {
+                  repository.deleteCashInHandTransaction('cash_payment_out_' + id);
+                } else if (pMode) {
+                  repository.deleteBankAccountTransaction('bank_payment_out_' + id);
+                }
+              } catch (txError) {
+                console.error('Failed to delete cash/bank transaction:', txError);
+              }
+
+              const record = {
+                id,
+                paymentNo: payload.paymentNo ?? existingRecord.payment_no,
+                date: payload.date ?? existingRecord.date,
+                partyName: payload.partyName ?? existingRecord.party_name,
+                partyId: payload.partyId ?? existingRecord.party_id,
+                amount: Number(payload.amount ?? existingRecord.amount),
+                paymentType: payload.paymentType ?? existingRecord.payment_type,
+                reference: payload.reference ?? existingRecord.reference,
+                description: payload.description ?? existingRecord.description,
+                attachmentImagePath: updatedImagePath,
+                attachmentImageName: existingRecord.attachment_image_name || existingRecord.attachmentImageName,
+                attachmentDocumentPath: existingRecord.attachment_document_path || existingRecord.attachmentDocumentPath,
+                attachmentDocumentName: existingRecord.attachment_document_name || existingRecord.attachmentDocumentName,
+              };
+
+              repository.updatePaymentOutRecord(id, record);
+
+              if (record.partyId) {
+                const allParties = repository.getParties();
+                const party = allParties.find((p: any) => String(p.id) === String(record.partyId));
+                if (party) {
+                  party.balance = Number(party.balance || 0) + Number(record.amount || 0);
+                  repository.upsertParty(party);
+                }
+              }
+
+              if (String(record.paymentType).toLowerCase() === 'cash') {
+                repository.addCashInHandTransaction({
+                  id: 'cash_payment_out_' + record.id,
+                  date: record.date,
+                  name: record.partyName,
+                  type: 'Payment Out',
+                  amount: -record.amount
+                });
+              } else if (record.paymentType) {
+                repository.addBankAccountTransaction({
+                  id: 'bank_payment_out_' + record.id,
+                  date: record.date,
+                  name: record.partyName,
+                  type: 'Payment Out',
+                  amount: -record.amount,
+                  paymentType: record.paymentType
+                });
+              }
+
+              res.statusCode = 200;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify(record));
+            } catch (error) {
+              console.error('PUT /api/payment_out_records error:', error);
+              res.statusCode = 400;
+              res.end(JSON.stringify({ message: 'Bad Request' }));
+            }
+            return;
+          }
+
           if (req.method === 'DELETE') {
             const pathId = requestUrl.pathname.split('/').filter(Boolean)[0];
             const queryId = requestUrl.searchParams.get('id');
@@ -1198,6 +1354,10 @@ function sqliteApiPlugin() {
                   }
                 } catch (txError) {
                   console.error('Failed to delete cash/bank transaction:', txError);
+                }
+
+                if (existingRecord.attachment_image_path || existingRecord.attachmentImagePath) {
+                  removeManagedPaymentOutAttachmentFile(existingRecord.attachment_image_path || existingRecord.attachmentImagePath);
                 }
               }
 

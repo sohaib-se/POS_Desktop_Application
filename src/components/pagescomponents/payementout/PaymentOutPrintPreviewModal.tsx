@@ -1,9 +1,9 @@
 import { X } from "lucide-react";
 import html2pdf from "html2pdf.js";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { PaymentInPrintReport } from "./PaymentInPrintReport";
+import { PaymentOutPrintReport } from "./PaymentOutPrintReport";
 
-interface PaymentInPrintPreviewModalProps {
+interface PaymentOutPrintPreviewModalProps {
   showPrintPreview: boolean;
   setShowPrintPreview: (show: boolean) => void;
   records: any[];
@@ -12,17 +12,17 @@ interface PaymentInPrintPreviewModalProps {
   businessProfile: any;
 }
 
-export function PaymentInPrintPreviewModal({
+export function PaymentOutPrintPreviewModal({
   showPrintPreview,
   setShowPrintPreview,
   records,
   selectedPartyName,
   selectedMonth,
   businessProfile,
-}: PaymentInPrintPreviewModalProps) {
+}: PaymentOutPrintPreviewModalProps) {
   const getPdfOptions = () => ({
     margin: 10,
-    filename: 'PaymentInReport.pdf',
+    filename: 'PaymentOutReport.pdf',
     image: { type: 'jpeg', quality: 1 },
     html2canvas: { scale: 2, useCORS: true, windowWidth: 794 },
     jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
@@ -49,12 +49,16 @@ export function PaymentInPrintPreviewModal({
   return (
     <Dialog open={showPrintPreview} onOpenChange={setShowPrintPreview}>
       {/*
-        Print-only CSS, kept local to this modal so it doesn't depend on a
-        global <style> block defined elsewhere on the page. See the
-        Payment-Out modal for the full explanation of why this is needed:
-        it hides everything except .print-area (preventing a stray blank
-        second sheet from the page behind the dialog) and anchors the
-        report at the top-left of the printed page for a consistent margin.
+        Print-only CSS, kept local to this modal so it works no matter which
+        page renders it (previously this fix only existed as a global
+        <style> block on the Payment-In page, which "leaked" and happened to
+        fix the Payment-In modal too, but never reached Payment-Out).
+        - Hides everything on the page except .print-area, so the
+          underlying list page behind the dialog doesn't spill onto a
+          second printed sheet.
+        - Anchors .print-area at the top-left of the printed page instead
+          of wherever it happened to sit in the page's normal flow, which
+          is what was causing the inconsistent top margin.
       */}
       <style>{`
         @media print {
@@ -76,6 +80,7 @@ export function PaymentInPrintPreviewModal({
             width: 100% !important;
             max-width: 100% !important;
             margin: 0 !important;
+            padding: 15mm !important;
           }
           .print-dialog-content {
             position: static !important;
@@ -109,7 +114,7 @@ export function PaymentInPrintPreviewModal({
           </button>
         </div>
         <div className="overflow-visible print:overflow-visible">
-          <PaymentInPrintReport
+          <PaymentOutPrintReport
             records={records}
             selectedPartyName={selectedPartyName}
             selectedMonth={selectedMonth}

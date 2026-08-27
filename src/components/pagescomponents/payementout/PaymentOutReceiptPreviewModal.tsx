@@ -1,45 +1,51 @@
 import { X } from "lucide-react";
+import { useRef } from "react";
 import html2pdf from "html2pdf.js";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { PaymentInPrintReport } from "./PaymentInPrintReport";
+import { PaymentOutReceiptPrint } from "./Paymentoutreceiptprint";
 
-interface PaymentInPrintPreviewModalProps {
-  showPrintPreview: boolean;
-  setShowPrintPreview: (show: boolean) => void;
-  records: any[];
-  selectedPartyName: string;
-  selectedMonth: string;
+interface PaymentOutReceiptPreviewModalProps {
+  record: any | null;
   businessProfile: any;
+  onClose: () => void;
 }
 
-export function PaymentInPrintPreviewModal({
-  showPrintPreview,
-  setShowPrintPreview,
-  records,
-  selectedPartyName,
-  selectedMonth,
+export function PaymentOutReceiptPreviewModal({
+  record,
   businessProfile,
-}: PaymentInPrintPreviewModalProps) {
+  onClose,
+}: PaymentOutReceiptPreviewModalProps) {
+  const printAreaRef = useRef<HTMLDivElement>(null);
+
+  const receiptNo = record?.paymentNo || record?.payment_no || record?.receiptNo || record?.receipt_no || "receipt";
+
   const getPdfOptions = () => ({
-    margin: 10,
-    filename: 'PaymentInReport.pdf',
-    image: { type: 'jpeg', quality: 1 },
+    // 0 here on purpose: the report itself already has its own padding
+    // (px-8 py-8 on .print-area), so adding a page-level margin on top of
+    // that would give the PDF more whitespace than the preview/print.
+    margin: 0,
+    filename: `PaymentOutReceipt_${receiptNo}.pdf`,
+    image: { type: "jpeg", quality: 1 },
     html2canvas: { scale: 2, useCORS: true, windowWidth: 794 },
-    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
   });
 
   const handleOpenPDF = () => {
-    const element = document.querySelector('.print-area') as HTMLElement;
+    const element = printAreaRef.current;
     if (element) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (html2pdf as any)().set(getPdfOptions()).from(element).output('bloburl').then((url: string) => {
-        window.open(url, '_blank');
-      });
+      (html2pdf as any)()
+        .set(getPdfOptions())
+        .from(element)
+        .output("bloburl")
+        .then((url: string) => {
+          window.open(url, "_blank");
+        });
     }
   };
 
   const handleSavePDF = () => {
-    const element = document.querySelector('.print-area') as HTMLElement;
+    const element = printAreaRef.current;
     if (element) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (html2pdf as any)().set(getPdfOptions()).from(element).save();
@@ -47,14 +53,18 @@ export function PaymentInPrintPreviewModal({
   };
 
   return (
-    <Dialog open={showPrintPreview} onOpenChange={setShowPrintPreview}>
+    <Dialog open={!!record} onOpenChange={(open) => !open && onClose()}>
       {/*
-        Print-only CSS, kept local to this modal so it doesn't depend on a
-        global <style> block defined elsewhere on the page. See the
-        Payment-Out modal for the full explanation of why this is needed:
-        it hides everything except .print-area (preventing a stray blank
-        second sheet from the page behind the dialog) and anchors the
-        report at the top-left of the printed page for a consistent margin.
+        Print-only CSS. Without this, native Print (window.print()) drifts
+        from the Open/Save PDF output in two ways:
+        1. The dialog keeps its fixed/centered on-screen position and
+           viewport-relative width when printed, instead of laying out as a
+           plain top-left block — this is reset here via .print-dialog-content.
+        2. Browsers strip background colors (the gray header bars) from
+           native print by default, even though html2canvas (used for the
+           PDFs) always captures them — forced back on via print-color-adjust.
+        Together these make native print match the on-screen preview and
+        the generated PDFs exactly.
       */}
       <style>{`
         @media print {
@@ -76,6 +86,7 @@ export function PaymentInPrintPreviewModal({
             width: 100% !important;
             max-width: 100% !important;
             margin: 0 !important;
+            padding: 15mm !important;
           }
           .print-dialog-content {
             position: static !important;
@@ -102,20 +113,27 @@ export function PaymentInPrintPreviewModal({
         className="print-dialog-content rounded-xl border-0 bg-white p-0 shadow-xl flex flex-col print:shadow-none print:m-0 print:p-0 print:border-none"
         style={{ width: "750px", maxWidth: "96vw" }}
       >
+        {/* Header */}
         <div className="flex items-center justify-between p-4 border-b print:hidden">
-          <h2 className="text-xl font-bold">Preview</h2>
-          <button onClick={() => setShowPrintPreview(false)} className="text-gray-500 hover:text-gray-700">
+          <h2 className="text-xl font-bold">Receipt Preview</h2>
+          <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
             <X className="w-5 h-5" />
           </button>
         </div>
-        <div className="overflow-visible print:overflow-visible">
-          <PaymentInPrintReport
-            records={records}
-            selectedPartyName={selectedPartyName}
-            selectedMonth={selectedMonth}
-            businessProfile={businessProfile}
-          />
+
+        {/* Preview content */}
+        <div className="overflow-auto print:overflow-visible max-h-[70vh] print:max-h-none">
+          <div ref={printAreaRef}>
+            {record && (
+              <PaymentOutReceiptPrint
+                record={record}
+                businessProfile={businessProfile}
+              />
+            )}
+          </div>
         </div>
+
+        {/* Footer actions */}
         <div className="p-4 border-t flex justify-end gap-3 print:hidden">
           <button
             onClick={handleOpenPDF}
@@ -124,19 +142,19 @@ export function PaymentInPrintPreviewModal({
             Open PDF
           </button>
           <button
+            onClick={handleSavePDF}
+            className="rounded-full px-6 py-2 border border-red-500 text-red-500 font-medium text-sm hover:bg-red-50 transition-colors"
+          >
+            Download PDF
+          </button>
+          <button
             onClick={() => window.print()}
             className="rounded-full px-6 py-2 border border-red-500 text-red-500 font-medium text-sm hover:bg-red-50 transition-colors"
           >
             Print
           </button>
           <button
-            onClick={handleSavePDF}
-            className="rounded-full px-6 py-2 border border-red-500 text-red-500 font-medium text-sm hover:bg-red-50 transition-colors"
-          >
-            Save PDF
-          </button>
-          <button
-            onClick={() => setShowPrintPreview(false)}
+            onClick={onClose}
             className="rounded-full px-6 py-2 bg-red-500 text-white font-medium text-sm hover:bg-red-600 transition-colors"
           >
             Close

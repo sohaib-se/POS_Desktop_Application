@@ -16,6 +16,7 @@ import { PurchaseBillTable } from "../components/pagescomponents/purchasebills/P
 import { PurchaseBillContextMenu } from "../components/pagescomponents/purchasebills/PurchaseBillContextMenu";
 import { PurchaseBillDialog } from "../components/pagescomponents/purchasebills/PurchaseBillDialog";
 import { EnterPasscodeScreen } from "@/components/common/EnterPasscodeScreen";
+import { ConfirmDeleteModal } from "@/components/common/ConfirmDeleteModal";
 
 interface PurchaseBillsProps {
   onBack?: () => void;
@@ -37,6 +38,8 @@ export function PurchaseBills({ onBack }: PurchaseBillsProps = {}) {
   const [isPasscodeEnabled] = useSettings('settings.isPasscodeEnabled', false);
   const [isPasscodeForTransactionEnabled] = useSettings('settings.isPasscodeForTransactionEnabled', false);
   const [passcodeAction, setPasscodeAction] = useState<{ type: 'edit' | 'delete', payload: PurchaseBillViewRow } | null>(null);
+  const [deleteModalState, setDeleteModalState] = useState<{isOpen: boolean, invoice: PurchaseBillViewRow | null}>({isOpen: false, invoice: null});
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     if (showSearchInput) {
@@ -191,13 +194,16 @@ export function PurchaseBills({ onBack }: PurchaseBillsProps = {}) {
     setViewingInvoice(invoice);
   };
 
-  const handleDeleteInvoice = async (invoice: PurchaseBillViewRow) => {
-    const confirmed = window.confirm(`Delete invoice ${invoice.invoiceNo} for ${invoice.partyName}?`);
-    if (!confirmed) {
-      return;
-    }
+  const handleDeleteInvoice = (invoice: PurchaseBillViewRow) => {
+    setDeleteModalState({isOpen: true, invoice});
+  };
+
+  const confirmDelete = async () => {
+    const invoice = deleteModalState.invoice;
+    if (!invoice) return;
 
     try {
+      setIsDeleting(true);
       const response = await fetch(`/api/purchase_bills/${invoice.id}`, {
         method: "DELETE",
       });
@@ -208,10 +214,12 @@ export function PurchaseBills({ onBack }: PurchaseBillsProps = {}) {
 
       setInvoiceRows((previousRows) => previousRows.filter((row) => row.id !== invoice.id));
       setStatusMessage("Purchase bill deleted successfully.");
+      setDeleteModalState({isOpen: false, invoice: null});
     } catch (error) {
       console.error(error);
       setStatusMessage("Failed to delete the selected purchase bill.");
     } finally {
+      setIsDeleting(false);
       setOpenRowMenuId(null);
     }
   };
@@ -312,6 +320,15 @@ export function PurchaseBills({ onBack }: PurchaseBillsProps = {}) {
           onCancel={() => setPasscodeAction(null)}
         />
       )}
+
+      <ConfirmDeleteModal
+        isOpen={deleteModalState.isOpen}
+        onClose={() => setDeleteModalState({isOpen: false, invoice: null})}
+        onConfirm={confirmDelete}
+        title="Delete Purchase Bill"
+        message={`Are you sure you want to delete purchase invoice ${deleteModalState.invoice?.invoiceNo} for ${deleteModalState.invoice?.partyName}? This action cannot be undone.`}
+        isDeleting={isDeleting}
+      />
     </div>
   );
 }

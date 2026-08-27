@@ -1,7 +1,7 @@
 import { useSettings } from "@/hooks/useSettings";
-import { useCallback, useEffect, useState, useMemo } from "react";
-import { ChevronDown, Printer, ArrowLeft } from "lucide-react";
-import { getMonthKeyFromDate, formatDateDisplay, monthLabelForFilter, formatMonthLabel } from "../../saleinvoices/utils";
+import { useCallback, useEffect, useState, useMemo, useRef } from "react";
+import { ChevronDown, Printer, ArrowLeft, Search } from "lucide-react";
+import { getMonthKeyFromDate, formatDateDisplay, formatMonthLabel } from "../../saleinvoices/utils";
 
 interface SalePurchaseByPartyProps {
   onBack: () => void;
@@ -21,18 +21,47 @@ export function SalePurchaseByParty({ onBack }: SalePurchaseByPartyProps) {
 
   const [loading, setLoading] = useState(true);
   
-  // Filter state
-  const [selectedMonthKey, setSelectedMonthKey] = useState<string>("");
-  const [isMonthMenuOpen, setIsMonthMenuOpen] = useState(false);
-  const [availableMonths, setAvailableMonths] = useState<string[]>([]);
+  const [monthFilter, setMonthFilter] = useState<string>(
+    getMonthKeyFromDate(formatDateDisplay(new Date()))
+  );
   
   const [selectedPartyFilter, setSelectedPartyFilter] = useState<string>("All Firms"); // From screenshot: "All Firms"
   const [isPartyMenuOpen, setIsPartyMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
+  // Search state
+  const [showSearchInput, setShowSearchInput] = useState(false);
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
+  const searchContainerRef = useRef<HTMLDivElement>(null);
+  const placeholders = ["Party Name", "Sale Amount", "Purchase Amount"];
+  const [placeholderIndex, setPlaceholderIndex] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setPlaceholderIndex((prev) => (prev + 1) % placeholders.length);
+    }, 3000);
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        showSearchInput &&
+        searchContainerRef.current &&
+        !searchContainerRef.current.contains(event.target as Node) &&
+        !searchQuery
+      ) {
+        setShowSearchInput(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [showSearchInput, searchQuery]);
+
   useEffect(() => {
     const closeMenus = () => {
-      setIsMonthMenuOpen(false);
       setIsPartyMenuOpen(false);
     };
     window.addEventListener("click", closeMenus);
@@ -64,23 +93,6 @@ export function SalePurchaseByParty({ onBack }: SalePurchaseByPartyProps) {
         setRawSales(sales);
         setRawPurchases(purchases);
 
-        const months = new Set<string>();
-        sales.forEach(s => {
-          if (s.date) months.add(getMonthKeyFromDate(s.date));
-        });
-        purchases.forEach(p => {
-          if (p.date) months.add(getMonthKeyFromDate(p.date));
-        });
-        const sortedMonths = Array.from(months).sort((a, b) => b.localeCompare(a));
-        setAvailableMonths(sortedMonths);
-
-        const currentMonthKey = getMonthKeyFromDate(formatDateDisplay(new Date()));
-        let defaultMonth = currentMonthKey;
-        if (sortedMonths.length > 0 && !sortedMonths.includes(currentMonthKey)) {
-            defaultMonth = sortedMonths[0];
-        }
-        setSelectedMonthKey(defaultMonth);
-
     } catch (error) {
         console.error(error);
     } finally {
@@ -95,13 +107,15 @@ export function SalePurchaseByParty({ onBack }: SalePurchaseByPartyProps) {
   const isAllParties = selectedPartyFilter === "All Firms";
 
   const displayData = useMemo(() => {
-      const filteredSales = selectedMonthKey 
-          ? rawSales.filter(s => getMonthKeyFromDate(s.date) === selectedMonthKey)
-          : rawSales;
+      const filterByDate = (record: any) => {
+        if (!monthFilter) return true;
+        const recordDateStr = record.date;
+        if (!recordDateStr) return true;
+        return getMonthKeyFromDate(recordDateStr) === monthFilter;
+      };
 
-      const filteredPurchases = selectedMonthKey 
-          ? rawPurchases.filter(p => getMonthKeyFromDate(p.date) === selectedMonthKey)
-          : rawPurchases;
+      const filteredSales = rawSales.filter(filterByDate);
+      const filteredPurchases = rawPurchases.filter(filterByDate);
 
       const partyMap = new Map<number, AggregateData>();
 
@@ -161,11 +175,15 @@ export function SalePurchaseByParty({ onBack }: SalePurchaseByPartyProps) {
       // Apply search filter
       if (searchQuery.trim()) {
          const lowerQ = searchQuery.toLowerCase();
-         results = results.filter(p => p.partyName.toLowerCase().includes(lowerQ));
+         results = results.filter(p => 
+           p.partyName.toLowerCase().includes(lowerQ) ||
+           p.totalSaleAmount.toString().toLowerCase().includes(lowerQ) ||
+           p.totalPurchaseAmount.toString().toLowerCase().includes(lowerQ)
+         );
       }
 
       return results.sort((a, b) => a.partyName.localeCompare(b.partyName));
-  }, [rawParties, rawSales, rawPurchases, selectedMonthKey, selectedPartyFilter, isAllParties, searchQuery]);
+  }, [rawParties, rawSales, rawPurchases, monthFilter, selectedPartyFilter, isAllParties, searchQuery]);
 
   const totalSale = displayData.reduce((sum, item) => sum + item.totalSaleAmount, 0);
   const totalPurchase = displayData.reduce((sum, item) => sum + item.totalPurchaseAmount, 0);
@@ -192,8 +210,6 @@ export function SalePurchaseByParty({ onBack }: SalePurchaseByPartyProps) {
     document.body.removeChild(link);
   };
 
-  const currentMonthKey = getMonthKeyFromDate(formatDateDisplay(new Date()));
-  const monthButtonLabel = selectedMonthKey === currentMonthKey ? "This Month" : monthLabelForFilter(selectedMonthKey);
   const partyButtonLabel = isAllParties ? "All Firms" : (rawParties.find(p => String(p.id) === selectedPartyFilter)?.name || selectedPartyFilter);
 
   return (
@@ -205,68 +221,23 @@ export function SalePurchaseByParty({ onBack }: SalePurchaseByPartyProps) {
             <ArrowLeft className="w-5 h-5" />
           </button>
           
-          <div className="flex items-center gap-2">
-            <div className="relative">
-                <button 
-                onClick={(e) => {
-                    e.stopPropagation();
-                    setIsMonthMenuOpen(!isMonthMenuOpen);
-                    setIsPartyMenuOpen(false);
-                }}
-                className="flex items-center gap-2 text-xl font-semibold text-gray-800 -ml-2 hover:bg-gray-50 px-2 py-1 rounded"
-                >
-                <span>{monthButtonLabel}</span>
-                <ChevronDown className="w-5 h-5 text-gray-500" />
-                </button>
-
-                {isMonthMenuOpen && (
-                <div 
-                    className="absolute left-0 top-full mt-1 z-20 w-48 rounded-lg border border-gray-200 bg-white shadow-lg overflow-hidden"
-                    onClick={(e) => e.stopPropagation()}
-                >
-                    <button
-                    className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50"
-                    onClick={() => {
-                        setSelectedMonthKey("");
-                        setIsMonthMenuOpen(false);
-                    }}
-                    >
-                    All Time
-                    </button>
-                    {availableMonths.map((monthKey) => (
-                    <button
-                        key={monthKey}
-                        className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50"
-                        onClick={() => {
-                        setSelectedMonthKey(monthKey);
-                        setIsMonthMenuOpen(false);
-                        }}
-                    >
-                        {formatMonthLabel(monthKey)}
-                    </button>
-                    ))}
-                </div>
-                )}
+          <div className="flex items-center gap-4 ml-4 flex-wrap">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium text-gray-700">Filter by Month:</span>
+              <input 
+                type="month"
+                value={monthFilter}
+                onChange={(e) => setMonthFilter(e.target.value)}
+                className="px-3 py-1.5 border border-gray-300 rounded bg-white text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+              />
             </div>
 
-            {/* Date Range Display (Mocked based on image) */}
-            {selectedMonthKey && (
-              <div className="flex items-center bg-gray-100 rounded border border-gray-300 ml-4 overflow-hidden">
-                <div className="px-3 py-1.5 bg-gray-400 text-white text-sm font-medium">Between</div>
-                <div className="px-3 py-1.5 text-sm text-gray-700 font-medium">
-                  {/* Just showing a static date range for demo, can be calculated from monthKey */}
-                  01/{selectedMonthKey.split('-')[1]}/{selectedMonthKey.split('-')[0]} To 31/{selectedMonthKey.split('-')[1]}/{selectedMonthKey.split('-')[0]}
-                </div>
-              </div>
-            )}
-
             {/* Party/Firm Filter */}
-            <div className="relative ml-4">
+            <div className="relative ml-2">
                 <button 
                 onClick={(e) => {
                     e.stopPropagation();
                     setIsPartyMenuOpen(!isPartyMenuOpen);
-                    setIsMonthMenuOpen(false);
                 }}
                 className="flex items-center justify-between w-56 px-3 py-1.5 border border-gray-300 rounded bg-white text-sm hover:bg-gray-50"
                 >
@@ -309,6 +280,54 @@ export function SalePurchaseByParty({ onBack }: SalePurchaseByPartyProps) {
         </div>
 
         <div className="flex items-center gap-6 pr-4">
+          <div className="flex gap-2 items-center h-10" ref={searchContainerRef}>
+            <div 
+              className={`flex items-center overflow-hidden transition-all duration-300 ease-out rounded-full h-9 ${
+                showSearchInput 
+                  ? "w-64 bg-white border border-blue-500 ring-4 ring-blue-50 mr-2" 
+                  : "w-9 bg-transparent border border-transparent hover:bg-gray-100 cursor-pointer"
+              }`}
+              onClick={(e) => {
+                if (!showSearchInput) {
+                  e.stopPropagation();
+                  setShowSearchInput(true);
+                  setTimeout(() => searchInputRef.current?.focus(), 150);
+                }
+              }}
+            >
+              <div className="flex items-center justify-center h-full w-9 shrink-0">
+                <Search className={`w-4 h-4 ${showSearchInput ? "text-gray-400" : "text-gray-500"}`} />
+              </div>
+              <div className={`relative flex-1 h-full flex items-center transition-opacity duration-200 ${
+                  showSearchInput ? "opacity-100 delay-100" : "opacity-0"
+                }`}>
+                <input
+                  ref={searchInputRef}
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="bg-transparent border-none outline-none focus:ring-0 focus:outline-none focus:border-transparent text-sm h-full w-full pr-3 relative z-10"
+                />
+                {!searchQuery && (
+                  <div className="absolute left-0 pointer-events-none flex items-center h-full w-full overflow-hidden text-gray-400 text-sm">
+                    <span className="whitespace-pre">Search </span>
+                    <div className="relative h-full flex-1 overflow-hidden">
+                      {placeholders.map((ph, idx) => (
+                        <span
+                          key={ph}
+                          className={`absolute top-0 left-0 flex items-center h-full transition-all duration-700 ease-in-out ${
+                            idx === placeholderIndex ? "opacity-100 translate-y-0" : "opacity-0 translate-y-3"
+                          }`}
+                        >
+                          {ph}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
           <button 
             onClick={handleExportExcel}
             className="flex flex-col items-center justify-center gap-1 text-gray-700 hover:text-gray-900"
@@ -329,16 +348,6 @@ export function SalePurchaseByParty({ onBack }: SalePurchaseByPartyProps) {
       <div className="flex-1 flex flex-col pt-2 overflow-hidden bg-white mt-1 mx-2">
         <div className="bg-white flex-1 flex flex-col overflow-hidden">
           
-          <div className="px-4 py-3 border-b border-gray-200">
-             <input 
-                type="text" 
-                placeholder="Search..." 
-                className="w-64 px-3 py-1.5 border border-gray-300 rounded focus:outline-none focus:border-blue-500 text-sm"
-                value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
-             />
-          </div>
-
           {/* Table */}
           <div className="flex-1 overflow-auto">
             <table className="w-full text-sm whitespace-nowrap">

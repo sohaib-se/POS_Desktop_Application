@@ -1,12 +1,13 @@
 import { useSettings } from "@/hooks/useSettings";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowLeft, Calendar, Search, Printer, Share2, MoreVertical, Pencil, Trash2 } from "lucide-react";
+import { ArrowLeft, Calendar, Search, Printer, MoreVertical, Pencil, Trash2 } from "lucide-react";
 import { formatDateDisplay } from "../../saleinvoices/utils";
 import type { SaleInvoiceEditData, PurchaseBillEditData } from "@/types";
 import { SaleInvoiceDialog } from "../../saleinvoices/SaleInvoiceDialog";
 import { PurchaseBillDialog } from "../../purchasebills/PurchaseBillDialog";
 import { AddPurchase } from "../../../../pages/AddPurchase";
 import { EnterPasscodeScreen } from "@/components/common/EnterPasscodeScreen";
+import { ConfirmDeleteModal } from "@/components/common/ConfirmDeleteModal";
 
 interface DaybookReportProps {
   onBack: () => void;
@@ -34,10 +35,47 @@ export function DaybookReport({ onBack, onEditInvoice }: DaybookReportProps) {
   const [transactions, setTransactions] = useState<TransactionRow[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const getTodayYMD = () => {
+    const d = new Date();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    const yyyy = d.getFullYear();
+    return `${yyyy}-${mm}-${dd}`;
+  };
+
+  const [selectedDate, setSelectedDate] = useState(getTodayYMD());
+
   // Table state
   const [searchQuery, setSearchQuery] = useState("");
   const [showSearchInput, setShowSearchInput] = useState(false);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
+  const searchContainerRef = useRef<HTMLDivElement>(null);
+  const placeholders = ["Party Name", "Invoice No.", "Amount"];
+  const [placeholderIndex, setPlaceholderIndex] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setPlaceholderIndex((prev) => (prev + 1) % placeholders.length);
+    }, 3000);
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        showSearchInput &&
+        searchContainerRef.current &&
+        !searchContainerRef.current.contains(event.target as Node) &&
+        !searchQuery
+      ) {
+        setShowSearchInput(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [showSearchInput, searchQuery]);
 
   // Menu state
   const [openRowMenuId, setOpenRowMenuId] = useState<string | null>(null);
@@ -52,6 +90,8 @@ export function DaybookReport({ onBack, onEditInvoice }: DaybookReportProps) {
   const [isPasscodeEnabled] = useSettings('settings.isPasscodeEnabled', false);
   const [isPasscodeForTransactionEnabled] = useSettings('settings.isPasscodeForTransactionEnabled', false);
   const [passcodeAction, setPasscodeAction] = useState<{ type: 'edit' | 'delete', payload: TransactionRow } | null>(null);
+  const [deleteModalState, setDeleteModalState] = useState<{isOpen: boolean, tx: TransactionRow | null}>({isOpen: false, tx: null});
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const handleEditClick = (tx: TransactionRow) => {
     if (isPasscodeEnabled && isPasscodeForTransactionEnabled) {
@@ -108,12 +148,13 @@ export function DaybookReport({ onBack, onEditInvoice }: DaybookReportProps) {
       ]);
       
       let allTx: TransactionRow[] = [];
-      const todayString = formatDateDisplay(new Date());
+      const parts = selectedDate.split('-');
+      const targetDateString = parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : formatDateDisplay(new Date());
       
       if (salesRes && salesRes.ok) {
         const sales = await salesRes.json();
         allTx = allTx.concat(sales
-          .filter((s: any) => s.date === todayString)
+          .filter((s: any) => s.date === targetDateString)
           .map((s: any) => ({
             id: `sale-${s.id}`,
             originalId: s.id,
@@ -154,7 +195,7 @@ export function DaybookReport({ onBack, onEditInvoice }: DaybookReportProps) {
       if (purchasesRes && purchasesRes.ok) {
         const purchases = await purchasesRes.json();
         allTx = allTx.concat(purchases
-          .filter((p: any) => p.date === todayString)
+          .filter((p: any) => p.date === targetDateString)
           .map((p: any) => ({
             id: `purchase-${p.id}`,
             originalId: p.id,
@@ -202,7 +243,7 @@ export function DaybookReport({ onBack, onEditInvoice }: DaybookReportProps) {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [selectedDate]);
 
   useEffect(() => {
     void loadTransactions();
@@ -213,13 +254,19 @@ export function DaybookReport({ onBack, onEditInvoice }: DaybookReportProps) {
     if (!normalizedQuery) {
       return transactions;
     }
-    return transactions.filter((row) => row.partyName.toLowerCase().includes(normalizedQuery));
+    return transactions.filter((row) => {
+        const partyMatch = row.partyName.toLowerCase().includes(normalizedQuery);
+        const invoiceMatch = row.invoiceNo.toLowerCase().includes(normalizedQuery);
+        const amountMatch = row.amount.toString().toLowerCase().includes(normalizedQuery);
+        return partyMatch || invoiceMatch || amountMatch;
+    });
   }, [searchQuery, transactions]);
 
   const totalSales = transactions.filter(r => r.type === 'Sale').reduce((sum, invoice) => sum + invoice.amount, 0);
   const totalPurchases = transactions.filter(r => r.type === 'Purchase').reduce((sum, invoice) => sum + invoice.amount, 0);
 
-  const todayDisplay = formatDateDisplay(new Date());
+  const isToday = selectedDate === getTodayYMD();
+  const displayDateStr = selectedDate.split('-').reverse().join('/');
 
   const handleDownloadCsv = () => {
     // simplified csv download for reporting
@@ -232,21 +279,26 @@ export function DaybookReport({ onBack, onEditInvoice }: DaybookReportProps) {
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = `daybook-${todayDisplay.replace(/\//g, '-')}.csv`;
+    link.download = `daybook-${displayDateStr.replace(/\//g, '-')}.csv`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
   };
 
-  const handleDeleteTransaction = async (tx: TransactionRow) => {
-    const isSale = tx.type === "Sale";
-    const endpoint = isSale ? `/api/sale_invoices/${tx.originalId}` : `/api/purchase_bills/${tx.originalId}`;
-    
-    const confirmed = window.confirm(`Delete ${tx.type.toLowerCase()} invoice ${tx.invoiceNo} for ${tx.partyName}?`);
-    if (!confirmed) return;
+  const handleDeleteTransaction = (tx: TransactionRow) => {
+    setDeleteModalState({isOpen: true, tx});
+  };
+
+  const confirmDelete = async () => {
+    const tx = deleteModalState.tx;
+    if (!tx) return;
 
     try {
+      setIsDeleting(true);
+      const isSale = tx.type === "Sale";
+      const endpoint = isSale ? `/api/sale_invoices/${tx.originalId}` : `/api/purchase_bills/${tx.originalId}`;
+
       const response = await fetch(endpoint, {
         method: "DELETE",
       });
@@ -256,10 +308,12 @@ export function DaybookReport({ onBack, onEditInvoice }: DaybookReportProps) {
       }
 
       setTransactions((prev) => prev.filter((row) => row.id !== tx.id));
+      setDeleteModalState({isOpen: false, tx: null});
     } catch (error) {
       console.error(error);
       alert(`Failed to delete the selected transaction.`);
     } finally {
+      setIsDeleting(false);
       setOpenRowMenuId(null);
     }
   };
@@ -298,12 +352,14 @@ export function DaybookReport({ onBack, onEditInvoice }: DaybookReportProps) {
         className="p-4 bg-white rounded-md shadow-sm flex items-center gap-4 shrink-0"
         style={{ marginLeft: "4px", marginRight: "4px" }}
       >
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-500">Date:</span>
-          <button className="flex items-center gap-2 px-3 py-1.5 border border-gray-300 bg-gray-50 rounded-lg text-sm text-gray-700 cursor-default">
-            <Calendar className="w-4 h-4" />
-            {todayDisplay} (Today)
-          </button>
+        <div className="flex items-center gap-3">
+          <span className="text-sm font-medium text-gray-600 uppercase tracking-wide">Filter By day:</span>
+          <input 
+            type="date"
+            className="px-3 py-2 border border-gray-300 bg-gray-50 rounded-lg text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#008AC9] transition-all shadow-sm hover:border-gray-400 w-44"
+            value={selectedDate}
+            onChange={(e) => setSelectedDate(e.target.value)}
+          />
         </div>
       </div>
 
@@ -314,7 +370,7 @@ export function DaybookReport({ onBack, onEditInvoice }: DaybookReportProps) {
       >
         <div className="flex-1 max-w-sm bg-[#F6F0FB] rounded-xl p-4 border border-[#E8D7F6]">
           <div className="flex items-center justify-between mb-1">
-            <span className="text-sm text-[#6B6B83]">Today's Total Sales</span>
+            <span className="text-sm text-[#6B6B83]">{isToday ? "Today's " : ""}Total Sales</span>
           </div>
           <p className="text-xl font-bold text-[#1C1F2A]">
             {currencyStr} {totalSales.toLocaleString()}
@@ -323,7 +379,7 @@ export function DaybookReport({ onBack, onEditInvoice }: DaybookReportProps) {
         
         <div className="flex-1 max-w-sm bg-[#E6F4EA] rounded-xl p-4 border border-[#CEEAD6]">
           <div className="flex items-center justify-between mb-1">
-            <span className="text-sm text-[#3D7D50]">Today's Purchase Bill</span>
+            <span className="text-sm text-[#3D7D50]">{isToday ? "Today's " : ""}Purchase Bill</span>
           </div>
           <p className="text-xl font-bold text-[#134D25]">
             {currencyStr} {totalPurchases.toLocaleString()}
@@ -338,41 +394,55 @@ export function DaybookReport({ onBack, onEditInvoice }: DaybookReportProps) {
       >
         <div className="flex items-center justify-between px-6 pt-4 pb-2 border-b border-gray-200">
           <h3 className="text-base font-bold text-[#222B45] tracking-wide">
-            TODAY'S TRANSACTIONS
+            TRANSACTIONS FOR {displayDateStr}
           </h3>
-          <div className="flex gap-2 items-center">
-            {showSearchInput && (
-              <div className="flex items-center bg-[#F7F9FB] rounded-lg px-3 py-1.5 border border-[#E3EAF2] w-64 mr-2">
-                <Search className="w-4 h-4 text-gray-400 mr-2 shrink-0" />
+          <div className="flex gap-2 items-center h-10" ref={searchContainerRef}>
+            <div 
+              className={`flex items-center overflow-hidden transition-all duration-300 ease-out rounded-full h-9 ${
+                showSearchInput 
+                  ? "w-64 bg-white border border-blue-500 ring-4 ring-blue-50 mr-2" 
+                  : "w-9 bg-transparent border border-transparent hover:bg-gray-100 cursor-pointer"
+              }`}
+              onClick={(e) => {
+                if (!showSearchInput) {
+                  e.stopPropagation();
+                  setShowSearchInput(true);
+                  setTimeout(() => searchInputRef.current?.focus(), 150);
+                }
+              }}
+            >
+              <div className="flex items-center justify-center h-full w-9 shrink-0">
+                <Search className={`w-4 h-4 ${showSearchInput ? "text-gray-400" : "text-gray-500"}`} />
+              </div>
+              <div className={`relative flex-1 h-full flex items-center transition-opacity duration-200 ${
+                  showSearchInput ? "opacity-100 delay-100" : "opacity-0"
+                }`}>
                 <input
                   ref={searchInputRef}
                   type="text"
-                  placeholder="Search transactions..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  onBlur={() => {
-                    setTimeout(() => {
-                      setShowSearchInput(false);
-                      setSearchQuery("");
-                    }, 150);
-                  }}
-                  className="w-full bg-transparent border-none outline-none text-sm"
-                  autoFocus
+                  className="bg-transparent border-none outline-none focus:ring-0 focus:outline-none focus:border-transparent text-sm h-full w-full pr-3 relative z-10"
                 />
+                {!searchQuery && (
+                  <div className="absolute left-0 pointer-events-none flex items-center h-full w-full overflow-hidden text-gray-400 text-sm">
+                    <span className="whitespace-pre">Search </span>
+                    <div className="relative h-full flex-1 overflow-hidden">
+                      {placeholders.map((ph, idx) => (
+                        <span
+                          key={ph}
+                          className={`absolute top-0 left-0 flex items-center h-full transition-all duration-700 ease-in-out ${
+                            idx === placeholderIndex ? "opacity-100 translate-y-0" : "opacity-0 translate-y-3"
+                          }`}
+                        >
+                          {ph}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
-            )}
-            {!showSearchInput && (
-              <button
-                onClick={(event) => {
-                  event.stopPropagation();
-                  setShowSearchInput(true);
-                }}
-                className="p-1.5 hover:bg-[#F7F9FB] rounded"
-                title="Search"
-              >
-                <Search className="w-4 h-4 text-[#7B8A9A]" />
-              </button>
-            )}
+            </div>
             <button
               onClick={() => window.print()}
               className="p-1.5 hover:bg-[#F7F9FB] rounded"
@@ -413,13 +483,13 @@ export function DaybookReport({ onBack, onEditInvoice }: DaybookReportProps) {
               {loading ? (
                 <tr>
                   <td colSpan={8} className="px-4 py-10 text-center text-sm text-gray-500">
-                    Loading today's transactions...
+                    Loading transactions...
                   </td>
                 </tr>
               ) : visibleRows.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="px-4 py-10 text-center text-sm text-gray-500">
-                    No transactions found for today.
+                    No transactions found for the selected date.
                   </td>
                 </tr>
               ) : (
@@ -445,9 +515,7 @@ export function DaybookReport({ onBack, onEditInvoice }: DaybookReportProps) {
                         <button className="p-1.5 hover:bg-gray-100 rounded" title="Print">
                           <Printer className="w-4 h-4 text-gray-500" />
                         </button>
-                        <button className="p-1.5 hover:bg-gray-100 rounded" title="Share">
-                          <Share2 className="w-4 h-4 text-gray-500" />
-                        </button>
+
                         <button
                           className="p-1.5 hover:bg-gray-100 rounded"
                           title="More actions"
@@ -556,6 +624,15 @@ export function DaybookReport({ onBack, onEditInvoice }: DaybookReportProps) {
           onCancel={() => setPasscodeAction(null)}
         />
       )}
+
+      <ConfirmDeleteModal
+        isOpen={deleteModalState.isOpen}
+        onClose={() => setDeleteModalState({isOpen: false, tx: null})}
+        onConfirm={confirmDelete}
+        title={`Delete ${deleteModalState.tx?.type} Invoice`}
+        message={`Are you sure you want to delete ${deleteModalState.tx?.type.toLowerCase()} invoice ${deleteModalState.tx?.invoiceNo} for ${deleteModalState.tx?.partyName}? This action cannot be undone.`}
+        isDeleting={isDeleting}
+      />
     </div>
   );
 }

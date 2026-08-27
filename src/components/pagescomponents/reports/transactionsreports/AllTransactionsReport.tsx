@@ -1,12 +1,13 @@
 import { useSettings } from "@/hooks/useSettings";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowLeft, Calendar, ChevronDown, Search, Printer, Share2, MoreVertical, Pencil, Trash2 } from "lucide-react";
+import { ArrowLeft, Calendar, ChevronDown, Search, Printer, MoreVertical, Pencil, Trash2 } from "lucide-react";
 import { getMonthKeyFromDate, formatDateDisplay, monthLabelForFilter, formatMonthLabel } from "../../saleinvoices/utils";
 import type { SaleInvoiceEditData, PurchaseBillEditData } from "@/types";
 import { SaleInvoiceDialog } from "../../saleinvoices/SaleInvoiceDialog";
 import { PurchaseBillDialog } from "../../purchasebills/PurchaseBillDialog";
 import { AddPurchase } from "../../../../pages/AddPurchase";
 import { EnterPasscodeScreen } from "@/components/common/EnterPasscodeScreen";
+import { ConfirmDeleteModal } from "@/components/common/ConfirmDeleteModal";
 
 interface AllTransactionsReportProps {
   onBack: () => void;
@@ -41,6 +42,33 @@ export function AllTransactionsReport({ onBack, onEditInvoice }: AllTransactions
   const [showSearchInput, setShowSearchInput] = useState(false);
   const [isMonthMenuOpen, setIsMonthMenuOpen] = useState(false);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
+  const searchContainerRef = useRef<HTMLDivElement>(null);
+  const placeholders = ["Party Name", "Invoice No.", "Amount"];
+  const [placeholderIndex, setPlaceholderIndex] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setPlaceholderIndex((prev) => (prev + 1) % placeholders.length);
+    }, 3000);
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        showSearchInput &&
+        searchContainerRef.current &&
+        !searchContainerRef.current.contains(event.target as Node) &&
+        !searchQuery
+      ) {
+        setShowSearchInput(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [showSearchInput, searchQuery]);
 
   // Menu state
   const [openRowMenuId, setOpenRowMenuId] = useState<string | null>(null);
@@ -55,6 +83,8 @@ export function AllTransactionsReport({ onBack, onEditInvoice }: AllTransactions
   const [isPasscodeEnabled] = useSettings('settings.isPasscodeEnabled', false);
   const [isPasscodeForTransactionEnabled] = useSettings('settings.isPasscodeForTransactionEnabled', false);
   const [passcodeAction, setPasscodeAction] = useState<{ type: 'edit' | 'delete', payload: TransactionRow } | null>(null);
+  const [deleteModalState, setDeleteModalState] = useState<{isOpen: boolean, tx: TransactionRow | null}>({isOpen: false, tx: null});
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const handleEditClick = (tx: TransactionRow) => {
     if (isPasscodeEnabled && isPasscodeForTransactionEnabled) {
@@ -234,7 +264,12 @@ export function AllTransactionsReport({ onBack, onEditInvoice }: AllTransactions
     if (!normalizedQuery) {
       return selectedMonthRows;
     }
-    return selectedMonthRows.filter((row) => row.partyName.toLowerCase().includes(normalizedQuery));
+    return selectedMonthRows.filter((row) => {
+        const partyMatch = row.partyName.toLowerCase().includes(normalizedQuery);
+        const invoiceMatch = row.invoiceNo.toLowerCase().includes(normalizedQuery);
+        const amountMatch = row.amount.toString().toLowerCase().includes(normalizedQuery);
+        return partyMatch || invoiceMatch || amountMatch;
+    });
   }, [searchQuery, selectedMonthRows]);
 
   const totalSales = selectedMonthRows.filter(r => r.type === 'Sale').reduce((sum, invoice) => sum + invoice.amount, 0);
@@ -261,14 +296,19 @@ export function AllTransactionsReport({ onBack, onEditInvoice }: AllTransactions
     URL.revokeObjectURL(url);
   };
 
-  const handleDeleteTransaction = async (tx: TransactionRow) => {
-    const isSale = tx.type === "Sale";
-    const endpoint = isSale ? `/api/sale_invoices/${tx.originalId}` : `/api/purchase_bills/${tx.originalId}`;
-    
-    const confirmed = window.confirm(`Delete ${tx.type.toLowerCase()} invoice ${tx.invoiceNo} for ${tx.partyName}?`);
-    if (!confirmed) return;
+  const handleDeleteTransaction = (tx: TransactionRow) => {
+    setDeleteModalState({isOpen: true, tx});
+  };
+
+  const confirmDelete = async () => {
+    const tx = deleteModalState.tx;
+    if (!tx) return;
 
     try {
+      setIsDeleting(true);
+      const isSale = tx.type === "Sale";
+      const endpoint = isSale ? `/api/sale_invoices/${tx.originalId}` : `/api/purchase_bills/${tx.originalId}`;
+
       const response = await fetch(endpoint, {
         method: "DELETE",
       });
@@ -278,10 +318,12 @@ export function AllTransactionsReport({ onBack, onEditInvoice }: AllTransactions
       }
 
       setTransactions((prev) => prev.filter((row) => row.id !== tx.id));
+      setDeleteModalState({isOpen: false, tx: null});
     } catch (error) {
       console.error(error);
       alert(`Failed to delete the selected transaction.`);
     } finally {
+      setIsDeleting(false);
       setOpenRowMenuId(null);
     }
   };
@@ -366,10 +408,14 @@ export function AllTransactionsReport({ onBack, onEditInvoice }: AllTransactions
 
         <div className="flex items-center gap-2">
           <span className="text-sm text-gray-500">Selected month:</span>
-          <button className="flex items-center gap-2 px-3 py-1.5 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50">
-            <Calendar className="w-4 h-4" />
-            {monthButtonLabel}
-          </button>
+          <input
+            type="month"
+            value={selectedMonthKey}
+            onChange={(e) => {
+              setSelectedMonthKey(e.target.value);
+            }}
+            className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#008AC9] transition-all cursor-pointer"
+          />
         </div>
       </div>
 
@@ -406,40 +452,54 @@ export function AllTransactionsReport({ onBack, onEditInvoice }: AllTransactions
           <h3 className="text-base font-bold text-[#222B45] tracking-wide">
             TRANSACTIONS
           </h3>
-          <div className="flex gap-2 items-center">
-            {showSearchInput && (
-              <div className="flex items-center bg-[#F7F9FB] rounded-lg px-3 py-1.5 border border-[#E3EAF2] w-64 mr-2">
-                <Search className="w-4 h-4 text-gray-400 mr-2 shrink-0" />
+          <div className="flex gap-2 items-center h-10" ref={searchContainerRef}>
+            <div 
+              className={`flex items-center overflow-hidden transition-all duration-300 ease-out rounded-full h-9 ${
+                showSearchInput 
+                  ? "w-64 bg-white border border-blue-500 ring-4 ring-blue-50 mr-2" 
+                  : "w-9 bg-transparent border border-transparent hover:bg-gray-100 cursor-pointer"
+              }`}
+              onClick={(e) => {
+                if (!showSearchInput) {
+                  e.stopPropagation();
+                  setShowSearchInput(true);
+                  setIsMonthMenuOpen(false);
+                  setTimeout(() => searchInputRef.current?.focus(), 150);
+                }
+              }}
+            >
+              <div className="flex items-center justify-center h-full w-9 shrink-0">
+                <Search className={`w-4 h-4 ${showSearchInput ? "text-gray-400" : "text-gray-500"}`} />
+              </div>
+              <div className={`relative flex-1 h-full flex items-center transition-opacity duration-200 ${
+                  showSearchInput ? "opacity-100 delay-100" : "opacity-0"
+                }`}>
                 <input
                   ref={searchInputRef}
                   type="text"
-                  placeholder="Search transactions..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  onBlur={() => {
-                    setTimeout(() => {
-                      setShowSearchInput(false);
-                      setSearchQuery("");
-                    }, 150);
-                  }}
-                  className="w-full bg-transparent border-none outline-none text-sm"
-                  autoFocus
+                  className="bg-transparent border-none outline-none focus:ring-0 focus:outline-none focus:border-transparent text-sm h-full w-full pr-3 relative z-10"
                 />
+                {!searchQuery && (
+                  <div className="absolute left-0 pointer-events-none flex items-center h-full w-full overflow-hidden text-gray-400 text-sm">
+                    <span className="whitespace-pre">Search </span>
+                    <div className="relative h-full flex-1 overflow-hidden">
+                      {placeholders.map((ph, idx) => (
+                        <span
+                          key={ph}
+                          className={`absolute top-0 left-0 flex items-center h-full transition-all duration-700 ease-in-out ${
+                            idx === placeholderIndex ? "opacity-100 translate-y-0" : "opacity-0 translate-y-3"
+                          }`}
+                        >
+                          {ph}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
-            )}
-            {!showSearchInput && (
-              <button
-                onClick={(event) => {
-                  event.stopPropagation();
-                  setShowSearchInput(true);
-                  setIsMonthMenuOpen(false);
-                }}
-                className="p-1.5 hover:bg-[#F7F9FB] rounded"
-                title="Search"
-              >
-                <Search className="w-4 h-4 text-[#7B8A9A]" />
-              </button>
-            )}
+            </div>
             <button
               onClick={() => window.print()}
               className="p-1.5 hover:bg-[#F7F9FB] rounded"
@@ -512,9 +572,7 @@ export function AllTransactionsReport({ onBack, onEditInvoice }: AllTransactions
                         <button className="p-1.5 hover:bg-gray-100 rounded" title="Print">
                           <Printer className="w-4 h-4 text-gray-500" />
                         </button>
-                        <button className="p-1.5 hover:bg-gray-100 rounded" title="Share">
-                          <Share2 className="w-4 h-4 text-gray-500" />
-                        </button>
+
                         <button
                           className="p-1.5 hover:bg-gray-100 rounded"
                           title="More actions"
@@ -623,6 +681,15 @@ export function AllTransactionsReport({ onBack, onEditInvoice }: AllTransactions
           onCancel={() => setPasscodeAction(null)}
         />
       )}
+
+      <ConfirmDeleteModal
+        isOpen={deleteModalState.isOpen}
+        onClose={() => setDeleteModalState({isOpen: false, tx: null})}
+        onConfirm={confirmDelete}
+        title={`Delete ${deleteModalState.tx?.type} Invoice`}
+        message={`Are you sure you want to delete ${deleteModalState.tx?.type.toLowerCase()} invoice ${deleteModalState.tx?.invoiceNo} for ${deleteModalState.tx?.partyName}? This action cannot be undone.`}
+        isDeleting={isDeleting}
+      />
     </div>
   );
 }

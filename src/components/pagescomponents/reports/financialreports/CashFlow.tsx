@@ -1,5 +1,5 @@
 import { useSettings } from "@/hooks/useSettings";
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { ArrowLeft, Search, Calendar } from 'lucide-react';
 
 interface CashFlowProps {
@@ -21,17 +21,17 @@ interface CashFlowRow extends Transaction {
   runningCash: number;
 }
 
-const getCurrencySymbol = () => {
-  try {
-    const saved = localStorage.getItem('settings.currency');
-    if (saved) {
-      const parsed = JSON.parse(saved);
-      if (parsed && parsed.symbol) return parsed.symbol;
-    }
-  } catch {
-    // ignore
+const parseLocalDate = (dStr: string) => {
+  if (!dStr) return new Date();
+  if (dStr.includes('/')) {
+    const [dd, mm, yyyy] = dStr.split('/');
+    return new Date(Number(yyyy), Number(mm) - 1, Number(dd));
   }
-  return `${currencyStr} `;
+  if (dStr.includes('-')) {
+    const [yyyy, mm, dd] = dStr.split('-');
+    return new Date(Number(yyyy), Number(mm) - 1, Number(dd));
+  }
+  return new Date(dStr);
 };
 
 export function CashFlow({ onBack }: CashFlowProps) {
@@ -39,6 +39,37 @@ export function CashFlow({ onBack }: CashFlowProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
+
+  // Search state
+  const [showSearchInput, setShowSearchInput] = useState(false);
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
+  const searchContainerRef = useRef<HTMLDivElement>(null);
+  const placeholders = ["Name", "Type", "Amount"];
+  const [placeholderIndex, setPlaceholderIndex] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setPlaceholderIndex((prev) => (prev + 1) % placeholders.length);
+    }, 3000);
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        showSearchInput &&
+        searchContainerRef.current &&
+        !searchContainerRef.current.contains(event.target as Node) &&
+        !searchTerm
+      ) {
+        setShowSearchInput(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [showSearchInput, searchTerm]);
   const [loading, setLoading] = useState(true);
     const [currency] = useSettings('settings.businessCurrency', { code: 'PKR', symbol: 'Rs' });
   const [currencyDisplay] = useSettings<'abbreviation' | 'icon'>('settings.currencyDisplay', 'abbreviation');
@@ -54,9 +85,7 @@ export function CashFlow({ onBack }: CashFlowProps) {
           
           // Sort chronologically (ascending) to calculate running cash
           const sortedAsc = [...data].sort((a, b) => {
-            const dateA = a.created_at ? new Date(a.created_at).getTime() : new Date(a.date.split('/').reverse().join('-')).getTime();
-            const dateB = b.created_at ? new Date(b.created_at).getTime() : new Date(b.date.split('/').reverse().join('-')).getTime();
-            return dateA - dateB;
+            return parseLocalDate(a.date).getTime() - parseLocalDate(b.date).getTime();
           });
 
           let runningCash = 0;
@@ -93,19 +122,20 @@ export function CashFlow({ onBack }: CashFlowProps) {
   }, []);
 
   const filteredTransactions = transactions.filter(tx => {
-    const matchesSearch = tx.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          tx.type?.toLowerCase().includes(searchTerm.toLowerCase());
+    const term = searchTerm.toLowerCase();
+    const matchesSearch = tx.name?.toLowerCase().includes(term) ||
+                          tx.type?.toLowerCase().includes(term) ||
+                          tx.amount.toString().toLowerCase().includes(term);
     
     let matchesDate = true;
     if (dateFrom || dateTo) {
-      const txDate = tx.created_at ? new Date(tx.created_at).getTime() : new Date(tx.date.split('/').reverse().join('-')).getTime();
+      const txDate = parseLocalDate(tx.date).getTime();
       
       if (dateFrom) {
-        const fromDate = new Date(dateFrom).getTime();
-        if (txDate < fromDate) matchesDate = false;
+        if (txDate < parseLocalDate(dateFrom).getTime()) matchesDate = false;
       }
       if (dateTo) {
-        const toDate = new Date(dateTo);
+        const toDate = parseLocalDate(dateTo);
         toDate.setHours(23, 59, 59, 999);
         if (txDate > toDate.getTime()) matchesDate = false;
       }
@@ -146,15 +176,53 @@ export function CashFlow({ onBack }: CashFlowProps) {
               className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
             />
           </div>
-          <div className="relative">
-            <Search className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
-            <input
-              type="text"
-              placeholder="Search transactions..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-64"
-            />
+          <div className="flex gap-2 items-center h-10" ref={searchContainerRef}>
+            <div 
+              className={`flex items-center overflow-hidden transition-all duration-300 ease-out rounded-full h-9 ${
+                showSearchInput 
+                  ? "w-64 bg-white border border-blue-500 ring-4 ring-blue-50" 
+                  : "w-9 bg-transparent border border-transparent hover:bg-gray-100 cursor-pointer"
+              }`}
+              onClick={(e) => {
+                if (!showSearchInput) {
+                  e.stopPropagation();
+                  setShowSearchInput(true);
+                  setTimeout(() => searchInputRef.current?.focus(), 150);
+                }
+              }}
+            >
+              <div className="flex items-center justify-center h-full w-9 shrink-0">
+                <Search className={`w-4 h-4 ${showSearchInput ? "text-gray-400" : "text-gray-500"}`} />
+              </div>
+              <div className={`relative flex-1 h-full flex items-center transition-opacity duration-200 ${
+                  showSearchInput ? "opacity-100 delay-100" : "opacity-0"
+                }`}>
+                <input
+                  ref={searchInputRef}
+                  type="text"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="bg-transparent border-none outline-none focus:ring-0 focus:outline-none focus:border-transparent text-sm h-full w-full pr-3 relative z-10"
+                />
+                {!searchTerm && (
+                  <div className="absolute left-0 pointer-events-none flex items-center h-full w-full overflow-hidden text-gray-400 text-sm">
+                    <span className="whitespace-pre">Search </span>
+                    <div className="relative h-full flex-1 overflow-hidden">
+                      {placeholders.map((ph, idx) => (
+                        <span
+                          key={ph}
+                          className={`absolute top-0 left-0 flex items-center h-full transition-all duration-700 ease-in-out ${
+                            idx === placeholderIndex ? "opacity-100 translate-y-0" : "opacity-0 translate-y-3"
+                          }`}
+                        >
+                          {ph}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         </div>
       </div>

@@ -1,7 +1,7 @@
 import { useSettings } from "@/hooks/useSettings";
 import { useCallback, useEffect, useState, useMemo } from "react";
 import { ChevronDown, Printer, ArrowLeft } from "lucide-react";
-import { getMonthKeyFromDate, formatDateDisplay, monthLabelForFilter, formatMonthLabel } from "../../saleinvoices/utils";
+import { getMonthKeyFromDate, formatDateDisplay } from "../../saleinvoices/utils";
 
 interface PartyWiseProfitLossReportProps {
   onBack: () => void;
@@ -35,16 +35,15 @@ export function PartyWiseProfitLossReport({ onBack }: PartyWiseProfitLossReportP
   const [loading, setLoading] = useState(true);
   
   // Filter state
-  const [selectedMonthKey, setSelectedMonthKey] = useState<string>("");
-  const [isMonthMenuOpen, setIsMonthMenuOpen] = useState(false);
-  const [availableMonths, setAvailableMonths] = useState<string[]>([]);
+  const [selectedMonthKey, setSelectedMonthKey] = useState<string>(
+    getMonthKeyFromDate(formatDateDisplay(new Date()))
+  );
   
   const [selectedPartyFilter, setSelectedPartyFilter] = useState<string>("All parties");
   const [isPartyMenuOpen, setIsPartyMenuOpen] = useState(false);
 
   useEffect(() => {
     const closeMenus = () => {
-      setIsMonthMenuOpen(false);
       setIsPartyMenuOpen(false);
     };
     window.addEventListener("click", closeMenus);
@@ -86,19 +85,7 @@ export function PartyWiseProfitLossReport({ onBack }: PartyWiseProfitLossReportP
         setRawSales(sales);
         setRawItems(items);
 
-        const months = new Set<string>();
-        sales.forEach(s => {
-          if (s.date) months.add(getMonthKeyFromDate(s.date));
-        });
-        const sortedMonths = Array.from(months).sort((a, b) => b.localeCompare(a));
-        setAvailableMonths(sortedMonths);
 
-        const currentMonthKey = getMonthKeyFromDate(formatDateDisplay(new Date()));
-        let defaultMonth = currentMonthKey;
-        if (sortedMonths.length > 0 && !sortedMonths.includes(currentMonthKey)) {
-            defaultMonth = sortedMonths[0];
-        }
-        setSelectedMonthKey(defaultMonth);
 
     } catch (error) {
         console.error(error);
@@ -247,8 +234,7 @@ export function PartyWiseProfitLossReport({ onBack }: PartyWiseProfitLossReportP
     document.body.removeChild(link);
   };
 
-  const currentMonthKey = getMonthKeyFromDate(formatDateDisplay(new Date()));
-  const monthButtonLabel = selectedMonthKey === currentMonthKey ? "This Month" : monthLabelForFilter(selectedMonthKey);
+
   const partyButtonLabel = isAllParties ? "All parties" : (rawParties.find(p => String(p.id) === selectedPartyFilter)?.name || selectedPartyFilter);
 
   return (
@@ -261,47 +247,14 @@ export function PartyWiseProfitLossReport({ onBack }: PartyWiseProfitLossReportP
           </button>
           
           <div className="flex items-center gap-2">
-            <div className="relative">
-                <button 
-                onClick={(e) => {
-                    e.stopPropagation();
-                    setIsMonthMenuOpen(!isMonthMenuOpen);
-                    setIsPartyMenuOpen(false);
-                }}
-                className="flex items-center gap-2 text-xl font-semibold text-gray-800 -ml-2 hover:bg-gray-50 px-2 py-1 rounded"
-                >
-                <span>{monthButtonLabel}</span>
-                <ChevronDown className="w-5 h-5 text-gray-500" />
-                </button>
-
-                {isMonthMenuOpen && (
-                <div 
-                    className="absolute left-0 top-full mt-1 z-20 w-48 rounded-lg border border-gray-200 bg-white shadow-lg overflow-hidden"
-                    onClick={(e) => e.stopPropagation()}
-                >
-                    <button
-                    className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50"
-                    onClick={() => {
-                        setSelectedMonthKey("");
-                        setIsMonthMenuOpen(false);
-                    }}
-                    >
-                    All Time
-                    </button>
-                    {availableMonths.map((monthKey) => (
-                    <button
-                        key={monthKey}
-                        className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50"
-                        onClick={() => {
-                        setSelectedMonthKey(monthKey);
-                        setIsMonthMenuOpen(false);
-                        }}
-                    >
-                        {formatMonthLabel(monthKey)}
-                    </button>
-                    ))}
-                </div>
-                )}
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium text-gray-700">Filter by Month:</span>
+              <input 
+                type="month"
+                value={selectedMonthKey}
+                onChange={(e) => setSelectedMonthKey(e.target.value)}
+                className="px-3 py-1.5 border border-gray-300 rounded bg-white text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+              />
             </div>
 
             {/* Party Filter */}
@@ -310,7 +263,6 @@ export function PartyWiseProfitLossReport({ onBack }: PartyWiseProfitLossReportP
                 onClick={(e) => {
                     e.stopPropagation();
                     setIsPartyMenuOpen(!isPartyMenuOpen);
-                    setIsMonthMenuOpen(false);
                 }}
                 className="flex items-center justify-between w-56 px-3 py-1.5 border border-gray-300 rounded bg-white text-sm hover:bg-gray-50"
                 >

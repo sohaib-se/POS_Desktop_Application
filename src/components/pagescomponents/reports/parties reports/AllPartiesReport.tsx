@@ -1,6 +1,6 @@
 import { useSettings } from "@/hooks/useSettings";
-import { useCallback, useEffect, useState, useMemo } from "react";
-import { ChevronDown, Printer, ArrowLeft } from "lucide-react";
+import { useCallback, useEffect, useState, useMemo, useRef } from "react";
+import { ChevronDown, Printer, ArrowLeft, Search } from "lucide-react";
 import type { Party } from "@/types";
 
 interface AllPartiesReportProps {
@@ -19,6 +19,38 @@ export function AllPartiesReport({ onBack }: AllPartiesReportProps) {
   // Filter state
   const [partyTypeFilter, setPartyTypeFilter] = useState<"All parties" | "Receivable" | "Payable">("All parties");
   const [isPartyTypeMenuOpen, setIsPartyTypeMenuOpen] = useState(false);
+
+  // Search state
+  const [searchQuery, setSearchQuery] = useState("");
+  const [showSearchInput, setShowSearchInput] = useState(false);
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
+  const searchContainerRef = useRef<HTMLDivElement>(null);
+  const placeholders = ["Party Name", "Phone", "Email"];
+  const [placeholderIndex, setPlaceholderIndex] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setPlaceholderIndex((prev) => (prev + 1) % placeholders.length);
+    }, 3000);
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        showSearchInput &&
+        searchContainerRef.current &&
+        !searchContainerRef.current.contains(event.target as Node) &&
+        !searchQuery
+      ) {
+        setShowSearchInput(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [showSearchInput, searchQuery]);
 
   useEffect(() => {
     const closeMenus = () => {
@@ -69,8 +101,18 @@ export function AllPartiesReport({ onBack }: AllPartiesReportProps) {
       filtered = filtered.filter(p => p.balance < 0);
     }
 
+    const normalizedQuery = searchQuery.trim().toLowerCase();
+    if (normalizedQuery) {
+        filtered = filtered.filter((row) => {
+            const nameMatch = row.name.toLowerCase().includes(normalizedQuery);
+            const phoneMatch = row.phone?.toLowerCase().includes(normalizedQuery);
+            const emailMatch = row.email?.toLowerCase().includes(normalizedQuery);
+            return nameMatch || phoneMatch || emailMatch;
+        });
+    }
+
     return filtered;
-  }, [parties, partyTypeFilter]);
+  }, [parties, partyTypeFilter, searchQuery]);
 
   const totalReceivable = visibleParties.reduce((sum, p) => p.balance > 0 ? sum + p.balance : sum, 0);
   const totalPayable = visibleParties.reduce((sum, p) => p.balance < 0 ? sum + Math.abs(p.balance) : sum, 0);
@@ -177,6 +219,55 @@ export function AllPartiesReport({ onBack }: AllPartiesReportProps) {
         </div>
 
         <div className="flex items-center gap-6 pr-4">
+          <div className="flex gap-2 items-center h-10" ref={searchContainerRef}>
+            <div 
+              className={`flex items-center overflow-hidden transition-all duration-300 ease-out rounded-full h-9 ${
+                showSearchInput 
+                  ? "w-64 bg-white border border-blue-500 ring-4 ring-blue-50 mr-2" 
+                  : "w-9 bg-transparent border border-transparent hover:bg-gray-100 cursor-pointer"
+              }`}
+              onClick={(e) => {
+                if (!showSearchInput) {
+                  e.stopPropagation();
+                  setShowSearchInput(true);
+                  setIsPartyTypeMenuOpen(false);
+                  setTimeout(() => searchInputRef.current?.focus(), 150);
+                }
+              }}
+            >
+              <div className="flex items-center justify-center h-full w-9 shrink-0">
+                <Search className={`w-4 h-4 ${showSearchInput ? "text-gray-400" : "text-gray-500"}`} />
+              </div>
+              <div className={`relative flex-1 h-full flex items-center transition-opacity duration-200 ${
+                  showSearchInput ? "opacity-100 delay-100" : "opacity-0"
+                }`}>
+                <input
+                  ref={searchInputRef}
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="bg-transparent border-none outline-none focus:ring-0 focus:outline-none focus:border-transparent text-sm h-full w-full pr-3 relative z-10"
+                />
+                {!searchQuery && (
+                  <div className="absolute left-0 pointer-events-none flex items-center h-full w-full overflow-hidden text-gray-400 text-sm">
+                    <span className="whitespace-pre">Search </span>
+                    <div className="relative h-full flex-1 overflow-hidden">
+                      {placeholders.map((ph, idx) => (
+                        <span
+                          key={ph}
+                          className={`absolute top-0 left-0 flex items-center h-full transition-all duration-700 ease-in-out ${
+                            idx === placeholderIndex ? "opacity-100 translate-y-0" : "opacity-0 translate-y-3"
+                          }`}
+                        >
+                          {ph}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
           <button 
             onClick={handleExportExcel}
             className="flex flex-col items-center justify-center gap-1 text-gray-700 hover:text-gray-900"

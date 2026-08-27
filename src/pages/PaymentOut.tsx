@@ -7,6 +7,7 @@ import { PaymentOutTable } from "@/components/pagescomponents/payementout/Paymen
 import { AddPaymentOutModal } from "@/components/pagescomponents/payementout/AddPaymentOutModal";
 import { PaymentOutRowMenu } from "@/components/pagescomponents/payementout/PaymentOutRowMenu";
 import { PaymentOutReceiptPreviewModal } from "@/components/pagescomponents/payementout/PaymentOutReceiptPreviewModal";
+import { PaymentOutPrintPreviewModal } from "@/components/pagescomponents/payementout/PaymentOutPrintPreviewModal";
 import { EnterPasscodeScreen } from "@/components/common/EnterPasscodeScreen";
 import { useSettings } from "@/hooks/useSettings";
 
@@ -20,6 +21,7 @@ export function PaymentOut() {
   const [bankAccounts, setBankAccounts] = useState<any[]>([]);
   const [records, setRecords] = useState<any[]>([]);
   const [previewingRecord, setPreviewingRecord] = useState<any>(null);
+  const [showPrintPreview, setShowPrintPreview] = useState(false);
   const [businessProfile, setBusinessProfile] = useState<any>(null);
 
   const [paymentType, setPaymentType] = useState("Cash");
@@ -308,7 +310,7 @@ export function PaymentOut() {
 
   return (
     <>
-      <div className="h-full flex flex-col bg-[#D0DCE7] gap-1 overflow-y-auto">
+      <div className="print:hidden h-full flex flex-col bg-[#D0DCE7] gap-1 overflow-y-auto">
         <PaymentOutHeader onAddPayment={handleOpenAddPayment} />
 
         <PaymentOutFilters
@@ -327,6 +329,7 @@ export function PaymentOut() {
           openRowMenuId={openRowMenuId}
           setOpenRowMenuId={setOpenRowMenuId}
           setOpenRowMenuPosition={setOpenRowMenuPosition}
+          onPrintClick={() => setShowPrintPreview(true)}
         />
 
         <AddPaymentOutModal
@@ -441,6 +444,15 @@ export function PaymentOut() {
           </DialogContent>
         </Dialog>
       </div>
+
+      <PaymentOutPrintPreviewModal
+        showPrintPreview={showPrintPreview}
+        setShowPrintPreview={setShowPrintPreview}
+        records={filteredRecords}
+        selectedPartyName={selectedParty ? partyOptions.find((p) => p.value === selectedParty)?.label || "All Parties" : "All Parties"}
+        selectedMonth={selectedMonth}
+        businessProfile={businessProfile}
+      />
     </>
   );
 }

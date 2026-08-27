@@ -86,6 +86,7 @@ export function PaymentOutReceiptPreviewModal({
             width: 100% !important;
             max-width: 100% !important;
             margin: 0 !important;
+            padding: 15mm !important;
           }
           .print-dialog-content {
             position: static !important;

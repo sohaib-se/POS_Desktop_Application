@@ -200,7 +200,6 @@ CREATE TABLE IF NOT EXISTS expense_records (
 CREATE TABLE IF NOT EXISTS expense_categories (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
-  type TEXT NOT NULL DEFAULT 'Indirect Expense',
   amount REAL NOT NULL DEFAULT 0,
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at TEXT NOT NULL DEFAULT (datetime('now'))

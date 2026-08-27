@@ -10,6 +10,8 @@ import { ExpenseSummary } from "../components/pagescomponents/addexpense/Expense
 import { ExpenseFooter } from "../components/pagescomponents/addexpense/ExpenseFooter";
 import { AddCategoryModal } from "../components/pagescomponents/addexpense/AddCategoryModal";
 import { AddItemModal } from "../components/pagescomponents/addexpense/AddItemModal";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { toast } from "@/components/ui/Toast";
 
 interface AddExpenseProps {
   onSave?: () => void;
@@ -27,7 +29,7 @@ function createDefaultRow(): ExpenseRow {
     categoryId: "",
     category: "",
     note: "",
-    paymentType: "Cash",
+    paymentType: "",
     amount: "",
   };
 }
@@ -36,7 +38,7 @@ function createDefaultTab(id: number): ExpenseTab {
   return {
     id,
     label: `Expense #${id}`,
-    expenseCategoryId: expenseCategories[0]?.id ?? "",
+    expenseCategoryId: "",
     expenseDate: new Date().toISOString().split("T")[0],
     paymentType: "Cash",
     roundOff: true,
@@ -108,6 +110,8 @@ export function AddExpense({ onSave, onShare, onClose, initialExpense }: AddExpe
   const [expenseItemList, setExpenseItemList] = useState<ExpenseItem[]>([]);
   const [showAddItemPopup, setShowAddItemPopup] = useState(false);
   const [activeRowIdForNewItem, setActiveRowIdForNewItem] = useState<number | null>(null);
+  const [tabToClose, setTabToClose] = useState<number | null>(null);
+  const [showCloseAllDialog, setShowCloseAllDialog] = useState(false);
 
   useEffect(() => {
     const frame = requestAnimationFrame(() => setIsOpenAnimated(true));
@@ -135,21 +139,6 @@ export function AddExpense({ onSave, onShare, onClose, initialExpense }: AddExpe
             accumulator[category.id] = category;
             return accumulator;
           }, {}),
-        );
-        setTabs((previousTabs) =>
-          previousTabs.map((tab) => {
-            if (!categories.length) {
-              return { ...tab, expenseCategoryId: "" };
-            }
-
-            const selectedCategoryExists = categories.some(
-              (category) => category.id === tab.expenseCategoryId,
-            );
-
-            return selectedCategoryExists
-              ? tab
-              : { ...tab, expenseCategoryId: categories[0].id };
-          }),
         );
       } catch (error) {
         console.error(error);
@@ -210,8 +199,7 @@ export function AddExpense({ onSave, onShare, onClose, initialExpense }: AddExpe
   }, []);
 
   const activeTab = tabs.find((tab) => tab.id === activeTabId) ?? tabs[0];
-  const tabIndex = tabs.findIndex((tab) => tab.id === activeTabId);
-  const displayedExpenseNo = initialExpense?.expense_no ? String(initialExpense.expense_no) : String(Number(nextExpenseNo) + (tabIndex >= 0 ? tabIndex : 0));
+  const displayedExpenseNo = initialExpense?.expense_no ? String(initialExpense.expense_no) : String(nextExpenseNo);
   const displayedExpenseDate = activeTab.expenseDate;
 
   const totalAmount = useMemo(() => {
@@ -240,15 +228,45 @@ export function AddExpense({ onSave, onShare, onClose, initialExpense }: AddExpe
     );
   };
 
+  const removeRow = (rowId: number) => {
+    setTabs((previousTabs) =>
+      previousTabs.map((tab) => {
+        if (tab.id === activeTabId) {
+          return {
+            ...tab,
+            rows: tab.rows.filter((row) => row.id !== rowId),
+          };
+        }
+        return tab;
+      })
+    );
+  };
+
   const addTab = () => {
     const id = globalTabId++;
     setTabs((previousTabs) => [...previousTabs, createDefaultTab(id)]);
     setActiveTabId(id);
   };
 
-  const closeTab = (id: number, event: React.MouseEvent) => {
-    event.stopPropagation();
+  const closeTab = (id: number, event?: React.MouseEvent, force = false) => {
+    event?.stopPropagation();
+
+    if (!force) {
+      const tabData = tabs.find((t) => t.id === id);
+      const hasData = tabData && (
+        tabData.expenseCategoryId !== "" ||
+        tabData.description !== "" ||
+        tabData.rows.some((r) => r.category !== "" || r.note !== "" || r.paymentType !== "")
+      );
+
+      if (hasData) {
+        setTabToClose(id);
+        return;
+      }
+    }
+
     if (tabs.length === 1) {
+      onClose?.();
       return;
     }
 
@@ -259,6 +277,20 @@ export function AddExpense({ onSave, onShare, onClose, initialExpense }: AddExpe
       }
       return remainingTabs;
     });
+  };
+
+  const handleCloseModal = () => {
+    const hasData = tabs.some((tabData) => 
+      tabData.expenseCategoryId !== "" ||
+      tabData.description !== "" ||
+      tabData.rows.some((r) => r.category !== "" || r.note !== "" || r.paymentType !== "")
+    );
+
+    if (hasData) {
+      setShowCloseAllDialog(true);
+    } else {
+      onClose?.();
+    }
   };
 
   const addRow = () => {
@@ -369,10 +401,16 @@ export function AddExpense({ onSave, onShare, onClose, initialExpense }: AddExpe
         }),
       );
 
+      toast.success(
+        activeTab.expenseRecordId 
+          ? "Expense updated successfully!" 
+          : "Expense saved successfully!"
+      );
+
       setNextExpenseNo(String(Number(displayedExpenseNo) + 1));
 
       onSave?.();
-      onClose?.();
+      closeTab(activeTabId, undefined, true);
     } catch (error) {
       console.error(error);
       setSaveError("Failed to save the expense. Please try again.");
@@ -440,12 +478,12 @@ export function AddExpense({ onSave, onShare, onClose, initialExpense }: AddExpe
       }}
     >
       <ExpenseTabs
-        tabs={tabs}
+        tabs={tabs.map(tab => ({ ...tab, label: `Expense #${displayedExpenseNo}` }))}
         activeTabId={activeTabId}
         setActiveTabId={setActiveTabId}
         closeTab={closeTab}
         addTab={addTab}
-        onClose={onClose}
+        onClose={handleCloseModal}
       />
 
       <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: 0 }}>
@@ -465,6 +503,7 @@ export function AddExpense({ onSave, onShare, onClose, initialExpense }: AddExpe
           setShowAddItemPopup={setShowAddItemPopup}
           setActiveRowIdForNewItem={setActiveRowIdForNewItem}
           updateRow={updateRow}
+          removeRow={removeRow}
           addRow={addRow}
           totalAmount={totalAmount}
         />
@@ -497,6 +536,34 @@ export function AddExpense({ onSave, onShare, onClose, initialExpense }: AddExpe
           onSuccess={handleItemSuccess}
         />
       )}
+
+      <ConfirmDialog
+        open={tabToClose !== null}
+        title="Close Tab"
+        message="Are you sure you want to close this tab? Any unsaved data will be lost."
+        confirmLabel="Close Tab"
+        cancelLabel="Cancel"
+        onConfirm={() => {
+          if (tabToClose !== null) {
+            closeTab(tabToClose, undefined, true);
+            setTabToClose(null);
+          }
+        }}
+        onCancel={() => setTabToClose(null)}
+      />
+
+      <ConfirmDialog
+        open={showCloseAllDialog}
+        title="Close Add Expense"
+        message="Are you sure you want to close? Any unsaved data across all tabs will be lost."
+        confirmLabel="Close"
+        cancelLabel="Cancel"
+        onConfirm={() => {
+          setShowCloseAllDialog(false);
+          onClose?.();
+        }}
+        onCancel={() => setShowCloseAllDialog(false)}
+      />
     </div>
   );
 }

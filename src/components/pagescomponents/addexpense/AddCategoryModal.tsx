@@ -8,8 +8,7 @@ interface AddCategoryModalProps {
 
 export function AddCategoryModal({ onClose, onSuccess }: AddCategoryModalProps) {
   const [newCategoryName, setNewCategoryName] = useState("");
-  const [newCategoryType, setNewCategoryType] = useState("Indirect Expense");
-  const [focusedField, setFocusedField] = useState<"name" | "type" | null>("name");
+  const [focusedField, setFocusedField] = useState<"name" | null>("name");
 
   const handleSave = async () => {
     const normalizedName = newCategoryName.trim();
@@ -18,14 +17,13 @@ export function AddCategoryModal({ onClose, onSuccess }: AddCategoryModalProps) 
       const response = await fetch("/api/expense_categories", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: normalizedName, type: newCategoryType, amount: 0 }),
+        body: JSON.stringify({ name: normalizedName, amount: 0 }),
       });
       if (!response.ok) throw new Error("Failed to save expense category");
       const createdCategory = (await response.json()) as ExpenseCategory;
       
       onSuccess(createdCategory);
       setNewCategoryName("");
-      setNewCategoryType("Indirect Expense");
       onClose();
     } catch (error) {
       console.error(error);
@@ -64,26 +62,7 @@ export function AddCategoryModal({ onClose, onSuccess }: AddCategoryModalProps) 
             />
           </div>
 
-          <div style={{ position: "relative" }}>
-            <label style={{ position: "absolute", top: -8, left: 10, background: "#fff", padding: "0 4px", color: focusedField === "type" ? "#007bff" : "#9ca3af", fontSize: 12, transition: "color 0.2s" }}>
-              Expense Type
-            </label>
-            <select
-              value={newCategoryType}
-              onChange={(e) => setNewCategoryType(e.target.value)}
-              onFocus={() => setFocusedField("type")}
-              onBlur={() => setFocusedField(null)}
-              style={{ width: "100%", appearance: "none", border: focusedField === "type" ? "2px solid #007bff" : "1px solid #d1d5db", borderRadius: 6, padding: focusedField === "type" ? "9px 11px" : "10px 12px", fontSize: 14, color: "#1f2937", outline: "none", cursor: "pointer", boxSizing: "border-box", transition: "border 0.2s, padding 0.2s" }}
-            >
-              <option value="Direct Expense">Direct Expense</option>
-              <option value="Indirect Expense">Indirect Expense</option>
-            </select>
-            <span style={{ position: "absolute", right: 12, top: "50%", transform: focusedField === "type" ? "translateY(-50%) rotate(180deg)" : "translateY(-50%)", transition: "transform 0.2s", pointerEvents: "none", color: focusedField === "type" ? "#007bff" : "#6b7280", display: "flex", alignItems: "center" }}>
-              <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-              </svg>
-            </span>
-          </div>
+
 
           <div style={{ display: "flex", justifyContent: "flex-end", gap: 12, marginTop: 4 }}>
             <button

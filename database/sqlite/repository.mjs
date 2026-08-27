@@ -1828,11 +1828,10 @@ export function upsertExpenseCategory(category) {
   const db = openDatabase();
   const id = category.id || Date.now().toString();
   db.prepare(`
-    INSERT INTO expense_categories (id, name, type, amount, updated_at)
-    VALUES (@id, @name, @type, @amount, datetime('now'))
+    INSERT INTO expense_categories (id, name, amount, updated_at)
+    VALUES (@id, @name, @amount, datetime('now'))
     ON CONFLICT(id) DO UPDATE SET
       name = excluded.name,
-      type = excluded.type,
       amount = excluded.amount,
       updated_at = datetime('now')
   `).run({

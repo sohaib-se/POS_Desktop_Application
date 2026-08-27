@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import type { Party } from "@/types";
 import { useSettings } from "@/hooks/useSettings";
+import { PhoneInput } from "@/components/ui/phone-input";
 
 interface AddPartyDialogProps {
   showAddParty: boolean;
@@ -81,7 +82,7 @@ export function AddPartyDialog({
           }
         }}
       >
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader className="flex items-center justify-between">
             <DialogTitle>{partyBeingEdited ? "Edit Party" : "Add Party"}</DialogTitle>
           </DialogHeader>
@@ -106,13 +107,11 @@ export function AddPartyDialog({
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Phone Number
               </label>
-              <input
-                type="text"
+              <PhoneInput
                 value={partyForm.phoneNumber}
-                onChange={(e) =>
-                  setPartyForm({ ...partyForm, phoneNumber: e.target.value })
+                onChange={(val) =>
+                  setPartyForm({ ...partyForm, phoneNumber: val })
                 }
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#E53935]"
                 placeholder="Phone Number"
               />
             </div>
@@ -218,13 +217,22 @@ export function AddPartyDialog({
                   </label>
                   <input
                     type="text"
+                    inputMode="decimal"
+                    onKeyDown={(e) => {
+                      if (e.key === "-" || e.key === "e" || e.key === "E") {
+                        e.preventDefault();
+                      }
+                    }}
                     value={partyForm.openingBalance}
-                    onChange={(e) =>
-                      setPartyForm({
-                        ...partyForm,
-                        openingBalance: e.target.value,
-                      })
-                    }
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (val === "" || (!isNaN(Number(val)) && Number(val) >= 0)) {
+                        setPartyForm({
+                          ...partyForm,
+                          openingBalance: val,
+                        });
+                      }
+                    }}
                     disabled={!!partyBeingEdited}
                     className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#E53935] disabled:bg-gray-100 disabled:text-gray-500"
                     placeholder="500"
@@ -307,14 +315,23 @@ export function AddPartyDialog({
                 {partyForm.creditLimit === "custom" && (
                   <div className="mt-3">
                     <input
-                      type="number"
+                      type="text"
+                      inputMode="decimal"
+                      onKeyDown={(e) => {
+                        if (e.key === "-" || e.key === "e" || e.key === "E") {
+                          e.preventDefault();
+                        }
+                      }}
                       value={partyForm.creditLimitAmount}
-                      onChange={(e) =>
-                        setPartyForm({
-                          ...partyForm,
-                          creditLimitAmount: e.target.value,
-                        })
-                      }
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (val === "" || (!isNaN(Number(val)) && Number(val) >= 0)) {
+                          setPartyForm({
+                            ...partyForm,
+                            creditLimitAmount: val,
+                          });
+                        }
+                      }}
                       placeholder="Enter amount"
                       className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#E53935]"
                     />

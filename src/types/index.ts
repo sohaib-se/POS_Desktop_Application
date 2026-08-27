@@ -40,7 +40,7 @@ export interface Transaction {
   amount: number;
   balance: number;
   paymentType?: string;
-  status?: 'Paid' | 'Unpaid' | 'Open' | 'Cancelled';
+  status?: 'Paid' | 'Unpaid' | 'Open' | 'Cancelled' | 'Converted';
   items?: Array<{
     id: string;
     itemId: string;

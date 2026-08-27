@@ -47,6 +47,10 @@ function normalizeTransactionType(value: string | null | undefined): Transaction
     return "Sale";
   }
 
+  if (normalizedValue.includes("estimate")) {
+    return "Estimate";
+  }
+
   return "Sale";
 }
 
@@ -64,7 +68,7 @@ function normalizePartyTransaction(row: TransactionApiRow): PartyTransactionRow 
     balance: Number(row.balance ?? 0),
     paymentType: row.payment_type ?? undefined,
     status:
-      row.status === "Paid" || row.status === "Unpaid" || row.status === "Open" || row.status === "Cancelled"
+      row.status === "Paid" || row.status === "Unpaid" || row.status === "Open" || row.status === "Cancelled" || row.status === "Converted"
         ? row.status
         : Number(row.balance ?? 0) === 0
           ? "Paid"
@@ -170,13 +174,15 @@ export function Parties({ isReportView, onBack, onEditSaleInvoice }: PartiesProp
         saleInvoicesResponse,
         purchaseBillsResponse,
         paymentInResponse,
-        paymentOutResponse
+        paymentOutResponse,
+        estimatesResponse
       ] = await Promise.all([
         fetch('/api/parties'),
         fetch('/api/sale_invoices'),
         fetch('/api/purchase_bills'),
         fetch('/api/payment_in_records'),
         fetch('/api/payment_out_records'),
+        fetch('/api/estimates'),
       ]);
 
       if (!partiesResponse.ok) {
@@ -240,6 +246,16 @@ export function Parties({ isReportView, onBack, onEditSaleInvoice }: PartiesProp
         }))
         : [];
 
+      const estimateTransactions = estimatesResponse.ok
+        ? ((await estimatesResponse.json()) as any[]).map((row) => ({
+          ...normalizePartyTransaction({
+            ...row,
+            invoice_no: row.referenceNo || row.reference_no,
+            transaction_type: row.transaction_type ?? 'Estimate',
+          }),
+        }))
+        : [];
+
       const normalizedParties: Party[] = dbParties.map((party) => ({
         id: party.id,
         name: party.name,
@@ -259,6 +275,7 @@ export function Parties({ isReportView, onBack, onEditSaleInvoice }: PartiesProp
         ...purchaseTransactions,
         ...paymentInTransactions,
         ...paymentOutTransactions,
+        ...estimateTransactions,
       ]);
       setSelectedParty((previousSelectedParty) => {
         if (!normalizedParties.length) {

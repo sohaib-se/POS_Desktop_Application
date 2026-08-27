@@ -6,7 +6,10 @@ import { AddSaleCustomerHeader } from "@/components/pagescomponents/addsale/AddS
 import { AddSaleTable } from "@/components/pagescomponents/addsale/AddSaleTable";
 import { AddSaleBottomActions } from "@/components/pagescomponents/addsale/AddSaleBottomActions";
 import { BarcodeScanModal } from "@/components/pagescomponents/addsale/BarcodeScanModal";
+import { AddPartyDialog } from "@/components/pagescomponents/parties/AddPartyDialog";
+import { toast } from "@/components/ui/Toast";
 import { useSettings } from "@/hooks/useSettings";
+import { ConfirmDeleteModal } from "@/components/common/ConfirmDeleteModal";
 
 export interface SaleRow {
   id: number;
@@ -20,6 +23,7 @@ export interface SaleRow {
 export interface SaleTab {
   id: number;
   label: string;
+  invoiceNo: string;
   paymentMode: "credit" | "cash";
   customerSearch: string;
   phoneNo: string;
@@ -79,11 +83,12 @@ const taxOptions = ["NONE", "GST 5%", "GST 12%", "GST 18%", "GST 28%"];
 let globalRowId = 3;
 let globalTabId = 2;
 
-function createDefaultTab(id: number): SaleTab {
+function createDefaultTab(id: number, invoiceNo = "1"): SaleTab {
   const isCashSaleByDefault = JSON.parse(localStorage.getItem('settings.isCashSaleByDefault') || 'false');
   return {
     id,
-    label: `Sale #${id}`,
+    label: `Sale #${invoiceNo}`,
+    invoiceNo,
     paymentMode: isCashSaleByDefault ? "cash" : "credit",
     customerSearch: "",
     phoneNo: "",
@@ -217,10 +222,73 @@ export function AddSale({ onSave, onShare, onClose, initialInvoice, isConversion
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
   const [showBarcodeModal, setShowBarcodeModal] = useState(false);
+  const [showAddParty, setShowAddParty] = useState(false);
+  const [partyBeingEdited, setPartyBeingEdited] = useState<any>(null);
+  const [activeTabParty, setActiveTabParty] = useState<"address" | "credit">("address");
+  const [showShippingAddress, setShowShippingAddress] = useState(false);
+  const [isSavingParty, setIsSavingParty] = useState(false);
+  const [showCreditLimitError, setShowCreditLimitError] = useState(false);
+  const [partyForm, setPartyForm] = useState({
+    name: "", phoneNumber: "", email: "", billingAddress: "", shippingAddress: "",
+    openingBalance: "", asOfDate: new Date().toLocaleDateString("en-IN"),
+    balanceType: "to-receive" as "to-pay" | "to-receive",
+    creditLimit: "no-limit" as "no-limit" | "custom", creditLimitAmount: "",
+  });
   const [stopSaleOnNegativeStock] = useSettings('settings.stopSaleOnNegativeStock', false);
   const [isBarcodeScanEnabled] = useSettings('settings.isBarcodeScanEnabled', false);
   const imageInputRef = useRef<HTMLInputElement | null>(null);
   const documentInputRef = useRef<HTMLInputElement | null>(null);
+
+  const [tabToClose, setTabToClose] = useState<number | null>(null);
+  const [isClosingPage, setIsClosingPage] = useState(false);
+
+  const resetPartyForm = () => {
+    setPartyForm({
+      name: "", phoneNumber: "", email: "", billingAddress: "", shippingAddress: "",
+      openingBalance: "", asOfDate: new Date().toLocaleDateString("en-IN"),
+      balanceType: "to-receive", creditLimit: "no-limit", creditLimitAmount: "",
+    });
+    setActiveTabParty("address");
+  };
+
+  const handleSaveParty = async () => {
+    setIsSavingParty(true);
+    try {
+      const payload = {
+        name: partyForm.name,
+        phone: partyForm.phoneNumber,
+        email: partyForm.email || null,
+        address: partyForm.billingAddress || null,
+        shippingAddress: partyForm.shippingAddress || null,
+        balance: (Number(partyForm.openingBalance) || 0) * (partyForm.balanceType === "to-pay" ? -1 : 1),
+        creditLimit: partyForm.creditLimit === "custom" ? Number(partyForm.creditLimitAmount) : null,
+        type: "customer"
+      };
+      const response = await fetch("/api/parties", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (response.ok) {
+        const newParty = await response.json();
+        if (newParty) {
+          setParties((prev) => {
+            const exists = prev.find(p => p.id === newParty.id);
+            return exists ? prev : [...prev, newParty].sort((a, b) => a.name.localeCompare(b.name));
+          });
+        }
+        setShowAddParty(false);
+        resetPartyForm();
+        if (newParty && newParty.id) {
+          setActiveTabCustomer(String(newParty.id));
+        }
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsSavingParty(false);
+    }
+  };
 
   useEffect(() => {
     const frame = requestAnimationFrame(() => setIsOpenAnimated(true));
@@ -280,6 +348,23 @@ export function AddSale({ onSave, onShare, onClose, initialInvoice, isConversion
     setSaveError("");
   }, [initialInvoice]);
 
+  const fetchParties = async () => {
+    try {
+      const res = await fetch("/api/parties");
+      if (res.ok) {
+        const data = (await res.json()) as PartyOption[];
+        setParties(data.sort((a, b) => a.name.localeCompare(b.name)));
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  // Refresh parties list when add-party dialog closes
+  useEffect(() => {
+    fetchParties();
+  }, [showAddParty]);
+
   useEffect(() => {
     let cancelled = false;
 
@@ -306,14 +391,13 @@ export function AddSale({ onSave, onShare, onClose, initialInvoice, isConversion
         const sortedParties = [...loadedParties].sort((left, right) => left.name.localeCompare(right.name));
         setParties(sortedParties);
         setItems(loadedItems);
-        setNextInvoiceNo(
-          String(
-            saleInvoices.reduce((highest, invoice) => {
-              const invoiceNumber = Number(invoice.invoice_no ?? 0);
-              return Number.isFinite(invoiceNumber) && invoiceNumber > highest ? invoiceNumber : highest;
-            }, 0) + 1,
-          ),
+        const nextNo = String(
+          saleInvoices.reduce((highest, invoice) => {
+            const invoiceNumber = Number(invoice.invoice_no ?? 0);
+            return Number.isFinite(invoiceNumber) && invoiceNumber > highest ? invoiceNumber : highest;
+          }, 0) + 1,
         );
+        setNextInvoiceNo(nextNo);
 
         setTabs((previousTabs) => {
           return previousTabs.map(tab => {
@@ -325,9 +409,12 @@ export function AddSale({ onSave, onShare, onClose, initialInvoice, isConversion
               }
             }
 
+            // Only update label/invoiceNo for brand new (non-edit) tabs
+            const isNewTab = !initialInvoice;
             return {
               ...tab,
               customerSearch: updatedCustomerSearch,
+              ...(isNewTab ? { invoiceNo: nextNo, label: `Sale #${nextNo}` } : {}),
               rows: tab.rows.map(row => {
                 if (!row.itemId && row.item) {
                   const matchedItem = loadedItems.find(i => i.name === row.item);
@@ -356,7 +443,7 @@ export function AddSale({ onSave, onShare, onClose, initialInvoice, isConversion
   const { widths, startResize } = useColumnResize([42, 340, 90, 110, 130, 120]);
 
   const activeTab = tabs.find((t) => t.id === activeTabId)!;
-  const displayedInvoiceNo = initialInvoice?.invoiceNo ?? nextInvoiceNo;
+  const displayedInvoiceNo = initialInvoice?.invoiceNo ?? activeTab?.invoiceNo ?? nextInvoiceNo;
   const displayedInvoiceDate = activeTab.invoiceDate ?? (initialInvoice?.date ?? formatDateForDisplay(new Date()));
 
 
@@ -416,6 +503,8 @@ export function AddSale({ onSave, onShare, onClose, initialInvoice, isConversion
         item: matchedItem?.name ?? "",
         unit: nextUnit,
         pricePerUnit: nextPricePerUnit,
+        // Default qty to 1 when selecting an item on an empty row
+        qty: row.qty && Number(row.qty) > 0 ? row.qty : "1",
       };
     });
 
@@ -583,11 +672,12 @@ export function AddSale({ onSave, onShare, onClose, initialInvoice, isConversion
       }
 
       const savedInvoice = (await response.json()) as { invoiceNo?: string; id?: string };
-      if (!isEditing && savedInvoice.invoiceNo) {
-        setNextInvoiceNo(String(Number(savedInvoice.invoiceNo) + 1));
-      } else if (!isEditing) {
-        setNextInvoiceNo((previousInvoiceNo) => String(Number(previousInvoiceNo) + 1));
-      }
+
+      // Compute the next invoice number after this save
+      const nextNo = savedInvoice.invoiceNo
+        ? String(Number(savedInvoice.invoiceNo) + 1)
+        : String(Number(nextInvoiceNo) + 1);
+      setNextInvoiceNo(nextNo);
 
       window.dispatchEvent(
         new CustomEvent("sale-invoices-refresh", {
@@ -599,9 +689,31 @@ export function AddSale({ onSave, onShare, onClose, initialInvoice, isConversion
         }),
       );
 
+      toast.success(isEditing ? "Sale updated successfully!" : "Sale saved successfully!");
+
       onSave?.();
 
-      onClose?.();
+      // Close or update tabs — same pattern as AddEstimate
+      const isEditingMode = Boolean(initialInvoice) && !isConversion;
+      if (isEditingMode) {
+        // Editing a single invoice — close the panel
+        onClose?.();
+      } else {
+        setTabs(prev => {
+          const remaining = prev.filter(t => t.id !== activeTabId);
+          if (remaining.length === 0) {
+            // Last tab saved — close the panel
+            setTimeout(() => { onClose?.(); }, 0);
+            return prev;
+          }
+          // Update remaining tabs: each gets the new next invoice number
+          const updated = remaining.map((t) => {
+            return { ...t, invoiceNo: nextNo, label: `Sale #${nextNo}` };
+          });
+          setActiveTabId(updated[updated.length - 1].id);
+          return updated;
+        });
+      }
 
     } catch (error) {
       console.error(error);
@@ -613,7 +725,7 @@ export function AddSale({ onSave, onShare, onClose, initialInvoice, isConversion
 
   const addTab = () => {
     const id = globalTabId++;
-    const newTab = createDefaultTab(id);
+    const newTab = createDefaultTab(id, nextInvoiceNo);
     setTabs((prev) => [...prev, newTab]);
     setActiveTabId(id);
   };
@@ -621,11 +733,22 @@ export function AddSale({ onSave, onShare, onClose, initialInvoice, isConversion
   const closeTab = (id: number, e: React.MouseEvent) => {
     e.stopPropagation();
     if (tabs.length === 1) return;
+    setTabToClose(id);
+  };
+
+  const confirmCloseTab = () => {
+    if (tabToClose === null) return;
     setTabs((prev) => {
-      const remaining = prev.filter((t) => t.id !== id);
-      if (activeTabId === id) setActiveTabId(remaining[remaining.length - 1].id);
+      const remaining = prev.filter((t) => t.id !== tabToClose);
+      if (activeTabId === tabToClose) setActiveTabId(remaining[remaining.length - 1].id);
       return remaining;
     });
+    setTabToClose(null);
+  };
+
+  const confirmClosePage = () => {
+    setIsClosingPage(false);
+    onClose?.();
   };
 
   const updateRow = (rowId: number, field: keyof SaleRow, value: string) => {
@@ -697,6 +820,15 @@ export function AddSale({ onSave, onShare, onClose, initialInvoice, isConversion
     });
   };
 
+  const removeRow = (rowId: number) => {
+    const remaining = activeTab.rows.filter((r) => r.id !== rowId);
+    // Always keep at least one empty row
+    const isEmpty = (row: SaleRow) => !row.itemId && !row.item && !row.qty && !row.pricePerUnit;
+    const hasEmptyAtEnd = remaining.length > 0 && isEmpty(remaining[remaining.length - 1]);
+    const rows = hasEmptyAtEnd ? remaining : [...remaining, createEmptyRow()];
+    updateTab({ rows: rows.length > 0 ? rows : [createEmptyRow()] });
+  };
+
   const handleBarcodeModalSave = (newRows: Omit<SaleRow, "id">[]) => {
     // Filter out existing empty rows (keep non-empty ones)
     const existingNonEmpty = activeTab.rows.filter(
@@ -756,7 +888,7 @@ export function AddSale({ onSave, onShare, onClose, initialInvoice, isConversion
         setActiveTabId={setActiveTabId}
         addTab={addTab}
         closeTab={closeTab}
-        onClose={onClose}
+        onClose={onClose ? () => setIsClosingPage(true) : undefined}
       />
 
       <AddSaleTopBar
@@ -773,6 +905,7 @@ export function AddSale({ onSave, onShare, onClose, initialInvoice, isConversion
           updateTab={updateTab}
           displayedInvoiceNo={displayedInvoiceNo}
           displayedInvoiceDate={displayedInvoiceDate}
+          setShowAddParty={setShowAddParty}
         />
 
         <AddSaleTable
@@ -780,6 +913,7 @@ export function AddSale({ onSave, onShare, onClose, initialInvoice, isConversion
           items={items}
           updateRowItem={updateRowItem}
           updateRow={updateRow}
+          removeRow={removeRow}
           addRow={addRow}
           widths={widths}
           startResize={startResize}
@@ -804,7 +938,6 @@ export function AddSale({ onSave, onShare, onClose, initialInvoice, isConversion
           saveError={saveError}
           isSaving={isSaving}
           handleSaveSale={handleSaveSale}
-          onShare={onShare}
           isEditing={Boolean(initialInvoice)}
         />
       </div>{/* end scroll */}
@@ -817,6 +950,47 @@ export function AddSale({ onSave, onShare, onClose, initialInvoice, isConversion
           onClose={() => setShowBarcodeModal(false)}
         />
       )}
+
+      <AddPartyDialog
+        showAddParty={showAddParty}
+        setShowAddParty={setShowAddParty}
+        partyBeingEdited={partyBeingEdited}
+        setPartyBeingEdited={setPartyBeingEdited}
+        resetPartyForm={resetPartyForm}
+        partyForm={partyForm}
+        setPartyForm={setPartyForm}
+        activeTab={activeTabParty}
+        setActiveTab={setActiveTabParty}
+        showShippingAddress={showShippingAddress}
+        setShowShippingAddress={setShowShippingAddress}
+        handleSaveParty={handleSaveParty}
+        isSavingParty={isSavingParty}
+        partyPendingDelete={null}
+        setPartyPendingDelete={() => {}}
+        isDeletingParty={false}
+        handleDeleteParty={async () => {}}
+        showCreditLimitError={showCreditLimitError}
+        setShowCreditLimitError={setShowCreditLimitError}
+      />
+      <ConfirmDeleteModal
+        isOpen={tabToClose !== null}
+        onClose={() => setTabToClose(null)}
+        onConfirm={confirmCloseTab}
+        title="Discard Sale Tab"
+        message="Are you sure you want to close this tab? Any unsaved changes will be lost."
+        confirmText="Discard"
+        confirmLoadingText="Discarding..."
+      />
+
+      <ConfirmDeleteModal
+        isOpen={isClosingPage}
+        onClose={() => setIsClosingPage(false)}
+        onConfirm={confirmClosePage}
+        title="Discard Sale"
+        message="Are you sure you want to close? Any unsaved changes will be lost."
+        confirmText="Discard"
+        confirmLoadingText="Discarding..."
+      />
     </div>
   );
 }

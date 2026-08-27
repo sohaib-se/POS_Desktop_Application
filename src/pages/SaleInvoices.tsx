@@ -19,6 +19,7 @@ import { SaleInvoiceTable } from "../components/pagescomponents/saleinvoices/Sal
 import { SaleInvoiceContextMenu } from "../components/pagescomponents/saleinvoices/SaleInvoiceContextMenu";
 import { SaleInvoiceDialog } from "../components/pagescomponents/saleinvoices/SaleInvoiceDialog";
 import { EnterPasscodeScreen } from "@/components/common/EnterPasscodeScreen";
+import { ConfirmDeleteModal } from "@/components/common/ConfirmDeleteModal";
 
 interface SaleInvoicesProps {
   onViewChange: (view: ViewType) => void;
@@ -28,10 +29,11 @@ interface SaleInvoicesProps {
 
 export function SaleInvoices({ onViewChange, onEditInvoice, onBack }: SaleInvoicesProps) {
   const [invoiceRows, setInvoiceRows] = useState<SaleInvoiceViewRow[]>([]);
-  const [selectedMonthKey, setSelectedMonthKey] = useState<string>("");
+  const [selectedMonthKey, setSelectedMonthKey] = useState<string>(
+    getMonthKeyFromDate(formatDateDisplay(new Date()))
+  );
   const [searchQuery, setSearchQuery] = useState("");
   const [showSearchInput, setShowSearchInput] = useState(false);
-  const [isMonthMenuOpen, setIsMonthMenuOpen] = useState(false);
   const [openRowMenuId, setOpenRowMenuId] = useState<string | null>(null);
   const [openRowMenuPosition, setOpenRowMenuPosition] = useState<{ left: number; top: number } | null>(null);
   const [viewingInvoice, setViewingInvoice] = useState<SaleInvoiceViewRow | null>(null);
@@ -41,6 +43,8 @@ export function SaleInvoices({ onViewChange, onEditInvoice, onBack }: SaleInvoic
   const [isPasscodeEnabled] = useSettings('settings.isPasscodeEnabled', false);
   const [isPasscodeForTransactionEnabled] = useSettings('settings.isPasscodeForTransactionEnabled', false);
   const [passcodeAction, setPasscodeAction] = useState<{ type: 'edit' | 'delete', payload: SaleInvoiceViewRow } | null>(null);
+  const [invoiceToDelete, setInvoiceToDelete] = useState<SaleInvoiceViewRow | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     if (showSearchInput) {
@@ -62,7 +66,6 @@ export function SaleInvoices({ onViewChange, onEditInvoice, onBack }: SaleInvoic
 
   useEffect(() => {
     const closeMenus = () => {
-      setIsMonthMenuOpen(false);
       setOpenRowMenuId(null);
       setOpenRowMenuPosition(null);
     };
@@ -117,12 +120,7 @@ export function SaleInvoices({ onViewChange, onEditInvoice, onBack }: SaleInvoic
           }
 
           const currentMonthKey = getMonthKeyFromDate(formatDateDisplay(new Date()));
-          const currentMonthExists = normalizedRows.some((row) => row.monthKey === currentMonthKey);
-          if (currentMonthExists) {
-            return currentMonthKey;
-          }
-
-          return normalizedRows[0]?.monthKey ?? "";
+          return previousMonthKey || currentMonthKey;
         });
       }
       setStatusMessage("");
@@ -156,6 +154,7 @@ export function SaleInvoices({ onViewChange, onEditInvoice, onBack }: SaleInvoic
 
   const monthOptions = useMemo(() => {
     const uniqueMonths = new Set(invoiceRows.map((row) => row.monthKey));
+    uniqueMonths.add(getMonthKeyFromDate(formatDateDisplay(new Date())));
     return Array.from(uniqueMonths).sort((left, right) => right.localeCompare(left));
   }, [invoiceRows]);
 
@@ -172,8 +171,12 @@ export function SaleInvoices({ onViewChange, onEditInvoice, onBack }: SaleInvoic
     if (!normalizedQuery) {
       return selectedMonthRows;
     }
-
-    return selectedMonthRows.filter((row) => row.partyName.toLowerCase().includes(normalizedQuery));
+    return selectedMonthRows.filter((row) => {
+      const matchName = row.partyName.toLowerCase().includes(normalizedQuery);
+      const matchInvoice = String(row.invoiceNo ?? "").toLowerCase().includes(normalizedQuery);
+      const matchAmount = String(row.amount ?? "").includes(normalizedQuery);
+      return matchName || matchInvoice || matchAmount;
+    });
   }, [searchQuery, selectedMonthRows]);
 
   const totalSales = visibleRows.reduce((sum, invoice) => sum + invoice.amount, 0);
@@ -202,14 +205,12 @@ export function SaleInvoices({ onViewChange, onEditInvoice, onBack }: SaleInvoic
     setViewingInvoice(invoice);
   };
 
-  const handleDeleteInvoice = async (invoice: SaleInvoiceViewRow) => {
-    const confirmed = window.confirm(`Delete invoice ${invoice.invoiceNo} for ${invoice.partyName}?`);
-    if (!confirmed) {
-      return;
-    }
+  const handleDeleteInvoice = async () => {
+    if (!invoiceToDelete) return;
 
+    setIsDeleting(true);
     try {
-      const response = await fetch(`/api/sale_invoices/${invoice.id}`, {
+      const response = await fetch(`/api/sale_invoices/${invoiceToDelete.id}`, {
         method: "DELETE",
       });
 
@@ -217,12 +218,14 @@ export function SaleInvoices({ onViewChange, onEditInvoice, onBack }: SaleInvoic
         throw new Error("Failed to delete sale invoice");
       }
 
-      setInvoiceRows((previousRows) => previousRows.filter((row) => row.id !== invoice.id));
+      setInvoiceRows((previousRows) => previousRows.filter((row) => row.id !== invoiceToDelete.id));
       setStatusMessage("Sale invoice deleted successfully.");
+      setInvoiceToDelete(null);
     } catch (error) {
       console.error(error);
       setStatusMessage("Failed to delete the selected sale invoice.");
     } finally {
+      setIsDeleting(false);
       setOpenRowMenuId(null);
     }
   };
@@ -236,10 +239,11 @@ export function SaleInvoices({ onViewChange, onEditInvoice, onBack }: SaleInvoic
   };
 
   const handleDeleteClick = (invoice: SaleInvoiceViewRow) => {
+    setOpenRowMenuId(null);
     if (isPasscodeEnabled && isPasscodeForTransactionEnabled) {
       setPasscodeAction({ type: 'delete', payload: invoice });
     } else {
-      handleDeleteInvoice(invoice);
+      setInvoiceToDelete(invoice);
     }
   };
 
@@ -247,7 +251,7 @@ export function SaleInvoices({ onViewChange, onEditInvoice, onBack }: SaleInvoic
     if (passcodeAction?.type === 'edit') {
       onEditInvoice(passcodeAction.payload);
     } else if (passcodeAction?.type === 'delete') {
-      handleDeleteInvoice(passcodeAction.payload);
+      setInvoiceToDelete(passcodeAction.payload);
     }
     setPasscodeAction(null);
   };
@@ -257,11 +261,7 @@ export function SaleInvoices({ onViewChange, onEditInvoice, onBack }: SaleInvoic
       <SaleInvoiceHeader onViewChange={onViewChange} onBack={onBack} />
 
       <SaleInvoiceFilters
-        monthButtonLabel={monthButtonLabel}
-        isMonthMenuOpen={isMonthMenuOpen}
-        setIsMonthMenuOpen={setIsMonthMenuOpen}
-        setOpenRowMenuId={setOpenRowMenuId}
-        monthOptions={monthOptions}
+        selectedMonthKey={selectedMonthKey}
         setSelectedMonthKey={setSelectedMonthKey}
       />
 
@@ -277,7 +277,6 @@ export function SaleInvoices({ onViewChange, onEditInvoice, onBack }: SaleInvoic
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
         searchInputRef={searchInputRef}
-        setIsMonthMenuOpen={setIsMonthMenuOpen}
         setOpenRowMenuId={setOpenRowMenuId}
         setOpenRowMenuPosition={setOpenRowMenuPosition}
         openRowMenuId={openRowMenuId}
@@ -308,6 +307,15 @@ export function SaleInvoices({ onViewChange, onEditInvoice, onBack }: SaleInvoic
           onCancel={() => setPasscodeAction(null)}
         />
       )}
+
+      <ConfirmDeleteModal
+        isOpen={!!invoiceToDelete}
+        onClose={() => setInvoiceToDelete(null)}
+        onConfirm={handleDeleteInvoice}
+        title="Delete Sale Invoice"
+        message={invoiceToDelete ? `Are you sure you want to delete invoice ${invoiceToDelete.invoiceNo} for ${invoiceToDelete.partyName}? This action cannot be undone.` : ""}
+        isDeleting={isDeleting}
+      />
     </div>
   );
 }

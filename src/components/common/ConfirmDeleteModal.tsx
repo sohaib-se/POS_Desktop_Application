@@ -7,6 +7,8 @@ interface ConfirmDeleteModalProps {
   title: string;
   message: string;
   isDeleting?: boolean;
+  confirmText?: string;
+  confirmLoadingText?: string;
 }
 
 export function ConfirmDeleteModal({
@@ -16,6 +18,8 @@ export function ConfirmDeleteModal({
   title,
   message,
   isDeleting = false,
+  confirmText = "Delete",
+  confirmLoadingText = "Deleting...",
 }: ConfirmDeleteModalProps) {
   if (!isOpen) return null;
 
@@ -58,7 +62,7 @@ export function ConfirmDeleteModal({
             className="px-4 py-2 text-sm font-medium text-white bg-red-600 border border-transparent rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors disabled:opacity-50 flex items-center gap-2"
           >
             {isDeleting && <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />}
-            {isDeleting ? "Deleting..." : "Delete"}
+            {isDeleting ? confirmLoadingText : confirmText}
           </button>
         </div>
       </div>

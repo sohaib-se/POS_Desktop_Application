@@ -1,4 +1,4 @@
-import { ChevronDown, Plus, ArrowLeft } from "lucide-react";
+import {Plus, ArrowLeft } from "lucide-react";
 import type { ViewType } from "@/types";
 
 interface SaleInvoiceHeaderProps {
@@ -16,7 +16,6 @@ export function SaleInvoiceHeader({ onViewChange, onBack }: SaleInvoiceHeaderPro
           </button>
         )}
         <h2 className="text-lg font-semibold text-gray-900">Sale Invoices</h2>
-        <ChevronDown className="w-4 h-4 text-gray-500" />
       </div>
       <button
         onClick={() => onViewChange("add-sale")}

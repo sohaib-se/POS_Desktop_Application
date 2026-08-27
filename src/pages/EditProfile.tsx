@@ -8,9 +8,10 @@ import { EditProfileFooter } from "../components/pagescomponents/editprofile/Edi
 interface EditProfileProps {
   onBack?: () => void;
   onProfileSaved?: () => void;
+  setUnsavedChanges?: (val: boolean) => void;
 }
 
-export function EditProfile({ onBack, onProfileSaved }: EditProfileProps) {
+export function EditProfile({ onBack, onProfileSaved, setUnsavedChanges }: EditProfileProps) {
   const [businessName, setBusinessName] = useState("");
   const [businessType, setBusinessType] = useState("Retail");
   const [businessCategory, setBusinessCategory] = useState("Book / Stationary store");
@@ -21,6 +22,8 @@ export function EditProfile({ onBack, onProfileSaved }: EditProfileProps) {
   const [logo, setLogo] = useState<string | null>(null);
   const [signature, setSignature] = useState<string | null>(null);
   const [termsConditions, setTermsConditions] = useState("");
+
+  const [initialProfileStr, setInitialProfileStr] = useState<string>("");
 
   const [toast, setToast] = useState<{message: string, type: 'success' | 'error'} | null>(null);
 
@@ -44,10 +47,50 @@ export function EditProfile({ onBack, onProfileSaved }: EditProfileProps) {
           setLogo(data.logo || null);
           setSignature(data.signature || null);
           setTermsConditions(data.terms_conditions || "");
+          
+          setInitialProfileStr(JSON.stringify({
+             businessName: data.business_name || "",
+             businessType: data.business_type || "Retail",
+             businessCategory: data.category || "Book / Stationary store",
+             phoneNumber: data.phone || "",
+             emailId: data.email || "",
+             businessAddress: data.address || "",
+             pincode: data.pincode || "",
+             logo: data.logo || null,
+             signature: data.signature || null,
+             termsConditions: data.terms_conditions || ""
+          }));
         }
       })
       .catch(console.error);
   }, []);
+
+  useEffect(() => {
+    if (!initialProfileStr) return;
+    const currentStr = JSON.stringify({
+       businessName,
+       businessType,
+       businessCategory,
+       phoneNumber,
+       emailId,
+       businessAddress,
+       pincode,
+       logo,
+       signature,
+       termsConditions
+    });
+    const dirty = currentStr !== initialProfileStr;
+    setUnsavedChanges?.(dirty);
+    
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (dirty) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [businessName, businessType, businessCategory, phoneNumber, emailId, businessAddress, pincode, logo, signature, termsConditions, initialProfileStr, setUnsavedChanges]);
 
   const handleSave = async () => {
     try {
@@ -84,6 +127,19 @@ export function EditProfile({ onBack, onProfileSaved }: EditProfileProps) {
         })
       });
       if (res.ok) {
+        setInitialProfileStr(JSON.stringify({
+          businessName,
+          businessType,
+          businessCategory,
+          phoneNumber: phoneNumber,
+          emailId: emailId,
+          businessAddress,
+          pincode,
+          logo,
+          signature,
+          termsConditions
+        }));
+        setUnsavedChanges?.(false);
         showToast("Profile saved successfully", "success");
         onProfileSaved?.();
       } else {
@@ -106,7 +162,7 @@ export function EditProfile({ onBack, onProfileSaved }: EditProfileProps) {
 
       <div className="flex-1 overflow-y-auto">
         <div className="p-6 space-y-6">
-          <LogoSection logo={logo} setLogo={setLogo} onProfileSaved={onProfileSaved} />
+          <LogoSection logo={logo} setLogo={setLogo} />
           
           <div className="grid grid-cols-3 gap-8">
             <BusinessDetails
@@ -130,7 +186,6 @@ export function EditProfile({ onBack, onProfileSaved }: EditProfileProps) {
               setBusinessAddress={setBusinessAddress}
               signature={signature}
               setSignature={setSignature}
-              onProfileSaved={onProfileSaved}
             />
           </div>
         </div>

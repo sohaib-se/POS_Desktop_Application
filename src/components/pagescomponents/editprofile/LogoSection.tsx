@@ -6,10 +6,9 @@ import { ConfirmDeleteModal } from "../../common/ConfirmDeleteModal";
 interface LogoSectionProps {
   logo: string | null;
   setLogo: Dispatch<SetStateAction<string | null>>;
-  onProfileSaved?: () => void;
 }
 
-export function LogoSection({ logo, setLogo, onProfileSaved }: LogoSectionProps) {
+export function LogoSection({ logo, setLogo }: LogoSectionProps) {
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {

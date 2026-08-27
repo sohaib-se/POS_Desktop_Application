@@ -41,7 +41,6 @@ interface MoreDetailsProps {
   setBusinessAddress: Dispatch<SetStateAction<string>>;
   signature: string | null;
   setSignature: Dispatch<SetStateAction<string | null>>;
-  onProfileSaved?: () => void;
 }
 
 export function MoreDetails({
@@ -54,8 +53,7 @@ export function MoreDetails({
   businessAddress,
   setBusinessAddress,
   signature,
-  setSignature,
-  onProfileSaved,
+  setSignature
 }: MoreDetailsProps) {
   const isCustomCategory = !BUSINESS_CATEGORIES.slice(0, -1).includes(businessCategory) ||
     businessCategory === "Custom";

@@ -441,6 +441,37 @@ function ensureUserProfileColumns(db) {
   }
 }
 
+function ensureExpenseCategoriesColumns(db) {
+  const rows = db.prepare('PRAGMA table_info(expense_categories)').all();
+  const existingColumns = new Set(rows.map((row) => row.name));
+
+  if (existingColumns.has('type')) {
+    try {
+      db.exec('ALTER TABLE expense_categories DROP COLUMN type');
+    } catch (error) {
+      console.warn('Could not drop type column directly, recreating table');
+      
+      db.exec(`
+        CREATE TABLE expense_categories_new (
+          id TEXT PRIMARY KEY,
+          name TEXT NOT NULL,
+          amount REAL NOT NULL DEFAULT 0,
+          created_at TEXT NOT NULL DEFAULT (datetime('now')),
+          updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+        )
+      `);
+      
+      db.exec(`
+        INSERT INTO expense_categories_new (id, name, amount, created_at, updated_at)
+        SELECT id, name, amount, created_at, updated_at FROM expense_categories
+      `);
+      
+      db.exec('DROP TABLE expense_categories');
+      db.exec('ALTER TABLE expense_categories_new RENAME TO expense_categories');
+    }
+  }
+}
+
 export function openDatabase() {
   ensureDataDirectory();
   const db = new Database(dbPath);
@@ -464,6 +495,7 @@ export function openDatabase() {
   ensurePaymentInRecordColumns(db);
   ensurePaymentOutRecordColumns(db);
   ensureExpenseRecordColumns(db);
+  ensureExpenseCategoriesColumns(db);
   ensureEstimatesColumns(db);
   ensurePasscodeTable(db);
   ensureUserProfileColumns(db);

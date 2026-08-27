@@ -69,8 +69,14 @@ export function AddItemModal({ onClose, onSuccess }: AddItemModalProps) {
               <input
                 type="number"
                 placeholder="Price"
+                min="1"
                 value={newItemPrice}
-                onChange={(e) => setNewItemPrice(e.target.value)}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (val === "" || parseFloat(val) >= 1) {
+                    setNewItemPrice(val);
+                  }
+                }}
                 onFocus={() => setFocusedField("price")}
                 onBlur={() => setFocusedField(null)}
                 style={{ width: "100%", border: focusedField === "price" ? "2px solid #007bff" : "1px solid #d1d5db", borderRadius: 6, padding: focusedField === "price" ? "9px 11px" : "10px 12px", fontSize: 14, color: "#1f2937", outline: "none", boxSizing: "border-box", transition: "border 0.2s, padding 0.2s" }}

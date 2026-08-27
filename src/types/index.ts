@@ -55,7 +55,6 @@ export interface Transaction {
 export interface ExpenseCategory {
   id: string;
   name: string;
-  type?: string;
   amount: number;
 }
 

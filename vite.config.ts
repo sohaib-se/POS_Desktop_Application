@@ -1638,7 +1638,6 @@ function sqliteApiPlugin() {
               const category = {
                 id: payload.id ? String(payload.id) : Date.now().toString(),
                 name: String(payload.name).trim(),
-                type: payload.type ? String(payload.type).trim() : 'Indirect Expense',
                 amount: Number(payload.amount) || 0
               };
 

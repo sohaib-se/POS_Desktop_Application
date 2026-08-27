@@ -9,6 +9,7 @@ import { EmptyState } from "../components/pagescomponents/bankaccounts/EmptyStat
 import { AccountListView } from "../components/pagescomponents/bankaccounts/AccountListView";
 import { AccountDetail } from "../components/pagescomponents/bankaccounts/AccountDetail";
 import { DepositWithdrawModal } from "../components/pagescomponents/bankaccounts/DepositWithdrawModal";
+import { ConfirmDeleteModal } from "@/components/common/ConfirmDeleteModal";
 
 export function BankAccounts() {
   const [accounts, setAccounts] = useState<BankAccount[]>([]);
@@ -23,6 +24,9 @@ export function BankAccounts() {
   const [editingAccount, setEditingAccount] = useState<BankAccount | null>(null);
   const [editingTx, setEditingTx] = useState<any | null>(null);
   const [contextMenu, setContextMenu] = useState<{ x: number, y: number, accountId: string } | null>(null);
+  
+  const [deleteModalState, setDeleteModalState] = useState<{ isOpen: boolean; type: 'account' | 'transaction'; id: string | null }>({ isOpen: false, type: 'account', id: null });
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const fetchAccounts = async () => {
     try {
@@ -54,31 +58,41 @@ export function BankAccounts() {
     fetchAccounts();
   }, []);
 
-  const handleDelete = async (id: string) => {
-    try {
-      const res = await fetch(`/api/bank_accounts/${id}`, { method: "DELETE" });
-      if (res.ok) {
-        fetchAccounts();
-        if (selectedId === id) setSelectedId(null);
-      }
-    } catch (err) {
-      console.error(err);
-    }
+  const handleDelete = (id: string) => {
+    setDeleteModalState({ isOpen: true, type: 'account', id });
   };
 
   // Transfer / adjustment modals
   const [activeModal, setActiveModal] = useState<string | null>(null);
   // activeModal: "Bank to Cash Transfer" | "Cash to Bank Transfer" | "Bank to Bank Transfer"
 
-  const handleDeleteTransaction = async (txId: string) => {
-    if (!confirm("Are you sure you want to delete this transaction?")) return;
+  const handleDeleteTransaction = (txId: string) => {
+    setDeleteModalState({ isOpen: true, type: 'transaction', id: txId });
+  };
+
+  const confirmDelete = async () => {
+    const { type, id } = deleteModalState;
+    if (!id) return;
+
+    setIsDeleting(true);
     try {
-      const res = await fetch(`/api/bank_account_transactions/${txId}`, { method: "DELETE" });
-      if (res.ok) {
-        fetchAccounts();
+      if (type === 'account') {
+        const res = await fetch(`/api/bank_accounts/${id}`, { method: "DELETE" });
+        if (res.ok) {
+          fetchAccounts();
+          if (selectedId === id) setSelectedId(null);
+        }
+      } else {
+        const res = await fetch(`/api/bank_account_transactions/${id}`, { method: "DELETE" });
+        if (res.ok) {
+          fetchAccounts();
+        }
       }
     } catch (err) {
       console.error(err);
+    } finally {
+      setIsDeleting(false);
+      setDeleteModalState({ isOpen: false, type: 'account', id: null });
     }
   };
 
@@ -232,6 +246,17 @@ export function BankAccounts() {
           </button>
         </div>
       )}
+      
+      <ConfirmDeleteModal
+        isOpen={deleteModalState.isOpen}
+        onClose={() => setDeleteModalState({ isOpen: false, type: 'account', id: null })}
+        onConfirm={confirmDelete}
+        title={deleteModalState.type === 'account' ? "Delete Bank Account" : "Delete Transaction"}
+        message={deleteModalState.type === 'account' 
+          ? "Are you sure you want to delete this bank account? This action cannot be undone."
+          : "Are you sure you want to delete this transaction? This action cannot be undone."}
+        isDeleting={isDeleting}
+      />
     </div>
   );
 }

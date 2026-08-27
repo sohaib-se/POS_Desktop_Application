@@ -58,8 +58,6 @@ export function LaimsoftPos({ onClose }: LaimsoftPosProps) {
   const [searchFocused, setSearchFocused] = useState(false);
   const [searchSelectedIndex, setSearchSelectedIndex] = useState(0);
 
-  // Customer Dropdown State
-  const [customerDropdownOpen, setCustomerDropdownOpen] = useState(false);
 
   // Modals State
   const [activeModal, setActiveModal] = useState<
@@ -191,7 +189,6 @@ export function LaimsoftPos({ onClose }: LaimsoftPosProps) {
         const customerInput = document.getElementById("customer-search-input");
         if (customerInput) {
           customerInput.focus();
-          setCustomerDropdownOpen(true);
         }
       } else if (e.ctrlKey && e.key.toLowerCase() === "w") {
         e.preventDefault();
@@ -567,7 +564,6 @@ export function LaimsoftPos({ onClose }: LaimsoftPosProps) {
       className="flex flex-col h-screen w-screen bg-[#f0f2f5] overflow-hidden"
       onClick={() => {
         setSearchFocused(false);
-        setCustomerDropdownOpen(false);
       }}
     >
       {/* Toast Notification */}

@@ -486,7 +486,7 @@ export function AddExpense({ onSave, onShare, onClose, initialExpense }: AddExpe
         onClose={handleCloseModal}
       />
 
-      <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: 0 }}>
+      <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: 0, background: "#fff" }}>
         <ExpenseHeader
           activeTab={activeTab}
           expenseCategoryList={expenseCategoryList}

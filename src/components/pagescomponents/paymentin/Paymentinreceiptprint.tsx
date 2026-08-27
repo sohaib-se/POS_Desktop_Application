@@ -68,6 +68,7 @@ export function PaymentInReceiptPrint({ record, businessProfile }: PaymentInRece
 
     const businessName = businessProfile?.business_name || "Laimsoft";
     const phoneNumber = businessProfile?.phone_number || "3369322038";
+    const signatureSrc = businessProfile?.signature || null;
 
     const formatDate = (dateStr: string) => {
         if (!dateStr) return "";
@@ -160,8 +161,15 @@ export function PaymentInReceiptPrint({ record, businessProfile }: PaymentInRece
                     <div className="bg-gray-100 border-b border-gray-400 px-3 py-1">
                         <p className="text-xs font-bold text-gray-800">For {businessName}:</p>
                     </div>
-                    <div className="h-24 flex items-end justify-center pb-2">
-                        <p className="text-xs text-gray-800">Authorized Signatory</p>
+                    <div className="h-24 flex items-end justify-center pb-2 relative">
+                        {signatureSrc && (
+                            <img
+                                src={signatureSrc}
+                                alt="Authorized Signature"
+                                className="absolute inset-0 w-full h-full object-contain p-2"
+                            />
+                        )}
+                        <p className="text-xs text-gray-800 relative z-10">Authorized Signatory</p>
                     </div>
                 </div>
             </div>

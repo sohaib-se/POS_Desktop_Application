@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import React from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import {
   X,
@@ -25,6 +25,7 @@ interface AddPaymentOutModalProps {
   setDescription: (desc: string) => void;
   imageDataUrl: string;
   setImageDataUrl: (url: string) => void;
+  fileInputRef: React.RefObject<HTMLInputElement | null>;
   paymentNo: string;
   setPaymentNo: (no: string) => void;
   paymentDate: string;
@@ -44,14 +45,13 @@ export function AddPaymentOutModal({
   paymentType,
   setPaymentType,
   bankAccounts,
-  referenceNo,
-  setReferenceNo,
   showDescription,
   setShowDescription,
   description,
   setDescription,
   imageDataUrl,
   setImageDataUrl,
+  fileInputRef,
   paymentNo,
   setPaymentNo,
   paymentDate,
@@ -60,7 +60,6 @@ export function AddPaymentOutModal({
   setAmount,
   handleSave,
 }: AddPaymentOutModalProps) {
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   return (
     <Dialog open={showAddPayment} onOpenChange={setShowAddPayment}>

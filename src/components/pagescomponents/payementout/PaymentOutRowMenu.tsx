@@ -5,7 +5,7 @@ interface PaymentOutRowMenuProps {
   openRowMenuPosition: { left: number; top: number } | null;
   records: any[];
   setViewingRecord: (record: any) => void;
-  setShowAddPayment: (show: boolean) => void;
+  setShowAddPayment: (show: boolean, record?: any) => void;
   handleDelete: (id: string) => void;
   setOpenRowMenuId: (id: string | null) => void;
   setOpenRowMenuPosition: (pos: { left: number; top: number } | null) => void;
@@ -49,7 +49,7 @@ export function PaymentOutRowMenu({
       <button
         className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-gray-50"
         onClick={() => {
-          setShowAddPayment(true);
+          setShowAddPayment(true, targetItem);
           setOpenRowMenuId(null);
           setOpenRowMenuPosition(null);
         }}

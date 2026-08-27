@@ -1009,7 +1009,40 @@ export function getNextPaymentOutNo() {
 }
 
 export function updatePaymentOutRecord(id, record) {
-  return updateExpenseRecord(id, record);
+  const db = openDatabase();
+  db.prepare(`
+    UPDATE payment_out_records
+    SET
+      payment_no = @paymentNo,
+      date = @date,
+      party_name = @partyName,
+      party_id = @partyId,
+      amount = @amount,
+      payment_type = @paymentType,
+      reference = @reference,
+      description = @description,
+      attachment_image_path = @attachmentImagePath,
+      attachment_image_name = @attachmentImageName,
+      attachment_document_path = @attachmentDocumentPath,
+      attachment_document_name = @attachmentDocumentName,
+      updated_at = datetime('now')
+    WHERE id = @id
+  `).run({
+    id: String(id),
+    paymentNo: record.paymentNo ?? record.payment_no ?? null,
+    date: record.date ?? null,
+    partyName: record.partyName ?? record.party_name ?? null,
+    partyId: record.partyId ?? record.party_id ?? null,
+    amount: Number(record.amount) || 0,
+    paymentType: record.paymentType ?? record.payment_type ?? 'Cash',
+    reference: record.reference ?? null,
+    description: record.description ?? null,
+    attachmentImagePath: record.attachmentImagePath ?? record.attachment_image_path ?? null,
+    attachmentImageName: record.attachmentImageName ?? record.attachment_image_name ?? null,
+    attachmentDocumentPath: record.attachmentDocumentPath ?? record.attachment_document_path ?? null,
+    attachmentDocumentName: record.attachmentDocumentName ?? record.attachment_document_name ?? null,
+  });
+  db.close();
 }
 
 export function getPaymentOutRecordById(id) {

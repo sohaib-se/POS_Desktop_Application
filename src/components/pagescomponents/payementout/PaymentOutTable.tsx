@@ -121,23 +121,30 @@ export function PaymentOutTable({
             </tr>
           </thead>
           <tbody>
-            {filteredRecords.map((payment) => (
-              <tr
-                key={payment.id}
-                className="border-b border-gray-100 hover:bg-gray-50"
-              >
-                <td className="px-4 py-3">{payment.date}</td>
-                <td className="px-4 py-3">{payment.paymentNo || ""}</td>
-                <td className="px-4 py-3">{payment.partyName}</td>
-                <td className="px-4 py-3 text-right">
-                  {currencyStr} {payment.amount.toFixed(2)}
+            {filteredRecords.length === 0 ? (
+              <tr>
+                <td colSpan={7} className="px-4 py-8 text-center text-gray-500">
+                  No transactions found for the selected month.
                 </td>
-                <td className="px-4 py-3 text-right">
-                  {currencyStr} {payment.amount.toFixed(2)}
-                </td>
-                <td className="px-4 py-3">{payment.paymentType}</td>
-                <td className="px-4 py-3 relative">
-                  <div className="flex items-center justify-center gap-2">
+              </tr>
+            ) : (
+              filteredRecords.map((payment) => (
+                <tr
+                  key={payment.id}
+                  className="border-b border-gray-100 hover:bg-gray-50"
+                >
+                  <td className="px-4 py-3">{payment.date}</td>
+                  <td className="px-4 py-3">{payment.paymentNo || ""}</td>
+                  <td className="px-4 py-3">{payment.partyName}</td>
+                  <td className="px-4 py-3 text-right">
+                    {currencyStr} {payment.amount.toFixed(2)}
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    {currencyStr} {payment.amount.toFixed(2)}
+                  </td>
+                  <td className="px-4 py-3">{payment.paymentType}</td>
+                  <td className="px-4 py-3 relative">
+                    <div className="flex items-center justify-center gap-2">
                     <button
                       className="p-1.5 hover:bg-gray-100 rounded"
                       title="More actions"
@@ -166,7 +173,8 @@ export function PaymentOutTable({
                   </div>
                 </td>
               </tr>
-            ))}
+            ))
+            )}
           </tbody>
         </table>
       </div>

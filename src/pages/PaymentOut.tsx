@@ -10,6 +10,7 @@ import { PaymentOutReceiptPreviewModal } from "@/components/pagescomponents/paye
 import { PaymentOutPrintPreviewModal } from "@/components/pagescomponents/payementout/PaymentOutPrintPreviewModal";
 import { EnterPasscodeScreen } from "@/components/common/EnterPasscodeScreen";
 import { useSettings } from "@/hooks/useSettings";
+import { exportPaymentOutToExcel } from "@/utils/exportPaymentOutExcel";
 
 export function PaymentOut() {
   const [showAddPayment, setShowAddPayment] = useState(false);
@@ -255,6 +256,8 @@ export function PaymentOut() {
     return month === targetMonth && year === targetYear;
   });
 
+  const [currency] = useSettings('settings.businessCurrency', { code: 'PKR', symbol: 'Rs' });
+
   const totalAmount = filteredRecords.reduce((sum, p) => sum + p.amount, 0);
   const totalPaid = totalAmount;
   const totalOpen = parties.reduce((sum, p) => sum + Number(p.balance || 0), 0);
@@ -330,6 +333,10 @@ export function PaymentOut() {
           setOpenRowMenuId={setOpenRowMenuId}
           setOpenRowMenuPosition={setOpenRowMenuPosition}
           onPrintClick={() => setShowPrintPreview(true)}
+          onExcelClick={() => {
+            const currencyCode = (currency as any)?.code || 'PKR';
+            exportPaymentOutToExcel(filteredRecords, selectedMonth, currencyCode);
+          }}
         />
 
         <AddPaymentOutModal

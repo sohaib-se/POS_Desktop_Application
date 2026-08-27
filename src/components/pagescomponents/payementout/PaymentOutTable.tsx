@@ -8,6 +8,7 @@ interface PaymentOutTableProps {
   setOpenRowMenuId: React.Dispatch<React.SetStateAction<string | null>>;
   setOpenRowMenuPosition: React.Dispatch<React.SetStateAction<{ left: number; top: number } | null>>;
   onPrintClick?: () => void;
+  onExcelClick?: () => void;
 }
 
 export function PaymentOutTable({
@@ -16,6 +17,7 @@ export function PaymentOutTable({
   setOpenRowMenuId,
   setOpenRowMenuPosition,
   onPrintClick,
+  onExcelClick,
 }: PaymentOutTableProps) {
   const [currency] = useSettings('settings.businessCurrency', { code: 'PKR', symbol: 'Rs' });
   const [currencyDisplay] = useSettings<'abbreviation' | 'icon'>('settings.currencyDisplay', 'abbreviation');
@@ -80,9 +82,9 @@ export function PaymentOutTable({
             <Printer className="w-4 h-4 text-[#7B8A9A]" />
           </button>
           <button
-            onClick={() => {}}
+            onClick={() => { if (onExcelClick) onExcelClick(); }}
             className="p-1.5 hover:bg-[#F7F9FB] rounded relative"
-            title="Download Excel/CSV"
+            title="Download Excel"
           >
             <span className="bg-green-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
               xls

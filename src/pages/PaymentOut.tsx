@@ -21,6 +21,7 @@ export function PaymentOut() {
   const [selectedParty, setSelectedParty] = useState("");
   const [bankAccounts, setBankAccounts] = useState<any[]>([]);
   const [records, setRecords] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [previewingRecord, setPreviewingRecord] = useState<any>(null);
   const [showPrintPreview, setShowPrintPreview] = useState(false);
   const [businessProfile, setBusinessProfile] = useState<any>(null);
@@ -53,6 +54,7 @@ export function PaymentOut() {
   const [passcodeAction, setPasscodeAction] = useState<{ type: 'edit' | 'delete', payload: string } | null>(null);
 
   const fetchData = async () => {
+    setIsLoading(true);
     try {
       await Promise.all([
         fetch('/api/payment_out_records')
@@ -76,7 +78,7 @@ export function PaymentOut() {
           .catch(console.error)
       ]);
     } finally {
-      // fetch complete
+      setIsLoading(false);
     }
   };
 
@@ -348,19 +350,71 @@ export function PaymentOut() {
           totalOpen={totalOpen}
         />
 
-        <PaymentOutTable 
-          records={filteredRecords}
-          showSearchInput={showSearchInput}
-          searchQuery={searchQuery}
-          searchInputRef={searchInputRef}
-          setShowSearchInput={setShowSearchInput}
-          setSearchQuery={setSearchQuery}
-          openRowMenuId={openRowMenuId}
-          setOpenRowMenuPosition={setOpenRowMenuPosition}
-          setOpenRowMenuId={setOpenRowMenuId}
-          onPrintClick={() => setShowPrintPreview(true)}
-          onExcelClick={() => exportPaymentOutToExcel(filteredRecords, selectedMonth, currency.code)}
-        />
+        {isLoading ? (
+          <div className="flex-1 bg-white rounded-md shadow-sm mx-1 flex flex-col items-center justify-center p-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#3B82F6]"></div>
+          </div>
+        ) : records.length === 0 ? (
+          <div className="flex-1 bg-white rounded-md shadow-sm mx-1 flex flex-col items-center justify-center p-8">
+            <div className="w-40 h-40 bg-[#D3E8FF] rounded-full flex items-center justify-center relative mb-5">
+              <div className="relative">
+                <svg width="80" height="80" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <rect x="25" y="20" width="50" height="16" rx="4" fill="#90C3FC" />
+                  <path d="M35 24 L38 30 L32 30 Z" fill="#FFFFFF" />
+                  <rect x="45" y="26" width="22" height="4" rx="2" fill="#FFFFFF" />
+
+                  <rect x="15" y="42" width="60" height="18" rx="4" fill="#3B82F6" />
+                  <rect x="23" y="46" width="10" height="10" rx="2" fill="#FFFFFF" />
+                  <circle cx="28" cy="51" r="2" fill="#3B82F6" />
+                  <rect x="40" y="49" width="28" height="4" rx="2" fill="#FFFFFF" />
+
+                  <rect x="20" y="66" width="50" height="16" rx="4" fill="#90C3FC" />
+                  <rect x="24" y="70" width="10" height="8" rx="1" fill="#FFFFFF" />
+                  <rect x="25" y="74" width="8" height="2" fill="#90C3FC" />
+                  <rect x="38" y="72" width="22" height="4" rx="2" fill="#FFFFFF" />
+                </svg>
+              </div>
+              <svg className="absolute top-6 left-2 w-5 h-5 text-white" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 2l2.4 7.6L22 12l-7.6 2.4L12 22l-2.4-7.6L2 12l7.6-2.4L12 2z" />
+              </svg>
+              <svg className="absolute bottom-8 left-3 w-3 h-3 text-white" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 2l2.4 7.6L22 12l-7.6 2.4L12 22l-2.4-7.6L2 12l7.6-2.4L12 2z" />
+              </svg>
+              <svg className="absolute top-1/2 right-1 w-4 h-4 text-white" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 2l2.4 7.6L22 12l-7.6 2.4L12 22l-2.4-7.6L2 12l7.6-2.4L12 2z" />
+              </svg>
+              <svg className="absolute top-2 right-10 w-2 h-2 text-white" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 2l2.4 7.6L22 12l-7.6 2.4L12 22l-2.4-7.6L2 12l7.6-2.4L12 2z" />
+              </svg>
+            </div>
+            <h3 className="text-[15px] font-bold text-[#2A2E3D] mb-1">
+              No Transactions to show
+            </h3>
+            <p className="text-[13px] text-[#8F9BB3] mb-6">
+              You haven't added any transactions yet.
+            </p>
+            <button
+              onClick={handleOpenAddPayment}
+              className="flex items-center gap-2 px-6 py-2.5 bg-[#E91E63] text-white text-[14px] font-semibold rounded-full shadow hover:bg-[#D81B60] transition-colors"
+            >
+              <span className="text-xl leading-none -mt-1">+</span> Add Payment-Out
+            </button>
+          </div>
+        ) : (
+          <PaymentOutTable 
+            records={filteredRecords}
+            showSearchInput={showSearchInput}
+            searchQuery={searchQuery}
+            searchInputRef={searchInputRef}
+            setShowSearchInput={setShowSearchInput}
+            setSearchQuery={setSearchQuery}
+            openRowMenuId={openRowMenuId}
+            setOpenRowMenuPosition={setOpenRowMenuPosition}
+            setOpenRowMenuId={setOpenRowMenuId}
+            onPrintClick={() => setShowPrintPreview(true)}
+            onExcelClick={() => exportPaymentOutToExcel(filteredRecords, selectedMonth, currency.code)}
+          />
+        )}
 
         <AddPaymentOutModal
           showAddPayment={showAddPayment}

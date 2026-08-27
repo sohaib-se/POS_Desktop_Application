@@ -1,8 +1,9 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { RecycleBinHeader } from "@/components/pagescomponents/recycle/RecycleBinHeader";
 import { RecycleBinFilters } from "@/components/pagescomponents/recycle/RecycleBinFilters";
 import { RecycleBinTable } from "@/components/pagescomponents/recycle/RecycleBinTable";
 import { RecycleBinFooter } from "@/components/pagescomponents/recycle/RecycleBinFooter";
+import { ConfirmDeleteModal } from "@/components/common/ConfirmDeleteModal";
 import type { DateRange } from "react-day-picker";
 import { subMonths } from "date-fns";
 
@@ -21,6 +22,13 @@ export function RecycleBin() {
   const [items, setItems] = useState<RecycleBinItem[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  const [showEmptyTrashWarning, setShowEmptyTrashWarning] = useState(false);
+  const [isEmptyingTrash, setIsEmptyingTrash] = useState(false);
+
+  const [searchQuery, setSearchQuery] = useState("");
+  const [showSearchInput, setShowSearchInput] = useState(false);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   // Default: To = Today, From = One month before Today
   const [dateRange, setDateRange] = useState<DateRange | undefined>({
@@ -45,10 +53,14 @@ export function RecycleBin() {
 
   const handleEmptyTrash = async () => {
     try {
+      setIsEmptyingTrash(true);
       await fetch('/api/recycle_bin/empty', { method: 'DELETE' });
       fetchItems();
+      setShowEmptyTrashWarning(false);
     } catch (e) {
       console.error('Failed to empty trash', e);
+    } finally {
+      setIsEmptyingTrash(false);
     }
   };
 
@@ -57,34 +69,49 @@ export function RecycleBin() {
   }, []);
 
   const filteredItems = useMemo(() => {
-    if (!dateRange?.from || !dateRange?.to) return items;
+    let result = items;
+    if (dateRange?.from && dateRange?.to) {
+      const start = new Date(dateRange.from);
+      start.setHours(0, 0, 0, 0);
 
-    // Both From and To dates are inclusive.
-    // Start of the day for From, End of the day for To
-    const start = new Date(dateRange.from);
-    start.setHours(0, 0, 0, 0);
+      const end = new Date(dateRange.to);
+      end.setHours(23, 59, 59, 999);
 
-    const end = new Date(dateRange.to);
-    end.setHours(23, 59, 59, 999);
+      result = result.filter((item) => {
+        const rawDate = item.deleted_on || item.transaction_date;
+        if (!rawDate) return false;
+        
+        const safeDate = rawDate.replace(' ', 'T');
+        const itemDate = new Date(safeDate);
+        
+        return itemDate >= start && itemDate <= end;
+      });
+    }
 
-    return items.filter((item) => {
-      // Use the actual deletion timestamp/date stored with each deleted record
-      // In recycle_bin schema, deleted_on defaults to datetime('now')
-      const rawDate = item.deleted_on || item.transaction_date;
-      if (!rawDate) return false;
-      
-      // SQLite datetime returns "YYYY-MM-DD HH:MM:SS", format for standard JS Date parsing
-      const safeDate = rawDate.replace(' ', 'T');
-      const itemDate = new Date(safeDate);
-      
-      return itemDate >= start && itemDate <= end;
-    });
-  }, [items, dateRange]);
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      result = result.filter(item => 
+        item.party_name?.toLowerCase().includes(query) ||
+        item.ref_no?.toLowerCase().includes(query) ||
+        item.txn_type?.toLowerCase().includes(query)
+      );
+    }
+
+    return result;
+  }, [items, dateRange, searchQuery]);
 
   return (
     <div className="h-full flex flex-col bg-[#F3F4F6]">
-      <RecycleBinHeader onEmptyTrash={handleEmptyTrash} />
-      <RecycleBinFilters dateRange={dateRange} setDateRange={setDateRange} />
+      <RecycleBinHeader onEmptyTrash={() => setShowEmptyTrashWarning(true)} />
+      <RecycleBinFilters 
+        dateRange={dateRange} 
+        setDateRange={setDateRange} 
+        searchQuery={searchQuery}
+        setSearchQuery={setSearchQuery}
+        showSearchInput={showSearchInput}
+        setShowSearchInput={setShowSearchInput}
+        searchInputRef={searchInputRef}
+      />
       <RecycleBinTable
         items={filteredItems}
         isLoading={isLoading}
@@ -98,6 +125,17 @@ export function RecycleBin() {
           setSelectedIds([]);
           fetchItems();
         }}
+      />
+      
+      <ConfirmDeleteModal
+        isOpen={showEmptyTrashWarning}
+        onClose={() => setShowEmptyTrashWarning(false)}
+        onConfirm={handleEmptyTrash}
+        title="Empty Trash"
+        message="Are you sure you want to permanently delete all items in the recycle bin? This action cannot be undone."
+        isDeleting={isEmptyingTrash}
+        confirmText="Empty Trash"
+        confirmLoadingText="Emptying..."
       />
     </div>
   );

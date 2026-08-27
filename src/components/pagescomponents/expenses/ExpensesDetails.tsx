@@ -1,7 +1,8 @@
 import type { ExpenseCategory } from "@/types";
 import { useSettings } from "@/hooks/useSettings";
 import type { ExpenseItem, ExpenseRecord } from "./types";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import { Search } from "lucide-react";
 import { ExpenseRecordContextMenu } from "./ExpenseRecordContextMenu";interface ExpensesDetailsProps {
   activeTab: "category" | "items";
   selectedCategory: ExpenseCategory | null;
@@ -58,11 +59,52 @@ export function ExpensesDetails({
     setOpenRowMenuPosition({ left: e.clientX, top: e.clientY });
   };
 
+  const [showSearchInput, setShowSearchInput] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
+  const searchContainerRef = useRef<HTMLDivElement>(null);
+  
+  const placeholders = ["Exp No.", "Payment Type", "Amount"];
+  const [placeholderIndex, setPlaceholderIndex] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setPlaceholderIndex((prev) => (prev + 1) % placeholders.length);
+    }, 3000);
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        showSearchInput &&
+        searchContainerRef.current &&
+        !searchContainerRef.current.contains(event.target as Node) &&
+        !searchQuery
+      ) {
+        setShowSearchInput(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [showSearchInput, searchQuery, setShowSearchInput]);
+
   const categoryRecords = selectedCategory
     ? expenseRecordList.filter(
         (r) => r.category_id === selectedCategory.id && Number(r.amount) > 0
       )
     : [];
+
+  const filteredCategoryRecords = categoryRecords.filter(record => {
+    if (!searchQuery) return true;
+    const query = searchQuery.toLowerCase();
+    const expNoMatch = record.expense_no?.toLowerCase().includes(query);
+    const typeMatch = record.payment_type?.toLowerCase().includes(query);
+    const amountMatch = record.amount?.toString().includes(query);
+    return expNoMatch || typeMatch || amountMatch;
+  });
 
   const categoryTotal = categoryRecords.reduce(
     (sum, r) => sum + Number(r.amount),
@@ -88,6 +130,15 @@ export function ExpensesDetails({
         }
       })
     : [];
+
+  const filteredItemRecords = itemRecords.filter(record => {
+    if (!searchQuery) return true;
+    const query = searchQuery.toLowerCase();
+    const expNoMatch = record.expense_no?.toLowerCase().includes(query);
+    const typeMatch = record.payment_type?.toLowerCase().includes(query);
+    const amountMatch = record.amount?.toString().includes(query);
+    return expNoMatch || typeMatch || amountMatch;
+  });
 
   // Total amount spent on selected item across all records
   const itemTotal = selectedExpenseItem
@@ -136,8 +187,62 @@ export function ExpensesDetails({
             </div>
 
             {/* Transactions Table */}
-            <div className="flex-1 bg-white rounded-md shadow-sm overflow-auto">
-              <table className="w-full text-sm">
+            <div className="flex-1 bg-white rounded-md shadow-sm overflow-hidden flex flex-col">
+              <div className="flex items-center justify-between px-6 pt-4 pb-2 border-b border-gray-200">
+                <h3 className="text-base font-bold text-[#222B45] tracking-wide">
+                  TRANSACTIONS
+                </h3>
+                <div className="flex gap-2 items-center h-10" ref={searchContainerRef}>
+                  <div 
+                    className={`flex items-center overflow-hidden transition-all duration-300 ease-out rounded-full h-9 ${
+                      showSearchInput 
+                        ? "w-64 bg-white border border-blue-500 ring-4 ring-blue-50" 
+                        : "w-9 bg-transparent border border-transparent hover:bg-gray-100 cursor-pointer"
+                    }`}
+                    onClick={(e) => {
+                      if (!showSearchInput) {
+                        e.stopPropagation();
+                        setShowSearchInput(true);
+                        setTimeout(() => searchInputRef.current?.focus(), 150);
+                      }
+                    }}
+                  >
+                    <div className="flex items-center justify-center h-full w-9 shrink-0">
+                      <Search className={`w-4 h-4 ${showSearchInput ? "text-gray-400" : "text-gray-500"}`} />
+                    </div>
+                    <div className={`relative flex-1 h-full flex items-center transition-opacity duration-200 ${
+                        showSearchInput ? "opacity-100 delay-100" : "opacity-0"
+                      }`}>
+                      <input
+                        ref={searchInputRef}
+                        type="text"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="bg-transparent border-none outline-none focus:ring-0 focus:outline-none focus:border-transparent text-sm h-full w-full pr-3 relative z-10"
+                      />
+                      {!searchQuery && (
+                        <div className="absolute left-0 pointer-events-none flex items-center h-full w-full overflow-hidden text-gray-400 text-sm">
+                          <span className="whitespace-pre">Search </span>
+                          <div className="relative h-full flex-1 overflow-hidden">
+                            {placeholders.map((ph, idx) => (
+                              <span
+                                key={ph}
+                                className={`absolute top-0 left-0 flex items-center h-full transition-all duration-700 ease-in-out ${
+                                  idx === placeholderIndex ? "opacity-100 translate-y-0" : "opacity-0 translate-y-3"
+                                }`}
+                              >
+                                {ph}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="overflow-auto flex-1">
+                <table className="w-full text-sm">
                 <thead className="bg-gray-50 sticky top-0">
                   <tr>
                     <th className="px-4 py-3 text-left font-medium text-gray-600 text-xs">
@@ -155,8 +260,8 @@ export function ExpensesDetails({
                   </tr>
                 </thead>
                 <tbody>
-                  {categoryRecords.length > 0 ? (
-                    categoryRecords.map((record) => (
+                  {filteredCategoryRecords.length > 0 ? (
+                    filteredCategoryRecords.map((record) => (
                       <tr
                         key={record.id}
                         onContextMenu={(e) => handleContextMenu(e, record)}
@@ -184,6 +289,7 @@ export function ExpensesDetails({
                   )}
                 </tbody>
               </table>
+              </div>
             </div>
           </>
         )
@@ -210,9 +316,63 @@ export function ExpensesDetails({
             </div>
 
             {/* Item Transactions Table */}
-            <div className="flex-1 bg-white rounded-md shadow-sm overflow-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-gray-50 sticky top-0">
+            <div className="flex-1 bg-white rounded-md shadow-sm overflow-hidden flex flex-col">
+              <div className="flex items-center justify-between px-6 pt-4 pb-2 border-b border-gray-200">
+                <h3 className="text-base font-bold text-[#222B45] tracking-wide">
+                  TRANSACTIONS
+                </h3>
+                <div className="flex gap-2 items-center h-10" ref={searchContainerRef}>
+                  <div 
+                    className={`flex items-center overflow-hidden transition-all duration-300 ease-out rounded-full h-9 ${
+                      showSearchInput 
+                        ? "w-64 bg-white border border-blue-500 ring-4 ring-blue-50" 
+                        : "w-9 bg-transparent border border-transparent hover:bg-gray-100 cursor-pointer"
+                    }`}
+                    onClick={(e) => {
+                      if (!showSearchInput) {
+                        e.stopPropagation();
+                        setShowSearchInput(true);
+                        setTimeout(() => searchInputRef.current?.focus(), 150);
+                      }
+                    }}
+                  >
+                    <div className="flex items-center justify-center h-full w-9 shrink-0">
+                      <Search className={`w-4 h-4 ${showSearchInput ? "text-gray-400" : "text-gray-500"}`} />
+                    </div>
+                    <div className={`relative flex-1 h-full flex items-center transition-opacity duration-200 ${
+                        showSearchInput ? "opacity-100 delay-100" : "opacity-0"
+                      }`}>
+                      <input
+                        ref={searchInputRef}
+                        type="text"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="bg-transparent border-none outline-none focus:ring-0 focus:outline-none focus:border-transparent text-sm h-full w-full pr-3 relative z-10"
+                      />
+                      {!searchQuery && (
+                        <div className="absolute left-0 pointer-events-none flex items-center h-full w-full overflow-hidden text-gray-400 text-sm">
+                          <span className="whitespace-pre">Search </span>
+                          <div className="relative h-full flex-1 overflow-hidden">
+                            {placeholders.map((ph, idx) => (
+                              <span
+                                key={ph}
+                                className={`absolute top-0 left-0 flex items-center h-full transition-all duration-700 ease-in-out ${
+                                  idx === placeholderIndex ? "opacity-100 translate-y-0" : "opacity-0 translate-y-3"
+                                }`}
+                              >
+                                {ph}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="overflow-auto flex-1">
+                <table className="w-full text-sm">
+                  <thead className="bg-gray-50 sticky top-0">
                   <tr>
                     <th className="px-4 py-3 text-left font-medium text-gray-600 text-xs">
                       DATE ⚲
@@ -229,8 +389,8 @@ export function ExpensesDetails({
                   </tr>
                 </thead>
                 <tbody>
-                  {itemRecords.length > 0 ? (
-                    itemRecords.map((record) => {
+                  {filteredItemRecords.length > 0 ? (
+                    filteredItemRecords.map((record) => {
                       // Extract this item's amount from line_items_json
                       let itemAmt = 0;
                       try {
@@ -281,6 +441,7 @@ export function ExpensesDetails({
                   )}
                 </tbody>
               </table>
+              </div>
             </div>
           </>
         )

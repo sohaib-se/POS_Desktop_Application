@@ -56,6 +56,7 @@ export interface ExpenseCategory {
   id: string;
   name: string;
   amount: number;
+  type?: string;
 }
 
 export interface BankAccount {

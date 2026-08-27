@@ -36,6 +36,10 @@ export function PaymentOut() {
   const [openRowMenuId, setOpenRowMenuId] = useState<string | null>(null);
   const [openRowMenuPosition, setOpenRowMenuPosition] = useState<{ left: number; top: number } | null>(null);
 
+  const [searchQuery, setSearchQuery] = useState("");
+  const [showSearchInput, setShowSearchInput] = useState(false);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
   const [selectedMonth, setSelectedMonth] = useState<string>(() => {
     const now = new Date();
     const year = now.getFullYear();
@@ -222,37 +226,48 @@ export function PaymentOut() {
   };
 
   const filteredRecords = records.filter(record => {
-    if (!selectedMonth) return true;
+    let monthMatch = true;
+    if (selectedMonth) {
+      const [selYear, selMonth] = selectedMonth.split('-');
+      const targetMonth = parseInt(selMonth, 10);
+      const targetYear = parseInt(selYear, 10);
 
-    const [selYear, selMonth] = selectedMonth.split('-');
-    const targetMonth = parseInt(selMonth, 10);
-    const targetYear = parseInt(selYear, 10);
+      let month = -1;
+      let year = -1;
 
-    let month = -1;
-    let year = -1;
-
-    if (record.date) {
-      const dateStr = String(record.date);
-      if (dateStr.includes('/')) {
-        const parts = dateStr.split('/');
-        if (parts.length === 3) {
-          month = parseInt(parts[1], 10);
-          year = parseInt(parts[2], 10);
-        }
-      } else if (dateStr.includes('-')) {
-        const parts = dateStr.split('T')[0].split('-');
-        if (parts.length === 3) {
-          if (parts[0].length === 4) {
-            year = parseInt(parts[0], 10);
-            month = parseInt(parts[1], 10);
-          } else {
+      if (record.date) {
+        const dateStr = String(record.date);
+        if (dateStr.includes('/')) {
+          const parts = dateStr.split('/');
+          if (parts.length === 3) {
             month = parseInt(parts[1], 10);
             year = parseInt(parts[2], 10);
           }
+        } else if (dateStr.includes('-')) {
+          const parts = dateStr.split('T')[0].split('-');
+          if (parts.length === 3) {
+            if (parts[0].length === 4) {
+              year = parseInt(parts[0], 10);
+              month = parseInt(parts[1], 10);
+            } else {
+              month = parseInt(parts[1], 10);
+              year = parseInt(parts[2], 10);
+            }
+          }
         }
       }
+      monthMatch = month === targetMonth && year === targetYear;
     }
-    return month === targetMonth && year === targetYear;
+
+    let searchMatch = true;
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      const partyMatch = record.partyName?.toLowerCase().includes(query) || record.party_name?.toLowerCase().includes(query);
+      const paymentMatch = record.paymentNo?.toLowerCase().includes(query) || record.payment_no?.toLowerCase().includes(query);
+      searchMatch = !!(partyMatch || paymentMatch);
+    }
+
+    return monthMatch && searchMatch;
   });
 
   const totalAmount = filteredRecords.reduce((sum, p) => sum + p.amount, 0);
@@ -324,11 +339,16 @@ export function PaymentOut() {
           totalOpen={totalOpen}
         />
 
-        <PaymentOutTable
+        <PaymentOutTable 
           records={filteredRecords}
+          showSearchInput={showSearchInput}
+          searchQuery={searchQuery}
+          searchInputRef={searchInputRef}
+          setShowSearchInput={setShowSearchInput}
+          setSearchQuery={setSearchQuery}
           openRowMenuId={openRowMenuId}
-          setOpenRowMenuId={setOpenRowMenuId}
           setOpenRowMenuPosition={setOpenRowMenuPosition}
+          setOpenRowMenuId={setOpenRowMenuId}
           onPrintClick={() => setShowPrintPreview(true)}
         />
 

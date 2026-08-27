@@ -21,7 +21,6 @@ export function PaymentOut() {
   const [selectedParty, setSelectedParty] = useState("");
   const [bankAccounts, setBankAccounts] = useState<any[]>([]);
   const [records, setRecords] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [previewingRecord, setPreviewingRecord] = useState<any>(null);
   const [showPrintPreview, setShowPrintPreview] = useState(false);
   const [businessProfile, setBusinessProfile] = useState<any>(null);
@@ -54,7 +53,6 @@ export function PaymentOut() {
   const [passcodeAction, setPasscodeAction] = useState<{ type: 'edit' | 'delete', payload: string } | null>(null);
 
   const fetchData = async () => {
-    setIsLoading(true);
     try {
       await Promise.all([
         fetch('/api/payment_out_records')
@@ -78,7 +76,7 @@ export function PaymentOut() {
           .catch(console.error)
       ]);
     } finally {
-      setIsLoading(false);
+      // fetch complete
     }
   };
 
@@ -361,6 +359,7 @@ export function PaymentOut() {
           setOpenRowMenuPosition={setOpenRowMenuPosition}
           setOpenRowMenuId={setOpenRowMenuId}
           onPrintClick={() => setShowPrintPreview(true)}
+          onExcelClick={() => exportPaymentOutToExcel(filteredRecords, selectedMonth, currency.code)}
         />
 
         <AddPaymentOutModal

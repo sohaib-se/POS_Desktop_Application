@@ -27,6 +27,7 @@ export function PaymentOutTable({
   setShowSearchInput,
   setSearchQuery,
   onPrintClick,
+  onExcelClick,
 }: PaymentOutTableProps) {
   const [currency] = useSettings('settings.businessCurrency', { code: 'PKR', symbol: 'Rs' });
   const [currencyDisplay] = useSettings<'abbreviation' | 'icon'>('settings.currencyDisplay', 'abbreviation');
@@ -123,7 +124,7 @@ export function PaymentOutTable({
             </button>
           )}
           <button
-            onClick={() => { }}
+            onClick={() => onExcelClick?.()}
             className="p-1.5 hover:bg-[#F7F9FB] rounded relative"
             title="Download Excel"
           >

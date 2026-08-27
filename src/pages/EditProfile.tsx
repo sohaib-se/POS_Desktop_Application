@@ -51,6 +51,22 @@ export function EditProfile({ onBack, onProfileSaved }: EditProfileProps) {
 
   const handleSave = async () => {
     try {
+      if (logo === null) {
+        await fetch('/api/delete_profile_image', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ field: 'logo' }),
+        });
+      }
+      
+      if (signature === null) {
+        await fetch('/api/delete_profile_image', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ field: 'signature' }),
+        });
+      }
+
       const res = await fetch('/api/user_profile', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },

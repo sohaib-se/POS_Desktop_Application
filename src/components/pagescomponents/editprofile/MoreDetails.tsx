@@ -41,7 +41,6 @@ interface MoreDetailsProps {
   setBusinessAddress: Dispatch<SetStateAction<string>>;
   signature: string | null;
   setSignature: Dispatch<SetStateAction<string | null>>;
-  onProfileSaved?: () => void;
 }
 
 export function MoreDetails({
@@ -54,8 +53,7 @@ export function MoreDetails({
   businessAddress,
   setBusinessAddress,
   signature,
-  setSignature,
-  onProfileSaved,
+  setSignature
 }: MoreDetailsProps) {
   const isCustomCategory = !BUSINESS_CATEGORIES.slice(0, -1).includes(businessCategory) ||
     businessCategory === "Custom";
@@ -72,7 +70,6 @@ export function MoreDetails({
     }
   }, [businessCategory]);
 
-  const [deletingSignature, setDeletingSignature] = useState(false);
   const [isConfirmSigOpen, setIsConfirmSigOpen] = useState(false);
 
   const handleSignatureChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -86,25 +83,9 @@ export function MoreDetails({
     }
   };
 
-  const handleDeleteSignature = async () => {
-    if (deletingSignature) return;
-    setDeletingSignature(true);
-    try {
-      const res = await fetch('/api/delete_profile_image', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ field: 'signature' }),
-      });
-      if (res.ok) {
-        setSignature(null);    // clear from UI immediately
-        onProfileSaved?.();    // refresh sidebar in App.tsx
-        setIsConfirmSigOpen(false);
-      }
-    } catch (err) {
-      console.error('Failed to delete signature:', err);
-    } finally {
-      setDeletingSignature(false);
-    }
+  const handleDeleteSignature = () => {
+    setSignature(null);
+    setIsConfirmSigOpen(false);
   };
 
   return (
@@ -218,15 +199,10 @@ export function MoreDetails({
                       e.stopPropagation();
                       setIsConfirmSigOpen(true);
                     }}
-                    disabled={deletingSignature}
-                    title="Delete signature permanently"
-                    className="text-white hover:text-red-400 transition-colors disabled:opacity-50"
+                    title="Delete signature"
+                    className="text-white hover:text-red-400 transition-colors"
                   >
-                    {deletingSignature ? (
-                      <span className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin inline-block" />
-                    ) : (
-                      <Trash2 className="w-8 h-8" />
-                    )}
+                    <Trash2 className="w-8 h-8" />
                   </button>
                 </div>
               </div>
@@ -247,9 +223,9 @@ export function MoreDetails({
         isOpen={isConfirmSigOpen}
         onClose={() => setIsConfirmSigOpen(false)}
         onConfirm={handleDeleteSignature}
-        title="Delete Signature"
-        message="Are you sure you want to delete the business signature? This action cannot be undone."
-        isDeleting={deletingSignature}
+        title="Remove Signature"
+        message="Are you sure you want to remove the business signature? Remember to save changes."
+        isDeleting={false}
       />
     </div>
   );

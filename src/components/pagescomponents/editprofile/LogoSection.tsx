@@ -6,11 +6,9 @@ import { ConfirmDeleteModal } from "../../common/ConfirmDeleteModal";
 interface LogoSectionProps {
   logo: string | null;
   setLogo: Dispatch<SetStateAction<string | null>>;
-  onProfileSaved?: () => void;
 }
 
-export function LogoSection({ logo, setLogo, onProfileSaved }: LogoSectionProps) {
-  const [deleting, setDeleting] = useState(false);
+export function LogoSection({ logo, setLogo }: LogoSectionProps) {
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -24,25 +22,9 @@ export function LogoSection({ logo, setLogo, onProfileSaved }: LogoSectionProps)
     }
   };
 
-  const handleDelete = async () => {
-    if (deleting) return;
-    setDeleting(true);
-    try {
-      const res = await fetch('/api/delete_profile_image', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ field: 'logo' }),
-      });
-      if (res.ok) {
-        setLogo(null);       // clear from UI immediately
-        onProfileSaved?.();  // refresh sidebar in App.tsx
-        setIsConfirmOpen(false);
-      }
-    } catch (err) {
-      console.error('Failed to delete logo:', err);
-    } finally {
-      setDeleting(false);
-    }
+  const handleDelete = () => {
+    setLogo(null);
+    setIsConfirmOpen(false);
   };
 
   return (
@@ -73,15 +55,10 @@ export function LogoSection({ logo, setLogo, onProfileSaved }: LogoSectionProps)
                 e.stopPropagation();
                 setIsConfirmOpen(true);
               }}
-              disabled={deleting}
-              title="Delete logo permanently"
-              className="text-white hover:text-red-400 transition-colors disabled:opacity-50"
+              title="Delete logo"
+              className="text-white hover:text-red-400 transition-colors"
             >
-              {deleting ? (
-                <span className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin inline-block" />
-              ) : (
-                <Trash2 className="w-6 h-6" />
-              )}
+              <Trash2 className="w-6 h-6" />
             </button>
           </div>
         </>
@@ -104,9 +81,9 @@ export function LogoSection({ logo, setLogo, onProfileSaved }: LogoSectionProps)
         isOpen={isConfirmOpen}
         onClose={() => setIsConfirmOpen(false)}
         onConfirm={handleDelete}
-        title="Delete Logo"
-        message="Are you sure you want to delete the business logo? This action cannot be undone."
-        isDeleting={deleting}
+        title="Remove Logo"
+        message="Are you sure you want to remove the business logo? Remember to save changes."
+        isDeleting={false}
       />
     </div>
   );

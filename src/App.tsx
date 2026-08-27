@@ -36,6 +36,7 @@ import { RestoreBackup } from "@/pages/restorebackup";
 import { LaimsoftPos } from "@/pages/LaimsoftPos";
 import { GlobalSearch } from "@/components/common/GlobalSearch";
 import { AllTransactions } from "@/pages/AllTransactions";
+import { ConfirmActionModal } from "@/components/common/ConfirmActionModal";
 import type { SaleInvoiceEditData, ViewType } from "@/types";
 
 function App() {
@@ -125,7 +126,20 @@ function App() {
     view === "settings" ||
     view === "pos";
 
+  const [globalUnsavedChanges, setGlobalUnsavedChanges] = useState(false);
+  const [pendingViewChange, setPendingViewChange] = useState<ViewType | null>(null);
+  const [showUnsavedModal, setShowUnsavedModal] = useState(false);
+
   const handleViewChange = (view: ViewType) => {
+    if (globalUnsavedChanges) {
+      setPendingViewChange(view);
+      setShowUnsavedModal(true);
+      return;
+    }
+    executeViewChange(view);
+  };
+
+  const executeViewChange = (view: ViewType) => {
     if (!isOverlayView(view)) {
       setLastStandardView(view);
     }
@@ -142,6 +156,20 @@ function App() {
     }
 
     setCurrentView(view);
+  };
+
+  const confirmDiscardChanges = () => {
+    setGlobalUnsavedChanges(false);
+    setShowUnsavedModal(false);
+    if (pendingViewChange) {
+      executeViewChange(pendingViewChange);
+      setPendingViewChange(null);
+    }
+  };
+
+  const cancelViewChange = () => {
+    setShowUnsavedModal(false);
+    setPendingViewChange(null);
   };
 
   const handleOpenReport = (category: string, name: string) => {
@@ -266,7 +294,7 @@ function App() {
       case "utilities-recycle-bin":
         return <RecycleBin />;
       case "edit-profile":
-        return <EditProfile onBack={() => handleViewChange("home")} onProfileSaved={fetchProfile} />;
+        return <EditProfile onBack={() => handleViewChange("home")} onProfileSaved={fetchProfile} setUnsavedChanges={setGlobalUnsavedChanges} />;
       default:
         return <Dashboard onViewChange={handleViewChange} onOpenReport={handleOpenReport} />;
     }
@@ -341,6 +369,16 @@ function App() {
           handleViewChange(view);
           setIsGlobalSearchOpen(false);
         }}
+      />
+
+      <ConfirmActionModal
+        isOpen={showUnsavedModal}
+        onClose={cancelViewChange}
+        onConfirm={confirmDiscardChanges}
+        title="Unsaved Changes"
+        message="You have unsaved changes. Are you sure you want to discard them and leave this page?"
+        confirmText="Discard Changes"
+        cancelText="Stay on Page"
       />
     </>
   );

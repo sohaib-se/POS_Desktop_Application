@@ -1,4 +1,4 @@
-import React, { useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useSettings } from "@/hooks/useSettings";
 import { Search, Printer, MoreVertical } from "lucide-react";
 
@@ -7,6 +7,11 @@ interface PaymentOutTableProps {
   openRowMenuId: string | null;
   setOpenRowMenuId: React.Dispatch<React.SetStateAction<string | null>>;
   setOpenRowMenuPosition: React.Dispatch<React.SetStateAction<{ left: number; top: number } | null>>;
+  showSearchInput: boolean;
+  searchQuery: string;
+  searchInputRef: React.RefObject<HTMLInputElement | null>;
+  setShowSearchInput: (val: boolean) => void;
+  setSearchQuery: (val: string) => void;
   onPrintClick?: () => void;
   onExcelClick?: () => void;
 }
@@ -16,6 +21,11 @@ export function PaymentOutTable({
   openRowMenuId,
   setOpenRowMenuId,
   setOpenRowMenuPosition,
+  showSearchInput,
+  searchQuery,
+  searchInputRef,
+  setShowSearchInput,
+  setSearchQuery,
   onPrintClick,
   onExcelClick,
 }: PaymentOutTableProps) {
@@ -23,14 +33,33 @@ export function PaymentOutTable({
   const [currencyDisplay] = useSettings<'abbreviation' | 'icon'>('settings.currencyDisplay', 'abbreviation');
   const currencyStr = currencyDisplay === 'icon' ? currency.symbol : currency.code;
 
-  const [showSearchInput, setShowSearchInput] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
-  const searchInputRef = useRef<HTMLInputElement | null>(null);
+  const searchContainerRef = useRef<HTMLDivElement>(null);
+  const placeholders = ["Party Name", "Payment No.", "Date", "Amount"];
+  const [placeholderIndex, setPlaceholderIndex] = useState(0);
 
-  const filteredRecords = records.filter(record => 
-    record.partyName?.toLowerCase().includes(searchQuery.toLowerCase()) || 
-    record.reference?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setPlaceholderIndex((prev) => (prev + 1) % placeholders.length);
+    }, 3000);
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        showSearchInput &&
+        searchContainerRef.current &&
+        !searchContainerRef.current.contains(event.target as Node) &&
+        !searchQuery
+      ) {
+        setShowSearchInput(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [showSearchInput, searchQuery, setShowSearchInput]);
 
   return (
     <div
@@ -41,48 +70,64 @@ export function PaymentOutTable({
         <h3 className="text-base font-bold text-[#222B45] tracking-wide">
           TRANSACTIONS
         </h3>
-        <div className="flex gap-2 items-center">
-          {showSearchInput && (
-            <div className="flex items-center bg-[#F7F9FB] rounded-lg px-3 py-1.5 border border-[#E3EAF2] w-64 mr-2">
-              <Search className="w-4 h-4 text-gray-400 mr-2 shrink-0" />
+        <div className="flex gap-2 items-center h-10" ref={searchContainerRef}>
+          <div 
+            className={`flex items-center overflow-hidden transition-all duration-300 ease-out rounded-full h-9 ${
+              showSearchInput 
+                ? "w-64 bg-white border border-blue-500 ring-4 ring-blue-50" 
+                : "w-9 bg-transparent border border-transparent hover:bg-gray-100 cursor-pointer"
+            }`}
+            onClick={(e) => {
+              if (!showSearchInput) {
+                e.stopPropagation();
+                setShowSearchInput(true);
+                setTimeout(() => searchInputRef.current?.focus(), 150);
+              }
+            }}
+          >
+            <div className="flex items-center justify-center h-full w-9 shrink-0">
+              <Search className={`w-4 h-4 ${showSearchInput ? "text-gray-400" : "text-gray-500"}`} />
+            </div>
+            <div className={`relative flex-1 h-full flex items-center transition-opacity duration-200 ${
+                showSearchInput ? "opacity-100 delay-100" : "opacity-0"
+              }`}>
               <input
                 ref={searchInputRef}
                 type="text"
-                placeholder="Search transactions..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                onBlur={() => {
-                  setTimeout(() => {
-                    setShowSearchInput(false);
-                    setSearchQuery("");
-                  }, 150);
-                }}
-                className="w-full bg-transparent border-none outline-none text-sm"
-                autoFocus
+                className="bg-transparent border-none outline-none focus:ring-0 focus:outline-none focus:border-transparent text-sm h-full w-full pr-3 relative z-10"
               />
+              {!searchQuery && (
+                <div className="absolute left-0 pointer-events-none flex items-center h-full w-full overflow-hidden text-gray-400 text-sm">
+                  <span className="whitespace-pre">Search </span>
+                  <div className="relative h-full flex-1 overflow-hidden">
+                    {placeholders.map((ph, idx) => (
+                      <span
+                        key={ph}
+                        className={`absolute top-0 left-0 flex items-center h-full transition-all duration-700 ease-in-out ${
+                          idx === placeholderIndex ? "opacity-100 translate-y-0" : "opacity-0 translate-y-3"
+                        }`}
+                      >
+                        {ph}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
-          )}
-          {!showSearchInput && (
+          </div>
+          {onPrintClick && (
             <button
-              onClick={(event) => {
-                event.stopPropagation();
-                setShowSearchInput(true);
-              }}
+              onClick={() => { if (onPrintClick) onPrintClick(); }}
               className="p-1.5 hover:bg-[#F7F9FB] rounded"
-              title="Search"
+              title="Print"
             >
-              <Search className="w-4 h-4 text-[#7B8A9A]" />
+              <Printer className="w-4 h-4 text-[#7B8A9A]" />
             </button>
           )}
           <button
-            onClick={() => { if (onPrintClick) onPrintClick(); }}
-            className="p-1.5 hover:bg-[#F7F9FB] rounded"
-            title="Print"
-          >
-            <Printer className="w-4 h-4 text-[#7B8A9A]" />
-          </button>
-          <button
-            onClick={() => { if (onExcelClick) onExcelClick(); }}
+            onClick={() => {}}
             className="p-1.5 hover:bg-[#F7F9FB] rounded relative"
             title="Download Excel"
           >
@@ -120,11 +165,17 @@ export function PaymentOutTable({
               </th>
             </tr>
           </thead>
-          <tbody>
-            {filteredRecords.length === 0 ? (
-              <tr>
-                <td colSpan={7} className="px-4 py-8 text-center text-gray-500">
-                  No transactions found for the selected month.
+          <tbody className="divide-y divide-gray-100">
+            {records.map((payment) => (
+              <tr
+                key={payment.id}
+                className="border-b border-gray-100 hover:bg-gray-50"
+              >
+                <td className="px-4 py-3">{payment.date}</td>
+                <td className="px-4 py-3">{payment.paymentNo || ""}</td>
+                <td className="px-4 py-3">{payment.partyName}</td>
+                <td className="px-4 py-3 text-right">
+                  {currencyStr} {payment.amount.toFixed(2)}
                 </td>
               </tr>
             ) : (
@@ -152,7 +203,7 @@ export function PaymentOutTable({
                         event.stopPropagation();
                         const targetRect = event.currentTarget.getBoundingClientRect();
                         const menuWidth = 144;
-                        const menuHeight = 116; // rough height for 3 items
+                        const menuHeight = 116; 
                         const nextLeft = Math.max(8, Math.min(targetRect.right - menuWidth, window.innerWidth - menuWidth - 8));
                         const nextTop = targetRect.bottom + menuHeight > window.innerHeight
                           ? Math.max(8, targetRect.top - menuHeight - 8)

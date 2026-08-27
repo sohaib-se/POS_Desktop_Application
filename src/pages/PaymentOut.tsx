@@ -38,6 +38,10 @@ export function PaymentOut() {
   const [openRowMenuId, setOpenRowMenuId] = useState<string | null>(null);
   const [openRowMenuPosition, setOpenRowMenuPosition] = useState<{ left: number; top: number } | null>(null);
 
+  const [searchQuery, setSearchQuery] = useState("");
+  const [showSearchInput, setShowSearchInput] = useState(false);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
   const [selectedMonth, setSelectedMonth] = useState<string>(() => {
     const now = new Date();
     const year = now.getFullYear();
@@ -231,37 +235,48 @@ export function PaymentOut() {
   };
 
   const filteredRecords = records.filter(record => {
-    if (!selectedMonth) return true;
+    let monthMatch = true;
+    if (selectedMonth) {
+      const [selYear, selMonth] = selectedMonth.split('-');
+      const targetMonth = parseInt(selMonth, 10);
+      const targetYear = parseInt(selYear, 10);
 
-    const [selYear, selMonth] = selectedMonth.split('-');
-    const targetMonth = parseInt(selMonth, 10);
-    const targetYear = parseInt(selYear, 10);
+      let month = -1;
+      let year = -1;
 
-    let month = -1;
-    let year = -1;
-
-    if (record.date) {
-      const dateStr = String(record.date);
-      if (dateStr.includes('/')) {
-        const parts = dateStr.split('/');
-        if (parts.length === 3) {
-          month = parseInt(parts[1], 10);
-          year = parseInt(parts[2], 10);
-        }
-      } else if (dateStr.includes('-')) {
-        const parts = dateStr.split('T')[0].split('-');
-        if (parts.length === 3) {
-          if (parts[0].length === 4) {
-            year = parseInt(parts[0], 10);
-            month = parseInt(parts[1], 10);
-          } else {
+      if (record.date) {
+        const dateStr = String(record.date);
+        if (dateStr.includes('/')) {
+          const parts = dateStr.split('/');
+          if (parts.length === 3) {
             month = parseInt(parts[1], 10);
             year = parseInt(parts[2], 10);
           }
+        } else if (dateStr.includes('-')) {
+          const parts = dateStr.split('T')[0].split('-');
+          if (parts.length === 3) {
+            if (parts[0].length === 4) {
+              year = parseInt(parts[0], 10);
+              month = parseInt(parts[1], 10);
+            } else {
+              month = parseInt(parts[1], 10);
+              year = parseInt(parts[2], 10);
+            }
+          }
         }
       }
+      monthMatch = month === targetMonth && year === targetYear;
     }
-    return month === targetMonth && year === targetYear;
+
+    let searchMatch = true;
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      const partyMatch = record.partyName?.toLowerCase().includes(query) || record.party_name?.toLowerCase().includes(query);
+      const paymentMatch = record.paymentNo?.toLowerCase().includes(query) || record.payment_no?.toLowerCase().includes(query);
+      searchMatch = !!(partyMatch || paymentMatch);
+    }
+
+    return monthMatch && searchMatch;
   });
 
   const [currency] = useSettings('settings.businessCurrency', { code: 'PKR', symbol: 'Rs' });
@@ -335,69 +350,18 @@ export function PaymentOut() {
           totalOpen={totalOpen}
         />
 
-        {isLoading ? (
-          <div className="flex-1 bg-white rounded-md shadow-sm mx-1 flex flex-col items-center justify-center p-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#3B82F6]"></div>
-          </div>
-        ) : records.length === 0 ? (
-          <div className="flex-1 bg-white rounded-md shadow-sm mx-1 flex flex-col items-center justify-center p-8">
-            <div className="w-40 h-40 bg-[#D3E8FF] rounded-full flex items-center justify-center relative mb-5">
-              <div className="relative">
-                <svg width="80" height="80" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <rect x="25" y="20" width="50" height="16" rx="4" fill="#90C3FC" />
-                  <path d="M35 24 L38 30 L32 30 Z" fill="#FFFFFF" />
-                  <rect x="45" y="26" width="22" height="4" rx="2" fill="#FFFFFF" />
-
-                  <rect x="15" y="42" width="60" height="18" rx="4" fill="#3B82F6" />
-                  <rect x="23" y="46" width="10" height="10" rx="2" fill="#FFFFFF" />
-                  <circle cx="28" cy="51" r="2" fill="#3B82F6" />
-                  <rect x="40" y="49" width="28" height="4" rx="2" fill="#FFFFFF" />
-
-                  <rect x="20" y="66" width="50" height="16" rx="4" fill="#90C3FC" />
-                  <rect x="24" y="70" width="10" height="8" rx="1" fill="#FFFFFF" />
-                  <rect x="25" y="74" width="8" height="2" fill="#90C3FC" />
-                  <rect x="38" y="72" width="22" height="4" rx="2" fill="#FFFFFF" />
-                </svg>
-              </div>
-              <svg className="absolute top-6 left-2 w-5 h-5 text-white" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12 2l2.4 7.6L22 12l-7.6 2.4L12 22l-2.4-7.6L2 12l7.6-2.4L12 2z" />
-              </svg>
-              <svg className="absolute bottom-8 left-3 w-3 h-3 text-white" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12 2l2.4 7.6L22 12l-7.6 2.4L12 22l-2.4-7.6L2 12l7.6-2.4L12 2z" />
-              </svg>
-              <svg className="absolute top-1/2 right-1 w-4 h-4 text-white" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12 2l2.4 7.6L22 12l-7.6 2.4L12 22l-2.4-7.6L2 12l7.6-2.4L12 2z" />
-              </svg>
-              <svg className="absolute top-2 right-10 w-2 h-2 text-white" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12 2l2.4 7.6L22 12l-7.6 2.4L12 22l-2.4-7.6L2 12l7.6-2.4L12 2z" />
-              </svg>
-            </div>
-            <h3 className="text-[15px] font-bold text-[#2A2E3D] mb-1">
-              No Transactions to show
-            </h3>
-            <p className="text-[13px] text-[#8F9BB3] mb-6">
-              You haven't added any transactions yet.
-            </p>
-            <button
-              onClick={handleOpenAddPayment}
-              className="flex items-center gap-2 px-6 py-2.5 bg-[#E91E63] text-white text-[14px] font-semibold rounded-full shadow hover:bg-[#D81B60] transition-colors"
-            >
-              <span className="text-xl leading-none -mt-1">+</span> Add Payment-Out
-            </button>
-          </div>
-        ) : (
-          <PaymentOutTable
-            records={filteredRecords}
-            openRowMenuId={openRowMenuId}
-            setOpenRowMenuId={setOpenRowMenuId}
-            setOpenRowMenuPosition={setOpenRowMenuPosition}
-            onPrintClick={() => setShowPrintPreview(true)}
-            onExcelClick={() => {
-              const currencyCode = (currency as any)?.code || 'PKR';
-              exportPaymentOutToExcel(filteredRecords, selectedMonth, currencyCode);
-            }}
-          />
-        )}
+        <PaymentOutTable 
+          records={filteredRecords}
+          showSearchInput={showSearchInput}
+          searchQuery={searchQuery}
+          searchInputRef={searchInputRef}
+          setShowSearchInput={setShowSearchInput}
+          setSearchQuery={setSearchQuery}
+          openRowMenuId={openRowMenuId}
+          setOpenRowMenuPosition={setOpenRowMenuPosition}
+          setOpenRowMenuId={setOpenRowMenuId}
+          onPrintClick={() => setShowPrintPreview(true)}
+        />
 
         <AddPaymentOutModal
           showAddPayment={showAddPayment}

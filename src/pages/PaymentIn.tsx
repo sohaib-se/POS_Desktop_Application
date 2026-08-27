@@ -232,37 +232,48 @@ export function PaymentIn() {
   };
 
   const filteredRecords = records.filter(record => {
-    if (!selectedMonth) return true;
+    let monthMatch = true;
+    if (selectedMonth) {
+      const [selYear, selMonth] = selectedMonth.split('-');
+      const targetMonth = parseInt(selMonth, 10);
+      const targetYear = parseInt(selYear, 10);
 
-    const [selYear, selMonth] = selectedMonth.split('-');
-    const targetMonth = parseInt(selMonth, 10);
-    const targetYear = parseInt(selYear, 10);
+      let month = -1;
+      let year = -1;
 
-    let month = -1;
-    let year = -1;
-
-    if (record.date) {
-      const dateStr = String(record.date);
-      if (dateStr.includes('/')) {
-        const parts = dateStr.split('/');
-        if (parts.length === 3) {
-          month = parseInt(parts[1], 10);
-          year = parseInt(parts[2], 10);
-        }
-      } else if (dateStr.includes('-')) {
-        const parts = dateStr.split('T')[0].split('-');
-        if (parts.length === 3) {
-          if (parts[0].length === 4) {
-            year = parseInt(parts[0], 10);
-            month = parseInt(parts[1], 10);
-          } else {
+      if (record.date) {
+        const dateStr = String(record.date);
+        if (dateStr.includes('/')) {
+          const parts = dateStr.split('/');
+          if (parts.length === 3) {
             month = parseInt(parts[1], 10);
             year = parseInt(parts[2], 10);
           }
+        } else if (dateStr.includes('-')) {
+          const parts = dateStr.split('T')[0].split('-');
+          if (parts.length === 3) {
+            if (parts[0].length === 4) {
+              year = parseInt(parts[0], 10);
+              month = parseInt(parts[1], 10);
+            } else {
+              month = parseInt(parts[1], 10);
+              year = parseInt(parts[2], 10);
+            }
+          }
         }
       }
+      monthMatch = month === targetMonth && year === targetYear;
     }
-    return month === targetMonth && year === targetYear;
+
+    let searchMatch = true;
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      const partyMatch = record.partyName?.toLowerCase().includes(query) || record.party_name?.toLowerCase().includes(query);
+      const receiptMatch = record.receiptNo?.toLowerCase().includes(query) || record.receipt_no?.toLowerCase().includes(query);
+      searchMatch = !!(partyMatch || receiptMatch);
+    }
+
+    return monthMatch && searchMatch;
   });
 
   const totalAmount = filteredRecords.reduce((sum, p) => sum + p.amount, 0);

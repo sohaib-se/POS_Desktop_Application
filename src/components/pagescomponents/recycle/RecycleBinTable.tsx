@@ -1,4 +1,3 @@
-import { Filter, Search } from "lucide-react";
 import { useSettings } from "@/hooks/useSettings";
 import {
   Table,
@@ -8,7 +7,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Input } from "@/components/ui/input";
+
 import { Checkbox } from "@/components/ui/checkbox";
 import type { RecycleBinItem } from "@/pages/recyclebin";
 
@@ -44,12 +43,7 @@ export function RecycleBinTable({ items, isLoading, selectedIds, setSelectedIds 
 
   return (
     <div className="flex-1 bg-white flex flex-col overflow-hidden">
-      <div className="p-4 border-b border-gray-100">
-        <div className="relative w-[300px]">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-          <Input className="pl-9 h-9" placeholder="Search..." />
-        </div>
-      </div>
+
 
       <div className="flex-1 overflow-auto">
         <Table>
@@ -64,37 +58,37 @@ export function RecycleBinTable({ items, isLoading, selectedIds, setSelectedIds 
               </TableHead>
               <TableHead className="text-xs font-semibold text-gray-500">
                 <div className="flex items-center justify-between">
-                  TRANSACTION DATE <Filter className="w-3 h-3 ml-2" />
+                  TRANSACTION DATE
                 </div>
               </TableHead>
               <TableHead className="text-xs font-semibold text-gray-500">
                 <div className="flex items-center justify-between">
-                  REF. NO. <Filter className="w-3 h-3 ml-2" />
+                  REF. NO.
                 </div>
               </TableHead>
               <TableHead className="text-xs font-semibold text-gray-500">
                 <div className="flex items-center justify-between">
-                  PARTY NAME <Filter className="w-3 h-3 ml-2" />
+                  PARTY NAME
                 </div>
               </TableHead>
               <TableHead className="text-xs font-semibold text-gray-500">
                 <div className="flex items-center justify-between">
-                  TXN TYPE <Filter className="w-3 h-3 ml-2" />
+                  TXN TYPE
                 </div>
               </TableHead>
               <TableHead className="text-xs font-semibold text-gray-500">
                 <div className="flex items-center justify-between">
-                  PAYMENT TYPE <Filter className="w-3 h-3 ml-2" />
+                  PAYMENT TYPE
                 </div>
               </TableHead>
               <TableHead className="text-xs font-semibold text-gray-500">
                 <div className="flex items-center justify-between">
-                  AMOUNT <Filter className="w-3 h-3 ml-2" />
+                  AMOUNT
                 </div>
               </TableHead>
               <TableHead className="text-xs font-semibold text-gray-500">
                 <div className="flex items-center justify-between">
-                  DELETED ON <Filter className="w-3 h-3 ml-2" />
+                  DELETED ON
                 </div>
               </TableHead>
             </TableRow>

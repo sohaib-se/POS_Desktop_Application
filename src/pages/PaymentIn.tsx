@@ -11,6 +11,7 @@ import { EnterPasscodeScreen } from "@/components/common/EnterPasscodeScreen";
 import { PaymentInPrintPreviewModal } from "@/components/pagescomponents/paymentin/PaymentInPrintPreviewModal";
 import { PaymentInReceiptPreviewModal } from "@/components/pagescomponents/paymentin/PaymentInReceiptPreviewModal";
 import { useSettings } from "@/hooks/useSettings";
+import { exportPaymentInToExcel } from "@/utils/exportPaymentInExcel";
 
 export function PaymentIn() {
   const [showAddPayment, setShowAddPayment] = useState(false);
@@ -43,6 +44,7 @@ export function PaymentIn() {
 
   const [isPasscodeEnabled] = useSettings('settings.isPasscodeEnabled', false);
   const [isPasscodeForTransactionEnabled] = useSettings('settings.isPasscodeForTransactionEnabled', false);
+  const [currency] = useSettings('settings.businessCurrency', { code: 'PKR', symbol: 'Rs', name: 'Rupees' });
   const [passcodeAction, setPasscodeAction] = useState<{ type: 'edit' | 'delete', payload: string } | null>(null);
 
   const [selectedMonth, setSelectedMonth] = useState<string>(() => {
@@ -426,6 +428,10 @@ export function PaymentIn() {
             setOpenRowMenuPosition={setOpenRowMenuPosition}
             setOpenRowMenuId={setOpenRowMenuId}
             onPrintClick={() => setShowPrintPreview(true)}
+            onExcelClick={() => {
+              const currencyCode = (currency as any)?.code || 'PKR';
+              exportPaymentInToExcel(filteredRecords, selectedMonth, currencyCode);
+            }}
           />
         )}
 

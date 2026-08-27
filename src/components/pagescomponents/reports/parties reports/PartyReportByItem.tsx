@@ -1,7 +1,7 @@
 import { useSettings } from "@/hooks/useSettings";
 import { useCallback, useEffect, useState, useMemo } from "react";
 import { ChevronDown, Printer, ArrowLeft } from "lucide-react";
-import { getMonthKeyFromDate, formatDateDisplay, monthLabelForFilter, formatMonthLabel } from "../../saleinvoices/utils";
+import { getMonthKeyFromDate, formatDateDisplay } from "../../saleinvoices/utils";
 
 interface PartyReportByItemProps {
   onBack: () => void;
@@ -24,9 +24,9 @@ export function PartyReportByItem({ onBack }: PartyReportByItemProps) {
   const [loading, setLoading] = useState(true);
   
   // Filter state
-  const [selectedMonthKey, setSelectedMonthKey] = useState<string>("");
-  const [isMonthMenuOpen, setIsMonthMenuOpen] = useState(false);
-  const [availableMonths, setAvailableMonths] = useState<string[]>([]);
+  const [selectedMonthKey, setSelectedMonthKey] = useState<string>(
+    getMonthKeyFromDate(formatDateDisplay(new Date()))
+  );
   
   const [selectedCategory, setSelectedCategory] = useState<string>("All Categories");
   const [isCategoryMenuOpen, setIsCategoryMenuOpen] = useState(false);
@@ -36,7 +36,6 @@ export function PartyReportByItem({ onBack }: PartyReportByItemProps) {
 
   useEffect(() => {
     const closeMenus = () => {
-      setIsMonthMenuOpen(false);
       setIsCategoryMenuOpen(false);
       setIsItemMenuOpen(false);
     };
@@ -84,23 +83,7 @@ export function PartyReportByItem({ onBack }: PartyReportByItemProps) {
         setRawPurchases(purchases);
         setRawItems(items);
 
-        const months = new Set<string>();
-        sales.forEach(s => {
-          if (s.date) months.add(getMonthKeyFromDate(s.date));
-        });
-        purchases.forEach(p => {
-            if (p.date) months.add(getMonthKeyFromDate(p.date));
-        });
 
-        const sortedMonths = Array.from(months).sort((a, b) => b.localeCompare(a));
-        setAvailableMonths(sortedMonths);
-
-        const currentMonthKey = getMonthKeyFromDate(formatDateDisplay(new Date()));
-        let defaultMonth = currentMonthKey;
-        if (sortedMonths.length > 0 && !sortedMonths.includes(currentMonthKey)) {
-            defaultMonth = sortedMonths[0];
-        }
-        setSelectedMonthKey(defaultMonth);
 
     } catch (error) {
         console.error(error);
@@ -261,8 +244,7 @@ export function PartyReportByItem({ onBack }: PartyReportByItemProps) {
     document.body.removeChild(link);
   };
 
-  const currentMonthKey = getMonthKeyFromDate(formatDateDisplay(new Date()));
-  const monthButtonLabel = selectedMonthKey === currentMonthKey ? "This Month" : monthLabelForFilter(selectedMonthKey);
+
   const itemButtonLabel = selectedItem === "All Items" ? "All Items" : (rawItems.find(i => String(i.id) === selectedItem)?.name || selectedItem);
 
   return (
@@ -275,48 +257,14 @@ export function PartyReportByItem({ onBack }: PartyReportByItemProps) {
           </button>
           
           <div className="flex items-center gap-2">
-            <div className="relative">
-                <button 
-                onClick={(e) => {
-                    e.stopPropagation();
-                    setIsMonthMenuOpen(!isMonthMenuOpen);
-                    setIsCategoryMenuOpen(false);
-                    setIsItemMenuOpen(false);
-                }}
-                className="flex items-center gap-2 text-xl font-semibold text-gray-800 -ml-2 hover:bg-gray-50 px-2 py-1 rounded"
-                >
-                <span>{monthButtonLabel}</span>
-                <ChevronDown className="w-5 h-5 text-gray-500" />
-                </button>
-
-                {isMonthMenuOpen && (
-                <div 
-                    className="absolute left-0 top-full mt-1 z-20 w-48 rounded-lg border border-gray-200 bg-white shadow-lg overflow-hidden"
-                    onClick={(e) => e.stopPropagation()}
-                >
-                    <button
-                    className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50"
-                    onClick={() => {
-                        setSelectedMonthKey("");
-                        setIsMonthMenuOpen(false);
-                    }}
-                    >
-                    All Time
-                    </button>
-                    {availableMonths.map((monthKey) => (
-                    <button
-                        key={monthKey}
-                        className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50"
-                        onClick={() => {
-                        setSelectedMonthKey(monthKey);
-                        setIsMonthMenuOpen(false);
-                        }}
-                    >
-                        {formatMonthLabel(monthKey)}
-                    </button>
-                    ))}
-                </div>
-                )}
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium text-gray-700">Filter by Month:</span>
+              <input 
+                type="month"
+                value={selectedMonthKey}
+                onChange={(e) => setSelectedMonthKey(e.target.value)}
+                className="px-3 py-1.5 border border-gray-300 rounded bg-white text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+              />
             </div>
 
             {/* Category Filter */}
@@ -325,7 +273,6 @@ export function PartyReportByItem({ onBack }: PartyReportByItemProps) {
                 onClick={(e) => {
                     e.stopPropagation();
                     setIsCategoryMenuOpen(!isCategoryMenuOpen);
-                    setIsMonthMenuOpen(false);
                     setIsItemMenuOpen(false);
                 }}
                 className="flex items-center justify-between w-48 px-3 py-1.5 border border-gray-300 rounded bg-white text-sm hover:bg-gray-50"
@@ -373,7 +320,6 @@ export function PartyReportByItem({ onBack }: PartyReportByItemProps) {
                 onClick={(e) => {
                     e.stopPropagation();
                     setIsItemMenuOpen(!isItemMenuOpen);
-                    setIsMonthMenuOpen(false);
                     setIsCategoryMenuOpen(false);
                 }}
                 className="flex items-center justify-between w-48 px-3 py-1.5 border border-gray-300 rounded bg-white text-sm hover:bg-gray-50"

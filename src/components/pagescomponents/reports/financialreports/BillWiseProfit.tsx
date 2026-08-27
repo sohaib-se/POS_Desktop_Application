@@ -1,7 +1,7 @@
 import { useSettings } from "@/hooks/useSettings";
 import { ArrowLeft, Search, Filter, Printer, Download, Eye, X } from 'lucide-react';
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
-import { getMonthKeyFromDate, parseLineItems, monthLabelForFilter } from '../../saleinvoices/utils';
+import { getMonthKeyFromDate, parseLineItems, formatDateDisplay } from '../../saleinvoices/utils';
 
 interface BillWiseProfitProps {
   onBack: () => void;
@@ -26,9 +26,9 @@ export function BillWiseProfit({ onBack }: BillWiseProfitProps) {
   const [rawSales, setRawSales] = useState<any[]>([]);
   const [rawItems, setRawItems] = useState<any[]>([]);
   
-  const [selectedMonthKey, setSelectedMonthKey] = useState<string>("");
-  const [availableMonths, setAvailableMonths] = useState<string[]>([]);
-  const [isMonthMenuOpen, setIsMonthMenuOpen] = useState(false);
+  const [selectedMonthKey, setSelectedMonthKey] = useState<string>(
+    getMonthKeyFromDate(formatDateDisplay(new Date()))
+  );
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedInvoiceForDetails, setSelectedInvoiceForDetails] = useState<any | null>(null);
 
@@ -79,17 +79,6 @@ export function BillWiseProfit({ onBack }: BillWiseProfitProps) {
 
       setRawSales(sales);
       setRawItems(items);
-
-      const months = new Set<string>();
-      sales.forEach(s => {
-        if (s.date) months.add(getMonthKeyFromDate(s.date));
-      });
-      const sortedMonths = Array.from(months).sort((a, b) => b.localeCompare(a));
-      setAvailableMonths(sortedMonths);
-
-      if (sortedMonths.length > 0) {
-        setSelectedMonthKey(sortedMonths[0]);
-      }
     } catch (error) {
       console.error(error);
     } finally {
@@ -222,33 +211,14 @@ export function BillWiseProfit({ onBack }: BillWiseProfitProps) {
             </div>
           </div>
           
-          <div className="relative">
-            <button 
-              onClick={() => setIsMonthMenuOpen(!isMonthMenuOpen)}
-              className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
-            >
-              <Filter className="w-4 h-4" />
-              {monthLabelForFilter(selectedMonthKey)}
-            </button>
-            {isMonthMenuOpen && (
-              <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-10 py-1">
-                <button
-                  className={`w-full text-left px-4 py-2 text-sm ${!selectedMonthKey ? 'bg-blue-50 text-blue-600' : 'text-gray-700 hover:bg-gray-50'}`}
-                  onClick={() => { setSelectedMonthKey(""); setIsMonthMenuOpen(false); }}
-                >
-                  All Months
-                </button>
-                {availableMonths.map(month => (
-                  <button
-                    key={month}
-                    className={`w-full text-left px-4 py-2 text-sm ${selectedMonthKey === month ? 'bg-blue-50 text-blue-600' : 'text-gray-700 hover:bg-gray-50'}`}
-                    onClick={() => { setSelectedMonthKey(month); setIsMonthMenuOpen(false); }}
-                  >
-                    {monthLabelForFilter(month)}
-                  </button>
-                ))}
-              </div>
-            )}
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium text-gray-700">Filter by Month:</span>
+            <input 
+              type="month"
+              value={selectedMonthKey}
+              onChange={(e) => setSelectedMonthKey(e.target.value)}
+              className="px-3 py-1.5 border border-gray-300 rounded bg-white text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+            />
           </div>
           <button className="p-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">
             <Download className="w-4 h-4" />

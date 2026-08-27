@@ -1,12 +1,13 @@
 import { useSettings } from "@/hooks/useSettings";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowLeft, Calendar, Search, Printer, Share2, MoreVertical, Pencil, Trash2 } from "lucide-react";
+import { ArrowLeft, Calendar, Search, Printer, MoreVertical, Pencil, Trash2 } from "lucide-react";
 import { formatDateDisplay } from "../../saleinvoices/utils";
 import type { SaleInvoiceEditData, PurchaseBillEditData } from "@/types";
 import { SaleInvoiceDialog } from "../../saleinvoices/SaleInvoiceDialog";
 import { PurchaseBillDialog } from "../../purchasebills/PurchaseBillDialog";
 import { AddPurchase } from "../../../../pages/AddPurchase";
 import { EnterPasscodeScreen } from "@/components/common/EnterPasscodeScreen";
+import { ConfirmDeleteModal } from "@/components/common/ConfirmDeleteModal";
 
 interface DaybookReportProps {
   onBack: () => void;
@@ -89,6 +90,8 @@ export function DaybookReport({ onBack, onEditInvoice }: DaybookReportProps) {
   const [isPasscodeEnabled] = useSettings('settings.isPasscodeEnabled', false);
   const [isPasscodeForTransactionEnabled] = useSettings('settings.isPasscodeForTransactionEnabled', false);
   const [passcodeAction, setPasscodeAction] = useState<{ type: 'edit' | 'delete', payload: TransactionRow } | null>(null);
+  const [deleteModalState, setDeleteModalState] = useState<{isOpen: boolean, tx: TransactionRow | null}>({isOpen: false, tx: null});
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const handleEditClick = (tx: TransactionRow) => {
     if (isPasscodeEnabled && isPasscodeForTransactionEnabled) {
@@ -283,14 +286,19 @@ export function DaybookReport({ onBack, onEditInvoice }: DaybookReportProps) {
     URL.revokeObjectURL(url);
   };
 
-  const handleDeleteTransaction = async (tx: TransactionRow) => {
-    const isSale = tx.type === "Sale";
-    const endpoint = isSale ? `/api/sale_invoices/${tx.originalId}` : `/api/purchase_bills/${tx.originalId}`;
-    
-    const confirmed = window.confirm(`Delete ${tx.type.toLowerCase()} invoice ${tx.invoiceNo} for ${tx.partyName}?`);
-    if (!confirmed) return;
+  const handleDeleteTransaction = (tx: TransactionRow) => {
+    setDeleteModalState({isOpen: true, tx});
+  };
+
+  const confirmDelete = async () => {
+    const tx = deleteModalState.tx;
+    if (!tx) return;
 
     try {
+      setIsDeleting(true);
+      const isSale = tx.type === "Sale";
+      const endpoint = isSale ? `/api/sale_invoices/${tx.originalId}` : `/api/purchase_bills/${tx.originalId}`;
+
       const response = await fetch(endpoint, {
         method: "DELETE",
       });
@@ -300,10 +308,12 @@ export function DaybookReport({ onBack, onEditInvoice }: DaybookReportProps) {
       }
 
       setTransactions((prev) => prev.filter((row) => row.id !== tx.id));
+      setDeleteModalState({isOpen: false, tx: null});
     } catch (error) {
       console.error(error);
       alert(`Failed to delete the selected transaction.`);
     } finally {
+      setIsDeleting(false);
       setOpenRowMenuId(null);
     }
   };
@@ -505,9 +515,7 @@ export function DaybookReport({ onBack, onEditInvoice }: DaybookReportProps) {
                         <button className="p-1.5 hover:bg-gray-100 rounded" title="Print">
                           <Printer className="w-4 h-4 text-gray-500" />
                         </button>
-                        <button className="p-1.5 hover:bg-gray-100 rounded" title="Share">
-                          <Share2 className="w-4 h-4 text-gray-500" />
-                        </button>
+
                         <button
                           className="p-1.5 hover:bg-gray-100 rounded"
                           title="More actions"
@@ -616,6 +624,15 @@ export function DaybookReport({ onBack, onEditInvoice }: DaybookReportProps) {
           onCancel={() => setPasscodeAction(null)}
         />
       )}
+
+      <ConfirmDeleteModal
+        isOpen={deleteModalState.isOpen}
+        onClose={() => setDeleteModalState({isOpen: false, tx: null})}
+        onConfirm={confirmDelete}
+        title={`Delete ${deleteModalState.tx?.type} Invoice`}
+        message={`Are you sure you want to delete ${deleteModalState.tx?.type.toLowerCase()} invoice ${deleteModalState.tx?.invoiceNo} for ${deleteModalState.tx?.partyName}? This action cannot be undone.`}
+        isDeleting={isDeleting}
+      />
     </div>
   );
 }

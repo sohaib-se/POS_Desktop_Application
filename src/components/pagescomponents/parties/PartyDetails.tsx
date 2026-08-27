@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useSettings } from "@/hooks/useSettings";
 import { Edit2, Mail, Search, Printer, MoreVertical, Pencil as PencilIcon, Trash2 as TrashIcon } from "lucide-react";
 import type { Party, Transaction, SaleInvoiceEditData, PurchaseBillEditData } from "@/types";
@@ -66,6 +66,35 @@ export function PartyDetails({
 
   const [openRowMenuId, setOpenRowMenuId] = useState<string | null>(null);
   const [openRowMenuPosition, setOpenRowMenuPosition] = useState<{ left: number; top: number } | null>(null);
+
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
+  const searchContainerRef = useRef<HTMLDivElement>(null);
+  const placeholders = ["Type", "Invoice No.", "Amount"];
+  const [placeholderIndex, setPlaceholderIndex] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setPlaceholderIndex((prev) => (prev + 1) % placeholders.length);
+    }, 3000);
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        showTransactionSearch &&
+        searchContainerRef.current &&
+        !searchContainerRef.current.contains(event.target as Node) &&
+        !transactionSearchTerm
+      ) {
+        setShowTransactionSearch(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [showTransactionSearch, transactionSearchTerm, setShowTransactionSearch]);
 
   const [editingPurchaseInvoice, setEditingPurchaseInvoice] = useState<PurchaseBillEditData | null>(null);
   const [viewingSaleInvoice, setViewingSaleInvoice] = useState<SaleInvoiceViewRow | null>(null);
@@ -249,33 +278,54 @@ export function PartyDetails({
             <div className="flex items-center justify-between px-5 py-3 border-b border-gray-200 shrink-0">
               <h3 className="text-base font-semibold text-gray-900">Transactions</h3>
               <div className="flex gap-2 items-center">
-                {showTransactionSearch && (
-                  <div className="flex items-center bg-gray-50 rounded px-3 py-1.5 border border-gray-200 w-64 mr-2">
-                    <Search className="w-4 h-4 text-gray-400 mr-2 shrink-0" />
-                    <input
-                      type="text"
-                      placeholder="Search transactions..."
-                      value={transactionSearchTerm}
-                      onChange={(e) => setTransactionSearchTerm(e.target.value)}
-                      onBlur={() => {
-                        setTimeout(() => {
-                          setShowTransactionSearch(false);
-                          setTransactionSearchTerm("");
-                        }, 150);
-                      }}
-                      className="w-full bg-transparent border-none outline-none text-sm"
-                      autoFocus
-                    />
-                  </div>
-                )}
-                {!showTransactionSearch && (
-                  <button
-                    onClick={() => setShowTransactionSearch(true)}
-                    className="p-1.5 hover:bg-gray-100 rounded"
+                <div className="flex gap-2 items-center h-10" ref={searchContainerRef}>
+                  <div 
+                    className={`flex items-center overflow-hidden transition-all duration-300 ease-out rounded-full h-9 ${
+                      showTransactionSearch 
+                        ? "w-64 bg-white border border-blue-500 ring-4 ring-blue-50 mr-2" 
+                        : "w-9 bg-transparent border border-transparent hover:bg-gray-100 cursor-pointer"
+                    }`}
+                    onClick={(e) => {
+                      if (!showTransactionSearch) {
+                        e.stopPropagation();
+                        setShowTransactionSearch(true);
+                        setTimeout(() => searchInputRef.current?.focus(), 150);
+                      }
+                    }}
                   >
-                    <Search className="w-4 h-4 text-gray-500" />
-                  </button>
-                )}
+                    <div className="flex items-center justify-center h-full w-9 shrink-0">
+                      <Search className={`w-4 h-4 ${showTransactionSearch ? "text-gray-400" : "text-gray-500"}`} />
+                    </div>
+                    <div className={`relative flex-1 h-full flex items-center transition-opacity duration-200 ${
+                        showTransactionSearch ? "opacity-100 delay-100" : "opacity-0"
+                      }`}>
+                      <input
+                        ref={searchInputRef}
+                        type="text"
+                        value={transactionSearchTerm}
+                        onChange={(e) => setTransactionSearchTerm(e.target.value)}
+                        className="bg-transparent border-none outline-none focus:ring-0 focus:outline-none focus:border-transparent text-sm h-full w-full pr-3 relative z-10"
+                      />
+                      {!transactionSearchTerm && (
+                        <div className="absolute left-0 pointer-events-none flex items-center h-full w-full overflow-hidden text-gray-400 text-sm">
+                          <span className="whitespace-pre">Search </span>
+                          <div className="relative h-full flex-1 overflow-hidden">
+                            {placeholders.map((ph, idx) => (
+                              <span
+                                key={ph}
+                                className={`absolute top-0 left-0 flex items-center h-full transition-all duration-700 ease-in-out ${
+                                  idx === placeholderIndex ? "opacity-100 translate-y-0" : "opacity-0 translate-y-3"
+                                }`}
+                              >
+                                {ph}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
                 <button
                   onClick={handlePrintTransactions}
                   className="p-1.5 hover:bg-gray-100 rounded"

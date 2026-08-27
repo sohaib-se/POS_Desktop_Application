@@ -9,7 +9,9 @@ import { PaymentInRowMenu } from "@/components/pagescomponents/paymentin/Payment
 import { ViewPaymentInModal } from "@/components/pagescomponents/paymentin/ViewPaymentInModal";
 import { EnterPasscodeScreen } from "@/components/common/EnterPasscodeScreen";
 import { PaymentInPrintPreviewModal } from "@/components/pagescomponents/paymentin/PaymentInPrintPreviewModal";
+import { PaymentInReceiptPreviewModal } from "@/components/pagescomponents/paymentin/PaymentInReceiptPreviewModal";
 import { useSettings } from "@/hooks/useSettings";
+import { exportPaymentInToExcel } from "@/utils/exportPaymentInExcel";
 
 export function PaymentIn() {
   const [showAddPayment, setShowAddPayment] = useState(false);
@@ -22,6 +24,7 @@ export function PaymentIn() {
   const [bankAccounts, setBankAccounts] = useState<any[]>([]);
   const [records, setRecords] = useState<any[]>([]);
   const [viewingRecord, setViewingRecord] = useState<any>(null);
+  const [previewingRecord, setPreviewingRecord] = useState<any>(null);
   const [businessProfile, setBusinessProfile] = useState<any>(null);
 
   const [paymentType, setPaymentType] = useState("Cash");
@@ -41,6 +44,7 @@ export function PaymentIn() {
 
   const [isPasscodeEnabled] = useSettings('settings.isPasscodeEnabled', false);
   const [isPasscodeForTransactionEnabled] = useSettings('settings.isPasscodeForTransactionEnabled', false);
+  const [currency] = useSettings('settings.businessCurrency', { code: 'PKR', symbol: 'Rs', name: 'Rupees' });
   const [passcodeAction, setPasscodeAction] = useState<{ type: 'edit' | 'delete', payload: string } | null>(null);
 
   const [selectedMonth, setSelectedMonth] = useState<string>(() => {
@@ -424,6 +428,10 @@ export function PaymentIn() {
             setOpenRowMenuPosition={setOpenRowMenuPosition}
             setOpenRowMenuId={setOpenRowMenuId}
             onPrintClick={() => setShowPrintPreview(true)}
+            onExcelClick={() => {
+              const currencyCode = (currency as any)?.code || 'PKR';
+              exportPaymentInToExcel(filteredRecords, selectedMonth, currencyCode);
+            }}
           />
         )}
 
@@ -458,16 +466,17 @@ export function PaymentIn() {
           openRowMenuId={openRowMenuId}
           openRowMenuPosition={openRowMenuPosition}
           records={records}
-          setViewingRecord={setViewingRecord}
+          onPreview={(record) => setPreviewingRecord(record)}
           setOpenRowMenuId={setOpenRowMenuId}
           setOpenRowMenuPosition={setOpenRowMenuPosition}
           setShowAddPayment={handleEditClick}
           handleDelete={handleDeleteClick}
         />
 
-        <ViewPaymentInModal
-          viewingRecord={viewingRecord}
-          setViewingRecord={setViewingRecord}
+        <PaymentInReceiptPreviewModal
+          record={previewingRecord}
+          businessProfile={businessProfile}
+          onClose={() => setPreviewingRecord(null)}
         />
 
         {passcodeAction && (

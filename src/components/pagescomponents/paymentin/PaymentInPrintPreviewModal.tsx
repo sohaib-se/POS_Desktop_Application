@@ -51,7 +51,7 @@ export function PaymentInPrintPreviewModal({
       <DialogContent
         showCloseButton={false}
         className="print-dialog-content rounded-xl border-0 bg-white p-0 shadow-xl flex flex-col print:shadow-none print:m-0 print:p-0 print:border-none"
-        style={{ width: '50vw', maxWidth: '50vw' }}
+        style={{ width: "750px", maxWidth: "96vw" }}
       >
         <div className="flex items-center justify-between p-4 border-b print:hidden">
           <h2 className="text-xl font-bold">Preview</h2>

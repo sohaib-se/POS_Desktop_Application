@@ -27,7 +27,6 @@ export function PaymentOutTable({
   setShowSearchInput,
   setSearchQuery,
   onPrintClick,
-  onExcelClick,
 }: PaymentOutTableProps) {
   const [currency] = useSettings('settings.businessCurrency', { code: 'PKR', symbol: 'Rs' });
   const [currencyDisplay] = useSettings<'abbreviation' | 'icon'>('settings.currencyDisplay', 'abbreviation');
@@ -71,12 +70,11 @@ export function PaymentOutTable({
           TRANSACTIONS
         </h3>
         <div className="flex gap-2 items-center h-10" ref={searchContainerRef}>
-          <div 
-            className={`flex items-center overflow-hidden transition-all duration-300 ease-out rounded-full h-9 ${
-              showSearchInput 
-                ? "w-64 bg-white border border-blue-500 ring-4 ring-blue-50" 
+          <div
+            className={`flex items-center overflow-hidden transition-all duration-300 ease-out rounded-full h-9 ${showSearchInput
+                ? "w-64 bg-white border border-blue-500 ring-4 ring-blue-50"
                 : "w-9 bg-transparent border border-transparent hover:bg-gray-100 cursor-pointer"
-            }`}
+              }`}
             onClick={(e) => {
               if (!showSearchInput) {
                 e.stopPropagation();
@@ -88,8 +86,7 @@ export function PaymentOutTable({
             <div className="flex items-center justify-center h-full w-9 shrink-0">
               <Search className={`w-4 h-4 ${showSearchInput ? "text-gray-400" : "text-gray-500"}`} />
             </div>
-            <div className={`relative flex-1 h-full flex items-center transition-opacity duration-200 ${
-                showSearchInput ? "opacity-100 delay-100" : "opacity-0"
+            <div className={`relative flex-1 h-full flex items-center transition-opacity duration-200 ${showSearchInput ? "opacity-100 delay-100" : "opacity-0"
               }`}>
               <input
                 ref={searchInputRef}
@@ -105,9 +102,8 @@ export function PaymentOutTable({
                     {placeholders.map((ph, idx) => (
                       <span
                         key={ph}
-                        className={`absolute top-0 left-0 flex items-center h-full transition-all duration-700 ease-in-out ${
-                          idx === placeholderIndex ? "opacity-100 translate-y-0" : "opacity-0 translate-y-3"
-                        }`}
+                        className={`absolute top-0 left-0 flex items-center h-full transition-all duration-700 ease-in-out ${idx === placeholderIndex ? "opacity-100 translate-y-0" : "opacity-0 translate-y-3"
+                          }`}
                       >
                         {ph}
                       </span>
@@ -127,7 +123,7 @@ export function PaymentOutTable({
             </button>
           )}
           <button
-            onClick={() => {}}
+            onClick={() => { }}
             className="p-1.5 hover:bg-[#F7F9FB] rounded relative"
             title="Download Excel"
           >
@@ -166,20 +162,14 @@ export function PaymentOutTable({
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
-            {records.map((payment) => (
-              <tr
-                key={payment.id}
-                className="border-b border-gray-100 hover:bg-gray-50"
-              >
-                <td className="px-4 py-3">{payment.date}</td>
-                <td className="px-4 py-3">{payment.paymentNo || ""}</td>
-                <td className="px-4 py-3">{payment.partyName}</td>
-                <td className="px-4 py-3 text-right">
-                  {currencyStr} {payment.amount.toFixed(2)}
+            {records.length === 0 ? (
+              <tr>
+                <td colSpan={7} className="px-4 py-8 text-center text-gray-500">
+                  No payment out records found for the selected month.
                 </td>
               </tr>
             ) : (
-              filteredRecords.map((payment) => (
+              records.map((payment) => (
                 <tr
                   key={payment.id}
                   className="border-b border-gray-100 hover:bg-gray-50"
@@ -196,35 +186,35 @@ export function PaymentOutTable({
                   <td className="px-4 py-3">{payment.paymentType}</td>
                   <td className="px-4 py-3 relative">
                     <div className="flex items-center justify-center gap-2">
-                    <button
-                      className="p-1.5 hover:bg-gray-100 rounded"
-                      title="More actions"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        const targetRect = event.currentTarget.getBoundingClientRect();
-                        const menuWidth = 144;
-                        const menuHeight = 116; 
-                        const nextLeft = Math.max(8, Math.min(targetRect.right - menuWidth, window.innerWidth - menuWidth - 8));
-                        const nextTop = targetRect.bottom + menuHeight > window.innerHeight
-                          ? Math.max(8, targetRect.top - menuHeight - 8)
-                          : targetRect.bottom + 8;
+                      <button
+                        className="p-1.5 hover:bg-gray-100 rounded"
+                        title="More actions"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          const targetRect = event.currentTarget.getBoundingClientRect();
+                          const menuWidth = 144;
+                          const menuHeight = 116;
+                          const nextLeft = Math.max(8, Math.min(targetRect.right - menuWidth, window.innerWidth - menuWidth - 8));
+                          const nextTop = targetRect.bottom + menuHeight > window.innerHeight
+                            ? Math.max(8, targetRect.top - menuHeight - 8)
+                            : targetRect.bottom + 8;
 
-                        setOpenRowMenuPosition((previousPosition) =>
-                          openRowMenuId === payment.id && previousPosition
-                            ? null
-                            : { left: nextLeft, top: nextTop },
-                        );
-                        setOpenRowMenuId((previous) =>
-                          previous === payment.id ? null : payment.id,
-                        );
-                      }}
-                    >
-                      <MoreVertical className="w-4 h-4 text-gray-500" />
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))
+                          setOpenRowMenuPosition((previousPosition) =>
+                            openRowMenuId === payment.id && previousPosition
+                              ? null
+                              : { left: nextLeft, top: nextTop },
+                          );
+                          setOpenRowMenuId((previous) =>
+                            previous === payment.id ? null : payment.id,
+                          );
+                        }}
+                      >
+                        <MoreVertical className="w-4 h-4 text-gray-500" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))
             )}
           </tbody>
         </table>

@@ -1,7 +1,7 @@
 import { useSettings } from "@/hooks/useSettings";
 import { useCallback, useEffect, useState, useMemo } from "react";
 import { ChevronDown, Printer, ArrowLeft } from "lucide-react";
-import { getMonthKeyFromDate, formatDateDisplay, monthLabelForFilter, formatMonthLabel } from "../../saleinvoices/utils";
+import { getMonthKeyFromDate, formatDateDisplay, formatMonthLabel } from "../../saleinvoices/utils";
 
 interface SalePurchaseByPartyProps {
   onBack: () => void;
@@ -21,7 +21,9 @@ export function SalePurchaseByParty({ onBack }: SalePurchaseByPartyProps) {
 
   const [loading, setLoading] = useState(true);
   
-  // Filter state
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
+
   const [selectedMonthKey, setSelectedMonthKey] = useState<string>("");
   const [isMonthMenuOpen, setIsMonthMenuOpen] = useState(false);
   const [availableMonths, setAvailableMonths] = useState<string[]>([]);
@@ -74,12 +76,7 @@ export function SalePurchaseByParty({ onBack }: SalePurchaseByPartyProps) {
         const sortedMonths = Array.from(months).sort((a, b) => b.localeCompare(a));
         setAvailableMonths(sortedMonths);
 
-        const currentMonthKey = getMonthKeyFromDate(formatDateDisplay(new Date()));
-        let defaultMonth = currentMonthKey;
-        if (sortedMonths.length > 0 && !sortedMonths.includes(currentMonthKey)) {
-            defaultMonth = sortedMonths[0];
-        }
-        setSelectedMonthKey(defaultMonth);
+
 
     } catch (error) {
         console.error(error);
@@ -95,13 +92,39 @@ export function SalePurchaseByParty({ onBack }: SalePurchaseByPartyProps) {
   const isAllParties = selectedPartyFilter === "All Firms";
 
   const displayData = useMemo(() => {
-      const filteredSales = selectedMonthKey 
-          ? rawSales.filter(s => getMonthKeyFromDate(s.date) === selectedMonthKey)
-          : rawSales;
+      const parseLocalDate = (dStr: string) => {
+        if (!dStr) return new Date();
+        if (dStr.includes('/')) {
+          const [dd, mm, yyyy] = dStr.split('/');
+          return new Date(Number(yyyy), Number(mm) - 1, Number(dd));
+        }
+        if (dStr.includes('-')) {
+          const [yyyy, mm, dd] = dStr.split('-');
+          return new Date(Number(yyyy), Number(mm) - 1, Number(dd));
+        }
+        return new Date(dStr);
+      };
 
-      const filteredPurchases = selectedMonthKey 
-          ? rawPurchases.filter(p => getMonthKeyFromDate(p.date) === selectedMonthKey)
-          : rawPurchases;
+      const filterByDate = (record: any) => {
+        if (!dateFrom && !dateTo) return true;
+        const recordDateStr = record.date;
+        if (!recordDateStr) return true;
+
+        const recordTime = parseLocalDate(recordDateStr).getTime();
+
+        if (dateFrom) {
+          if (recordTime < parseLocalDate(dateFrom).getTime()) return false;
+        }
+        if (dateTo) {
+          const to = parseLocalDate(dateTo);
+          to.setHours(23, 59, 59, 999);
+          if (recordTime > to.getTime()) return false;
+        }
+        return true;
+      };
+
+      const filteredSales = rawSales.filter(filterByDate);
+      const filteredPurchases = rawPurchases.filter(filterByDate);
 
       const partyMap = new Map<number, AggregateData>();
 
@@ -165,7 +188,7 @@ export function SalePurchaseByParty({ onBack }: SalePurchaseByPartyProps) {
       }
 
       return results.sort((a, b) => a.partyName.localeCompare(b.partyName));
-  }, [rawParties, rawSales, rawPurchases, selectedMonthKey, selectedPartyFilter, isAllParties, searchQuery]);
+  }, [rawParties, rawSales, rawPurchases, dateFrom, dateTo, selectedPartyFilter, isAllParties, searchQuery]);
 
   const totalSale = displayData.reduce((sum, item) => sum + item.totalSaleAmount, 0);
   const totalPurchase = displayData.reduce((sum, item) => sum + item.totalPurchaseAmount, 0);
@@ -193,7 +216,8 @@ export function SalePurchaseByParty({ onBack }: SalePurchaseByPartyProps) {
   };
 
   const currentMonthKey = getMonthKeyFromDate(formatDateDisplay(new Date()));
-  const monthButtonLabel = selectedMonthKey === currentMonthKey ? "This Month" : monthLabelForFilter(selectedMonthKey);
+  const monthButtonLabel = selectedMonthKey === currentMonthKey ? "This Month" : (selectedMonthKey ? formatMonthLabel(selectedMonthKey) : "Filter by Month");
+
   const partyButtonLabel = isAllParties ? "All Firms" : (rawParties.find(p => String(p.id) === selectedPartyFilter)?.name || selectedPartyFilter);
 
   return (
@@ -205,7 +229,7 @@ export function SalePurchaseByParty({ onBack }: SalePurchaseByPartyProps) {
             <ArrowLeft className="w-5 h-5" />
           </button>
           
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-4 ml-4 flex-wrap">
             <div className="relative">
                 <button 
                 onClick={(e) => {
@@ -228,6 +252,8 @@ export function SalePurchaseByParty({ onBack }: SalePurchaseByPartyProps) {
                     className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50"
                     onClick={() => {
                         setSelectedMonthKey("");
+                        setDateFrom("");
+                        setDateTo("");
                         setIsMonthMenuOpen(false);
                     }}
                     >
@@ -238,8 +264,14 @@ export function SalePurchaseByParty({ onBack }: SalePurchaseByPartyProps) {
                         key={monthKey}
                         className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50"
                         onClick={() => {
-                        setSelectedMonthKey(monthKey);
-                        setIsMonthMenuOpen(false);
+                            setSelectedMonthKey(monthKey);
+                            const [yyyy, mm] = monthKey.split('-');
+                            const firstDay = `${yyyy}-${mm}-01`;
+                            const lastDay = new Date(Number(yyyy), Number(mm), 0).getDate();
+                            const lastDayStr = `${yyyy}-${mm}-${String(lastDay).padStart(2, '0')}`;
+                            setDateFrom(firstDay);
+                            setDateTo(lastDayStr);
+                            setIsMonthMenuOpen(false);
                         }}
                     >
                         {formatMonthLabel(monthKey)}
@@ -249,24 +281,37 @@ export function SalePurchaseByParty({ onBack }: SalePurchaseByPartyProps) {
                 )}
             </div>
 
-            {/* Date Range Display (Mocked based on image) */}
-            {selectedMonthKey && (
-              <div className="flex items-center bg-gray-100 rounded border border-gray-300 ml-4 overflow-hidden">
-                <div className="px-3 py-1.5 bg-gray-400 text-white text-sm font-medium">Between</div>
-                <div className="px-3 py-1.5 text-sm text-gray-700 font-medium">
-                  {/* Just showing a static date range for demo, can be calculated from monthKey */}
-                  01/{selectedMonthKey.split('-')[1]}/{selectedMonthKey.split('-')[0]} To 31/{selectedMonthKey.split('-')[1]}/{selectedMonthKey.split('-')[0]}
-                </div>
-              </div>
-            )}
+            <div className="flex items-center gap-2 ml-2">
+              <span className="text-sm text-gray-600 font-medium">From:</span>
+              <input
+                type="date"
+                value={dateFrom}
+                onChange={(e) => {
+                  setDateFrom(e.target.value);
+                  setSelectedMonthKey("");
+                }}
+                className="px-3 py-1.5 border border-gray-300 rounded bg-white text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-gray-600 font-medium">To:</span>
+              <input
+                type="date"
+                value={dateTo}
+                onChange={(e) => {
+                  setDateTo(e.target.value);
+                  setSelectedMonthKey("");
+                }}
+                className="px-3 py-1.5 border border-gray-300 rounded bg-white text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+              />
+            </div>
 
             {/* Party/Firm Filter */}
-            <div className="relative ml-4">
+            <div className="relative ml-2">
                 <button 
                 onClick={(e) => {
                     e.stopPropagation();
                     setIsPartyMenuOpen(!isPartyMenuOpen);
-                    setIsMonthMenuOpen(false);
                 }}
                 className="flex items-center justify-between w-56 px-3 py-1.5 border border-gray-300 rounded bg-white text-sm hover:bg-gray-50"
                 >

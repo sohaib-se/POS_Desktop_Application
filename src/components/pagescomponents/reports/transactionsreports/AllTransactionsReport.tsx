@@ -366,10 +366,14 @@ export function AllTransactionsReport({ onBack, onEditInvoice }: AllTransactions
 
         <div className="flex items-center gap-2">
           <span className="text-sm text-gray-500">Selected month:</span>
-          <button className="flex items-center gap-2 px-3 py-1.5 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50">
-            <Calendar className="w-4 h-4" />
-            {monthButtonLabel}
-          </button>
+          <input
+            type="month"
+            value={selectedMonthKey}
+            onChange={(e) => {
+              setSelectedMonthKey(e.target.value);
+            }}
+            className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#008AC9] transition-all cursor-pointer"
+          />
         </div>
       </div>
 

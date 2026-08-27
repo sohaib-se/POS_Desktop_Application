@@ -1,6 +1,7 @@
 import { useSettings } from "@/hooks/useSettings";
 import { useCallback, useEffect, useState, useMemo } from "react";
-import { Printer, ArrowLeft, Calendar, FileText } from "lucide-react";
+import { Printer, ArrowLeft, FileText } from "lucide-react";
+import { getMonthKeyFromDate, formatDateDisplay } from "../../saleinvoices/utils";
 
 interface StockInOutDetailsProps {
   onBack: () => void;
@@ -37,19 +38,17 @@ const parseLineItems = (lineItemsJson: string | null | undefined) => {
     }
 };
 
-const parseDateString = (dateStr: string | undefined | null) => {
-    if (!dateStr) return 0;
-    if (dateStr.includes("/")) {
-        const parts = dateStr.split("/");
-        if (parts.length === 3) {
-            const day = parseInt(parts[0], 10);
-            const month = parseInt(parts[1], 10) - 1;
-            const year = parseInt(parts[2], 10);
-            return new Date(year, month, day).getTime();
-        }
-    }
-    const t = new Date(dateStr).getTime();
-    return isNaN(t) ? 0 : t;
+const parseLocalDate = (dStr: string | undefined | null) => {
+  if (!dStr) return new Date(0);
+  if (dStr.includes('/')) {
+    const [dd, mm, yyyy] = dStr.split('/');
+    return new Date(Number(yyyy), Number(mm) - 1, Number(dd));
+  }
+  if (dStr.includes('-')) {
+    const [yyyy, mm, dd] = dStr.split('-');
+    return new Date(Number(yyyy), Number(mm) - 1, Number(dd));
+  }
+  return new Date(dStr);
 };
 
 export function StockInOutDetails({ onBack }: StockInOutDetailsProps) {
@@ -59,15 +58,7 @@ export function StockInOutDetails({ onBack }: StockInOutDetailsProps) {
 
   const [loading, setLoading] = useState(true);
   
-  // Date Filter State
-  const defaultFrom = new Date();
-  defaultFrom.setDate(1); // First day of current month
-  const defaultTo = new Date();
-  
-  const formatDateForInput = (d: Date) => d.toISOString().split('T')[0];
-  
-  const [fromDate, setFromDate] = useState(formatDateForInput(defaultFrom));
-  const [toDate, setToDate] = useState(formatDateForInput(defaultTo));
+  const [selectedMonthKey, setSelectedMonthKey] = useState<string>("");
 
   const [selectedCategory, setSelectedCategory] = useState("All Categories");
 
@@ -108,6 +99,9 @@ export function StockInOutDetails({ onBack }: StockInOutDetailsProps) {
         });
         setCategories(Array.from(cats).sort());
 
+        const currentMonthKey = getMonthKeyFromDate(formatDateDisplay(new Date()));
+        setSelectedMonthKey(currentMonthKey);
+
     } catch (error) {
         console.error("Failed to load stock in/out data", error);
     } finally {
@@ -136,12 +130,17 @@ export function StockInOutDetails({ onBack }: StockInOutDetailsProps) {
           });
       });
 
-      const fromTime = new Date(fromDate).getTime();
-      const toTime = new Date(toDate).setHours(23, 59, 59, 999); // End of toDate
+      let fromTime = 0;
+      let toTime = Infinity;
+      if (selectedMonthKey) {
+          const [yyyy, mm] = selectedMonthKey.split('-');
+          fromTime = new Date(Number(yyyy), Number(mm) - 1, 1).getTime();
+          toTime = new Date(Number(yyyy), Number(mm), 0, 23, 59, 59, 999).getTime();
+      }
 
       // Process Purchases (In)
       rawPurchases.forEach(purchase => {
-          const purchaseTime = parseDateString(purchase.date);
+          const purchaseTime = parseLocalDate(purchase.date).getTime();
           const isBeforeFrom = purchaseTime < fromTime;
           const isWithinRange = purchaseTime >= fromTime && purchaseTime <= toTime;
           
@@ -167,7 +166,7 @@ export function StockInOutDetails({ onBack }: StockInOutDetailsProps) {
 
       // Process Adjustments (In)
       rawAdjustments.forEach(adj => {
-          const adjTime = parseDateString(adj.date);
+          const adjTime = parseLocalDate(adj.date).getTime();
           const isBeforeFrom = adjTime < fromTime;
           const isWithinRange = adjTime >= fromTime && adjTime <= toTime;
           
@@ -190,7 +189,7 @@ export function StockInOutDetails({ onBack }: StockInOutDetailsProps) {
 
       // Process Sales (Out)
       rawSales.forEach(sale => {
-          const saleTime = parseDateString(sale.date);
+          const saleTime = parseLocalDate(sale.date).getTime();
           const isBeforeFrom = saleTime < fromTime;
           const isWithinRange = saleTime >= fromTime && saleTime <= toTime;
           
@@ -227,7 +226,7 @@ export function StockInOutDetails({ onBack }: StockInOutDetailsProps) {
       }
 
       return results.sort((a, b) => a.itemName.localeCompare(b.itemName));
-  }, [rawItems, rawSales, rawPurchases, rawAdjustments, fromDate, toDate, selectedCategory]);
+  }, [rawItems, rawSales, rawPurchases, rawAdjustments, selectedMonthKey, selectedCategory]);
 
   const totals = displayData.reduce((acc, row) => {
       acc.beginningQuantity += row.beginningQuantity;
@@ -280,23 +279,14 @@ export function StockInOutDetails({ onBack }: StockInOutDetailsProps) {
             <ArrowLeft className="w-5 h-5" />
           </button>
           
-          <div className="flex items-center border border-gray-300 rounded px-3 py-1.5 bg-white shadow-sm">
-             <span className="text-gray-500 text-sm mr-2">From</span>
-             <input 
-                type="date" 
-                className="outline-none text-sm text-gray-700 bg-transparent"
-                value={fromDate}
-                onChange={e => setFromDate(e.target.value)}
-             />
-             <Calendar className="w-4 h-4 text-gray-400 mx-2" />
-             <span className="text-gray-500 text-sm mr-2 ml-2">To</span>
-             <input 
-                type="date" 
-                className="outline-none text-sm text-gray-700 bg-transparent"
-                value={toDate}
-                onChange={e => setToDate(e.target.value)}
-             />
-             <Calendar className="w-4 h-4 text-gray-400 ml-2" />
+          <div className="flex items-center ml-4">
+              <span className="text-sm text-gray-500 mr-2">Filter by Month :</span>
+              <input 
+                type="month" 
+                value={selectedMonthKey}
+                onChange={(e) => setSelectedMonthKey(e.target.value)}
+                className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
           </div>
         </div>
 

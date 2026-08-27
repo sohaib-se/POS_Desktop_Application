@@ -21,17 +21,17 @@ interface CashFlowRow extends Transaction {
   runningCash: number;
 }
 
-const getCurrencySymbol = () => {
-  try {
-    const saved = localStorage.getItem('settings.currency');
-    if (saved) {
-      const parsed = JSON.parse(saved);
-      if (parsed && parsed.symbol) return parsed.symbol;
-    }
-  } catch {
-    // ignore
+const parseLocalDate = (dStr: string) => {
+  if (!dStr) return new Date();
+  if (dStr.includes('/')) {
+    const [dd, mm, yyyy] = dStr.split('/');
+    return new Date(Number(yyyy), Number(mm) - 1, Number(dd));
   }
-  return `${currencyStr} `;
+  if (dStr.includes('-')) {
+    const [yyyy, mm, dd] = dStr.split('-');
+    return new Date(Number(yyyy), Number(mm) - 1, Number(dd));
+  }
+  return new Date(dStr);
 };
 
 export function CashFlow({ onBack }: CashFlowProps) {
@@ -54,9 +54,7 @@ export function CashFlow({ onBack }: CashFlowProps) {
           
           // Sort chronologically (ascending) to calculate running cash
           const sortedAsc = [...data].sort((a, b) => {
-            const dateA = a.created_at ? new Date(a.created_at).getTime() : new Date(a.date.split('/').reverse().join('-')).getTime();
-            const dateB = b.created_at ? new Date(b.created_at).getTime() : new Date(b.date.split('/').reverse().join('-')).getTime();
-            return dateA - dateB;
+            return parseLocalDate(a.date).getTime() - parseLocalDate(b.date).getTime();
           });
 
           let runningCash = 0;
@@ -98,14 +96,13 @@ export function CashFlow({ onBack }: CashFlowProps) {
     
     let matchesDate = true;
     if (dateFrom || dateTo) {
-      const txDate = tx.created_at ? new Date(tx.created_at).getTime() : new Date(tx.date.split('/').reverse().join('-')).getTime();
+      const txDate = parseLocalDate(tx.date).getTime();
       
       if (dateFrom) {
-        const fromDate = new Date(dateFrom).getTime();
-        if (txDate < fromDate) matchesDate = false;
+        if (txDate < parseLocalDate(dateFrom).getTime()) matchesDate = false;
       }
       if (dateTo) {
-        const toDate = new Date(dateTo);
+        const toDate = parseLocalDate(dateTo);
         toDate.setHours(23, 59, 59, 999);
         if (txDate > toDate.getTime()) matchesDate = false;
       }

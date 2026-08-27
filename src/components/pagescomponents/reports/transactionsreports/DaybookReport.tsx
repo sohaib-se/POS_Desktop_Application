@@ -34,6 +34,16 @@ export function DaybookReport({ onBack, onEditInvoice }: DaybookReportProps) {
   const [transactions, setTransactions] = useState<TransactionRow[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const getTodayYMD = () => {
+    const d = new Date();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    const yyyy = d.getFullYear();
+    return `${yyyy}-${mm}-${dd}`;
+  };
+
+  const [selectedDate, setSelectedDate] = useState(getTodayYMD());
+
   // Table state
   const [searchQuery, setSearchQuery] = useState("");
   const [showSearchInput, setShowSearchInput] = useState(false);
@@ -108,12 +118,13 @@ export function DaybookReport({ onBack, onEditInvoice }: DaybookReportProps) {
       ]);
       
       let allTx: TransactionRow[] = [];
-      const todayString = formatDateDisplay(new Date());
+      const parts = selectedDate.split('-');
+      const targetDateString = parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : formatDateDisplay(new Date());
       
       if (salesRes && salesRes.ok) {
         const sales = await salesRes.json();
         allTx = allTx.concat(sales
-          .filter((s: any) => s.date === todayString)
+          .filter((s: any) => s.date === targetDateString)
           .map((s: any) => ({
             id: `sale-${s.id}`,
             originalId: s.id,
@@ -154,7 +165,7 @@ export function DaybookReport({ onBack, onEditInvoice }: DaybookReportProps) {
       if (purchasesRes && purchasesRes.ok) {
         const purchases = await purchasesRes.json();
         allTx = allTx.concat(purchases
-          .filter((p: any) => p.date === todayString)
+          .filter((p: any) => p.date === targetDateString)
           .map((p: any) => ({
             id: `purchase-${p.id}`,
             originalId: p.id,
@@ -202,7 +213,7 @@ export function DaybookReport({ onBack, onEditInvoice }: DaybookReportProps) {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [selectedDate]);
 
   useEffect(() => {
     void loadTransactions();
@@ -219,7 +230,8 @@ export function DaybookReport({ onBack, onEditInvoice }: DaybookReportProps) {
   const totalSales = transactions.filter(r => r.type === 'Sale').reduce((sum, invoice) => sum + invoice.amount, 0);
   const totalPurchases = transactions.filter(r => r.type === 'Purchase').reduce((sum, invoice) => sum + invoice.amount, 0);
 
-  const todayDisplay = formatDateDisplay(new Date());
+  const isToday = selectedDate === getTodayYMD();
+  const displayDateStr = selectedDate.split('-').reverse().join('/');
 
   const handleDownloadCsv = () => {
     // simplified csv download for reporting
@@ -232,7 +244,7 @@ export function DaybookReport({ onBack, onEditInvoice }: DaybookReportProps) {
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = `daybook-${todayDisplay.replace(/\//g, '-')}.csv`;
+    link.download = `daybook-${displayDateStr.replace(/\//g, '-')}.csv`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -298,12 +310,14 @@ export function DaybookReport({ onBack, onEditInvoice }: DaybookReportProps) {
         className="p-4 bg-white rounded-md shadow-sm flex items-center gap-4 shrink-0"
         style={{ marginLeft: "4px", marginRight: "4px" }}
       >
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-500">Date:</span>
-          <button className="flex items-center gap-2 px-3 py-1.5 border border-gray-300 bg-gray-50 rounded-lg text-sm text-gray-700 cursor-default">
-            <Calendar className="w-4 h-4" />
-            {todayDisplay} (Today)
-          </button>
+        <div className="flex items-center gap-3">
+          <span className="text-sm font-medium text-gray-600 uppercase tracking-wide">Filter By day:</span>
+          <input 
+            type="date"
+            className="px-3 py-2 border border-gray-300 bg-gray-50 rounded-lg text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#008AC9] transition-all shadow-sm hover:border-gray-400 w-44"
+            value={selectedDate}
+            onChange={(e) => setSelectedDate(e.target.value)}
+          />
         </div>
       </div>
 
@@ -314,7 +328,7 @@ export function DaybookReport({ onBack, onEditInvoice }: DaybookReportProps) {
       >
         <div className="flex-1 max-w-sm bg-[#F6F0FB] rounded-xl p-4 border border-[#E8D7F6]">
           <div className="flex items-center justify-between mb-1">
-            <span className="text-sm text-[#6B6B83]">Today's Total Sales</span>
+            <span className="text-sm text-[#6B6B83]">{isToday ? "Today's " : ""}Total Sales</span>
           </div>
           <p className="text-xl font-bold text-[#1C1F2A]">
             {currencyStr} {totalSales.toLocaleString()}
@@ -323,7 +337,7 @@ export function DaybookReport({ onBack, onEditInvoice }: DaybookReportProps) {
         
         <div className="flex-1 max-w-sm bg-[#E6F4EA] rounded-xl p-4 border border-[#CEEAD6]">
           <div className="flex items-center justify-between mb-1">
-            <span className="text-sm text-[#3D7D50]">Today's Purchase Bill</span>
+            <span className="text-sm text-[#3D7D50]">{isToday ? "Today's " : ""}Purchase Bill</span>
           </div>
           <p className="text-xl font-bold text-[#134D25]">
             {currencyStr} {totalPurchases.toLocaleString()}
@@ -338,7 +352,7 @@ export function DaybookReport({ onBack, onEditInvoice }: DaybookReportProps) {
       >
         <div className="flex items-center justify-between px-6 pt-4 pb-2 border-b border-gray-200">
           <h3 className="text-base font-bold text-[#222B45] tracking-wide">
-            TODAY'S TRANSACTIONS
+            TRANSACTIONS FOR {displayDateStr}
           </h3>
           <div className="flex gap-2 items-center">
             {showSearchInput && (
@@ -413,13 +427,13 @@ export function DaybookReport({ onBack, onEditInvoice }: DaybookReportProps) {
               {loading ? (
                 <tr>
                   <td colSpan={8} className="px-4 py-10 text-center text-sm text-gray-500">
-                    Loading today's transactions...
+                    Loading transactions...
                   </td>
                 </tr>
               ) : visibleRows.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="px-4 py-10 text-center text-sm text-gray-500">
-                    No transactions found for today.
+                    No transactions found for the selected date.
                   </td>
                 </tr>
               ) : (

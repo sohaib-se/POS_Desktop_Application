@@ -219,30 +219,29 @@ export function AllTransactions() {
   return (
     <div className="h-full flex flex-col bg-gray-50">
       {/* Date Filter Bar */}
-      <div className="p-4 bg-white border-b border-gray-200 flex items-center gap-4">
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-500 w-10">Date</span>
-          <div className="relative">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs">From</span>
+      <div className="p-5 bg-white border-b border-gray-200 flex items-center gap-6">
+        <div className="flex flex-wrap items-center gap-6">
+          <div className="flex items-center gap-3">
+            <label className="text-sm font-semibold text-gray-600 uppercase tracking-wide">From</label>
             <input 
               type="date"
-              className="pl-12 pr-8 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:border-blue-500 w-40"
+              className="px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#008AC9] focus:border-transparent transition-all shadow-sm hover:border-gray-400 w-44"
               value={dateFrom}
               onChange={(e) => setDateFrom(e.target.value)}
             />
           </div>
-          <div className="relative">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs">To</span>
+          <div className="flex items-center gap-3">
+            <label className="text-sm font-semibold text-gray-600 uppercase tracking-wide">To</label>
             <input 
               type="date"
-              className="pl-8 pr-8 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:border-blue-500 w-40"
+              className="px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#008AC9] focus:border-transparent transition-all shadow-sm hover:border-gray-400 w-44"
               value={dateTo}
               onChange={(e) => setDateTo(e.target.value)}
             />
           </div>
           <button 
             onClick={handleSearch}
-            className="bg-[#008AC9] hover:bg-[#007AB3] text-white px-6 py-1.5 rounded font-medium text-sm transition-colors shadow-sm"
+            className="h-[38px] bg-[#008AC9] hover:bg-[#007AB3] text-white px-8 rounded-lg font-medium text-sm transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#008AC9]"
           >
             SEARCH
           </button>

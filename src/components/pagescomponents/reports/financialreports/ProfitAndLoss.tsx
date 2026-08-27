@@ -7,18 +7,7 @@ interface ProfitAndLossProps {
   onBack: () => void;
 }
 
-const getCurrencySymbol = () => {
-  try {
-    const saved = localStorage.getItem('settings.currency');
-    if (saved) {
-      const parsed = JSON.parse(saved);
-      if (parsed && parsed.symbol) return parsed.symbol;
-    }
-  } catch {
-    // ignore
-  }
-  return `${currencyStr} `;
-};
+
 
 export function ProfitAndLoss({ onBack }: ProfitAndLossProps) {
   const [dateFrom, setDateFrom] = useState('');
@@ -30,7 +19,7 @@ export function ProfitAndLoss({ onBack }: ProfitAndLossProps) {
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-    const [currency] = useSettings('settings.businessCurrency', { code: 'PKR', symbol: 'Rs' });
+  const [currency] = useSettings('settings.businessCurrency', { code: 'PKR', symbol: 'Rs' });
   const [currencyDisplay] = useSettings<'abbreviation' | 'icon'>('settings.currencyDisplay', 'abbreviation');
   const currencyStr = currencyDisplay === 'icon' ? currency.symbol : currency.code;
 
@@ -62,20 +51,30 @@ export function ProfitAndLoss({ onBack }: ProfitAndLossProps) {
   }, []);
 
   const stats = useMemo(() => {
+    const parseLocalDate = (dStr: string) => {
+      if (dStr.includes('/')) {
+        const [dd, mm, yyyy] = dStr.split('/');
+        return new Date(Number(yyyy), Number(mm) - 1, Number(dd));
+      }
+      if (dStr.includes('-')) {
+        const [yyyy, mm, dd] = dStr.split('-');
+        return new Date(Number(yyyy), Number(mm) - 1, Number(dd));
+      }
+      return new Date(dStr);
+    };
+
     const filterByDate = (record: any) => {
       if (!dateFrom && !dateTo) return true;
-      const recordDateStr = record.date || record.created_at;
+      const recordDateStr = record.date;
       if (!recordDateStr) return true;
 
-      const recordTime = record.created_at
-        ? new Date(record.created_at).getTime()
-        : new Date(recordDateStr.split('/').reverse().join('-')).getTime();
+      const recordTime = parseLocalDate(recordDateStr).getTime();
 
       if (dateFrom) {
-        if (recordTime < new Date(dateFrom).getTime()) return false;
+        if (recordTime < parseLocalDate(dateFrom).getTime()) return false;
       }
       if (dateTo) {
-        const to = new Date(dateTo);
+        const to = parseLocalDate(dateTo);
         to.setHours(23, 59, 59, 999);
         if (recordTime > to.getTime()) return false;
       }
@@ -101,13 +100,13 @@ export function ProfitAndLoss({ onBack }: ProfitAndLossProps) {
       const lineItems = parseLineItems(sale.line_items_json);
 
       lineItems.forEach((item: any) => {
-          const itemId = String(item.itemId);
-          const qty = Number(item.quantity || item.qty || 0);
-          const invoiceSalePrice = Number(item.price || 0);
-          const purchasePrice = itemPurchasePriceMap.get(itemId) || 0;
+        const itemId = String(item.itemId);
+        const qty = Number(item.quantity || item.qty || 0);
+        const invoiceSalePrice = Number(item.price || 0);
+        const purchasePrice = itemPurchasePriceMap.get(itemId) || 0;
 
-          // Calculate gross profit for this specific item based on its sale price in the invoice
-          grossProfit += (invoiceSalePrice - purchasePrice) * qty;
+        // Calculate gross profit for this specific item based on its sale price in the invoice
+        grossProfit += (invoiceSalePrice - purchasePrice) * qty;
       });
 
       // Subtract any invoice-level discount to get the true net gross profit

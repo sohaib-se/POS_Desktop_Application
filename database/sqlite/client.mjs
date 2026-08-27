@@ -534,10 +534,21 @@ function ensureBankAccountTransactionsTable(db) {
       name TEXT NOT NULL,
       type TEXT NOT NULL,
       amount REAL NOT NULL,
+      attachment_image_path TEXT,
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       updated_at TEXT NOT NULL DEFAULT (datetime('now'))
     )
   `);
+
+  try {
+    const columnsInfo = db.prepare('PRAGMA table_info(bank_account_transactions)').all();
+    const hasImagePath = columnsInfo.some(col => col.name === 'attachment_image_path');
+    if (!hasImagePath) {
+      db.exec('ALTER TABLE bank_account_transactions ADD COLUMN attachment_image_path TEXT');
+    }
+  } catch (err) {
+    console.error('Error adding attachment_image_path to bank_account_transactions:', err);
+  }
 }
 
 function ensureAdjustStockTransactionsTable(db) {

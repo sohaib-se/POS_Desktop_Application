@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { Modal, Input, ModalFooter } from "./SharedComponents";
+import { useState, useEffect, useRef } from "react";
+import { Modal, Input, ModalFooter, ImageUpload } from "./SharedComponents";
 import type { BankAccount } from "./types";
 import { useSettings } from "@/hooks/useSettings";
 
@@ -19,9 +19,27 @@ export function DepositWithdrawModal({ open, onClose, account, onSuccess, initia
   const [type, setType] = useState<"deposit" | "withdraw">("deposit");
   const [amount, setAmount] = useState("");
   const [description, setDescription] = useState("");
+  const [imageDataUrl, setImageDataUrl] = useState("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [isSaving, setIsSaving] = useState(false);
 
+  const [date, setDate] = useState("");
+
   const today = new Date().toLocaleDateString("en-GB").replace(/\//g, "/");
+
+  const toYMD = (dmy: string) => {
+    if (!dmy || !dmy.includes("/")) return dmy;
+    const parts = dmy.split("/");
+    if (parts.length === 3) return `${parts[2]}-${parts[1]}-${parts[0]}`;
+    return dmy;
+  };
+
+  const toDMY = (ymd: string) => {
+    if (!ymd || !ymd.includes("-")) return ymd;
+    const parts = ymd.split("-");
+    if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
+    return ymd;
+  };
 
   useEffect(() => {
     if (open) {
@@ -30,10 +48,14 @@ export function DepositWithdrawModal({ open, onClose, account, onSuccess, initia
         setType(isDeposit ? "deposit" : "withdraw");
         setAmount(Math.abs(Number(initialData.amount)).toString());
         setDescription(initialData.name || "");
+        setImageDataUrl(initialData.attachment_image_path || "");
+        setDate(initialData.date || today);
       } else {
         setType("deposit");
         setAmount("");
         setDescription("");
+        setImageDataUrl("");
+        setDate(today);
       }
     }
   }, [open, initialData]);
@@ -46,7 +68,7 @@ export function DepositWithdrawModal({ open, onClose, account, onSuccess, initia
   const updatedCash = baseBalance + (type === "deposit" ? Number(amount || 0) : -Number(amount || 0));
 
   const handleSave = async () => {
-    if (!amount || Number(amount) <= 0 || !description) return;
+    if (!amount || Number(amount) <= 0) return;
     setIsSaving(true);
     try {
       const url = initialData ? `/api/bank_account_transactions/${initialData.id}` : `/api/bank_account_transactions`;
@@ -60,7 +82,8 @@ export function DepositWithdrawModal({ open, onClose, account, onSuccess, initia
           type: type === "deposit" ? "Payment In" : "Payment Out",
           name: description,
           amount: type === "deposit" ? Number(amount) : -Number(amount),
-          date: initialData?.date || today,
+          date: date,
+          imageDataUrl: imageDataUrl,
         }),
       });
 
@@ -116,19 +139,31 @@ export function DepositWithdrawModal({ open, onClose, account, onSuccess, initia
           Updated Cash: <span className="font-semibold">{currencyStr} {updatedCash.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</span>
         </div>
 
-        <Input label="Adjustment Date" value={today} readOnly />
+        <Input 
+          type="date" 
+          label="Adjustment Date" 
+          value={toYMD(date)} 
+          onChange={(e) => setDate(toDMY(e.target.value))} 
+        />
 
         <div>
           <label className="block text-sm text-gray-600 mb-1">
-            Description<span className="text-red-500 ml-0.5">*</span>
+            Description
           </label>
           <textarea
             placeholder="Enter Description"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             rows={3}
-            required
             className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-100 resize-none"
+          />
+        </div>
+
+        <div>
+          <ImageUpload 
+            imageDataUrl={imageDataUrl} 
+            setImageDataUrl={setImageDataUrl} 
+            fileInputRef={fileInputRef} 
           />
         </div>
       </div>

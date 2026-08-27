@@ -1,5 +1,5 @@
 import React from "react";
-import { ChevronDown, X, Upload } from "lucide-react";
+import { ChevronDown, X, Camera } from "lucide-react";
 
 export interface ModalProps {
   open: boolean;
@@ -91,16 +91,69 @@ export function Select({ label, value, onChange, options, className = "" }: Sele
   );
 }
 
-export function ImageUpload() {
+export interface ImageUploadProps {
+  imageDataUrl: string;
+  setImageDataUrl: (url: string) => void;
+  fileInputRef: React.RefObject<HTMLInputElement | null>;
+}
+
+export function ImageUpload({ imageDataUrl, setImageDataUrl, fileInputRef }: ImageUploadProps) {
   return (
     <div>
-      <label className="block text-sm text-gray-600 mb-1">Image</label>
-      <div className="border border-dashed border-gray-300 rounded-lg px-4 py-5 flex items-center justify-center cursor-pointer hover:bg-gray-50 transition-colors">
-        <div className="flex items-center gap-2 text-blue-500 text-sm font-medium">
-          <Upload className="w-4 h-4" />
-          Add Image
+      {!imageDataUrl ? (
+        <button
+          type="button"
+          onClick={() => fileInputRef.current?.click()}
+          className="relative flex h-8 w-8 mt-2 items-center justify-center text-slate-400 hover:text-slate-600"
+          aria-label="Add attachment"
+        >
+          <Camera className="h-7 w-7" />
+          <span className="absolute -top-1 -left-1 bg-white rounded-full text-slate-400">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+          </span>
+        </button>
+      ) : (
+        <div className="relative group w-[180px] h-[120px] rounded overflow-hidden mt-2 border border-slate-200">
+          <img 
+            src={imageDataUrl} 
+            alt="Attachment preview" 
+            className="w-full h-full object-cover" 
+          />
+          <div className="absolute inset-x-0 bottom-0 bg-[#2d3748]/80 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-between px-3 py-1.5">
+            <button 
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="text-[11px] font-bold text-white tracking-wide hover:text-gray-200"
+            >
+              CHANGE
+            </button>
+            <button 
+              type="button"
+              onClick={() => {
+                setImageDataUrl("");
+                if (fileInputRef.current) fileInputRef.current.value = "";
+              }}
+              className="text-[11px] font-bold text-white tracking-wide hover:text-gray-200"
+            >
+              DELETE
+            </button>
+          </div>
         </div>
-      </div>
+      )}
+      <input 
+        type="file" 
+        accept="image/*" 
+        ref={fileInputRef} 
+        className="hidden" 
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (file) {
+            const reader = new FileReader();
+            reader.onloadend = () => setImageDataUrl(reader.result as string);
+            reader.readAsDataURL(file);
+          }
+        }} 
+      />
     </div>
   );
 }

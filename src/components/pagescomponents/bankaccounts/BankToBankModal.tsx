@@ -1,26 +1,44 @@
-import { useState, useEffect } from "react";
-import { Modal, Input, Select, ModalFooter } from "./SharedComponents";
+import { useState, useEffect, useRef } from "react";
+import { Modal, Input, Select, ModalFooter, ImageUpload } from "./SharedComponents";
 import type { TransferModalProps } from "./types";
 
 export function BankToBankModal({ open, onClose, accounts, onSuccess, initialData }: TransferModalProps) {
   const [from, setFrom] = useState(accounts[0]?.name || "");
   const [to, setTo] = useState(accounts[1]?.name || accounts[0]?.name || "");
   const [amount, setAmount] = useState("");
-  const [date, setDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const today = new Date().toLocaleDateString("en-GB").replace(/\//g, "/");
+  const [date, setDate] = useState(today);
+
+  const toYMD = (dmy: string) => {
+    if (!dmy || !dmy.includes("/")) return dmy;
+    const parts = dmy.split("/");
+    if (parts.length === 3) return `${parts[2]}-${parts[1]}-${parts[0]}`;
+    return dmy;
+  };
+
+  const toDMY = (ymd: string) => {
+    if (!ymd || !ymd.includes("-")) return ymd;
+    const parts = ymd.split("-");
+    if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
+    return ymd;
+  };
   const [description, setDescription] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [imageDataUrl, setImageDataUrl] = useState("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (open) {
       if (initialData) {
         setAmount(Math.abs(Number(initialData.amount)).toString());
-        setDate(initialData.date || new Date().toISOString().split('T')[0]);
+        setDate(initialData.date || today);
         // Extract the description if we prepended it
         let desc = initialData.name;
         if (desc.startsWith('Transfer to ') || desc.startsWith('Transfer from ')) {
           desc = '';
         }
         setDescription(desc);
+        setImageDataUrl(initialData.attachment_image_path || "");
         
         // Figure out from/to based on the transaction type
         if (initialData.id.endsWith('-bank-out')) {
@@ -34,8 +52,9 @@ export function BankToBankModal({ open, onClose, accounts, onSuccess, initialDat
         setFrom(accounts[0]?.name || "");
         setTo(accounts[1]?.name || accounts[0]?.name || "");
         setAmount("");
-        setDate(new Date().toISOString().split('T')[0]);
+        setDate(today);
         setDescription("");
+        setImageDataUrl("");
       }
     }
   }, [open, initialData, accounts]);
@@ -73,6 +92,7 @@ export function BankToBankModal({ open, onClose, accounts, onSuccess, initialDat
             name: description || initialData.name, // Just use what they type or the old one
             paymentType: initialData.paymentType, // Can't easily change source bank during edit
             type: initialData.type,
+            imageDataUrl: imageDataUrl
           }),
         });
         if (!res.ok) throw new Error("Failed to update transfer");
@@ -86,6 +106,7 @@ export function BankToBankModal({ open, onClose, accounts, onSuccess, initialDat
             amount: Number(amount),
             date,
             description,
+            imageDataUrl: imageDataUrl
           }),
         });
         if (!res.ok) throw new Error("Failed to save transfer");
@@ -131,8 +152,8 @@ export function BankToBankModal({ open, onClose, accounts, onSuccess, initialDat
           <Input 
             label="Date" 
             type="date"
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
+            value={toYMD(date)}
+            onChange={(e) => setDate(toDMY(e.target.value))}
           />
         </div>
         <div>
@@ -145,6 +166,13 @@ export function BankToBankModal({ open, onClose, accounts, onSuccess, initialDat
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-blue-400 resize-none"
+          />
+        </div>
+        <div>
+          <ImageUpload 
+            imageDataUrl={imageDataUrl} 
+            setImageDataUrl={setImageDataUrl} 
+            fileInputRef={fileInputRef} 
           />
         </div>
       </div>

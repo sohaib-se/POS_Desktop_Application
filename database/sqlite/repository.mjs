@@ -1588,15 +1588,16 @@ export function addBankAccountTransaction(entry) {
   const txId = entry.id || Date.now().toString();
 
   db.prepare(`
-    INSERT INTO bank_account_transactions (id, bank_account_name, date, name, type, amount, created_at, updated_at)
-    VALUES (@id, @paymentType, @date, @name, @type, @amount, datetime('now'), datetime('now'))
+    INSERT INTO bank_account_transactions (id, bank_account_name, date, name, type, amount, attachment_image_path, created_at, updated_at)
+    VALUES (@id, @paymentType, @date, @name, @type, @amount, @attachmentImagePath, datetime('now'), datetime('now'))
   `).run({
     id: txId,
     paymentType: entry.paymentType,
     date: entry.date,
     name: entry.name,
     type: entry.type,
-    amount: Number(entry.amount)
+    amount: Number(entry.amount),
+    attachmentImagePath: entry.attachmentImagePath || null
   });
 
   db.prepare(`
@@ -1623,7 +1624,7 @@ export function addBankAccountTransaction(entry) {
 
 export function updateBankAccountTransaction(id, entry) {
   const db = openDatabase();
-  const tx = db.prepare('SELECT amount, bank_account_name FROM bank_account_transactions WHERE id = ?').get(String(id));
+  const tx = db.prepare('SELECT amount, bank_account_name, attachment_image_path FROM bank_account_transactions WHERE id = ?').get(String(id));
   if (!tx) {
     db.close();
     return false;
@@ -1631,7 +1632,7 @@ export function updateBankAccountTransaction(id, entry) {
 
   db.prepare(`
     UPDATE bank_account_transactions 
-    SET bank_account_name = @paymentType, date = @date, name = @name, type = @type, amount = @amount, updated_at = datetime('now')
+    SET bank_account_name = @paymentType, date = @date, name = @name, type = @type, amount = @amount, attachment_image_path = @attachmentImagePath, updated_at = datetime('now')
     WHERE id = @id
   `).run({
     id: String(id),
@@ -1639,7 +1640,8 @@ export function updateBankAccountTransaction(id, entry) {
     date: entry.date,
     name: entry.name,
     type: entry.type,
-    amount: Number(entry.amount)
+    amount: Number(entry.amount),
+    attachmentImagePath: entry.attachmentImagePath !== undefined ? (entry.attachmentImagePath || null) : tx.attachment_image_path
   });
 
   db.prepare(`
@@ -1770,13 +1772,24 @@ export function updateBankAccountTransaction(id, entry) {
 export function getBankAccountTransactions(bankName) {
   const db = openDatabase();
   const rows = db.prepare(`
-    SELECT id, date, name, type, amount, bank_account_name AS paymentType, created_at 
+    SELECT id, date, name, type, amount, bank_account_name AS paymentType, attachment_image_path, created_at 
     FROM bank_account_transactions 
     WHERE bank_account_name = ?
     ORDER BY date DESC, created_at DESC
   `).all(bankName);
   db.close();
   return rows;
+}
+
+export function getBankAccountTransactionById(id) {
+  const db = openDatabase();
+  const row = db.prepare(`
+    SELECT id, date, name, type, amount, bank_account_name AS paymentType, attachment_image_path, created_at 
+    FROM bank_account_transactions 
+    WHERE id = ?
+  `).get(String(id));
+  db.close();
+  return row;
 }
 
 export function addStockAdjustment(data) {

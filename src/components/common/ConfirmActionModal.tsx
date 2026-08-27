@@ -8,6 +8,7 @@ interface ConfirmActionModalProps {
   message: string;
   confirmText?: string;
   cancelText?: string;
+  hideCancel?: boolean;
 }
 
 export function ConfirmActionModal({
@@ -18,6 +19,7 @@ export function ConfirmActionModal({
   message,
   confirmText = "Confirm",
   cancelText = "Cancel",
+  hideCancel = false,
 }: ConfirmActionModalProps) {
   if (!isOpen) return null;
 
@@ -44,13 +46,15 @@ export function ConfirmActionModal({
         </div>
 
         <div className="p-4 bg-gray-50 flex justify-end gap-3 border-t border-gray-100">
-          <button
-            type="button"
-            onClick={onClose}
-            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-200 transition-colors"
-          >
-            {cancelText}
-          </button>
+          {!hideCancel && (
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-200 transition-colors"
+            >
+              {cancelText}
+            </button>
+          )}
           <button
             type="button"
             onClick={onConfirm}

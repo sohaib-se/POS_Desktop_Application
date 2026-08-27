@@ -6,6 +6,7 @@ import { PosTable } from "../components/pagescomponents/laimsoftpos/PosTable";
 import { ActionButtons } from "../components/pagescomponents/laimsoftpos/ActionButtons";
 import { RightPanel } from "../components/pagescomponents/laimsoftpos/RightPanel";
 import { Modals } from "../components/pagescomponents/laimsoftpos/Modals";
+import { ConfirmActionModal } from "@/components/common/ConfirmActionModal";
 import { useSettings } from "@/hooks/useSettings";
 
 interface LaimsoftPosProps {
@@ -42,6 +43,7 @@ export function LaimsoftPos({ onClose }: LaimsoftPosProps) {
   const [nextInvoiceNo, setNextInvoiceNo] = useState("1");
   const [isSaving, setIsSaving] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
+  const [alertState, setAlertState] = useState<{ isOpen: boolean; title: string; message: string }>({ isOpen: false, title: "", message: "" });
 
   const showToast = useCallback((message: string, type: "success" | "error" = "success") => {
     setToast({ message, type });
@@ -56,8 +58,6 @@ export function LaimsoftPos({ onClose }: LaimsoftPosProps) {
   const [searchFocused, setSearchFocused] = useState(false);
   const [searchSelectedIndex, setSearchSelectedIndex] = useState(0);
 
-  // Customer Dropdown State
-  const [customerDropdownOpen, setCustomerDropdownOpen] = useState(false);
 
   // Modals State
   const [activeModal, setActiveModal] = useState<
@@ -189,7 +189,6 @@ export function LaimsoftPos({ onClose }: LaimsoftPosProps) {
         const customerInput = document.getElementById("customer-search-input");
         if (customerInput) {
           customerInput.focus();
-          setCustomerDropdownOpen(true);
         }
       } else if (e.ctrlKey && e.key.toLowerCase() === "w") {
         e.preventDefault();
@@ -424,7 +423,7 @@ export function LaimsoftPos({ onClose }: LaimsoftPosProps) {
 
     const validRows = activeTab.rows.filter((r) => r.itemId);
     if (validRows.length === 0) {
-      alert("Please add at least one item to save the sale.");
+      setAlertState({ isOpen: true, title: "No Items Added", message: "Please add at least one item to save the sale." });
       return;
     }
 
@@ -447,7 +446,7 @@ export function LaimsoftPos({ onClose }: LaimsoftPosProps) {
         if (item) {
           const currentStock = item.stock_quantity || 0;
           if (totalQty > currentStock) {
-            alert(`Cannot sell ${totalQty} of ${item.name}. Current stock is only ${currentStock}.`);
+            setAlertState({ isOpen: true, title: "Insufficient Stock", message: `Cannot sell ${totalQty} of ${item.name}. Current stock is only ${currentStock}.` });
             return;
           }
         }
@@ -455,7 +454,7 @@ export function LaimsoftPos({ onClose }: LaimsoftPosProps) {
     }
 
     if (receivedLessThanTotal) {
-      alert("Received amount cannot be less than the total.");
+      setAlertState({ isOpen: true, title: "Invalid Amount", message: "Received amount cannot be less than the total." });
       return;
     }
 
@@ -565,7 +564,6 @@ export function LaimsoftPos({ onClose }: LaimsoftPosProps) {
       className="flex flex-col h-screen w-screen bg-[#f0f2f5] overflow-hidden"
       onClick={() => {
         setSearchFocused(false);
-        setCustomerDropdownOpen(false);
       }}
     >
       {/* Toast Notification */}
@@ -629,11 +627,21 @@ export function LaimsoftPos({ onClose }: LaimsoftPosProps) {
           receivedLessThanTotal={receivedLessThanTotal}
           isSaving={isSaving}
           handleSaveSale={handleSaveSale}
-          customerDropdownOpen={customerDropdownOpen}
-          setCustomerDropdownOpen={setCustomerDropdownOpen}
+
           filteredCustomers={filteredCustomers}
         />
       </div>
+
+      {/* Modals */}
+      <ConfirmActionModal
+        isOpen={alertState.isOpen}
+        onClose={() => setAlertState({ isOpen: false, title: "", message: "" })}
+        onConfirm={() => setAlertState({ isOpen: false, title: "", message: "" })}
+        title={alertState.title}
+        message={alertState.message}
+        confirmText="OK"
+        hideCancel={true}
+      />
 
       <Modals
         activeModal={activeModal}

@@ -9,6 +9,7 @@ import { ExpensesSidebar } from "../components/pagescomponents/expenses/Expenses
 import { ExpensesDetails } from "../components/pagescomponents/expenses/ExpensesDetails";
 import { CategoryModals } from "../components/pagescomponents/expenses/CategoryModals";
 import { ItemModals } from "../components/pagescomponents/expenses/ItemModals";
+import { ConfirmDeleteModal } from "@/components/common/ConfirmDeleteModal";
 
 interface ExpensesProps {
   onAddExpense?: () => void;
@@ -40,6 +41,8 @@ export function Expenses({ onAddExpense, onEditExpenseRecord }: ExpensesProps) {
   const [itemBeingEdited, setItemBeingEdited] = useState<ExpenseItem | null>(null);
   const [isDeletingItem, setIsDeletingItem] = useState(false);
   const [itemPendingDelete, setItemPendingDelete] = useState<ExpenseItem | null>(null);
+  const [recordPendingDelete, setRecordPendingDelete] = useState<ExpenseRecord | null>(null);
+  const [isDeletingRecord, setIsDeletingRecord] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -366,10 +369,15 @@ export function Expenses({ onAddExpense, onEditExpenseRecord }: ExpensesProps) {
     }
   };
 
-  const handleDeleteRecord = async (record: ExpenseRecord) => {
-    if (!window.confirm("Are you sure you want to delete this expense record?")) return;
+  const handleDeleteRecord = (record: ExpenseRecord) => {
+    setRecordPendingDelete(record);
+  };
+
+  const confirmDeleteRecord = async () => {
+    if (!recordPendingDelete) return;
+    setIsDeletingRecord(true);
     try {
-      const response = await fetch(`/api/expense_records/${record.id}`, {
+      const response = await fetch(`/api/expense_records/${recordPendingDelete.id}`, {
         method: "DELETE",
       });
 
@@ -377,10 +385,13 @@ export function Expenses({ onAddExpense, onEditExpenseRecord }: ExpensesProps) {
         throw new Error("Failed to delete expense record");
       }
 
-      setExpenseRecordList((prev) => prev.filter((r) => r.id !== record.id));
+      setExpenseRecordList((prev) => prev.filter((r) => r.id !== recordPendingDelete.id));
       window.dispatchEvent(new CustomEvent("expenses-refresh"));
+      setRecordPendingDelete(null);
     } catch (error) {
       console.error(error);
+    } finally {
+      setIsDeletingRecord(false);
     }
   };
 
@@ -443,6 +454,14 @@ export function Expenses({ onAddExpense, onEditExpenseRecord }: ExpensesProps) {
         setItemPendingDelete={setItemPendingDelete}
         isDeletingItem={isDeletingItem}
         handleDeleteItem={handleDeleteItem}
+      />
+      <ConfirmDeleteModal
+        isOpen={Boolean(recordPendingDelete)}
+        onClose={() => setRecordPendingDelete(null)}
+        onConfirm={confirmDeleteRecord}
+        title="Delete Expense Record"
+        message={`Are you sure you want to delete this expense record? This action cannot be undone.`}
+        isDeleting={isDeletingRecord}
       />
     </div>
   );

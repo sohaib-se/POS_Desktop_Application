@@ -1,10 +1,10 @@
-import { Search, Pencil, Trash2 } from "lucide-react";
+import { Eye, Pencil, Trash2 } from "lucide-react";
 
 interface PaymentInRowMenuProps {
   openRowMenuId: string | null;
   openRowMenuPosition: { left: number; top: number } | null;
   records: any[];
-  setViewingRecord: (record: any) => void;
+  onPreview: (record: any) => void;
   setOpenRowMenuId: (id: string | null) => void;
   setOpenRowMenuPosition: (pos: { left: number; top: number } | null) => void;
   setShowAddPayment: (show: boolean, record?: any) => void;
@@ -29,13 +29,13 @@ export function PaymentInRowMenu(props: PaymentInRowMenuProps) {
       <button
         className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-gray-50"
         onClick={() => {
-          props.setViewingRecord(targetItem);
+          props.onPreview(targetItem);
           props.setOpenRowMenuId(null);
           props.setOpenRowMenuPosition(null);
         }}
       >
-        <Search className="w-4 h-4 text-gray-500" />
-        View
+        <Eye className="w-4 h-4 text-gray-500" />
+        Preview
       </button>
       <button
         className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-gray-50"

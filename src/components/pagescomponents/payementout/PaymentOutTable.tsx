@@ -1,6 +1,6 @@
 import React, { useRef, useState } from "react";
 import { useSettings } from "@/hooks/useSettings";
-import { Search, Printer, Share2, MoreVertical } from "lucide-react";
+import { Search, Printer, MoreVertical } from "lucide-react";
 
 interface PaymentOutTableProps {
   records: any[];
@@ -97,7 +97,7 @@ export function PaymentOutTable({
                 Date
               </th>
               <th className="px-4 py-3 text-left font-medium text-gray-600">
-                Ref. no.
+                Receipt No.
               </th>
               <th className="px-4 py-3 text-left font-medium text-gray-600">
                 Party Name
@@ -134,12 +134,6 @@ export function PaymentOutTable({
                 <td className="px-4 py-3">{payment.paymentType}</td>
                 <td className="px-4 py-3 relative">
                   <div className="flex items-center justify-center gap-2">
-                    <button className="p-1.5 hover:bg-gray-100 rounded" title="Print">
-                      <Printer className="w-4 h-4 text-gray-500" />
-                    </button>
-                    <button className="p-1.5 hover:bg-gray-100 rounded" title="Share">
-                      <Share2 className="w-4 h-4 text-gray-500" />
-                    </button>
                     <button
                       className="p-1.5 hover:bg-gray-100 rounded"
                       title="More actions"

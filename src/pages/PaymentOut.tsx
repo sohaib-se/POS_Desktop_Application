@@ -29,6 +29,13 @@ export function PaymentOut() {
   const [openRowMenuId, setOpenRowMenuId] = useState<string | null>(null);
   const [openRowMenuPosition, setOpenRowMenuPosition] = useState<{ left: number; top: number } | null>(null);
 
+  const [selectedMonth, setSelectedMonth] = useState<string>(() => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    return `${year}-${month}`;
+  });
+
   const [isPasscodeEnabled] = useSettings('settings.isPasscodeEnabled', false);
   const [isPasscodeForTransactionEnabled] = useSettings('settings.isPasscodeForTransactionEnabled', false);
   const [passcodeAction, setPasscodeAction] = useState<{ type: 'edit' | 'delete', payload: string } | null>(null);
@@ -110,7 +117,41 @@ export function PaymentOut() {
     setPasscodeAction(null);
   };
 
-  const totalAmount = records.reduce((sum, p) => sum + p.amount, 0);
+  const filteredRecords = records.filter(record => {
+    if (!selectedMonth) return true;
+
+    const [selYear, selMonth] = selectedMonth.split('-');
+    const targetMonth = parseInt(selMonth, 10);
+    const targetYear = parseInt(selYear, 10);
+
+    let month = -1;
+    let year = -1;
+
+    if (record.date) {
+      const dateStr = String(record.date);
+      if (dateStr.includes('/')) {
+        const parts = dateStr.split('/');
+        if (parts.length === 3) {
+          month = parseInt(parts[1], 10);
+          year = parseInt(parts[2], 10);
+        }
+      } else if (dateStr.includes('-')) {
+        const parts = dateStr.split('T')[0].split('-');
+        if (parts.length === 3) {
+          if (parts[0].length === 4) {
+            year = parseInt(parts[0], 10);
+            month = parseInt(parts[1], 10);
+          } else {
+            month = parseInt(parts[1], 10);
+            year = parseInt(parts[2], 10);
+          }
+        }
+      }
+    }
+    return month === targetMonth && year === targetYear;
+  });
+
+  const totalAmount = filteredRecords.reduce((sum, p) => sum + p.amount, 0);
   const totalPaid = totalAmount;
   const totalOpen = parties.reduce((sum, p) => sum + Number(p.balance || 0), 0);
 
@@ -167,7 +208,10 @@ export function PaymentOut() {
     <div className="h-full flex flex-col bg-[#D0DCE7] gap-1 overflow-y-auto">
       <PaymentOutHeader onAddPayment={() => setShowAddPayment(true)} />
       
-      <PaymentOutFilters />
+      <PaymentOutFilters
+        selectedMonth={selectedMonth}
+        setSelectedMonth={setSelectedMonth}
+      />
       
       <PaymentOutSummary 
         totalAmount={totalAmount}
@@ -176,7 +220,7 @@ export function PaymentOut() {
       />
       
       <PaymentOutTable 
-        records={records}
+        records={filteredRecords}
         openRowMenuId={openRowMenuId}
         setOpenRowMenuId={setOpenRowMenuId}
         setOpenRowMenuPosition={setOpenRowMenuPosition}

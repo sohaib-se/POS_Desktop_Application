@@ -6,7 +6,7 @@ import { PaymentOutSummary } from "@/components/pagescomponents/payementout/Paym
 import { PaymentOutTable } from "@/components/pagescomponents/payementout/PaymentOutTable";
 import { AddPaymentOutModal } from "@/components/pagescomponents/payementout/AddPaymentOutModal";
 import { PaymentOutRowMenu } from "@/components/pagescomponents/payementout/PaymentOutRowMenu";
-import { ViewPaymentOutDialog } from "@/components/pagescomponents/payementout/ViewPaymentOutDialog";
+import { PaymentOutReceiptPreviewModal } from "@/components/pagescomponents/payementout/PaymentOutReceiptPreviewModal";
 import { EnterPasscodeScreen } from "@/components/common/EnterPasscodeScreen";
 import { useSettings } from "@/hooks/useSettings";
 
@@ -19,7 +19,8 @@ export function PaymentOut() {
   const [selectedParty, setSelectedParty] = useState("");
   const [bankAccounts, setBankAccounts] = useState<any[]>([]);
   const [records, setRecords] = useState<any[]>([]);
-  const [viewingRecord, setViewingRecord] = useState<any>(null);
+  const [previewingRecord, setPreviewingRecord] = useState<any>(null);
+  const [businessProfile, setBusinessProfile] = useState<any>(null);
 
   const [paymentType, setPaymentType] = useState("Cash");
   const [amount, setAmount] = useState("");
@@ -59,6 +60,10 @@ export function PaymentOut() {
     fetch('/api/bank_accounts')
       .then(res => res.json())
       .then(data => setBankAccounts(data))
+      .catch(console.error);
+    fetch('/api/user_profile')
+      .then(res => res.json())
+      .then(data => setBusinessProfile(data))
       .catch(console.error);
   };
 
@@ -356,16 +361,17 @@ export function PaymentOut() {
           openRowMenuId={openRowMenuId}
           openRowMenuPosition={openRowMenuPosition}
           records={records}
-          setViewingRecord={setViewingRecord}
           setShowAddPayment={handleEditClick}
           handleDelete={handleDeleteClick}
           setOpenRowMenuId={setOpenRowMenuId}
           setOpenRowMenuPosition={setOpenRowMenuPosition}
+          onPrint={(record) => setPreviewingRecord(record)}
         />
 
-        <ViewPaymentOutDialog
-          viewingRecord={viewingRecord}
-          setViewingRecord={setViewingRecord}
+        <PaymentOutReceiptPreviewModal
+          record={previewingRecord}
+          businessProfile={businessProfile}
+          onClose={() => setPreviewingRecord(null)}
         />
 
         {passcodeAction && (

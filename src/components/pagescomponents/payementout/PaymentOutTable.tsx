@@ -123,7 +123,7 @@ export function PaymentOutTable({
                 className="border-b border-gray-100 hover:bg-gray-50"
               >
                 <td className="px-4 py-3">{payment.date}</td>
-                <td className="px-4 py-3">{payment.reference || ""}</td>
+                <td className="px-4 py-3">{payment.paymentNo || ""}</td>
                 <td className="px-4 py-3">{payment.partyName}</td>
                 <td className="px-4 py-3 text-right">
                   {currencyStr} {payment.amount.toFixed(2)}

@@ -13,6 +13,7 @@ interface PaymentOutTableProps {
   setShowSearchInput: (val: boolean) => void;
   setSearchQuery: (val: string) => void;
   onPrintClick?: () => void;
+  onExcelClick?: () => void;
 }
 
 export function PaymentOutTable({
@@ -26,6 +27,7 @@ export function PaymentOutTable({
   setShowSearchInput,
   setSearchQuery,
   onPrintClick,
+  onExcelClick,
 }: PaymentOutTableProps) {
   const [currency] = useSettings('settings.businessCurrency', { code: 'PKR', symbol: 'Rs' });
   const [currencyDisplay] = useSettings<'abbreviation' | 'icon'>('settings.currencyDisplay', 'abbreviation');
@@ -127,7 +129,7 @@ export function PaymentOutTable({
           <button
             onClick={() => {}}
             className="p-1.5 hover:bg-[#F7F9FB] rounded relative"
-            title="Download Excel/CSV"
+            title="Download Excel"
           >
             <span className="bg-green-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
               xls
@@ -175,12 +177,25 @@ export function PaymentOutTable({
                 <td className="px-4 py-3 text-right">
                   {currencyStr} {payment.amount.toFixed(2)}
                 </td>
-                <td className="px-4 py-3 text-right">
-                  {currencyStr} {payment.amount.toFixed(2)}
-                </td>
-                <td className="px-4 py-3">{payment.paymentType}</td>
-                <td className="px-4 py-3 relative">
-                  <div className="flex items-center justify-center gap-2">
+              </tr>
+            ) : (
+              filteredRecords.map((payment) => (
+                <tr
+                  key={payment.id}
+                  className="border-b border-gray-100 hover:bg-gray-50"
+                >
+                  <td className="px-4 py-3">{payment.date}</td>
+                  <td className="px-4 py-3">{payment.paymentNo || ""}</td>
+                  <td className="px-4 py-3">{payment.partyName}</td>
+                  <td className="px-4 py-3 text-right">
+                    {currencyStr} {payment.amount.toFixed(2)}
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    {currencyStr} {payment.amount.toFixed(2)}
+                  </td>
+                  <td className="px-4 py-3">{payment.paymentType}</td>
+                  <td className="px-4 py-3 relative">
+                    <div className="flex items-center justify-center gap-2">
                     <button
                       className="p-1.5 hover:bg-gray-100 rounded"
                       title="More actions"
@@ -209,7 +224,8 @@ export function PaymentOutTable({
                   </div>
                 </td>
               </tr>
-            ))}
+            ))
+            )}
           </tbody>
         </table>
       </div>

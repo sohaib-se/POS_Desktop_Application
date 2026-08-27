@@ -23,6 +23,7 @@ export function PaymentIn() {
   const [selectedParty, setSelectedParty] = useState("");
   const [bankAccounts, setBankAccounts] = useState<any[]>([]);
   const [records, setRecords] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [viewingRecord, setViewingRecord] = useState<any>(null);
   const [previewingRecord, setPreviewingRecord] = useState<any>(null);
   const [businessProfile, setBusinessProfile] = useState<any>(null);
@@ -54,26 +55,33 @@ export function PaymentIn() {
     return `${year}-${month}`;
   });
 
-  const fetchData = () => {
-    fetch('/api/payment_in_records')
-      .then(res => res.json())
-      .then(data => setRecords(data))
-      .catch(err => console.error("Failed to fetch payment_in_records:", err));
-    fetch('/api/parties')
-      .then(res => res.json())
-      .then(data => {
-        setParties(data);
-        if (data.length > 0 && !selectedParty) setSelectedParty(String(data[0].id));
-      })
-      .catch(console.error);
-    fetch('/api/bank_accounts')
-      .then(res => res.json())
-      .then(data => setBankAccounts(data))
-      .catch(console.error);
-    fetch('/api/user_profile')
-      .then(res => res.json())
-      .then(data => setBusinessProfile(data))
-      .catch(console.error);
+  const fetchData = async () => {
+    setIsLoading(true);
+    try {
+      await Promise.all([
+        fetch('/api/payment_in_records')
+          .then(res => res.json())
+          .then(data => setRecords(data))
+          .catch(err => console.error("Failed to fetch payment_in_records:", err)),
+        fetch('/api/parties')
+          .then(res => res.json())
+          .then(data => {
+            setParties(data);
+            if (data.length > 0 && !selectedParty) setSelectedParty(String(data[0].id));
+          })
+          .catch(console.error),
+        fetch('/api/bank_accounts')
+          .then(res => res.json())
+          .then(data => setBankAccounts(data))
+          .catch(console.error),
+        fetch('/api/user_profile')
+          .then(res => res.json())
+          .then(data => setBusinessProfile(data))
+          .catch(console.error)
+      ]);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -381,7 +389,11 @@ export function PaymentIn() {
           totalReceived={totalReceived}
         />
 
-        {records.length === 0 ? (
+        {isLoading ? (
+          <div className="flex-1 bg-white rounded-md shadow-sm mx-1 flex flex-col items-center justify-center p-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#3B82F6]"></div>
+          </div>
+        ) : records.length === 0 ? (
           <div className="flex-1 bg-white rounded-md shadow-sm mx-1 flex flex-col items-center justify-center p-8">
             <div className="w-40 h-40 bg-[#D3E8FF] rounded-full flex items-center justify-center relative mb-5">
               <div className="relative">

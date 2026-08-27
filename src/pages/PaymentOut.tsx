@@ -10,6 +10,7 @@ import { PaymentOutReceiptPreviewModal } from "@/components/pagescomponents/paye
 import { PaymentOutPrintPreviewModal } from "@/components/pagescomponents/payementout/PaymentOutPrintPreviewModal";
 import { EnterPasscodeScreen } from "@/components/common/EnterPasscodeScreen";
 import { useSettings } from "@/hooks/useSettings";
+import { exportPaymentOutToExcel } from "@/utils/exportPaymentOutExcel";
 
 export function PaymentOut() {
   const [showAddPayment, setShowAddPayment] = useState(false);
@@ -20,6 +21,7 @@ export function PaymentOut() {
   const [selectedParty, setSelectedParty] = useState("");
   const [bankAccounts, setBankAccounts] = useState<any[]>([]);
   const [records, setRecords] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [previewingRecord, setPreviewingRecord] = useState<any>(null);
   const [showPrintPreview, setShowPrintPreview] = useState(false);
   const [businessProfile, setBusinessProfile] = useState<any>(null);
@@ -51,26 +53,33 @@ export function PaymentOut() {
   const [isPasscodeForTransactionEnabled] = useSettings('settings.isPasscodeForTransactionEnabled', false);
   const [passcodeAction, setPasscodeAction] = useState<{ type: 'edit' | 'delete', payload: string } | null>(null);
 
-  const fetchData = () => {
-    fetch('/api/payment_out_records')
-      .then(res => res.json())
-      .then(data => setRecords(data))
-      .catch(err => console.error("Failed to fetch payment_out_records:", err));
-    fetch('/api/parties')
-      .then(res => res.json())
-      .then(data => {
-         setParties(data);
-         if (data.length > 0 && !selectedParty) setSelectedParty(String(data[0].id));
-      })
-      .catch(console.error);
-    fetch('/api/bank_accounts')
-      .then(res => res.json())
-      .then(data => setBankAccounts(data))
-      .catch(console.error);
-    fetch('/api/user_profile')
-      .then(res => res.json())
-      .then(data => setBusinessProfile(data))
-      .catch(console.error);
+  const fetchData = async () => {
+    setIsLoading(true);
+    try {
+      await Promise.all([
+        fetch('/api/payment_out_records')
+          .then(res => res.json())
+          .then(data => setRecords(data))
+          .catch(err => console.error("Failed to fetch payment_out_records:", err)),
+        fetch('/api/parties')
+          .then(res => res.json())
+          .then(data => {
+             setParties(data);
+             if (data.length > 0 && !selectedParty) setSelectedParty(String(data[0].id));
+          })
+          .catch(console.error),
+        fetch('/api/bank_accounts')
+          .then(res => res.json())
+          .then(data => setBankAccounts(data))
+          .catch(console.error),
+        fetch('/api/user_profile')
+          .then(res => res.json())
+          .then(data => setBusinessProfile(data))
+          .catch(console.error)
+      ]);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -269,6 +278,8 @@ export function PaymentOut() {
 
     return monthMatch && searchMatch;
   });
+
+  const [currency] = useSettings('settings.businessCurrency', { code: 'PKR', symbol: 'Rs' });
 
   const totalAmount = filteredRecords.reduce((sum, p) => sum + p.amount, 0);
   const totalPaid = totalAmount;

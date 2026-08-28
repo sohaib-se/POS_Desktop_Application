@@ -3540,19 +3540,26 @@ function sqliteApiPlugin() {
 
               try {
                 const allItems = repository.getItems();
-                for (const lineItem of lineItems) {
+                for (let i = 0; i < lineItems.length; i++) {
+                  const lineItem = lineItems[i];
                   if (!lineItem.itemId || !lineItem.quantity) continue;
                   const dbItem = allItems.find((i: any) => i.id === lineItem.itemId);
                   if (!dbItem) continue;
 
                   const isSecondary = lineItem.unit === dbItem.secondary_unit;
-                  // Purchase adds stock — use flat (non-FIFO) function
+                  const lineItemId = lineItem.id || `line_${i}`;
+                  
+                  // Purchase adds stock — and now creates a FIFO layer
                   repository.addPurchaseStock(
                     lineItem.itemId,
                     lineItem.quantity,
                     isSecondary,
                     dbItem.conversion_rate,
-                    lineItem.price ?? 0
+                    lineItem.price ?? 0,
+                    invoice.id,
+                    lineItemId,
+                    invoice.date,
+                    dbItem.name
                   );
                 }
               } catch (stockError) {
@@ -3703,19 +3710,23 @@ function sqliteApiPlugin() {
               try {
                 const oldLineItems = JSON.parse(existingInvoice.line_items_json || '[]');
                 const allItems = repository.getItems();
-                for (const lineItem of oldLineItems) {
+                for (let i = 0; i < oldLineItems.length; i++) {
+                  const lineItem = oldLineItems[i];
                   if (!lineItem.itemId || !lineItem.quantity) continue;
                   const dbItem = allItems.find((i: any) => String(i.id) === String(lineItem.itemId));
                   if (!dbItem) continue;
 
                   const isSecondary = lineItem.unit === dbItem.secondary_unit;
-                  // Undo old purchase stock addition
+                  const lineItemId = lineItem.id || `line_${i}`;
+                  // Undo old purchase stock addition and remove FIFO layer
                   repository.removePurchaseStock(
                     lineItem.itemId,
                     Number(lineItem.quantity),
                     isSecondary,
                     dbItem.conversion_rate,
-                    lineItem.price ?? 0
+                    lineItem.price ?? 0,
+                    id,
+                    lineItemId
                   );
                 }
               } catch (stockError) {
@@ -3823,19 +3834,23 @@ function sqliteApiPlugin() {
               try {
                 const lineItems = JSON.parse(existingInvoice.line_items_json || '[]');
                 const allItems = repository.getItems();
-                for (const lineItem of lineItems) {
+                for (let i = 0; i < lineItems.length; i++) {
+                  const lineItem = lineItems[i];
                   if (!lineItem.itemId || !lineItem.quantity) continue;
                   const dbItem = allItems.find((i: any) => String(i.id) === String(lineItem.itemId));
                   if (!dbItem) continue;
 
                   const isSecondary = lineItem.unit === dbItem.secondary_unit;
-                  // Undo purchase stock addition
+                  const lineItemId = lineItem.id || `line_${i}`;
+                  // Undo purchase stock addition and remove FIFO layer
                   repository.removePurchaseStock(
                     lineItem.itemId,
                     Number(lineItem.quantity),
                     isSecondary,
                     dbItem.conversion_rate,
-                    lineItem.price ?? 0
+                    lineItem.price ?? 0,
+                    id,
+                    lineItemId
                   );
                 }
               } catch (stockError) {

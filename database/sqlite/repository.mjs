@@ -354,7 +354,7 @@ export function deductItemStockFifo(itemId, quantity, isSecondary, conversionRat
       SELECT id, remaining_quantity, at_price
       FROM adjust_stock_transactions
       WHERE item_id = ?
-        AND adjustment_type IN ('Opening Stock', 'Add Stock')
+        AND adjustment_type IN ('Opening Stock', 'Add Stock', 'Purchase Bill')
         AND COALESCE(remaining_quantity, 0) > 0
       ORDER BY date ASC, created_at ASC
     `).all(String(itemId));
@@ -422,7 +422,7 @@ export function restoreItemStockFifo(itemId, quantity, isSecondary, conversionRa
       SELECT id, quantity, remaining_quantity, at_price
       FROM adjust_stock_transactions
       WHERE item_id = ?
-        AND adjustment_type IN ('Opening Stock', 'Add Stock')
+        AND adjustment_type IN ('Opening Stock', 'Add Stock', 'Purchase Bill')
       ORDER BY date DESC, created_at DESC
     `).all(String(itemId));
 
@@ -478,8 +478,9 @@ export function deductItemStock(itemId, quantity, isSecondary, conversionRate) {
 /**
  * Adds stock from a purchase bill (flat, not FIFO-tracked).
  * Purchase bills use the line item's price to add stock_value.
+ * Also inserts a FIFO layer so it can be consumed by sales.
  */
-export function addPurchaseStock(itemId, quantity, isSecondary, conversionRate, unitPrice) {
+export function addPurchaseStock(itemId, quantity, isSecondary, conversionRate, unitPrice, purchaseBillId, lineItemId, purchaseDate, itemName) {
   const db = openDatabase();
   try {
     const primaryQty = toPrimaryQty(quantity, isSecondary, conversionRate);
@@ -500,6 +501,30 @@ export function addPurchaseStock(itemId, quantity, isSecondary, conversionRate, 
       WHERE id = @id
     `).run({ id: String(itemId), primaryQty, secondaryQty, valueToAdd });
 
+    if (purchaseBillId && lineItemId) {
+      const fifoId = `pb_${purchaseBillId}_${lineItemId}`;
+      db.prepare(`
+        INSERT INTO adjust_stock_transactions (
+          id, item_id, item_name, adjustment_type, date, quantity, remaining_quantity, unit, at_price, details
+        ) VALUES (
+          @id, @itemId, @itemName, 'Purchase Bill', @date, @quantity, @remainingQuantity, @unit, @atPrice, 'Auto-generated FIFO layer for Purchase Bill'
+        )
+        ON CONFLICT(id) DO UPDATE SET
+          quantity = @quantity,
+          remaining_quantity = @remainingQuantity,
+          at_price = @atPrice
+      `).run({
+        id: fifoId,
+        itemId: String(itemId),
+        itemName: itemName || '',
+        date: purchaseDate || new Date().toISOString(),
+        quantity: primaryQty,
+        remainingQuantity: primaryQty,
+        unit: isSecondary ? 'Secondary' : 'Primary',
+        atPrice: Number(unitPrice ?? 0)
+      });
+    }
+
     return true;
   } finally {
     db.close();
@@ -509,8 +534,9 @@ export function addPurchaseStock(itemId, quantity, isSecondary, conversionRate, 
 /**
  * Removes stock that was added by a purchase bill (flat reversal, not FIFO).
  * Used when deleting or editing a purchase bill.
+ * Also removes the corresponding FIFO layer.
  */
-export function removePurchaseStock(itemId, quantity, isSecondary, conversionRate, unitPrice) {
+export function removePurchaseStock(itemId, quantity, isSecondary, conversionRate, unitPrice, purchaseBillId, lineItemId) {
   const db = openDatabase();
   try {
     const primaryQty = toPrimaryQty(quantity, isSecondary, conversionRate);
@@ -530,6 +556,11 @@ export function removePurchaseStock(itemId, quantity, isSecondary, conversionRat
         stock_value = MAX(0, COALESCE(stock_value, 0) - @valueToRemove)
       WHERE id = @id
     `).run({ id: String(itemId), primaryQty, secondaryQty, valueToRemove });
+
+    if (purchaseBillId && lineItemId) {
+      const fifoId = `pb_${purchaseBillId}_${lineItemId}`;
+      db.prepare('DELETE FROM adjust_stock_transactions WHERE id = ?').run(fifoId);
+    }
 
     return true;
   } finally {
@@ -2006,7 +2037,8 @@ export function addStockAdjustment(data) {
 
 export function getStockAdjustments() {
   const db = openDatabase();
-  const rows = db.prepare('SELECT * FROM adjust_stock_transactions ORDER BY created_at DESC, date DESC').all();
+  // Exclude 'Purchase Bill' from raw adjustments list since they appear in the UI as purchase invoices natively
+  const rows = db.prepare("SELECT * FROM adjust_stock_transactions WHERE adjustment_type != 'Purchase Bill' ORDER BY created_at DESC, date DESC").all();
   db.close();
   return rows;
 }

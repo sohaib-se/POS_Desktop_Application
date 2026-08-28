@@ -608,8 +608,7 @@ export function Parties({ isReportView, onBack, onEditSaleInvoice }: PartiesProp
     const hasOtherTransactions = baseTransactions.some(t => {
       const type = t.type;
       return type !== 'Payable Opening Balance' && 
-             type !== 'Receivable Opening Balance' && 
-             type !== 'Opening Balance';
+             type !== 'Receivable Opening Balance';
     });
 
     if (hasOtherTransactions) {
@@ -622,7 +621,7 @@ export function Parties({ isReportView, onBack, onEditSaleInvoice }: PartiesProp
 
     try {
       const realOpeningBalances = baseTransactions.filter(t => 
-        (t.type === 'Payable Opening Balance' || t.type === 'Receivable Opening Balance' || t.type === 'Opening Balance') 
+        (t.type === 'Payable Opening Balance' || t.type === 'Receivable Opening Balance') 
         && t.id !== "opening-balance-dynamic"
       );
 

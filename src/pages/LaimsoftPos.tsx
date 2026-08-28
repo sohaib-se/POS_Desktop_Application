@@ -254,7 +254,6 @@ export function LaimsoftPos({ onClose }: LaimsoftPosProps) {
 
   const handleNewBill = () => {
     const newTab = createEmptyTab(nextInvoiceNo);
-    setNextInvoiceNo((prev) => String(Number(prev) + 1));
     setTabs((prev) => [...prev, newTab]);
     setActiveTabId(newTab.id);
     if (searchInputRef.current) searchInputRef.current.focus();
@@ -526,20 +525,32 @@ export function LaimsoftPos({ onClose }: LaimsoftPosProps) {
 
       showToast(`Sale #${activeTab.invoiceNo} completed successfully!`, "success");
 
-      // Reset the POS for the next sale instead of closing
+      // Close the saved tab and update remaining tabs, or reset if it is the last tab
       const isCashSaleByDefault = JSON.parse(localStorage.getItem('settings.isCashSaleByDefault') || 'false');
-      updateTab({
-        invoiceNo: nextInvNo,
-        customerSelectedId: null,
-        customerSearchText: isCashSaleByDefault ? "Cash Sale" : "",
-        rows: [],
-        amountReceived: "",
-        isAmountReceivedDirty: false,
-        paymentMode: "Cash",
-        discountPercent: "",
-        discountAmount: "",
-        searchQuery: "",
-        selectedRowId: null,
+      
+      setTabs(prev => {
+        const remaining = prev.filter(t => t.id !== activeTabId);
+        
+        if (remaining.length === 0) {
+          return [{
+            ...prev[0],
+            invoiceNo: nextInvNo,
+            customerSelectedId: null,
+            customerSearchText: isCashSaleByDefault ? "Cash Sale" : "",
+            rows: [],
+            amountReceived: "",
+            isAmountReceivedDirty: false,
+            paymentMode: "Cash",
+            discountPercent: "",
+            discountAmount: "",
+            searchQuery: "",
+            selectedRowId: null,
+          }];
+        }
+
+        const updated = remaining.map(t => ({ ...t, invoiceNo: nextInvNo }));
+        setActiveTabId(updated[updated.length - 1].id);
+        return updated;
       });
     } catch (error) {
       console.error(error);

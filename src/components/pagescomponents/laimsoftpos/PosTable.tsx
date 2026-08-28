@@ -58,7 +58,7 @@ export function PosTable({ activeTab, updateTab, updateRow, columns }: PosTableP
                 />
               </div>
               <div className="w-[80px] px-3 py-2 border-r border-gray-100 flex items-center text-gray-500">
-                {row.unit}
+                {row.unit ? (row.unit.match(/\(([^)]+)\)/)?.[1] || row.unit) : ""}
               </div>
               <div className="w-[120px] px-3 py-2 border-r border-gray-100 flex items-center">
                 <input

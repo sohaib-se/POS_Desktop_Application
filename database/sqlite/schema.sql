@@ -161,8 +161,6 @@ CREATE TABLE IF NOT EXISTS payment_out_records (
   payment_no TEXT,
   date TEXT NOT NULL,
   party_name TEXT NOT NULL,
-  expense_category_id TEXT,
-  expense_category_name TEXT,
   amount REAL NOT NULL,
   payment_type TEXT NOT NULL,
   reference TEXT,

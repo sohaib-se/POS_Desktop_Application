@@ -177,53 +177,87 @@ export function ExpensesSidebar({
           </thead>
           <tbody>
             {activeTab === "category" ? (
-              filteredCategoryList.map((cat) => (
-                <tr
-                  key={cat.id}
-                  onClick={() => setSelectedCategory(cat)}
-                  onContextMenu={(event) => {
-                    event.preventDefault();
-                    setCategoryContextMenu({
-                      category: cat,
-                      x: event.clientX,
-                      y: event.clientY,
-                    });
-                  }}
-                  className={`cursor-pointer border-b border-gray-100 ${selectedCategory?.id === cat.id
-                      ? "bg-[#E3F2FD]"
-                      : "hover:bg-gray-50"
-                    }`}
-                >
-                  <td className="px-4 py-3 text-gray-900">{cat.name}</td>
-                  <td className="px-4 py-3 text-right font-medium">
-                    {cat.amount > 0 ? cat.amount.toFixed(2) : "0.00"}
+              filteredCategoryList.length > 0 ? (
+                filteredCategoryList.map((cat) => (
+                  <tr
+                    key={cat.id}
+                    onClick={() => setSelectedCategory(cat)}
+                    onContextMenu={(event) => {
+                      event.preventDefault();
+                      setCategoryContextMenu({
+                        category: cat,
+                        x: event.clientX,
+                        y: event.clientY,
+                      });
+                    }}
+                    className={`cursor-pointer border-b border-gray-100 ${selectedCategory?.id === cat.id
+                        ? "bg-[#E3F2FD]"
+                        : "hover:bg-gray-50"
+                      }`}
+                  >
+                    <td className="px-4 py-3 text-gray-900">{cat.name}</td>
+                    <td className="px-4 py-3 text-right font-medium">
+                      {cat.amount > 0 ? cat.amount.toFixed(2) : "0.00"}
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={2}>
+                    <div className="flex flex-col items-center justify-center py-10 px-6 text-center select-none">
+                      <p className="text-sm font-semibold text-gray-500">
+                        {searchQuery ? "No categories found" : "No expense categories"}
+                      </p>
+                      <p className="mt-1 text-xs text-gray-400">
+                        {searchQuery
+                          ? "Try a different search term."
+                          : "Add a category using the menu above."}
+                      </p>
+                    </div>
                   </td>
                 </tr>
-              ))
+              )
             ) : (
-              filteredItemList.map((item) => (
-                <tr
-                  key={item.id}
-                  onClick={() => setSelectedExpenseItem(item)}
-                  onContextMenu={(event) => {
-                    event.preventDefault();
-                    setItemContextMenu({
-                      item: item,
-                      x: event.clientX,
-                      y: event.clientY,
-                    });
-                  }}
-                  className={`cursor-pointer border-b border-gray-100 ${selectedExpenseItem?.id === item.id
-                      ? "bg-[#E3F2FD]"
-                      : "hover:bg-gray-50"
-                    }`}
-                >
-                  <td className="px-4 py-3 text-gray-900">{item.name}</td>
-                  <td className="px-4 py-3 text-right font-medium">
-                    {item.price}
+              filteredItemList.length > 0 ? (
+                filteredItemList.map((item) => (
+                  <tr
+                    key={item.id}
+                    onClick={() => setSelectedExpenseItem(item)}
+                    onContextMenu={(event) => {
+                      event.preventDefault();
+                      setItemContextMenu({
+                        item: item,
+                        x: event.clientX,
+                        y: event.clientY,
+                      });
+                    }}
+                    className={`cursor-pointer border-b border-gray-100 ${selectedExpenseItem?.id === item.id
+                        ? "bg-[#E3F2FD]"
+                        : "hover:bg-gray-50"
+                      }`}
+                  >
+                    <td className="px-4 py-3 text-gray-900">{item.name}</td>
+                    <td className="px-4 py-3 text-right font-medium">
+                      {item.price}
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={2}>
+                    <div className="flex flex-col items-center justify-center py-10 px-6 text-center select-none">
+                      <p className="text-sm font-semibold text-gray-500">
+                        {searchQuery ? "No items found" : "No expense items"}
+                      </p>
+                      <p className="mt-1 text-xs text-gray-400">
+                        {searchQuery
+                          ? "Try a different search term."
+                          : "Add an item using the menu above."}
+                      </p>
+                    </div>
                   </td>
                 </tr>
-              ))
+              )
             )}
           </tbody>
         </table>

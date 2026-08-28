@@ -2,7 +2,7 @@ import type { ExpenseCategory } from "@/types";
 import { useSettings } from "@/hooks/useSettings";
 import type { ExpenseItem, ExpenseRecord } from "./types";
 import { useState, useEffect, useRef } from "react";
-import { Search } from "lucide-react";
+import { Search, FolderOpen, Tag } from "lucide-react";
 import { ExpenseRecordContextMenu } from "./ExpenseRecordContextMenu";interface ExpensesDetailsProps {
   activeTab: "category" | "items";
   selectedCategory: ExpenseCategory | null;
@@ -165,7 +165,7 @@ export function ExpensesDetails({
   return (
     <div className="flex-1 flex flex-col gap-1">
       {activeTab === "category" ? (
-        selectedCategory && (
+        selectedCategory ? (
           <>
             {/* Category Info Card */}
             <div className="bg-white rounded-md shadow-sm px-6 pt-6 pb-4">
@@ -292,9 +292,32 @@ export function ExpensesDetails({
               </div>
             </div>
           </>
+        ) : (
+          <>
+            {/* Empty Category Info Card */}
+            <div className="bg-white rounded-md shadow-sm px-6 pt-6 pb-4">
+              <div className="flex items-center h-10">
+                <p className="text-sm text-gray-400">No expense category selected. Add a category from the left panel.</p>
+              </div>
+            </div>
+
+            {/* Empty Transactions Card */}
+            <div className="flex-1 bg-white rounded-md shadow-sm overflow-hidden flex flex-col">
+              <div className="px-6 pt-4 pb-2 border-b border-gray-200">
+                <h3 className="text-base font-bold text-[#222B45] tracking-wide">TRANSACTIONS</h3>
+              </div>
+              <div className="flex-1 flex flex-col items-center justify-center py-16 select-none">
+                <div className="mb-3 flex items-center justify-center w-14 h-14 rounded-full bg-gray-100">
+                  <FolderOpen className="w-7 h-7 text-gray-400" />
+                </div>
+                <p className="text-sm font-semibold text-gray-500">No expense category selected</p>
+                <p className="mt-1 text-xs text-gray-400">Add a category from the left panel to get started.</p>
+              </div>
+            </div>
+          </>
         )
       ) : (
-        selectedExpenseItem && (
+        selectedExpenseItem ? (
           <>
             {/* Item Info Card */}
             <div className="bg-white rounded-md shadow-sm px-6 pt-6 pb-4">
@@ -441,6 +464,29 @@ export function ExpensesDetails({
                   )}
                 </tbody>
               </table>
+              </div>
+            </div>
+          </>
+        ) : (
+          <>
+            {/* Empty Item Info Card */}
+            <div className="bg-white rounded-md shadow-sm px-6 pt-6 pb-4">
+              <div className="flex items-center h-10">
+                <p className="text-sm text-gray-400">No expense item selected. Add an item from the left panel.</p>
+              </div>
+            </div>
+
+            {/* Empty Transactions Card */}
+            <div className="flex-1 bg-white rounded-md shadow-sm overflow-hidden flex flex-col">
+              <div className="px-6 pt-4 pb-2 border-b border-gray-200">
+                <h3 className="text-base font-bold text-[#222B45] tracking-wide">TRANSACTIONS</h3>
+              </div>
+              <div className="flex-1 flex flex-col items-center justify-center py-16 select-none">
+                <div className="mb-3 flex items-center justify-center w-14 h-14 rounded-full bg-gray-100">
+                  <Tag className="w-7 h-7 text-gray-400" />
+                </div>
+                <p className="text-sm font-semibold text-gray-500">No expense item selected</p>
+                <p className="mt-1 text-xs text-gray-400">Add an item from the left panel to get started.</p>
               </div>
             </div>
           </>

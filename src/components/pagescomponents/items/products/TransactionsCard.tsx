@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useSettings } from "@/hooks/useSettings";
-import { Search, Printer, MoreVertical } from "lucide-react";
+import { Search, MoreVertical } from "lucide-react";
 import { Card, CardContent } from "./ui";
 import type { ItemTransactionRow } from "./types";
 import { ItemTransactionContextMenu } from "./ItemTransactionContextMenu";
@@ -11,7 +11,6 @@ type TransactionsCardProps = {
   transactionSearchTerm: string;
   onSetShowTransactionSearch: (show: boolean) => void;
   onSetTransactionSearchTerm: (term: string) => void;
-  onPrintTransactions: () => void;
   onExportExcel: () => void;
   onViewTransaction?: (transaction: ItemTransactionRow) => void;
   onEditTransaction?: (transaction: ItemTransactionRow) => void;
@@ -24,7 +23,6 @@ export function TransactionsCard({
   transactionSearchTerm,
   onSetShowTransactionSearch,
   onSetTransactionSearchTerm,
-  onPrintTransactions,
   onExportExcel,
   onViewTransaction,
   onEditTransaction,
@@ -102,12 +100,6 @@ export function TransactionsCard({
               </button>
             )}
             <button
-              onClick={onPrintTransactions}
-              className="p-1.5 hover:bg-[#F7F9FB] rounded"
-            >
-              <Printer className="w-4 h-4 text-[#7B8A9A]" />
-            </button>
-            <button
               onClick={onExportExcel}
               className="p-1.5 hover:bg-[#F7F9FB] rounded relative"
             >
@@ -174,7 +166,15 @@ export function TransactionsCard({
                     </td>
                     <td className="px-4 py-2">{transaction.invoiceNo}</td>
                     <td className="px-4 py-2">{transaction.partyName}</td>
-                    <td className="px-4 py-2">{transaction.date}</td>
+                    <td className="px-4 py-2">
+                      {transaction.date
+                        ? new Date(transaction.date).toLocaleDateString("en-GB", {
+                            day: "2-digit",
+                            month: "2-digit",
+                            year: "numeric",
+                          })
+                        : ""}
+                    </td>
                     <td className="px-4 py-2 text-right">
                       {Number(transaction.quantity).toLocaleString()}{" "}
                       {transaction.unit || ""}
@@ -183,44 +183,48 @@ export function TransactionsCard({
                       {currencyStr} {Number(transaction.price).toFixed(2)}
                     </td>
                     <td className="px-4 py-2">
-                      <span
-                        className={`text-xs px-2 py-1 rounded-full font-semibold ${
-                          transaction.status === "Paid"
-                            ? "bg-[#E6F4EA] text-[#43A047]"
-                            : transaction.status === "Unpaid"
-                              ? "bg-[#FDEAEA] text-[#E53935]"
-                              : "bg-[#F7F9FB] text-[#7B8A9A]"
-                        }`}
-                      >
-                        {transaction.status}
-                      </span>
+                      {transaction.status ? (
+                        <span
+                          className={`text-xs px-2 py-1 rounded-full font-semibold ${
+                            transaction.status === "Paid"
+                              ? "bg-[#E6F4EA] text-[#43A047]"
+                              : transaction.status === "Unpaid"
+                                ? "bg-[#FDEAEA] text-[#E53935]"
+                                : "bg-[#F7F9FB] text-[#7B8A9A]"
+                          }`}
+                        >
+                          {transaction.status}
+                        </span>
+                      ) : null}
                     </td>
                     <td className="px-4 py-2 text-center">
-                      <button
-                        className="p-1.5 hover:bg-gray-100 rounded"
-                        title="More actions"
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          const targetRect = event.currentTarget.getBoundingClientRect();
-                          const menuWidth = 144;
-                          const menuHeight = 96;
-                          const nextLeft = Math.max(8, Math.min(targetRect.right - menuWidth, window.innerWidth - menuWidth - 8));
-                          const nextTop = targetRect.bottom + menuHeight > window.innerHeight
-                            ? Math.max(8, targetRect.top - menuHeight - 8)
-                            : targetRect.bottom + 8;
+                      {transaction.type !== "Opening Stock" && (
+                        <button
+                          className="p-1.5 hover:bg-gray-100 rounded"
+                          title="More actions"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            const targetRect = event.currentTarget.getBoundingClientRect();
+                            const menuWidth = 144;
+                            const menuHeight = 96;
+                            const nextLeft = Math.max(8, Math.min(targetRect.right - menuWidth, window.innerWidth - menuWidth - 8));
+                            const nextTop = targetRect.bottom + menuHeight > window.innerHeight
+                              ? Math.max(8, targetRect.top - menuHeight - 8)
+                              : targetRect.bottom + 8;
 
-                          setOpenRowMenuPosition((previousPosition) =>
-                            openRowMenuId === transaction.id && previousPosition
-                              ? null
-                              : { left: nextLeft, top: nextTop },
-                          );
-                          setOpenRowMenuId((previous) =>
-                            previous === transaction.id ? null : transaction.id,
-                          );
-                        }}
-                      >
-                        <MoreVertical className="w-4 h-4 text-gray-500" />
-                      </button>
+                            setOpenRowMenuPosition((previousPosition) =>
+                              openRowMenuId === transaction.id && previousPosition
+                                ? null
+                                : { left: nextLeft, top: nextTop },
+                            );
+                            setOpenRowMenuId((previous) =>
+                              previous === transaction.id ? null : transaction.id,
+                            );
+                          }}
+                        >
+                          <MoreVertical className="w-4 h-4 text-gray-500" />
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))

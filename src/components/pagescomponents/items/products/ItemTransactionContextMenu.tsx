@@ -1,4 +1,5 @@
 import { Search, Pencil, Trash2 } from "lucide-react";
+import { useEffect, useRef } from "react";
 import type { ItemTransactionRow } from "./types";
 
 interface ItemTransactionContextMenuProps {
@@ -22,6 +23,24 @@ export function ItemTransactionContextMenu({
   onEditTransaction,
   handleDeleteTransaction
 }: ItemTransactionContextMenuProps) {
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setOpenRowMenuId(null);
+        setOpenRowMenuPosition(null);
+      }
+    }
+
+    if (openRowMenuId) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [openRowMenuId, setOpenRowMenuId, setOpenRowMenuPosition]);
+
   if (!openRowMenuId || !openRowMenuPosition) return null;
 
   const targetTransaction = transactions.find((row) => row.id === openRowMenuId) ?? null;
@@ -29,23 +48,25 @@ export function ItemTransactionContextMenu({
 
   return (
     <div
+      ref={menuRef}
       className="fixed z-50 w-36 overflow-hidden rounded-lg border border-gray-200 bg-white shadow-lg"
       style={{ left: openRowMenuPosition.left, top: openRowMenuPosition.top }}
       onClick={(event) => event.stopPropagation()}
     >
-      {targetTransaction.type !== "Add Stock" && targetTransaction.type !== "Reduce Stock" && (
         <>
-          <button
-            className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-gray-50"
-            onClick={() => {
-              openViewDialog?.(targetTransaction);
-              setOpenRowMenuId(null);
-              setOpenRowMenuPosition(null);
-            }}
-          >
-            <Search className="w-4 h-4 text-gray-500" />
-            View
-          </button>
+          {targetTransaction.type !== "Add Stock" && targetTransaction.type !== "Reduce Stock" && (
+            <button
+              className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-gray-50"
+              onClick={() => {
+                openViewDialog?.(targetTransaction);
+                setOpenRowMenuId(null);
+                setOpenRowMenuPosition(null);
+              }}
+            >
+              <Search className="w-4 h-4 text-gray-500" />
+              View
+            </button>
+          )}
           <button
             className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-gray-50"
             onClick={() => {
@@ -58,7 +79,6 @@ export function ItemTransactionContextMenu({
             Edit
           </button>
         </>
-      )}
       <button
         className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50"
         onClick={() => {

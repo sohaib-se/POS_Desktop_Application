@@ -2422,6 +2422,60 @@ function sqliteApiPlugin() {
                 const secondaryStock = Number(item.stockQuantity) * Number(item.conversionRate ?? 0);
 
                 repository.upsertItem(item);
+
+                if (!payload.skipOpeningStockUpdate) {
+                  if (!existingItem && Number(item.stockQuantity) > 0) {
+                    try {
+                      repository.addStockAdjustment({
+                        itemId: item.id,
+                        itemName: item.name,
+                        adjustmentType: 'Opening Stock',
+                        date: new Date().toISOString(),
+                        quantity: Number(item.stockQuantity),
+                        unit: item.unit,
+                        atPrice: item.atPrice,
+                        details: 'Opening stock transaction'
+                      });
+                    } catch (e) {
+                      console.error('Failed to add opening stock transaction:', e);
+                    }
+                  } else if (existingItem) {
+                    try {
+                      const allAdjustments = repository.getStockAdjustments();
+                      const openingStockTx = allAdjustments.find((a: any) => String(a.item_id) === String(item.id) && a.adjustment_type === 'Opening Stock');
+                      if (openingStockTx) {
+                        if (Number(item.stockQuantity) > 0) {
+                          repository.updateStockAdjustment(openingStockTx.id, {
+                            itemId: item.id,
+                            itemName: item.name,
+                            adjustmentType: 'Opening Stock',
+                            date: openingStockTx.date,
+                            quantity: Number(item.stockQuantity),
+                            unit: item.unit,
+                            atPrice: item.atPrice,
+                            details: openingStockTx.details
+                          });
+                        } else {
+                          repository.deleteStockAdjustment(openingStockTx.id);
+                        }
+                      } else if (Number(item.stockQuantity) > 0) {
+                        repository.addStockAdjustment({
+                          itemId: item.id,
+                          itemName: item.name,
+                          adjustmentType: 'Opening Stock',
+                          date: new Date().toISOString(),
+                          quantity: Number(item.stockQuantity),
+                          unit: item.unit,
+                          atPrice: item.atPrice,
+                          details: 'Opening stock transaction'
+                        });
+                      }
+                    } catch (e) {
+                      console.error('Failed to update opening stock transaction:', e);
+                    }
+                  }
+                }
+
                 res.statusCode = 201;
                 res.setHeader('Content-Type', 'application/json');
                 res.end(JSON.stringify({
@@ -2456,6 +2510,16 @@ function sqliteApiPlugin() {
             const existingImgPath = existingItem?.img_path ?? null;
 
             try {
+              // Auto-delete any "Opening Stock" adjustments for this item before deletion.
+              // All other transactions (sales, purchases, other adjustments) still block deletion.
+              const allAdjustments = repository.getStockAdjustments();
+              const openingStockTxIds = allAdjustments
+                .filter((a: any) => String(a.item_id) === id && a.adjustment_type === 'Opening Stock')
+                .map((a: any) => a.id);
+              for (const txId of openingStockTxIds) {
+                try { repository.deleteStockAdjustment(txId); } catch (e) { /* ignore */ }
+              }
+
               const deleted = repository.deleteItem(id);
               if (!deleted) {
                 res.statusCode = 404;
@@ -2478,7 +2542,7 @@ function sqliteApiPlugin() {
               if (error.message === 'ITEM_IN_USE') {
                 res.statusCode = 409;
                 res.setHeader('Content-Type', 'application/json');
-                res.end(JSON.stringify({ message: 'delete all the transaction of item, if you want to delete the items' }));
+                res.end(JSON.stringify({ message: 'Please delete all sales, purchases, and stock adjustment transactions for this item before deleting it.' }));
               } else {
                 res.statusCode = 500;
                 res.setHeader('Content-Type', 'application/json');

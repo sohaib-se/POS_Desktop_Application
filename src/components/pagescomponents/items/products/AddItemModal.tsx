@@ -1,4 +1,4 @@
-import { X } from "lucide-react";
+import { X, ScanBarcode } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui";
 import { useSettings } from "@/hooks/useSettings";
 import type {
@@ -133,24 +133,15 @@ export function AddItemModal({
                 />
                 <button
                   type="button"
-                  onClick={() =>
-                    onFormChange(
-                      "itemCode",
-                      `ITEM-${Date.now().toString().slice(-6)}`
-                    )
-                  }
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-blue-600 hover:text-blue-700"
-                  aria-label="Assign code"
-                  title="Assign code"
+                  onClick={() => {
+                    const randomCode = Math.floor(100000000000 + Math.random() * 900000000000).toString();
+                    onFormChange("itemCode", randomCode);
+                  }}
+                  className="absolute right-1 top-1 bottom-1 px-2 flex items-center justify-center text-white bg-[#E53935] hover:bg-[#d32f2f] rounded transition-colors"
+                  aria-label="Assign Random Code"
+                  title="Assign Random Code"
                 >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                    <path
-                      d="M7 7h10M7 12h10M7 17h6"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                    />
-                  </svg>
+                  <ScanBarcode className="w-4 h-4" />
                 </button>
               </div>
             </div>
@@ -227,11 +218,16 @@ export function AddItemModal({
                   </label>
                   <input
                     type="number"
+                    min="0"
+                    onWheel={(e) => e.currentTarget.blur()}
+                    onKeyDown={(e) => {
+                      if (e.key === '-' || e.key === '+') e.preventDefault();
+                    }}
                     value={addItemForm.salePrice}
                     onChange={(event) =>
                       onFormChange("salePrice", event.target.value)
                     }
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                     placeholder="Sale Price"
                   />
                 </div>
@@ -241,11 +237,16 @@ export function AddItemModal({
                   </label>
                   <input
                     type="number"
+                    min="0"
+                    onWheel={(e) => e.currentTarget.blur()}
+                    onKeyDown={(e) => {
+                      if (e.key === '-' || e.key === '+') e.preventDefault();
+                    }}
                     value={addItemForm.wholesalePrice}
                     onChange={(event) =>
                       onFormChange("wholesalePrice", event.target.value)
                     }
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                     placeholder="Wholesale Price"
                   />
                 </div>
@@ -257,11 +258,16 @@ export function AddItemModal({
                   </label>
                   <input
                     type="number"
+                    min="0"
+                    onWheel={(e) => e.currentTarget.blur()}
+                    onKeyDown={(e) => {
+                      if (e.key === '-' || e.key === '+') e.preventDefault();
+                    }}
                     value={addItemForm.purchasePrice}
                     onChange={(event) =>
                       onFormChange("purchasePrice", event.target.value)
                     }
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                     placeholder="Purchase Price"
                   />
                 </div>
@@ -271,12 +277,17 @@ export function AddItemModal({
                   </label>
                   <input
                     type="number"
+                    min="0"
+                    onWheel={(e) => e.currentTarget.blur()}
+                    onKeyDown={(e) => {
+                      if (e.key === '-' || e.key === '+') e.preventDefault();
+                    }}
                     placeholder="0"
                     value={addItemForm.minWholesaleQty}
                     onChange={(event) =>
                       onFormChange("minWholesaleQty", event.target.value)
                     }
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                   />
                 </div>
               </div>
@@ -294,11 +305,19 @@ export function AddItemModal({
                   </div>
                   <input
                     type="number"
+                    min="0"
+                    disabled={!!itemBeingEdited}
+                    onWheel={(e) => e.currentTarget.blur()}
+                    onKeyDown={(e) => {
+                      if (e.key === '-' || e.key === '+') e.preventDefault();
+                    }}
                     value={addItemForm.openingStock}
                     onChange={(event) =>
                       onFormChange("openingStock", event.target.value)
                     }
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                    className={`w-full border border-gray-300 rounded-lg px-3 py-2 text-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
+                      itemBeingEdited ? "bg-gray-100 cursor-not-allowed" : ""
+                    }`}
                     placeholder="0"
                   />
                 </div>
@@ -308,11 +327,19 @@ export function AddItemModal({
                   </label>
                   <input
                     type="number"
+                    min="0"
+                    disabled={!!itemBeingEdited}
+                    onWheel={(e) => e.currentTarget.blur()}
+                    onKeyDown={(e) => {
+                      if (e.key === '-' || e.key === '+') e.preventDefault();
+                    }}
                     value={addItemForm.atPrice}
                     onChange={(event) =>
                       onFormChange("atPrice", event.target.value)
                     }
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                    className={`w-full border border-gray-300 rounded-lg px-3 py-2 text-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
+                      itemBeingEdited ? "bg-gray-100 cursor-not-allowed" : ""
+                    }`}
                     placeholder="0"
                   />
                 </div>
@@ -324,12 +351,15 @@ export function AddItemModal({
                   </label>
                   <input
                     type="date"
+                    disabled={!!itemBeingEdited}
                     placeholder="YYYY-MM-DD"
                     value={addItemForm.asOfDate}
                     onChange={(event) =>
                       onFormChange("asOfDate", event.target.value)
                     }
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                    className={`w-full border border-gray-300 rounded-lg px-3 py-2 text-sm ${
+                      itemBeingEdited ? "bg-gray-100 cursor-not-allowed" : ""
+                    }`}
                   />
                 </div>
                 <div>
@@ -338,12 +368,17 @@ export function AddItemModal({
                   </label>
                   <input
                     type="number"
+                    min="0"
+                    onWheel={(e) => e.currentTarget.blur()}
+                    onKeyDown={(e) => {
+                      if (e.key === '-' || e.key === '+') e.preventDefault();
+                    }}
                     placeholder="0"
                     value={addItemForm.lowStockThreshold}
                     onChange={(event) =>
                       onFormChange("lowStockThreshold", event.target.value)
                     }
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                   />
                 </div>
               </div>

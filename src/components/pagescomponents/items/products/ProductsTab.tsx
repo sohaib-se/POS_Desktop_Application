@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useSettings } from "@/hooks/useSettings";
+
 import { Package, Plus } from "lucide-react";
 
 import type {
@@ -194,9 +194,7 @@ export function ProductsTab({
   onOpenUnitSelector,
 }: ProductsTabProps) {
   // ---- State ----
-  const [currency] = useSettings('settings.businessCurrency', { code: 'PKR', symbol: 'Rs' });
-  const [currencyDisplay] = useSettings<'abbreviation' | 'icon'>('settings.currencyDisplay', 'abbreviation');
-  const currencyStr = currencyDisplay === 'icon' ? currency.symbol : currency.code;
+
 
   const [itemList, setItemList] = useState<Item[]>([]);
   const [isItemsLoading, setIsItemsLoading] = useState(true);
@@ -386,19 +384,19 @@ export function ProductsTab({
       const adjustTransactions: ItemTransactionRow[] = adjustStockTx.map(
         (adj) => ({
           id: `adj-${adj.id as string}`,
-          type: adj.adjustment_type as ItemTransactionRow["type"],
+          type: (adj.adjustmentType || adj.adjustment_type) as ItemTransactionRow["type"],
           invoiceNo: "",
-          partyName: "Stock Adjustment",
+          partyName: (adj.details as string) || (adj.adjustmentType as string) || (adj.adjustment_type as string) || "Stock Adjustment",
           date: adj.date as string,
           quantity: Number(adj.quantity ?? 0),
           unit: (adj.unit as string) ?? "",
-          price: Number(adj.at_price ?? 0),
-          amount: Number(adj.quantity ?? 0) * Number(adj.at_price ?? 0),
+          price: Number(adj.atPrice ?? adj.at_price ?? 0),
+          amount: Number(adj.quantity ?? 0) * Number(adj.atPrice ?? adj.at_price ?? 0),
           balance: 0,
-          status: "Paid",
-          itemId: adj.item_id as string,
-          itemName: adj.item_name as string,
-          rawTransaction: { id: adj.id },
+          status: "",
+          itemId: (adj.itemId || adj.item_id) as string,
+          itemName: (adj.itemName || adj.item_name) as string,
+          rawTransaction: adj,
         })
       );
 
@@ -469,8 +467,9 @@ export function ProductsTab({
       let oldStockChange = 0;
       let oldValueChange = 0;
       
+      let oldTx: ItemTransactionRow | undefined = undefined;
       if (adjustStockForm.id) {
-        const oldTx = itemTransactions.find(t => t.rawTransaction?.id === adjustStockForm.id);
+        oldTx = itemTransactions.find(t => t.rawTransaction?.id === adjustStockForm.id);
         if (oldTx) {
           const oldQty = oldTx.quantity;
           const oldPrice = oldTx.price;
@@ -479,7 +478,7 @@ export function ProductsTab({
           if (oldIsSecondary && selectedItem.conversionRate) {
             oldBaseQty = oldQty / selectedItem.conversionRate;
           }
-          const oldIsAdd = oldTx.type === "Add Stock";
+          const oldIsAdd = oldTx.type === "Add Stock" || oldTx.type === "Opening Stock";
           oldStockChange = oldIsAdd ? oldBaseQty : -oldBaseQty;
           
           const oldVal = oldQty * oldPrice;
@@ -525,6 +524,7 @@ export function ProductsTab({
         secondaryStock: newSecondaryStock,
         conversionRate: selectedItem.conversionRate,
         status: selectedItem.status,
+        skipOpeningStockUpdate: true,
       };
 
       const response = await fetch("/api/items", {
@@ -537,7 +537,7 @@ export function ProductsTab({
       const adjustPayload = {
         itemId: selectedItem.id,
         itemName: selectedItem.name,
-        adjustmentType: adjustStockForm.type + " Stock",
+        adjustmentType: oldTx?.type === "Opening Stock" ? "Opening Stock" : (adjustStockForm.type + " Stock"),
         date: adjustStockForm.date,
         quantity: qty,
         unit: adjustStockForm.unit,
@@ -608,7 +608,7 @@ export function ProductsTab({
       if (transaction.rawTransaction) {
         setAdjustStockForm({
           id: transaction.rawTransaction.id,
-          type: transaction.type === "Add Stock" ? "Add" : "Reduce",
+          type: transaction.type === "Add Stock" || transaction.type === "Opening Stock" ? "Add" : "Reduce",
           date: transaction.date,
           qty: String(transaction.quantity),
           unit: transaction.unit,
@@ -635,7 +635,7 @@ export function ProductsTab({
         if (!res.ok && res.status !== 204) throw new Error("Failed to delete purchase");
       } else {
         if (selectedItem) {
-          const isAdd = transaction.type === "Add Stock";
+          const isAdd = transaction.type === "Add Stock" || transaction.type === "Opening Stock";
           const qty = transaction.quantity;
           const atPrice = transaction.price;
           
@@ -675,6 +675,7 @@ export function ProductsTab({
             secondaryStock: newSecondaryStock,
             conversionRate: selectedItem.conversionRate,
             status: selectedItem.status,
+            skipOpeningStockUpdate: true,
           };
 
           const response = await fetch("/api/items", {
@@ -683,6 +684,22 @@ export function ProductsTab({
             body: JSON.stringify(payload),
           });
           if (!response.ok) throw new Error("Failed to revert stock");
+
+          const updatedItemPayload = (await response.json()) as Record<string, unknown>;
+          const updatedItem: Item = {
+            ...selectedItem,
+            stockQuantity: Number(updatedItemPayload.stockQuantity ?? newStockQuantity),
+            stockValue: Number(updatedItemPayload.stockValue ?? finalStockValue),
+            secondaryStock:
+              updatedItemPayload.secondaryStock != null
+                ? Number(updatedItemPayload.secondaryStock)
+                : newSecondaryStock,
+            conversionRate: selectedItem.conversionRate,
+          };
+          setItemList((prev) =>
+            prev.map((item) => (item.id === updatedItem.id ? updatedItem : item))
+          );
+          setSelectedItem(updatedItem);
         }
 
         const res = await fetch(`/api/adjust_stock_transactions/${apiId}`, { method: "DELETE" });
@@ -696,33 +713,6 @@ export function ProductsTab({
     }
   };
 
-  const handlePrintTransactions = () => {
-    if (!selectedItem) return;
-    const iframe = document.createElement("iframe");
-    iframe.style.cssText =
-      "position:fixed;right:0;bottom:0;width:0;height:0;border:0;";
-    document.body.appendChild(iframe);
-    const html = `
-      <html><head><title>Transactions - ${selectedItem.name}</title>
-      <style>body{font-family:sans-serif;padding:20px}table{width:100%;border-collapse:collapse;margin-top:20px}th,td{border:1px solid #ddd;padding:8px;text-align:left}th{background:#f2f2f2}</style>
-      </head><body><h2>Transactions - ${selectedItem.name}</h2>
-      <table><thead><tr><th>Type</th><th>Number</th><th>Date</th><th>Total</th><th>Balance</th></tr></thead>
-      <tbody>${filteredItemTransactions.map((t) => `<tr><td>${t.type}</td><td>${t.invoiceNo || ""}</td><td>${t.date}</td><td>${currencyStr} ${t.amount.toFixed(2)}</td><td>${currencyStr} ${t.balance.toFixed(2)}</td></tr>`).join("")}</tbody>
-      </table></body></html>`;
-    const iframeDoc = iframe.contentWindow?.document;
-    if (iframeDoc) {
-      iframeDoc.open();
-      iframeDoc.write(html);
-      iframeDoc.close();
-      setTimeout(() => {
-        iframe.contentWindow?.focus();
-        iframe.contentWindow?.print();
-        setTimeout(() => document.body.removeChild(iframe), 1000);
-      }, 250);
-    } else {
-      document.body.removeChild(iframe);
-    }
-  };
 
   const handleExportExcel = () => {
     if (!selectedItem) return;
@@ -1035,6 +1025,7 @@ export function ProductsTab({
         return next.sort((a, b) => a.name.localeCompare(b.name));
       });
       setSelectedItem(createdItem);
+      void loadItemTransactions();
 
       if (!itemBeingEdited && selectedItemCategory) {
         setCategoryList((prev) =>
@@ -1218,7 +1209,7 @@ export function ProductsTab({
               transactionSearchTerm={transactionSearchTerm}
               onSetShowTransactionSearch={setShowTransactionSearch}
               onSetTransactionSearchTerm={setTransactionSearchTerm}
-              onPrintTransactions={handlePrintTransactions}
+
               onExportExcel={handleExportExcel}
               onViewTransaction={handleViewTransaction}
               onEditTransaction={handleEditTransaction}

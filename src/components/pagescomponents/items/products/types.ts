@@ -91,7 +91,7 @@ export type ConversionRateRecord = {
 
 export type ItemTransactionRow = {
   id: string;
-  type: "Sale" | "Purchase" | "Add Stock" | "Reduce Stock";
+  type: "Sale" | "Purchase" | "Add Stock" | "Reduce Stock" | "Opening Stock";
   invoiceNo: string;
   partyName: string;
   date: string;
@@ -100,7 +100,7 @@ export type ItemTransactionRow = {
   price: number;
   amount: number;
   balance: number;
-  status: "Paid" | "Unpaid" | "Open" | "Cancelled";
+  status: "Paid" | "Unpaid" | "Open" | "Cancelled" | "";
   itemId?: string;
   itemName: string;
   rawTransaction?: any;

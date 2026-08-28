@@ -127,29 +127,31 @@ export function UnitSelectorModal({
             </div>
           )}
 
-          <div className="flex items-center gap-2 mt-4 pt-3 border-t border-gray-100">
-            <span className="text-sm text-gray-600">
-              1{" "}
-              {baseUnit?.fullName ?? "BASE UNIT"}{" "}
-              =
-            </span>
-            <input
-              type="number"
-              className="w-20 border border-gray-300 rounded-lg px-3 py-2 text-sm"
-              placeholder="0"
-              value={unitSelectorConversionRate}
-              onChange={(event) =>
-                onSetUnitSelectorConversionRate(
-                  Number(event.target.value) || 0
-                )
-              }
-            />
-            <span className="text-sm text-gray-600">
-              {units.find((u) => u.id === unitSelectorSecondaryUnitId)
-                ? `${units.find((u) => u.id === unitSelectorSecondaryUnitId)!.fullName} (${units.find((u) => u.id === unitSelectorSecondaryUnitId)!.shortName})`
-                : "SECONDARY UNIT"}
-            </span>
-          </div>
+          {unitSelectorSecondaryUnitId && (
+            <div className="flex items-center gap-2 mt-4 pt-3 border-t border-gray-100">
+              <span className="text-sm text-gray-600">
+                1{" "}
+                {baseUnit?.fullName ?? "BASE UNIT"}{" "}
+                =
+              </span>
+              <input
+                type="number"
+                className="w-20 border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                placeholder="0"
+                value={unitSelectorConversionRate}
+                onChange={(event) =>
+                  onSetUnitSelectorConversionRate(
+                    Number(event.target.value) || 0
+                  )
+                }
+              />
+              <span className="text-sm text-gray-600">
+                {units.find((u) => u.id === unitSelectorSecondaryUnitId)
+                  ? `${units.find((u) => u.id === unitSelectorSecondaryUnitId)!.fullName} (${units.find((u) => u.id === unitSelectorSecondaryUnitId)!.shortName})`
+                  : "SECONDARY UNIT"}
+              </span>
+            </div>
+          )}
           <button
             onClick={onSave}
             className="w-full bg-[#1976D2] text-white py-2 rounded-lg text-sm font-medium"

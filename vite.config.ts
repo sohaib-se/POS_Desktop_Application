@@ -2510,16 +2510,6 @@ function sqliteApiPlugin() {
             const existingImgPath = existingItem?.img_path ?? null;
 
             try {
-              // Auto-delete any "Opening Stock" adjustments for this item before deletion.
-              // All other transactions (sales, purchases, other adjustments) still block deletion.
-              const allAdjustments = repository.getStockAdjustments();
-              const openingStockTxIds = allAdjustments
-                .filter((a: any) => String(a.item_id) === id && a.adjustment_type === 'Opening Stock')
-                .map((a: any) => a.id);
-              for (const txId of openingStockTxIds) {
-                try { repository.deleteStockAdjustment(txId); } catch (e) { /* ignore */ }
-              }
-
               const deleted = repository.deleteItem(id);
               if (!deleted) {
                 res.statusCode = 404;
@@ -3087,7 +3077,7 @@ function sqliteApiPlugin() {
                   if (receivedAmount > 0) {
                     try {
                       repository.addCashInHandTransaction({
-                        id: 'cash_pos_' + invoice.id + '_' + Date.now(),
+                        id: invoice.id + '_cash_pos',
                         date: invoice.date,
                         name: invoice.partyName || 'Cash Sale',
                         type: 'POS Sale',
@@ -3322,11 +3312,7 @@ function sqliteApiPlugin() {
               }
 
               try {
-                if (String(existingInvoice.payment_mode).toLowerCase() === 'cash') {
-                  repository.deleteCashInHandTransaction('cash_' + id);
-                } else if (String(existingInvoice.payment_mode).toLowerCase() === 'credit') {
-                  repository.deleteCashInHandTransaction('cash_' + id + '_received');
-                }
+                repository.deleteCashInHandTransactionsForSale(id);
               } catch (txError) {
                 console.error('Failed to delete cash transaction:', txError);
               }
@@ -4052,6 +4038,60 @@ function sqliteApiPlugin() {
               res.setHeader('Content-Type', 'application/json');
               res.end(JSON.stringify({ message: 'Transaction id is required.' }));
               return;
+            }
+
+            // If this is a linked POS sale cash transaction (format: {invoiceId}_cash_pos),
+            // also delete the associated sale invoice and restore stock/party balance.
+            if (id.endsWith('_cash_pos')) {
+              const invoiceId = id.slice(0, -'_cash_pos'.length);
+              const existingInvoice = repository.getSaleInvoiceById(invoiceId);
+              if (existingInvoice) {
+                try {
+                  const lineItems = JSON.parse(existingInvoice.line_items_json || '[]');
+                  const allItems = repository.getItems();
+                  for (const lineItem of lineItems) {
+                    if (!lineItem.itemId || !lineItem.quantity) continue;
+                    const dbItem = allItems.find((i: any) => String(i.id) === String(lineItem.itemId));
+                    if (!dbItem) continue;
+
+                    const isSecondary = lineItem.unit === dbItem.secondary_unit;
+                    repository.deductItemStock(
+                      lineItem.itemId,
+                      -Number(lineItem.quantity),
+                      isSecondary,
+                      dbItem.conversion_rate
+                    );
+                  }
+                } catch (stockError) {
+                  console.error('Failed to restore stock:', stockError);
+                }
+
+                if (String(existingInvoice.payment_mode).toLowerCase() === 'credit' && existingInvoice.party_id) {
+                  try {
+                    const allParties = repository.getParties();
+                    const party = allParties.find((p: any) => String(p.id) === String(existingInvoice.party_id));
+                    if (party) {
+                      party.balance = Number(party.balance || 0) - Number(existingInvoice.balance || 0);
+                      repository.upsertParty(party);
+                    }
+                  } catch (balanceError) {
+                    console.error('Failed to restore party balance:', balanceError);
+                  }
+                }
+
+                repository.deleteSaleInvoice(invoiceId);
+
+                try {
+                  if (existingInvoice?.attachment_image_path) {
+                    removeManagedAttachmentFile(existingInvoice.attachment_image_path);
+                  }
+                  if (existingInvoice?.attachment_document_path) {
+                    removeManagedAttachmentFile(existingInvoice.attachment_document_path);
+                  }
+                } catch (error) {
+                  console.error('Failed to remove sale invoice attachments on delete:', error);
+                }
+              }
             }
 
             const deleted = repository.deleteCashInHandTransaction(id);

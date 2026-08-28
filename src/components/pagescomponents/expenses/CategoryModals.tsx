@@ -1,6 +1,7 @@
-import { X } from "lucide-react";
+import { X, AlertTriangle } from "lucide-react";
 import type { ExpenseCategory } from "@/types";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./Dialog";
+import type { ExpenseRecord } from "./types";
 
 interface CategoryModalsProps {
   showAddCategory: boolean;
@@ -10,11 +11,12 @@ interface CategoryModalsProps {
   categoryBeingEdited: ExpenseCategory | null;
   setCategoryBeingEdited: (cat: ExpenseCategory | null) => void;
   handleCreateCategory: () => void;
-  
+
   categoryPendingDelete: ExpenseCategory | null;
   setCategoryPendingDelete: (cat: ExpenseCategory | null) => void;
   isDeletingCategory: boolean;
   handleDeleteCategory: (cat: ExpenseCategory) => void;
+  expenseRecordList: ExpenseRecord[];
 }
 
 export function CategoryModals({
@@ -29,7 +31,14 @@ export function CategoryModals({
   setCategoryPendingDelete,
   isDeletingCategory,
   handleDeleteCategory,
+  expenseRecordList,
 }: CategoryModalsProps) {
+  const linkedTransactionCount = categoryPendingDelete
+    ? expenseRecordList.filter(
+        (r) => r.category_id === categoryPendingDelete.id && Number(r.amount) > 0
+      ).length
+    : 0;
+  const hasLinkedTransactions = linkedTransactionCount > 0;
   return (
     <>
       <Dialog
@@ -99,34 +108,63 @@ export function CategoryModals({
             <DialogTitle>Delete Category</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <p className="text-sm text-gray-600">
-              {categoryPendingDelete
-                ? `Are you sure you want to delete ${categoryPendingDelete.name}? This action cannot be undone.`
-                : "Are you sure you want to delete this category?"}
-            </p>
-            <div className="flex justify-end gap-2">
-              <button
-                type="button"
-                disabled={isDeletingCategory}
-                onClick={() => setCategoryPendingDelete(null)}
-                className="px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                disabled={isDeletingCategory || !categoryPendingDelete}
-                onClick={() => {
-                  if (!categoryPendingDelete) {
-                    return;
-                  }
-                  void handleDeleteCategory(categoryPendingDelete);
-                }}
-                className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 disabled:opacity-60"
-              >
-                {isDeletingCategory ? "Deleting..." : "Delete"}
-              </button>
-            </div>
+            {hasLinkedTransactions ? (
+              <>
+                <div className="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 p-3">
+                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" />
+                  <div>
+                    <p className="text-sm font-semibold text-amber-800">
+                      Cannot delete — transactions exist
+                    </p>
+                    <p className="mt-1 text-xs text-amber-700">
+                      <span className="font-medium">{categoryPendingDelete?.name}</span> has{" "}
+                      <span className="font-medium">{linkedTransactionCount}</span>{" "}
+                      {linkedTransactionCount === 1 ? "transaction" : "transactions"}. Please
+                      delete all its transactions from the right panel before deleting this
+                      category.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex justify-end">
+                  <button
+                    type="button"
+                    onClick={() => setCategoryPendingDelete(null)}
+                    className="px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50"
+                  >
+                    Close
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <p className="text-sm text-gray-600">
+                  {categoryPendingDelete
+                    ? `Are you sure you want to delete ${categoryPendingDelete.name}? This action cannot be undone.`
+                    : "Are you sure you want to delete this category?"}
+                </p>
+                <div className="flex justify-end gap-2">
+                  <button
+                    type="button"
+                    disabled={isDeletingCategory}
+                    onClick={() => setCategoryPendingDelete(null)}
+                    className="px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    disabled={isDeletingCategory || !categoryPendingDelete}
+                    onClick={() => {
+                      if (!categoryPendingDelete) return;
+                      void handleDeleteCategory(categoryPendingDelete);
+                    }}
+                    className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 disabled:opacity-60"
+                  >
+                    {isDeletingCategory ? "Deleting..." : "Delete"}
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </DialogContent>
       </Dialog>

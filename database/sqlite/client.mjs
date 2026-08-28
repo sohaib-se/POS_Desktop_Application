@@ -158,11 +158,23 @@ function ensurePaymentOutRecordColumns(db) {
     }
   };
 
+  // Drop legacy expense-specific columns if they still exist in older databases
+  const dropColumn = (columnName) => {
+    if (existingColumns.has(columnName)) {
+      try {
+        db.exec(`ALTER TABLE payment_out_records DROP COLUMN ${columnName}`);
+      } catch (error) {
+        console.warn(`Could not drop column ${columnName} from payment_out_records, ignoring`, error);
+      }
+    }
+  };
+
+  dropColumn('expense_category_id');
+  dropColumn('expense_category_name');
+
   addColumn('payment_no', 'TEXT');
   addColumn('party_id', 'TEXT');
   addColumn('reference', 'TEXT');
-  addColumn('expense_category_id', 'TEXT');
-  addColumn('expense_category_name', 'TEXT');
   addColumn('description', 'TEXT');
   addColumn('line_items_json', 'TEXT');
   addColumn('attachment_image_path', 'TEXT');
@@ -219,52 +231,9 @@ function ensureExpenseRecordColumns(db) {
   addColumn('round_off_amount', 'REAL NOT NULL DEFAULT 0');
 }
 
-function migratePaymentOutRecordsToExpenseRecords(db) {
-  const tables = db.prepare("SELECT name FROM sqlite_master WHERE type = 'table'").all();
-  const tableNames = new Set(tables.map((row) => row.name));
-
-  if (!tableNames.has('payment_out_records') || !tableNames.has('expense_records')) {
-    return;
-  }
-
-  db.exec(`
-    INSERT OR IGNORE INTO expense_records (
-      id,
-      expense_no,
-      category_id,
-      category_name,
-      amount,
-      payment_type,
-      description,
-      line_items_json,
-      attachment_image_path,
-      attachment_image_name,
-      attachment_document_path,
-      attachment_document_name,
-      round_off,
-      round_off_amount,
-      created_at,
-      updated_at
-    )
-    SELECT
-      id,
-      payment_no,
-      expense_category_id,
-      expense_category_name,
-      amount,
-      payment_type,
-      description,
-      line_items_json,
-      attachment_image_path,
-      attachment_image_name,
-      attachment_document_path,
-      attachment_document_name,
-      round_off,
-      round_off_amount,
-      created_at,
-      updated_at
-    FROM payment_out_records
-  `);
+function migratePaymentOutRecordsToExpenseRecords(_db) {
+  // Migration removed: payment_out_records are no longer copied into expense_records.
+  // Payment Out and Expense are separate features with separate tables.
 }
 
 function ensureUnitsAndConversionRatesTables(db) {

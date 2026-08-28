@@ -596,9 +596,41 @@ export function Parties({ isReportView, onBack, onEditSaleInvoice }: PartiesProp
       return;
     }
 
+    const baseTransactions = [...partyTransactionsFromApi].filter((transaction) => {
+      if (transaction.partyId !== undefined && partyToDelete.id !== undefined) {
+        if (Number(transaction.partyId) === Number(partyToDelete.id)) {
+          return true;
+        }
+      }
+      return String(transaction.partyName).trim().toLowerCase() === String(partyToDelete.name).trim().toLowerCase();
+    });
+
+    const hasOtherTransactions = baseTransactions.some(t => {
+      const type = t.type;
+      return type !== 'Payable Opening Balance' && 
+             type !== 'Receivable Opening Balance' && 
+             type !== 'Opening Balance';
+    });
+
+    if (hasOtherTransactions) {
+      alert("Please delete all transactions associated with this party before deleting the party.");
+      setPartyPendingDelete(null);
+      return;
+    }
+
     setIsDeletingParty(true);
 
     try {
+      const realOpeningBalances = baseTransactions.filter(t => 
+        (t.type === 'Payable Opening Balance' || t.type === 'Receivable Opening Balance' || t.type === 'Opening Balance') 
+        && t.id !== "opening-balance-dynamic"
+      );
+
+      for (const t of realOpeningBalances) {
+        await fetch(`/api/payment_in_records/${t.id}`, { method: 'DELETE' }).catch(() => {});
+        await fetch(`/api/payment_out_records/${t.id}`, { method: 'DELETE' }).catch(() => {});
+      }
+
       const response = await fetch(`/api/parties/${partyToDelete.id}`, {
         method: 'DELETE',
       });

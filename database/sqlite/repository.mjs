@@ -1172,8 +1172,8 @@ export function deleteItem(id) {
     throw new Error('ITEM_IN_USE');
   }
 
-  // Check if item is used in stock adjustments
-  const adjustments = db.prepare(`SELECT id FROM adjust_stock_transactions WHERE item_id = ? LIMIT 1`).get(idStr);
+  // Check if item is used in stock adjustments, ignoring Opening Stock
+  const adjustments = db.prepare(`SELECT id FROM adjust_stock_transactions WHERE item_id = ? AND adjustment_type != 'Opening Stock' LIMIT 1`).get(idStr);
   if (adjustments) {
     db.close();
     throw new Error('ITEM_IN_USE');
@@ -1195,6 +1195,10 @@ export function deleteItem(id) {
       );
     } catch(e) { console.error('Error inserting to recycle_bin', e); }
   }
+
+  // Delete Opening Stock adjustments
+  db.prepare(`DELETE FROM adjust_stock_transactions WHERE item_id = ? AND adjustment_type = 'Opening Stock'`).run(idStr);
+
   const result = db
     .prepare('DELETE FROM items WHERE id = ?')
     .run(idStr);
@@ -1364,6 +1368,19 @@ export function deleteCashInHandTransaction(id) {
 
   db.close();
   return result.changes > 0;
+}
+export function deleteCashInHandTransactionsForSale(invoiceId) {
+  // Cash transactions linked to a sale invoice use the format: {invoiceId}_cash_pos
+  deleteCashInHandTransaction(invoiceId + '_cash_pos');
+  // Also attempt to clean up any legacy formats that may exist in the database
+  deleteCashInHandTransaction('cash_' + invoiceId);
+  deleteCashInHandTransaction('cash_' + invoiceId + '_received');
+  const db = openDatabase();
+  const legacyRows = db.prepare("SELECT id FROM cash_in_hand_transactions WHERE id LIKE ?").all('cash_pos_' + invoiceId + '_%');
+  db.close();
+  for (const row of legacyRows) {
+    deleteCashInHandTransaction(row.id);
+  }
 }
 
 export function updateCashInHandTransaction(id, entry) {

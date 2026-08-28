@@ -1,4 +1,5 @@
 import { Search } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
 import { useSettings } from "@/hooks/useSettings";
 import type { CategoryRecord } from "@/components/pagescomponents/items/products/types";
 import type { ItemRecord } from "./types";
@@ -19,6 +20,36 @@ export function CategoryDetailsPanel({
   onSetCategoryItemSearchTerm,
   onOpenMoveItemsDialog,
 }: Props) {
+  const [showSearchInput, setShowSearchInput] = useState(false);
+  const searchContainerRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const placeholders = ["Item Name", "Quantity", "Amount"];
+  const [placeholderIndex, setPlaceholderIndex] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setPlaceholderIndex((prev) => (prev + 1) % placeholders.length);
+    }, 3000);
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        showSearchInput &&
+        searchContainerRef.current &&
+        !searchContainerRef.current.contains(event.target as Node) &&
+        !categoryItemSearchTerm
+      ) {
+        setShowSearchInput(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [showSearchInput, categoryItemSearchTerm]);
+
   const [currency] = useSettings('settings.businessCurrency', { code: 'PKR', symbol: 'Rs' });
   const [currencyDisplay] = useSettings<'abbreviation' | 'icon'>('settings.currencyDisplay', 'abbreviation');
   const currencyStr = currencyDisplay === 'icon' ? currency.symbol : currency.code;
@@ -60,16 +91,52 @@ export function CategoryDetailsPanel({
             <h3 className="text-base font-bold text-[#222B45] tracking-wide">
               ITEMS
             </h3>
-            <div className="flex gap-2 items-center">
-              <div className="relative">
-                <input
-                  type="text"
-                  placeholder="Search items..."
-                  value={categoryItemSearchTerm}
-                  onChange={(e) => onSetCategoryItemSearchTerm(e.target.value)}
-                  className="bg-[#F7F9FB] border border-[#E3EAF2] rounded-lg px-8 py-1.5 text-sm text-[#222B45] focus:bg-white focus:border-[#1976D2]"
-                />
-                <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-[#AEB8C4]" />
+            <div className="flex gap-2 items-center h-10" ref={searchContainerRef}>
+              <div 
+                className={`flex items-center overflow-hidden transition-all duration-300 ease-out rounded-full h-9 ${
+                  showSearchInput 
+                    ? "w-64 bg-white border border-blue-500 ring-4 ring-blue-50" 
+                    : "w-9 bg-transparent border border-transparent hover:bg-gray-100 cursor-pointer"
+                }`}
+                onClick={(e) => {
+                  if (!showSearchInput) {
+                    e.stopPropagation();
+                    setShowSearchInput(true);
+                    setTimeout(() => searchInputRef.current?.focus(), 150);
+                  }
+                }}
+              >
+                <div className="flex items-center justify-center h-full w-9 shrink-0">
+                  <Search className={`w-4 h-4 ${showSearchInput ? "text-gray-400" : "text-gray-500"}`} />
+                </div>
+                <div className={`relative flex-1 h-full flex items-center transition-opacity duration-200 ${
+                    showSearchInput ? "opacity-100 delay-100" : "opacity-0"
+                  }`}>
+                  <input
+                    ref={searchInputRef}
+                    type="text"
+                    value={categoryItemSearchTerm}
+                    onChange={(e) => onSetCategoryItemSearchTerm(e.target.value)}
+                    className="bg-transparent border-none outline-none focus:ring-0 focus:outline-none focus:border-transparent text-sm h-full w-full pr-3 relative z-10"
+                  />
+                  {!categoryItemSearchTerm && (
+                    <div className="absolute left-0 pointer-events-none flex items-center h-full w-full overflow-hidden text-gray-400 text-sm">
+                      <span className="whitespace-pre">Search </span>
+                      <div className="relative h-full flex-1 overflow-hidden">
+                        {placeholders.map((ph, idx) => (
+                          <span
+                            key={ph}
+                            className={`absolute top-0 left-0 flex items-center h-full transition-all duration-700 ease-in-out ${
+                              idx === placeholderIndex ? "opacity-100 translate-y-0" : "opacity-0 translate-y-3"
+                            }`}
+                          >
+                            {ph}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>

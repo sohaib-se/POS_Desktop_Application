@@ -1,4 +1,5 @@
-import { ChevronDown, FileText, AlertCircle } from "lucide-react";
+import { ChevronDown, FileText, AlertCircle, Plus, ArrowUpRight, ArrowDownRight } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
 import { useSettings } from "@/hooks/useSettings";
 import type { PosTab, PartyOption, BankOption } from "./types";
 
@@ -31,8 +32,28 @@ export function RightPanel({
   const [currencyDisplay] = useSettings<'abbreviation' | 'icon'>('settings.currencyDisplay', 'abbreviation');
   const currencyStr = currencyDisplay === 'icon' ? currency.symbol : currency.code;
 
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
   const selectedPartyObj = filteredCustomers.find(
     (p) => String(p.id) === String(activeTab.customerSelectedId)
+  );
+
+  const searchedCustomers = filteredCustomers.filter(
+    (p) =>
+      p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (p.phone && p.phone.includes(searchQuery))
   );
 
   const receivedVal = Number(effectiveAmountReceived) || 0;
@@ -53,35 +74,105 @@ export function RightPanel({
           />
         </div>
 
-        <div className="relative">
-          <select
-            id="customer-search-input"
-            value={activeTab.customerSelectedId || ""}
-            onChange={(e) => {
-              const val = e.target.value;
-              if (!val) {
-                updateTab({
-                  customerSelectedId: null,
-                  customerSearchText: "Cash Sale",
-                });
-              } else {
-                const party = filteredCustomers.find((p) => String(p.id) === val);
-                updateTab({
-                  customerSelectedId: party ? party.id : null,
-                  customerSearchText: party ? party.name : "",
-                });
-              }
-            }}
-            className="w-full appearance-none rounded border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-800 outline-none focus:ring-1 focus:ring-blue-500 bg-white"
-          >
-            <option value="">Cash Sale (Default)</option>
-            {filteredCustomers.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name} {p.phone ? `- ${p.phone}` : ""}
-              </option>
-            ))}
-          </select>
-          <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none shrink-0" />
+        <div style={{ position: "relative", width: "100%" }} ref={dropdownRef}>
+          <label style={{ position: "absolute", top: -8, left: 12, background: "#fff", padding: "0 4px", fontSize: 12, color: "#3b82f6", fontWeight: 500, zIndex: 1 }}>
+            Party <span style={{ color: "#ef4444" }}>*</span>
+          </label>
+          <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+            <input
+              type="text"
+              value={dropdownOpen ? searchQuery : (activeTab.customerSelectedId ? (selectedPartyObj ? selectedPartyObj.name : "") : "Cash Sale")}
+              onChange={(e) => { setSearchQuery(e.target.value); setDropdownOpen(true); }}
+              onFocus={() => { setSearchQuery(activeTab.customerSelectedId ? (selectedPartyObj ? selectedPartyObj.name : "") : ""); setDropdownOpen(true); }}
+              onClick={() => { setDropdownOpen(true); setSearchQuery(activeTab.customerSelectedId ? (selectedPartyObj ? selectedPartyObj.name : "") : ""); }}
+              placeholder="Search by Name/Phone"
+              style={{
+                border: "1.5px solid #3b82f6", borderRadius: 4,
+                padding: "8px 30px 8px 12px", width: "100%", height: 38,
+                fontSize: 13, color: "#1f2937", outline: "none"
+              }}
+            />
+            <ChevronDown size={16} color="#1f2937" style={{ position: "absolute", right: 10, pointerEvents: "none" }} />
+          </div>
+
+          {dropdownOpen && (
+            <div style={{
+              position: "absolute", top: "100%", left: 0, width: "100%",
+              background: "#fff", border: "1px solid #e5e7eb",
+              borderRadius: 4, marginTop: 4,
+              boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)", zIndex: 50
+            }}>
+              {/* Add Party button */}
+              <div
+                style={{ padding: "12px 16px", borderBottom: "1px solid #e5e7eb", display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer" }}
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  // For now, this just closes the dropdown as LaimsoftPos doesn't have an Add Party modal
+                  setDropdownOpen(false);
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: 6, fontWeight: 500, color: "#3b82f6", fontSize: 14 }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 18, height: 18, borderRadius: "50%", border: "1.5px solid #3b82f6" }}>
+                    <Plus size={12} strokeWidth={3} />
+                  </div>
+                  Add Party
+                </div>
+                <span style={{ fontSize: 12, color: "#9ca3af" }}>Party Balance</span>
+              </div>
+              
+              <div style={{ maxHeight: 300, overflowY: "auto" }}>
+                <div
+                  onPointerDown={(e) => {
+                    e.preventDefault();
+                    updateTab({
+                      customerSelectedId: null,
+                      customerSearchText: "Cash Sale",
+                    });
+                    setDropdownOpen(false);
+                  }}
+                  style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 16px", cursor: "pointer", borderBottom: "1px solid #f3f4f6" }}
+                  onMouseEnter={(e) => e.currentTarget.style.background = "#f9fafb"}
+                  onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
+                >
+                  <span style={{ fontSize: 13, fontWeight: 500, color: "#1f2937" }}>Cash Sale (Default)</span>
+                </div>
+
+                {searchedCustomers.map((p) => {
+                  const balance = Number(p.balance) || 0;
+                  return (
+                    <div
+                      key={p.id}
+                      onPointerDown={(e) => {
+                        e.preventDefault();
+                        updateTab({
+                          customerSelectedId: p.id,
+                          customerSearchText: p.name,
+                        });
+                        setDropdownOpen(false);
+                      }}
+                      style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 16px", cursor: "pointer", borderBottom: "1px solid #f3f4f6" }}
+                      onMouseEnter={(e) => e.currentTarget.style.background = "#f9fafb"}
+                      onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
+                    >
+                      <span style={{ fontSize: 13, fontWeight: 500, color: "#1f2937" }}>{p.name}</span>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                        <span style={{ fontSize: 13, color: "#374151", fontWeight: 500 }}>{Math.abs(balance).toFixed(2)}</span>
+                        {balance < 0 ? (
+                          <div style={{ background: "#ef4444", borderRadius: 2, padding: 2, color: "#fff", display: "flex" }}>
+                            <ArrowUpRight size={14} />
+                          </div>
+                        ) : (
+                          <div style={{ background: "#10b981", borderRadius: 2, padding: 2, color: "#fff", display: "flex" }}>
+                            <ArrowDownRight size={14} />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
         
         {selectedPartyObj && (

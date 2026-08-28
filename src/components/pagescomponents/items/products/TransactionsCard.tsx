@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useSettings } from "@/hooks/useSettings";
 import { Search, MoreVertical } from "lucide-react";
 import { Card, CardContent } from "./ui";
@@ -28,6 +28,35 @@ export function TransactionsCard({
   onEditTransaction,
   onDeleteTransaction,
 }: TransactionsCardProps) {
+  const searchContainerRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const placeholders = ["Customer Name", "Invoice No.", "Amount"];
+  const [placeholderIndex, setPlaceholderIndex] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setPlaceholderIndex((prev) => (prev + 1) % placeholders.length);
+    }, 3000);
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        showTransactionSearch &&
+        searchContainerRef.current &&
+        !searchContainerRef.current.contains(event.target as Node) &&
+        !transactionSearchTerm
+      ) {
+        onSetShowTransactionSearch(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [showTransactionSearch, transactionSearchTerm, onSetShowTransactionSearch]);
+
   const [openRowMenuId, setOpenRowMenuId] = useState<string | null>(null);
   const [openRowMenuPosition, setOpenRowMenuPosition] = useState<{ left: number; top: number } | null>(null);
 
@@ -71,34 +100,53 @@ export function TransactionsCard({
           <h3 className="text-base font-bold text-[#222B45] tracking-wide">
             TRANSACTIONS
           </h3>
-          <div className="flex gap-2 items-center">
-            {showTransactionSearch && (
-              <div className="flex items-center bg-[#F7F9FB] rounded-lg px-3 py-1.5 border border-[#E3EAF2] w-64 mr-2">
-                <Search className="w-4 h-4 text-gray-400 mr-2 shrink-0" />
+          <div className="flex gap-2 items-center h-10" ref={searchContainerRef}>
+            <div 
+              className={`flex items-center overflow-hidden transition-all duration-300 ease-out rounded-full h-9 ${
+                showTransactionSearch 
+                  ? "w-64 bg-white border border-blue-500 ring-4 ring-blue-50" 
+                  : "w-9 bg-transparent border border-transparent hover:bg-gray-100 cursor-pointer"
+              }`}
+              onClick={(e) => {
+                if (!showTransactionSearch) {
+                  e.stopPropagation();
+                  onSetShowTransactionSearch(true);
+                  setTimeout(() => searchInputRef.current?.focus(), 150);
+                }
+              }}
+            >
+              <div className="flex items-center justify-center h-full w-9 shrink-0">
+                <Search className={`w-4 h-4 ${showTransactionSearch ? "text-gray-400" : "text-gray-500"}`} />
+              </div>
+              <div className={`relative flex-1 h-full flex items-center transition-opacity duration-200 ${
+                  showTransactionSearch ? "opacity-100 delay-100" : "opacity-0"
+                }`}>
                 <input
+                  ref={searchInputRef}
                   type="text"
-                  placeholder="Search transactions..."
                   value={transactionSearchTerm}
                   onChange={(e) => onSetTransactionSearchTerm(e.target.value)}
-                  onBlur={() => {
-                    setTimeout(() => {
-                      onSetShowTransactionSearch(false);
-                      onSetTransactionSearchTerm("");
-                    }, 150);
-                  }}
-                  className="w-full bg-transparent border-none outline-none text-sm"
-                  autoFocus
+                  className="bg-transparent border-none outline-none focus:ring-0 focus:outline-none focus:border-transparent text-sm h-full w-full pr-3 relative z-10"
                 />
+                {!transactionSearchTerm && (
+                  <div className="absolute left-0 pointer-events-none flex items-center h-full w-full overflow-hidden text-gray-400 text-sm">
+                    <span className="whitespace-pre">Search </span>
+                    <div className="relative h-full flex-1 overflow-hidden">
+                      {placeholders.map((ph, idx) => (
+                        <span
+                          key={ph}
+                          className={`absolute top-0 left-0 flex items-center h-full transition-all duration-700 ease-in-out ${
+                            idx === placeholderIndex ? "opacity-100 translate-y-0" : "opacity-0 translate-y-3"
+                          }`}
+                        >
+                          {ph}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
-            )}
-            {!showTransactionSearch && (
-              <button
-                onClick={() => onSetShowTransactionSearch(true)}
-                className="p-1.5 hover:bg-[#F7F9FB] rounded"
-              >
-                <Search className="w-4 h-4 text-[#7B8A9A]" />
-              </button>
-            )}
+            </div>
             <button
               onClick={onExportExcel}
               className="p-1.5 hover:bg-[#F7F9FB] rounded relative"

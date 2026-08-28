@@ -402,8 +402,15 @@ export function ProductsTab({
 
       setItemTransactions(
         [...nextTransactions, ...adjustTransactions].sort(
-          (a, b) =>
-            new Date(b.date).getTime() - new Date(a.date).getTime()
+          (a, b) => {
+            const parseDate = (s: string) => {
+              const m = s?.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+              if (m) return new Date(`${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`).getTime();
+              const t = new Date(s).getTime();
+              return isNaN(t) ? 0 : t;
+            };
+            return parseDate(b.date) - parseDate(a.date);
+          }
         )
       );
     } catch (error) {
@@ -494,81 +501,112 @@ export function ProductsTab({
         baseQtyChange = qty / selectedItem.conversionRate;
       }
       const isAdd = adjustStockForm.type === "Add";
-      const stockChange = isAdd ? baseQtyChange : -baseQtyChange;
-      
-      const newStockQuantity = selectedItem.stockQuantity - oldStockChange + stockChange;
-      let newSecondaryStock = selectedItem.secondaryStock ?? 0;
-      if (selectedItem.conversionRate) {
-        newSecondaryStock = newStockQuantity * selectedItem.conversionRate;
-      }
-      const valueChange = qty * atPrice;
-      const newValueChange = isAdd ? valueChange : -valueChange;
-      const newStockValue = selectedItem.stockValue - oldValueChange + newValueChange;
-      const finalStockValue = Math.max(0, newStockValue);
 
-      const payload = {
-        id: selectedItem.id,
-        name: selectedItem.name,
-        code: selectedItem.code,
-        category: selectedItem.category,
-        salePrice: selectedItem.salePrice,
-        wholesalePrice: selectedItem.wholesalePrice,
-        purchasePrice: selectedItem.purchasePrice,
-        stockQuantity: newStockQuantity,
-        unit: selectedItem.unit,
-        primaryUnit: selectedItem.primaryUnit,
-        secondaryUnit: selectedItem.secondaryUnit,
-        stockValue: finalStockValue,
-        minStock: selectedItem.minStock,
-        lowStock: selectedItem.lowStock,
-        secondaryStock: newSecondaryStock,
-        conversionRate: selectedItem.conversionRate,
-        status: selectedItem.status,
-        skipOpeningStockUpdate: true,
-      };
-
-      const response = await fetch("/api/items", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      if (!response.ok) throw new Error("Failed to adjust stock");
-
+      const adjustmentType = oldTx?.type === "Opening Stock" ? "Opening Stock" : (adjustStockForm.type + " Stock");
       const adjustPayload = {
         itemId: selectedItem.id,
         itemName: selectedItem.name,
-        adjustmentType: oldTx?.type === "Opening Stock" ? "Opening Stock" : (adjustStockForm.type + " Stock"),
+        adjustmentType,
         date: adjustStockForm.date,
         quantity: qty,
         unit: adjustStockForm.unit,
         atPrice: atPrice,
         details: adjustStockForm.details,
       };
-      const endpoint = adjustStockForm.id 
+      const endpoint = adjustStockForm.id
         ? `/api/adjust_stock_transactions/${adjustStockForm.id}`
         : "/api/adjust_stock_transactions";
       const method = adjustStockForm.id ? "PUT" : "POST";
-      
-      const adjustResponse = await fetch(endpoint, {
-        method: method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(adjustPayload),
-      });
-      if (adjustResponse.ok) {
-        void loadItemTransactions();
+
+      let updatedItem: Item;
+
+      if (!isAdd && !adjustStockForm.id) {
+        // ── REDUCE STOCK (new) ──
+        // The backend handles FIFO deduction and returns the updated item.
+        // We do NOT call /api/items separately — it would overwrite the FIFO value.
+        const adjustResponse = await fetch(endpoint, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(adjustPayload),
+        });
+        if (!adjustResponse.ok) throw new Error("Failed to save stock adjustment");
+        const adjustData = (await adjustResponse.json()) as Record<string, unknown>;
+
+        // Use the FIFO-updated item returned by the backend if available
+        const serverItem = adjustData.updatedItem as Record<string, unknown> | null | undefined;
+        updatedItem = {
+          ...selectedItem,
+          stockQuantity: serverItem ? Number(serverItem.stock_quantity ?? selectedItem.stockQuantity) : selectedItem.stockQuantity,
+          stockValue: serverItem ? Number(serverItem.stock_value ?? selectedItem.stockValue) : selectedItem.stockValue,
+          secondaryStock: serverItem
+            ? (serverItem.secondary_stock != null ? Number(serverItem.secondary_stock) : selectedItem.secondaryStock)
+            : selectedItem.secondaryStock,
+          conversionRate: selectedItem.conversionRate,
+        };
+      } else {
+        // ── ADD STOCK (or editing an existing adjustment) ──
+        // Compute the new stock values on the frontend, then update /api/items.
+        const stockChange = isAdd ? baseQtyChange : -baseQtyChange;
+        const newStockQuantity = selectedItem.stockQuantity - oldStockChange + stockChange;
+        let newSecondaryStock = selectedItem.secondaryStock ?? 0;
+        if (selectedItem.conversionRate) {
+          newSecondaryStock = newStockQuantity * selectedItem.conversionRate;
+        }
+        const valueChange = qty * atPrice;
+        const newValueChange = isAdd ? valueChange : -valueChange;
+        const newStockValue = selectedItem.stockValue - oldValueChange + newValueChange;
+        const finalStockValue = Math.max(0, newStockValue);
+
+        const itemPayload = {
+          id: selectedItem.id,
+          name: selectedItem.name,
+          code: selectedItem.code,
+          category: selectedItem.category,
+          salePrice: selectedItem.salePrice,
+          wholesalePrice: selectedItem.wholesalePrice,
+          purchasePrice: selectedItem.purchasePrice,
+          stockQuantity: newStockQuantity,
+          unit: selectedItem.unit,
+          primaryUnit: selectedItem.primaryUnit,
+          secondaryUnit: selectedItem.secondaryUnit,
+          stockValue: finalStockValue,
+          minStock: selectedItem.minStock,
+          lowStock: selectedItem.lowStock,
+          secondaryStock: newSecondaryStock,
+          conversionRate: selectedItem.conversionRate,
+          status: selectedItem.status,
+          skipOpeningStockUpdate: true,
+        };
+
+        const response = await fetch("/api/items", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(itemPayload),
+        });
+        if (!response.ok) throw new Error("Failed to adjust stock");
+
+        const adjustResponse = await fetch(endpoint, {
+          method,
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(adjustPayload),
+        });
+        if (adjustResponse.ok) {
+          void loadItemTransactions();
+        }
+
+        const createdItemPayload = (await response.json()) as Record<string, unknown>;
+        updatedItem = {
+          ...selectedItem,
+          stockQuantity: Number(createdItemPayload.stockQuantity ?? newStockQuantity),
+          stockValue: Number(createdItemPayload.stockValue ?? finalStockValue),
+          secondaryStock:
+            createdItemPayload.secondaryStock != null
+              ? Number(createdItemPayload.secondaryStock)
+              : newSecondaryStock,
+          conversionRate: selectedItem.conversionRate,
+        };
       }
 
-      const createdItemPayload = (await response.json()) as Record<string, unknown>;
-      const updatedItem: Item = {
-        ...selectedItem,
-        stockQuantity: Number(createdItemPayload.stockQuantity ?? newStockQuantity),
-        stockValue: Number(createdItemPayload.stockValue ?? finalStockValue),
-        secondaryStock:
-          createdItemPayload.secondaryStock != null
-            ? Number(createdItemPayload.secondaryStock)
-            : newSecondaryStock,
-        conversionRate: selectedItem.conversionRate,
-      };
       setItemList((prev) =>
         prev.map((item) => (item.id === updatedItem.id ? updatedItem : item))
       );
@@ -635,75 +673,109 @@ export function ProductsTab({
         if (!res.ok && res.status !== 204) throw new Error("Failed to delete purchase");
       } else {
         if (selectedItem) {
+          const isReduceStock = transaction.type === "Reduce Stock";
           const isAdd = transaction.type === "Add Stock" || transaction.type === "Opening Stock";
           const qty = transaction.quantity;
           const atPrice = transaction.price;
-          
-          let baseQtyChange = qty;
-          const isSecondary = transaction.unit === selectedItem.secondaryUnit;
-          if (isSecondary && selectedItem.conversionRate) {
-            baseQtyChange = qty / selectedItem.conversionRate;
+
+          // ── Reduce Stock: FIFO restore via backend (no manual /api/items call) ──
+          if (isReduceStock) {
+            const res = await fetch(`/api/adjust_stock_transactions/${apiId}`, { method: "DELETE" });
+            if (!res.ok && res.status !== 200 && res.status !== 204) throw new Error("Failed to delete adjustment");
+
+            let updatedItem: Item = selectedItem;
+            if (res.ok && res.status !== 204) {
+              try {
+                const deleteData = (await res.json()) as Record<string, unknown>;
+                const serverItem = deleteData.updatedItem as Record<string, unknown> | null | undefined;
+                if (serverItem) {
+                  updatedItem = {
+                    ...selectedItem,
+                    stockQuantity: Number(serverItem.stock_quantity ?? selectedItem.stockQuantity),
+                    stockValue: Number(serverItem.stock_value ?? selectedItem.stockValue),
+                    secondaryStock: serverItem.secondary_stock != null
+                      ? Number(serverItem.secondary_stock)
+                      : selectedItem.secondaryStock,
+                    conversionRate: selectedItem.conversionRate,
+                  };
+                }
+              } catch { /* parse failure — UI will refresh from loadItemTransactions */ }
+            }
+
+            setItemList((prev) => prev.map((item) => (item.id === updatedItem.id ? updatedItem : item)));
+            setSelectedItem(updatedItem);
+          } else {
+            // ── Add Stock / Opening Stock: reverse using atPrice (flat, not FIFO) ──
+            let baseQtyChange = qty;
+            const isSecondary = transaction.unit === selectedItem.secondaryUnit;
+            if (isSecondary && selectedItem.conversionRate) {
+              baseQtyChange = qty / selectedItem.conversionRate;
+            }
+            const stockChange = isAdd ? -baseQtyChange : baseQtyChange; // Reverse
+            const newStockQuantity = selectedItem.stockQuantity + stockChange;
+
+            let newSecondaryStock = selectedItem.secondaryStock ?? 0;
+            if (selectedItem.conversionRate) {
+              newSecondaryStock = newStockQuantity * selectedItem.conversionRate;
+            }
+
+            const valueChange = qty * atPrice;
+            const newValueChange = isAdd ? -valueChange : valueChange; // Reverse
+            const newStockValue = selectedItem.stockValue + newValueChange;
+            const finalStockValue = Math.max(0, newStockValue);
+
+            const payload = {
+              id: selectedItem.id,
+              name: selectedItem.name,
+              code: selectedItem.code,
+              category: selectedItem.category,
+              salePrice: selectedItem.salePrice,
+              wholesalePrice: selectedItem.wholesalePrice,
+              purchasePrice: selectedItem.purchasePrice,
+              stockQuantity: newStockQuantity,
+              unit: selectedItem.unit,
+              primaryUnit: selectedItem.primaryUnit,
+              secondaryUnit: selectedItem.secondaryUnit,
+              stockValue: finalStockValue,
+              minStock: selectedItem.minStock,
+              lowStock: selectedItem.lowStock,
+              secondaryStock: newSecondaryStock,
+              conversionRate: selectedItem.conversionRate,
+              status: selectedItem.status,
+              skipOpeningStockUpdate: true,
+            };
+
+            const response = await fetch("/api/items", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(payload),
+            });
+            if (!response.ok) throw new Error("Failed to revert stock");
+
+            const updatedItemPayload = (await response.json()) as Record<string, unknown>;
+            const updatedItem: Item = {
+              ...selectedItem,
+              stockQuantity: Number(updatedItemPayload.stockQuantity ?? newStockQuantity),
+              stockValue: Number(updatedItemPayload.stockValue ?? finalStockValue),
+              secondaryStock:
+                updatedItemPayload.secondaryStock != null
+                  ? Number(updatedItemPayload.secondaryStock)
+                  : newSecondaryStock,
+              conversionRate: selectedItem.conversionRate,
+            };
+            setItemList((prev) =>
+              prev.map((item) => (item.id === updatedItem.id ? updatedItem : item))
+            );
+            setSelectedItem(updatedItem);
+
+            const res = await fetch(`/api/adjust_stock_transactions/${apiId}`, { method: "DELETE" });
+            if (!res.ok && res.status !== 204 && res.status !== 200) throw new Error("Failed to delete adjustment");
           }
-          const stockChange = isAdd ? -baseQtyChange : baseQtyChange; // Reverse
-          const newStockQuantity = selectedItem.stockQuantity + stockChange;
-          
-          let newSecondaryStock = selectedItem.secondaryStock ?? 0;
-          if (selectedItem.conversionRate) {
-            newSecondaryStock = newStockQuantity * selectedItem.conversionRate;
-          }
-          
-          const valueChange = qty * atPrice;
-          const newValueChange = isAdd ? -valueChange : valueChange; // Reverse
-          const newStockValue = selectedItem.stockValue + newValueChange;
-          const finalStockValue = Math.max(0, newStockValue);
-
-          const payload = {
-            id: selectedItem.id,
-            name: selectedItem.name,
-            code: selectedItem.code,
-            category: selectedItem.category,
-            salePrice: selectedItem.salePrice,
-            wholesalePrice: selectedItem.wholesalePrice,
-            purchasePrice: selectedItem.purchasePrice,
-            stockQuantity: newStockQuantity,
-            unit: selectedItem.unit,
-            primaryUnit: selectedItem.primaryUnit,
-            secondaryUnit: selectedItem.secondaryUnit,
-            stockValue: finalStockValue,
-            minStock: selectedItem.minStock,
-            lowStock: selectedItem.lowStock,
-            secondaryStock: newSecondaryStock,
-            conversionRate: selectedItem.conversionRate,
-            status: selectedItem.status,
-            skipOpeningStockUpdate: true,
-          };
-
-          const response = await fetch("/api/items", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload),
-          });
-          if (!response.ok) throw new Error("Failed to revert stock");
-
-          const updatedItemPayload = (await response.json()) as Record<string, unknown>;
-          const updatedItem: Item = {
-            ...selectedItem,
-            stockQuantity: Number(updatedItemPayload.stockQuantity ?? newStockQuantity),
-            stockValue: Number(updatedItemPayload.stockValue ?? finalStockValue),
-            secondaryStock:
-              updatedItemPayload.secondaryStock != null
-                ? Number(updatedItemPayload.secondaryStock)
-                : newSecondaryStock,
-            conversionRate: selectedItem.conversionRate,
-          };
-          setItemList((prev) =>
-            prev.map((item) => (item.id === updatedItem.id ? updatedItem : item))
-          );
-          setSelectedItem(updatedItem);
+        } else {
+          // No selected item — just delete the record
+          const res = await fetch(`/api/adjust_stock_transactions/${apiId}`, { method: "DELETE" });
+          if (!res.ok && res.status !== 204 && res.status !== 200) throw new Error("Failed to delete adjustment");
         }
-
-        const res = await fetch(`/api/adjust_stock_transactions/${apiId}`, { method: "DELETE" });
-        if (!res.ok && res.status !== 204) throw new Error("Failed to delete adjustment");
       }
       
       void loadItemTransactions();

@@ -317,40 +317,224 @@ export function getItems() {
   return rows;
 }
 
-export function deductItemStock(itemId, quantity, isSecondary, conversionRate) {
-  const db = openDatabase();
-
-  let primaryQtyToDeduct = Number(quantity);
-  let secondaryQtyToDeduct = Number(quantity);
-
+/**
+ * Compute primary-unit quantity from the raw sold quantity, respecting
+ * whether the unit is the secondary unit.
+ */
+function toPrimaryQty(quantity, isSecondary, conversionRate) {
   const validConversion = Number.isFinite(Number(conversionRate)) && Number(conversionRate) > 0;
-
-  if (isSecondary) {
-    if (validConversion) {
-      primaryQtyToDeduct = Number(quantity) / Number(conversionRate);
-    }
-  } else {
-    if (validConversion) {
-      secondaryQtyToDeduct = Number(quantity) * Number(conversionRate);
-    }
+  if (isSecondary && validConversion) {
+    return Number(quantity) / Number(conversionRate);
   }
+  return Number(quantity);
+}
 
-  const stmt = db.prepare(`
-    UPDATE items 
-    SET 
-      stock_quantity = COALESCE(stock_quantity, 0) - @primaryQty,
-      secondary_stock = CASE WHEN secondary_unit IS NOT NULL AND secondary_unit != '' THEN COALESCE(secondary_stock, 0) - @secondaryQty ELSE secondary_stock END,
-      stock_value = (COALESCE(stock_quantity, 0) - @primaryQty) * COALESCE(purchase_price, 0)
-    WHERE id = @id
-  `);
+/**
+ * FIFO stock deduction — called when a sale is saved.
+ *
+ * Consumes units from the oldest stock layers first
+ * (Opening Stock, then Add Stock adjustments in date/created_at order).
+ * Decrements `remaining_quantity` on each consumed layer and deducts the
+ * exact cost from the item's `stock_value`.
+ *
+ * @param {string} itemId
+ * @param {number} quantity        - quantity in the unit used on the line item
+ * @param {boolean} isSecondary    - true when the line-item unit is the secondary unit
+ * @param {number} conversionRate  - conversion rate between primary and secondary units
+ */
+export function deductItemStockFifo(itemId, quantity, isSecondary, conversionRate) {
+  const db = openDatabase();
+  try {
+    const primaryQty = toPrimaryQty(quantity, isSecondary, conversionRate);
+    const validConversion = Number.isFinite(Number(conversionRate)) && Number(conversionRate) > 0;
+    const secondaryQty = (!isSecondary && validConversion) ? primaryQty * Number(conversionRate) : Number(quantity);
 
-  const result = stmt.run({
-    id: String(itemId),
-    primaryQty: primaryQtyToDeduct,
-    secondaryQty: secondaryQtyToDeduct
-  });
-  db.close();
-  return result.changes > 0;
+    // --- FIFO: walk layers oldest-first, accumulate value to deduct ---
+    const layers = db.prepare(`
+      SELECT id, remaining_quantity, at_price
+      FROM adjust_stock_transactions
+      WHERE item_id = ?
+        AND adjustment_type IN ('Opening Stock', 'Add Stock')
+        AND COALESCE(remaining_quantity, 0) > 0
+      ORDER BY date ASC, created_at ASC
+    `).all(String(itemId));
+
+    let remaining = primaryQty;
+    let valueToDeduct = 0;
+
+    for (const layer of layers) {
+      if (remaining <= 0) break;
+      const available = Number(layer.remaining_quantity ?? 0);
+      const consumed = Math.min(remaining, available);
+      const unitCost = Number(layer.at_price ?? 0);
+      valueToDeduct += consumed * unitCost;
+      remaining -= consumed;
+
+      // Decrement the layer's remaining_quantity
+      db.prepare(
+        'UPDATE adjust_stock_transactions SET remaining_quantity = remaining_quantity - ? WHERE id = ?'
+      ).run(consumed, layer.id);
+    }
+    // If remaining > 0 the item is oversold; value deduction stops at 0 (handled by MAX below)
+
+    // --- Update the item ---
+    db.prepare(`
+      UPDATE items
+      SET
+        stock_quantity = COALESCE(stock_quantity, 0) - @primaryQty,
+        secondary_stock = CASE
+          WHEN secondary_unit IS NOT NULL AND secondary_unit != ''
+          THEN COALESCE(secondary_stock, 0) - @secondaryQty
+          ELSE secondary_stock
+        END,
+        stock_value = MAX(0, COALESCE(stock_value, 0) - @valueToDeduct)
+      WHERE id = @id
+    `).run({ id: String(itemId), primaryQty, secondaryQty, valueToDeduct });
+
+    return true;
+  } finally {
+    db.close();
+  }
+}
+
+/**
+ * FIFO stock restoration — called when a sale is deleted.
+ *
+ * Reverses `deductItemStockFifo` by walking layers in REVERSE order
+ * (most-recently-consumed first) and restoring `remaining_quantity` on
+ * each layer, adding the exact cost back to the item's `stock_value`.
+ *
+ * @param {string} itemId
+ * @param {number} quantity        - same quantity that was deducted when the sale was saved
+ * @param {boolean} isSecondary
+ * @param {number} conversionRate
+ */
+export function restoreItemStockFifo(itemId, quantity, isSecondary, conversionRate) {
+  const db = openDatabase();
+  try {
+    const primaryQty = toPrimaryQty(quantity, isSecondary, conversionRate);
+    const validConversion = Number.isFinite(Number(conversionRate)) && Number(conversionRate) > 0;
+    const secondaryQty = (!isSecondary && validConversion) ? primaryQty * Number(conversionRate) : Number(quantity);
+
+    // Walk layers newest-first: restore into the most recently consumed layer first.
+    // A layer has "space" to restore into when remaining_quantity < quantity.
+    const layers = db.prepare(`
+      SELECT id, quantity, remaining_quantity, at_price
+      FROM adjust_stock_transactions
+      WHERE item_id = ?
+        AND adjustment_type IN ('Opening Stock', 'Add Stock')
+      ORDER BY date DESC, created_at DESC
+    `).all(String(itemId));
+
+    let remaining = primaryQty;
+    let valueToRestore = 0;
+
+    for (const layer of layers) {
+      if (remaining <= 0) break;
+      const capacity = Number(layer.quantity ?? 0) - Number(layer.remaining_quantity ?? 0);
+      if (capacity <= 0) continue; // this layer wasn't consumed at all
+      const restore = Math.min(remaining, capacity);
+      const unitCost = Number(layer.at_price ?? 0);
+      valueToRestore += restore * unitCost;
+      remaining -= restore;
+
+      db.prepare(
+        'UPDATE adjust_stock_transactions SET remaining_quantity = remaining_quantity + ? WHERE id = ?'
+      ).run(restore, layer.id);
+    }
+
+    // --- Update the item ---
+    db.prepare(`
+      UPDATE items
+      SET
+        stock_quantity = COALESCE(stock_quantity, 0) + @primaryQty,
+        secondary_stock = CASE
+          WHEN secondary_unit IS NOT NULL AND secondary_unit != ''
+          THEN COALESCE(secondary_stock, 0) + @secondaryQty
+          ELSE secondary_stock
+        END,
+        stock_value = COALESCE(stock_value, 0) + @valueToRestore
+      WHERE id = @id
+    `).run({ id: String(itemId), primaryQty, secondaryQty, valueToRestore });
+
+    return true;
+  } finally {
+    db.close();
+  }
+}
+
+/**
+ * Legacy alias kept so any remaining direct callers don't crash.
+ * New code should use deductItemStockFifo / restoreItemStockFifo.
+ * @deprecated
+ */
+export function deductItemStock(itemId, quantity, isSecondary, conversionRate) {
+  if (Number(quantity) < 0) {
+    return restoreItemStockFifo(itemId, -Number(quantity), isSecondary, conversionRate);
+  }
+  return deductItemStockFifo(itemId, quantity, isSecondary, conversionRate);
+}
+
+/**
+ * Adds stock from a purchase bill (flat, not FIFO-tracked).
+ * Purchase bills use the line item's price to add stock_value.
+ */
+export function addPurchaseStock(itemId, quantity, isSecondary, conversionRate, unitPrice) {
+  const db = openDatabase();
+  try {
+    const primaryQty = toPrimaryQty(quantity, isSecondary, conversionRate);
+    const validConversion = Number.isFinite(Number(conversionRate)) && Number(conversionRate) > 0;
+    const secondaryQty = (!isSecondary && validConversion) ? primaryQty * Number(conversionRate) : Number(quantity);
+    const valueToAdd = primaryQty * Number(unitPrice ?? 0);
+
+    db.prepare(`
+      UPDATE items
+      SET
+        stock_quantity = COALESCE(stock_quantity, 0) + @primaryQty,
+        secondary_stock = CASE
+          WHEN secondary_unit IS NOT NULL AND secondary_unit != ''
+          THEN COALESCE(secondary_stock, 0) + @secondaryQty
+          ELSE secondary_stock
+        END,
+        stock_value = COALESCE(stock_value, 0) + @valueToAdd
+      WHERE id = @id
+    `).run({ id: String(itemId), primaryQty, secondaryQty, valueToAdd });
+
+    return true;
+  } finally {
+    db.close();
+  }
+}
+
+/**
+ * Removes stock that was added by a purchase bill (flat reversal, not FIFO).
+ * Used when deleting or editing a purchase bill.
+ */
+export function removePurchaseStock(itemId, quantity, isSecondary, conversionRate, unitPrice) {
+  const db = openDatabase();
+  try {
+    const primaryQty = toPrimaryQty(quantity, isSecondary, conversionRate);
+    const validConversion = Number.isFinite(Number(conversionRate)) && Number(conversionRate) > 0;
+    const secondaryQty = (!isSecondary && validConversion) ? primaryQty * Number(conversionRate) : Number(quantity);
+    const valueToRemove = primaryQty * Number(unitPrice ?? 0);
+
+    db.prepare(`
+      UPDATE items
+      SET
+        stock_quantity = COALESCE(stock_quantity, 0) - @primaryQty,
+        secondary_stock = CASE
+          WHEN secondary_unit IS NOT NULL AND secondary_unit != ''
+          THEN COALESCE(secondary_stock, 0) - @secondaryQty
+          ELSE secondary_stock
+        END,
+        stock_value = MAX(0, COALESCE(stock_value, 0) - @valueToRemove)
+      WHERE id = @id
+    `).run({ id: String(itemId), primaryQty, secondaryQty, valueToRemove });
+
+    return true;
+  } finally {
+    db.close();
+  }
 }
 
 export function getSaleInvoices() {
@@ -1795,12 +1979,13 @@ export function getBankAccountTransactionById(id) {
 export function addStockAdjustment(data) {
   const db = openDatabase();
   const txId = data.id || Date.now().toString();
+  const qty = Number(data.quantity);
 
   db.prepare(`
     INSERT INTO adjust_stock_transactions (
-      id, item_id, item_name, adjustment_type, date, quantity, unit, at_price, details, created_at, updated_at
+      id, item_id, item_name, adjustment_type, date, quantity, remaining_quantity, unit, at_price, details, created_at, updated_at
     ) VALUES (
-      @id, @itemId, @itemName, @adjustmentType, @date, @quantity, @unit, @atPrice, @details, datetime('now'), datetime('now')
+      @id, @itemId, @itemName, @adjustmentType, @date, @quantity, @remainingQuantity, @unit, @atPrice, @details, datetime('now'), datetime('now')
     )
   `).run({
     id: txId,
@@ -1808,7 +1993,8 @@ export function addStockAdjustment(data) {
     itemName: data.itemName,
     adjustmentType: data.adjustmentType,
     date: data.date,
-    quantity: Number(data.quantity),
+    quantity: qty,
+    remainingQuantity: qty,
     unit: data.unit || null,
     atPrice: data.atPrice ? Number(data.atPrice) : null,
     details: data.details || null
@@ -1825,8 +2011,29 @@ export function getStockAdjustments() {
   return rows;
 }
 
+export function getStockAdjustmentById(id) {
+  const db = openDatabase();
+  const row = db.prepare('SELECT * FROM adjust_stock_transactions WHERE id = ?').get(String(id));
+  db.close();
+  return row ?? null;
+}
+
 export function updateStockAdjustment(id, data) {
   const db = openDatabase();
+  const newQty = Number(data.quantity);
+
+  // Preserve the consumed portion: remaining_quantity = newQty - (old_quantity - old_remaining_quantity)
+  // i.e. keep the same number of units "consumed"; if new qty is smaller than consumed, clamp to 0.
+  const existing = db.prepare(
+    'SELECT quantity, remaining_quantity FROM adjust_stock_transactions WHERE id = ?'
+  ).get(String(id));
+
+  let newRemaining = newQty;
+  if (existing) {
+    const oldConsumed = Number(existing.quantity ?? 0) - Number(existing.remaining_quantity ?? existing.quantity ?? 0);
+    newRemaining = Math.max(0, newQty - oldConsumed);
+  }
+
   db.prepare(`
     UPDATE adjust_stock_transactions
     SET
@@ -1835,6 +2042,7 @@ export function updateStockAdjustment(id, data) {
       adjustment_type = @adjustmentType,
       date = @date,
       quantity = @quantity,
+      remaining_quantity = @remainingQuantity,
       unit = @unit,
       at_price = @atPrice,
       details = @details,
@@ -1846,7 +2054,8 @@ export function updateStockAdjustment(id, data) {
     itemName: data.itemName,
     adjustmentType: data.adjustmentType,
     date: data.date,
-    quantity: Number(data.quantity),
+    quantity: newQty,
+    remainingQuantity: newRemaining,
     unit: data.unit || null,
     atPrice: data.atPrice ? Number(data.atPrice) : null,
     details: data.details || null

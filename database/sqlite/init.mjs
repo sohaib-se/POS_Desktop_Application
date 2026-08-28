@@ -289,6 +289,40 @@ function ensurePartyColumns(db) {
   }
 }
 
+/**
+ * Ensures the adjust_stock_transactions table has the remaining_quantity column
+ * used for FIFO stock value tracking.
+ * Backfills existing rows by setting remaining_quantity = quantity where it is NULL.
+ */
+function ensureAdjustStockTransactionColumns(db) {
+  // Create the table if it somehow doesn't exist yet (safety guard)
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS adjust_stock_transactions (
+      id TEXT PRIMARY KEY,
+      item_id TEXT NOT NULL,
+      item_name TEXT NOT NULL,
+      adjustment_type TEXT NOT NULL,
+      date TEXT NOT NULL,
+      quantity REAL NOT NULL,
+      unit TEXT,
+      at_price REAL,
+      details TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    )
+  `);
+
+  const cols = db.prepare(`PRAGMA table_info(adjust_stock_transactions)`).all();
+  const colNames = new Set(cols.map((c) => c.name));
+
+  if (!colNames.has('remaining_quantity')) {
+    db.exec('ALTER TABLE adjust_stock_transactions ADD COLUMN remaining_quantity REAL');
+    // Backfill: for existing rows set remaining_quantity = quantity as a safe starting point.
+    // The FIFO engine will respect this column going forward.
+    db.exec('UPDATE adjust_stock_transactions SET remaining_quantity = quantity WHERE remaining_quantity IS NULL');
+  }
+}
+
 export function initDatabase() {
   const db = openDatabase();
   const schemaSql = fs.readFileSync(schemaPath, 'utf8');
@@ -301,6 +335,7 @@ export function initDatabase() {
   ensureExpenseRecordColumns(db);
   ensureExpenseCategoryColumns(db);
   ensurePartyColumns(db);
+  ensureAdjustStockTransactionColumns(db);
   seedDefaultExpenseCategories(db);
   ensureBankAccountColumns(db);
   ensureUserProfileColumns(db);

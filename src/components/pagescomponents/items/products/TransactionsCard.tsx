@@ -5,6 +5,22 @@ import { Card, CardContent } from "./ui";
 import type { ItemTransactionRow } from "./types";
 import { ItemTransactionContextMenu } from "./ItemTransactionContextMenu";
 import { EnterPasscodeScreen } from "@/components/common/EnterPasscodeScreen";
+
+/**
+ * Parse a date string that may be in dd/MM/yyyy (en-GB) or ISO (yyyy-MM-dd) format.
+ * JavaScript's Date constructor cannot parse dd/MM/yyyy natively.
+ */
+function parseDate(dateStr: string | null | undefined): Date | null {
+  if (!dateStr) return null;
+  // Match dd/MM/yyyy
+  const ddMmYyyy = dateStr.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (ddMmYyyy) {
+    return new Date(`${ddMmYyyy[3]}-${ddMmYyyy[2].padStart(2, '0')}-${ddMmYyyy[1].padStart(2, '0')}`);
+  }
+  const d = new Date(dateStr);
+  return isNaN(d.getTime()) ? null : d;
+}
+
 type TransactionsCardProps = {
   filteredItemTransactions: ItemTransactionRow[];
   showTransactionSearch: boolean;
@@ -215,13 +231,16 @@ export function TransactionsCard({
                     <td className="px-4 py-2">{transaction.invoiceNo}</td>
                     <td className="px-4 py-2">{transaction.partyName}</td>
                     <td className="px-4 py-2">
-                      {transaction.date
-                        ? new Date(transaction.date).toLocaleDateString("en-GB", {
-                            day: "2-digit",
-                            month: "2-digit",
-                            year: "numeric",
-                          })
-                        : ""}
+                      {(() => {
+                        const d = parseDate(transaction.date);
+                        return d
+                          ? d.toLocaleDateString("en-GB", {
+                              day: "2-digit",
+                              month: "2-digit",
+                              year: "numeric",
+                            })
+                          : "";
+                      })()}
                     </td>
                     <td className="px-4 py-2 text-right">
                       {Number(transaction.quantity).toLocaleString()}{" "}

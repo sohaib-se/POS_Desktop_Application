@@ -557,9 +557,35 @@ function sqliteApiPlugin() {
           if (req.method === 'POST') {
             const payload = await parseJsonBody(req);
             const newId = repository.addStockAdjustment(payload);
+
+            // For "Reduce Stock", deduct using FIFO so the stock value reflects
+            // the actual cost of the consumed layers (at_price in the form is ignored
+            // for value purposes — only the quantity matters).
+            let updatedItem: Record<string, unknown> | null = null;
+            if (payload.adjustmentType === 'Reduce Stock' && payload.itemId && payload.quantity) {
+              try {
+                const allItems = repository.getItems() as any[];
+                const dbItem = allItems.find((i: any) => String(i.id) === String(payload.itemId));
+                if (dbItem) {
+                  const isSecondary = payload.unit === dbItem.secondary_unit;
+                  repository.deductItemStockFifo(
+                    payload.itemId,
+                    Number(payload.quantity),
+                    isSecondary,
+                    dbItem.conversion_rate
+                  );
+                  // Fetch the updated item to return to frontend
+                  const refreshedItems = repository.getItems() as any[];
+                  updatedItem = refreshedItems.find((i: any) => String(i.id) === String(payload.itemId)) ?? null;
+                }
+              } catch (fifoErr) {
+                console.error('[Reduce Stock] FIFO deduction failed:', fifoErr);
+              }
+            }
+
             res.statusCode = 201;
             res.setHeader('Content-Type', 'application/json');
-            res.end(JSON.stringify({ ...payload, id: newId }));
+            res.end(JSON.stringify({ ...payload, id: newId, updatedItem }));
             return;
           }
 
@@ -573,9 +599,36 @@ function sqliteApiPlugin() {
           }
 
           if (req.method === 'DELETE' && id) {
+            // Before deleting, look up the record so we can reverse its effect.
+            const existingAdjustment = repository.getStockAdjustmentById(id) as any;
+
+            let updatedItem: Record<string, unknown> | null = null;
+
+            // If this was a "Reduce Stock" record, restore the FIFO-consumed stock.
+            if (existingAdjustment && existingAdjustment.adjustment_type === 'Reduce Stock') {
+              try {
+                const allItems = repository.getItems() as any[];
+                const dbItem = allItems.find((i: any) => String(i.id) === String(existingAdjustment.item_id));
+                if (dbItem) {
+                  const isSecondary = existingAdjustment.unit === dbItem.secondary_unit;
+                  repository.restoreItemStockFifo(
+                    existingAdjustment.item_id,
+                    Number(existingAdjustment.quantity),
+                    isSecondary,
+                    dbItem.conversion_rate
+                  );
+                  const refreshedItems = repository.getItems() as any[];
+                  updatedItem = refreshedItems.find((i: any) => String(i.id) === String(existingAdjustment.item_id)) ?? null;
+                }
+              } catch (fifoErr) {
+                console.error('[Delete Reduce Stock] FIFO restore failed:', fifoErr);
+              }
+            }
+
             repository.deleteStockAdjustment(id);
-            res.statusCode = 204;
-            res.end();
+            res.statusCode = 200;
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({ id, updatedItem }));
             return;
           }
 
@@ -3123,7 +3176,7 @@ function sqliteApiPlugin() {
                   if (!dbItem) continue;
 
                   const isSecondary = lineItem.unit === dbItem.secondary_unit;
-                  repository.deductItemStock(
+                  repository.deductItemStockFifo(
                     lineItem.itemId,
                     lineItem.quantity,
                     isSecondary,
@@ -3297,9 +3350,9 @@ function sqliteApiPlugin() {
                   if (!dbItem) continue;
 
                   const isSecondary = lineItem.unit === dbItem.secondary_unit;
-                  repository.deductItemStock(
+                  repository.restoreItemStockFifo(
                     lineItem.itemId,
-                    -Number(lineItem.quantity),
+                    Number(lineItem.quantity),
                     isSecondary,
                     dbItem.conversion_rate
                   );
@@ -3493,11 +3546,13 @@ function sqliteApiPlugin() {
                   if (!dbItem) continue;
 
                   const isSecondary = lineItem.unit === dbItem.secondary_unit;
-                  repository.deductItemStock(
+                  // Purchase adds stock — use flat (non-FIFO) function
+                  repository.addPurchaseStock(
                     lineItem.itemId,
-                    -lineItem.quantity,
+                    lineItem.quantity,
                     isSecondary,
-                    dbItem.conversion_rate
+                    dbItem.conversion_rate,
+                    lineItem.price ?? 0
                   );
                 }
               } catch (stockError) {
@@ -3654,11 +3709,13 @@ function sqliteApiPlugin() {
                   if (!dbItem) continue;
 
                   const isSecondary = lineItem.unit === dbItem.secondary_unit;
-                  repository.deductItemStock(
+                  // Undo old purchase stock addition
+                  repository.removePurchaseStock(
                     lineItem.itemId,
                     Number(lineItem.quantity),
                     isSecondary,
-                    dbItem.conversion_rate
+                    dbItem.conversion_rate,
+                    lineItem.price ?? 0
                   );
                 }
               } catch (stockError) {
@@ -3709,11 +3766,13 @@ function sqliteApiPlugin() {
                   if (!dbItem) continue;
 
                   const isSecondary = lineItem.unit === dbItem.secondary_unit;
-                  repository.deductItemStock(
+                  // Apply updated purchase stock
+                  repository.addPurchaseStock(
                     lineItem.itemId,
-                    -lineItem.quantity,
+                    lineItem.quantity,
                     isSecondary,
-                    dbItem.conversion_rate
+                    dbItem.conversion_rate,
+                    lineItem.price ?? 0
                   );
                 }
               } catch (stockError) {
@@ -3770,11 +3829,13 @@ function sqliteApiPlugin() {
                   if (!dbItem) continue;
 
                   const isSecondary = lineItem.unit === dbItem.secondary_unit;
-                  repository.deductItemStock(
+                  // Undo purchase stock addition
+                  repository.removePurchaseStock(
                     lineItem.itemId,
                     Number(lineItem.quantity),
                     isSecondary,
-                    dbItem.conversion_rate
+                    dbItem.conversion_rate,
+                    lineItem.price ?? 0
                   );
                 }
               } catch (stockError) {

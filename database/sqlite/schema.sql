@@ -318,6 +318,7 @@ CREATE TABLE IF NOT EXISTS adjust_stock_transactions (
   adjustment_type TEXT NOT NULL,
   date TEXT NOT NULL,
   quantity REAL NOT NULL,
+  remaining_quantity REAL,
   unit TEXT,
   at_price REAL,
   details TEXT,

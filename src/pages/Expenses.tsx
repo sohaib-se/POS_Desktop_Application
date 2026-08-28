@@ -438,6 +438,7 @@ export function Expenses({ onAddExpense, onEditExpenseRecord }: ExpensesProps) {
         setCategoryPendingDelete={setCategoryPendingDelete}
         isDeletingCategory={isDeletingCategory}
         handleDeleteCategory={handleDeleteCategory}
+        expenseRecordList={expenseRecordList}
       />
 
       <ItemModals
@@ -454,6 +455,7 @@ export function Expenses({ onAddExpense, onEditExpenseRecord }: ExpensesProps) {
         setItemPendingDelete={setItemPendingDelete}
         isDeletingItem={isDeletingItem}
         handleDeleteItem={handleDeleteItem}
+        expenseRecordList={expenseRecordList}
       />
       <ConfirmDeleteModal
         isOpen={Boolean(recordPendingDelete)}

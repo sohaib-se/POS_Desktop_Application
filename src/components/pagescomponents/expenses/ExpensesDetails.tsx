@@ -3,7 +3,9 @@ import { useSettings } from "@/hooks/useSettings";
 import type { ExpenseItem, ExpenseRecord } from "./types";
 import { useState, useEffect, useRef } from "react";
 import { Search, FolderOpen, Tag } from "lucide-react";
-import { ExpenseRecordContextMenu } from "./ExpenseRecordContextMenu";interface ExpensesDetailsProps {
+import { ExpenseRowActions } from "./ExpenseRecordContextMenu";
+
+interface ExpensesDetailsProps {
   activeTab: "category" | "items";
   selectedCategory: ExpenseCategory | null;
   selectedExpenseItem: ExpenseItem | null;
@@ -34,30 +36,8 @@ export function ExpensesDetails({
   const [currencyDisplay] = useSettings<'abbreviation' | 'icon'>('settings.currencyDisplay', 'abbreviation');
   const currencyStr = currencyDisplay === 'icon' ? currency.symbol : currency.code;
 
-  const [openRowMenuId, setOpenRowMenuId] = useState<string | null>(null);
-  const [openRowMenuPosition, setOpenRowMenuPosition] = useState<{ left: number; top: number } | null>(null);
-
-  useEffect(() => {
-    if (!openRowMenuId) return;
-    const closeMenu = () => {
-      setOpenRowMenuId(null);
-      setOpenRowMenuPosition(null);
-    };
-    window.addEventListener("click", closeMenu);
-    window.addEventListener("resize", closeMenu);
-    window.addEventListener("scroll", closeMenu, true);
-    return () => {
-      window.removeEventListener("click", closeMenu);
-      window.removeEventListener("resize", closeMenu);
-      window.removeEventListener("scroll", closeMenu, true);
-    };
-  }, [openRowMenuId]);
-
-  const handleContextMenu = (e: React.MouseEvent, record: ExpenseRecord) => {
-    e.preventDefault();
-    setOpenRowMenuId(record.id);
-    setOpenRowMenuPosition({ left: e.clientX, top: e.clientY });
-  };
+  // Right-click context menu has been replaced by inline three-dots action buttons.
+  // openRowMenuId / openRowMenuPosition state and handleContextMenu are no longer needed.
 
   const [showSearchInput, setShowSearchInput] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -174,9 +154,6 @@ export function ExpensesDetails({
                   <h2 className="text-xl font-semibold text-gray-900 mb-1">
                     {selectedCategory.name.toUpperCase()}
                   </h2>
-                  <p className="text-sm text-gray-500">
-                    {selectedCategory.type ?? "Indirect Expense"}
-                  </p>
                 </div>
                 <div className="text-right">
                   <p className="text-sm text-[#E53935]">
@@ -257,6 +234,9 @@ export function ExpensesDetails({
                     <th className="px-4 py-3 text-right font-medium text-gray-600 text-xs">
                       AMOUNT ⚲
                     </th>
+                    <th className="px-4 py-3 text-center font-medium text-gray-600 text-xs w-12">
+                      ACTION
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -264,8 +244,7 @@ export function ExpensesDetails({
                     filteredCategoryRecords.map((record) => (
                       <tr
                         key={record.id}
-                        onContextMenu={(e) => handleContextMenu(e, record)}
-                        className={`border-b border-gray-100 ${openRowMenuId === record.id ? "bg-gray-100" : "hover:bg-gray-50"} cursor-context-menu`}
+                        className="border-b border-gray-100 hover:bg-gray-50"
                       >
                         <td className="px-4 py-3">
                           {formatDate(record.created_at)}
@@ -275,12 +254,19 @@ export function ExpensesDetails({
                         <td className="px-4 py-3 text-right">
                           {Number(record.amount).toFixed(2)}
                         </td>
+                        <td className="px-2 py-3 text-center w-12">
+                          <ExpenseRowActions
+                            record={record}
+                            onEditRecord={(r) => onEditRecord && onEditRecord(r)}
+                            onDeleteRecord={(r) => onDeleteRecord && onDeleteRecord(r)}
+                          />
+                        </td>
                       </tr>
                     ))
                   ) : (
                     <tr>
                       <td
-                        colSpan={4}
+                        colSpan={5}
                         className="px-4 py-10 text-center text-gray-400 text-sm"
                       >
                         No transactions found for this category.
@@ -409,6 +395,9 @@ export function ExpensesDetails({
                     <th className="px-4 py-3 text-right font-medium text-gray-600 text-xs">
                       AMOUNT ⚲
                     </th>
+                    <th className="px-4 py-3 text-center font-medium text-gray-600 text-xs w-12">
+                      ACTION
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -436,8 +425,7 @@ export function ExpensesDetails({
                       return (
                         <tr
                           key={record.id}
-                          onContextMenu={(e) => handleContextMenu(e, record)}
-                          className={`border-b border-gray-100 ${openRowMenuId === record.id ? "bg-gray-100" : "hover:bg-gray-50"} cursor-context-menu`}
+                          className="border-b border-gray-100 hover:bg-gray-50"
                         >
                           <td className="px-4 py-3">
                             {formatDate(record.created_at)}
@@ -449,13 +437,20 @@ export function ExpensesDetails({
                           <td className="px-4 py-3 text-right">
                             {itemAmt.toFixed(2)}
                           </td>
+                          <td className="px-2 py-3 text-center w-12">
+                            <ExpenseRowActions
+                              record={record}
+                              onEditRecord={(r) => onEditRecord && onEditRecord(r)}
+                              onDeleteRecord={(r) => onDeleteRecord && onDeleteRecord(r)}
+                            />
+                          </td>
                         </tr>
                       );
                     })
                   ) : (
                     <tr>
                       <td
-                        colSpan={4}
+                        colSpan={5}
                         className="px-4 py-10 text-center text-gray-400 text-sm"
                       >
                         No transactions found for this item.
@@ -493,17 +488,6 @@ export function ExpensesDetails({
         )
       )}
 
-      {openRowMenuId && openRowMenuPosition && (
-        <ExpenseRecordContextMenu
-          openRowMenuId={openRowMenuId}
-          openRowMenuPosition={openRowMenuPosition}
-          records={expenseRecordList}
-          setOpenRowMenuId={setOpenRowMenuId}
-          setOpenRowMenuPosition={setOpenRowMenuPosition}
-          onEditRecord={(record) => onEditRecord && onEditRecord(record)}
-          handleDeleteRecord={(record) => onDeleteRecord && onDeleteRecord(record)}
-        />
-      )}
     </div>
   );
 }

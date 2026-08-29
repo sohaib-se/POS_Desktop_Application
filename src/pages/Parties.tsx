@@ -335,27 +335,41 @@ export function Parties({ isReportView, onBack, onEditSaleInvoice }: PartiesProp
     );
 
     if (selectedParty) {
-      const netTransactionsEffect = baseTransactions.reduce((acc, t) => {
-        if (t.type === "Sale" || t.type === "Payment-Out") return acc + t.amount;
-        if (t.type === "Purchase" || t.type === "Payment-In") return acc - t.amount;
-        return acc;
-      }, 0);
+      // Check if a real Opening Balance transaction is already present
+      // (stored in payment_in/out_records when the party was created).
+      const hasStoredOpeningBalance = baseTransactions.some(
+        (t) =>
+          t.type === 'Payable Opening Balance' ||
+          t.type === 'Receivable Opening Balance'
+      );
 
-      const initialOpeningBalance = selectedParty.balance - netTransactionsEffect;
+      // Only synthesize the dynamic fallback for legacy parties that
+      // have no stored OB transaction. For new parties the real record
+      // is already in baseTransactions and must not be double-counted.
+      if (!hasStoredOpeningBalance) {
+        const netTransactionsEffect = baseTransactions.reduce((acc, t) => {
+          if (t.type === "Sale" || t.type === "Payment-Out") return acc + t.amount;
+          if (t.type === "Purchase" || t.type === "Payment-In") return acc - t.amount;
+          return acc;
+        }, 0);
 
-      if (Math.abs(initialOpeningBalance) > 0.01) {
-        baseTransactions.push({
-          id: "opening-balance-dynamic",
-          type: initialOpeningBalance > 0 ? "Receivable Opening Balance" : "Payable Opening Balance",
-          invoiceNo: "",
-          date: new Date().toLocaleDateString("en-IN"),
-          partyName: selectedParty.name,
-          amount: Math.abs(initialOpeningBalance),
-          balance: Math.abs(initialOpeningBalance),
-          partyId: selectedParty.id,
-        });
+        const initialOpeningBalance = selectedParty.balance - netTransactionsEffect;
+
+        if (Math.abs(initialOpeningBalance) > 0.01) {
+          baseTransactions.push({
+            id: "opening-balance-dynamic",
+            type: initialOpeningBalance > 0 ? "Receivable Opening Balance" : "Payable Opening Balance",
+            invoiceNo: "",
+            date: new Date().toLocaleDateString("en-IN"),
+            partyName: selectedParty.name,
+            amount: Math.abs(initialOpeningBalance),
+            balance: Math.abs(initialOpeningBalance),
+            partyId: selectedParty.id,
+          });
+        }
       }
     }
+
 
     return baseTransactions;
   })();
@@ -620,16 +634,7 @@ export function Parties({ isReportView, onBack, onEditSaleInvoice }: PartiesProp
     setIsDeletingParty(true);
 
     try {
-      const realOpeningBalances = baseTransactions.filter(t => 
-        (t.type === 'Payable Opening Balance' || t.type === 'Receivable Opening Balance') 
-        && t.id !== "opening-balance-dynamic"
-      );
-
-      for (const t of realOpeningBalances) {
-        await fetch(`/api/payment_in_records/${t.id}`, { method: 'DELETE' }).catch(() => {});
-        await fetch(`/api/payment_out_records/${t.id}`, { method: 'DELETE' }).catch(() => {});
-      }
-
+      // Opening balance transactions are now deleted server-side when the party is deleted.
       const response = await fetch(`/api/parties/${partyToDelete.id}`, {
         method: 'DELETE',
       });

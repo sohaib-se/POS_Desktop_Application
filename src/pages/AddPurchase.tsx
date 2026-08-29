@@ -291,7 +291,7 @@ export function AddPurchase({ onSave, onShare, onClose, initialInvoice }: AddPur
         documentFileName: "",
         paid: initialInvoice.balance !== undefined && initialInvoice.amount !== undefined ? String(Number(initialInvoice.amount) - Number(initialInvoice.balance)) : "",
         paidAll: initialInvoice.balance === 0,
-        paymentType: String(initialInvoice.paymentMode || "Cash"),
+        paymentType: String(initialInvoice.paymentType || initialInvoice.paymentMode || "Cash"),
       },
     ]);
     setActiveTabId(1);

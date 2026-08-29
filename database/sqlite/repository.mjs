@@ -310,6 +310,26 @@ export function deleteParty(id) {
   return result.changes > 0;
 }
 
+/**
+ * Deletes all Opening Balance transactions (Payable or Receivable) for a party
+ * from both payment_in_records and payment_out_records.
+ * These records are identified by payment_type and party_name.
+ * Called automatically when a party is deleted so OB records don't become orphans.
+ */
+export function deleteOpeningBalanceTransactionsByPartyName(partyName) {
+  const db = openDatabase();
+  const obTypes = ['Payable Opening Balance', 'Receivable Opening Balance', 'Opening Balance'];
+  const placeholders = obTypes.map(() => '?').join(', ');
+  db.prepare(
+    `DELETE FROM payment_in_records WHERE payment_type IN (${placeholders}) AND party_name = ?`
+  ).run(...obTypes, String(partyName));
+  db.prepare(
+    `DELETE FROM payment_out_records WHERE payment_type IN (${placeholders}) AND party_name = ?`
+  ).run(...obTypes, String(partyName));
+  db.close();
+}
+
+
 export function getItems() {
   const db = openDatabase();
   const rows = db.prepare('SELECT * FROM items ORDER BY name ASC').all();

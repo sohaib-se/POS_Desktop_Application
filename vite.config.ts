@@ -1756,7 +1756,8 @@ function sqliteApiPlugin() {
 
                 const normalizedBalance = Number(payload.balance ?? 0);
                 const providedId = Number(payload.id);
-                const normalizedId = Number.isFinite(providedId)
+                const isNewParty = !Number.isFinite(providedId) || !payload.id;
+                const normalizedId = !isNewParty
                   ? providedId
                   : repository.getNextPartyId();
 
@@ -1775,6 +1776,19 @@ function sqliteApiPlugin() {
 
                 repository.upsertParty(party);
 
+                // On new party creation only: persist the opening balance as an immutable
+                // transaction record so it never changes when future transactions are added.
+                if (isNewParty && Number.isFinite(normalizedBalance) && Math.abs(normalizedBalance) > 0) {
+                  try {
+                    const obDate = payload.asOfDate
+                      ? String(payload.asOfDate)
+                      : new Date().toLocaleDateString('en-GB');
+                    repository.saveOpeningBalanceTransaction(party.name, normalizedBalance, obDate);
+                  } catch (obErr) {
+                    console.error('Failed to save opening balance transaction:', obErr);
+                  }
+                }
+
                 res.statusCode = 201;
                 res.setHeader('Content-Type', 'application/json');
                 res.end(JSON.stringify(party));
@@ -1786,6 +1800,7 @@ function sqliteApiPlugin() {
             });
             return;
           }
+
 
           if (req.method === 'DELETE') {
             const pathId = requestUrl.pathname.split('/').filter(Boolean)[0];
@@ -1801,6 +1816,20 @@ function sqliteApiPlugin() {
                 return;
               }
 
+              // Look up the party first so we have its name for OB cleanup.
+              const existingParties = repository.getParties();
+              const partyToDelete = existingParties.find((p: any) => String(p.id) === String(id));
+
+              // Delete opening balance transactions (Payable/Receivable) for this party.
+              // These are stored by party_name in payment_in/out_records.
+              if (partyToDelete?.name) {
+                try {
+                  repository.deleteOpeningBalanceTransactionsByPartyName(partyToDelete.name);
+                } catch (obErr) {
+                  console.error('Failed to delete opening balance transactions for party:', obErr);
+                }
+              }
+
               const deleted = repository.deleteParty(id);
               if (!deleted) {
                 res.statusCode = 404;
@@ -1812,6 +1841,7 @@ function sqliteApiPlugin() {
               res.statusCode = 204;
               res.end();
             };
+
 
             if (pathId || queryId) {
               deleteById(pathId || queryId);
@@ -3516,7 +3546,9 @@ function sqliteApiPlugin() {
                   const allParties = repository.getParties();
                   const party = allParties.find((p: any) => String(p.id) === String(invoice.partyId));
                   if (party) {
-                    party.balance = Number(party.balance || 0) + Number(invoice.balance || 0); // Owe supplier more
+                    // Purchase means we OWE the supplier — balance goes more negative (to-pay).
+                    // Convention: negative balance = to-pay, positive = to-receive.
+                    party.balance = Number(party.balance || 0) - Number(invoice.balance || 0);
                     repository.upsertParty(party);
                   }
                 }
@@ -3555,7 +3587,8 @@ function sqliteApiPlugin() {
               res.statusCode = 201;
               res.setHeader('Content-Type', 'application/json');
               res.end(JSON.stringify(invoice));
-            } catch {
+            } catch (err) {
+              console.error("DEBUG: POST /api/purchase_bills error:", err);
               if (createdImagePath) {
                 removeManagedAttachmentFile(createdImagePath);
               }
@@ -3566,7 +3599,7 @@ function sqliteApiPlugin() {
 
               res.statusCode = 400;
               res.setHeader('Content-Type', 'application/json');
-              res.end(JSON.stringify({ message: 'Invalid JSON payload.' }));
+              res.end(JSON.stringify({ message: 'Invalid JSON payload.', error: String(err) }));
             }
             return;
           }
@@ -3668,14 +3701,15 @@ function sqliteApiPlugin() {
 
               repository.updatePurchaseBill(id, invoice);
 
-              // 1. REVERT OLD STATE
+              // 1. REVERT OLD STATE — always revert the OLD party regardless of whether the party changed
               if (existingInvoice.party_id) {
                 try {
                   const allParties = repository.getParties();
-                  const party = allParties.find((p: any) => String(p.id) === String(existingInvoice.party_id));
-                  if (party) {
-                    party.balance = Number(party.balance || 0) - Number(existingInvoice.balance || 0);
-                    repository.upsertParty(party);
+                  const oldParty = allParties.find((p: any) => String(p.id) === String(existingInvoice.party_id));
+                  if (oldParty) {
+                    // Undo the old purchase's effect: add the old balance back (make less negative).
+                    oldParty.balance = Number(oldParty.balance || 0) + Number(existingInvoice.balance || 0);
+                    repository.upsertParty(oldParty);
                   }
                 } catch (balanceError) {
                   console.error('Failed to restore old party balance on edit:', balanceError);
@@ -3744,11 +3778,13 @@ function sqliteApiPlugin() {
                 }
 
                 if (invoice.partyId) {
-                  const allParties = repository.getParties();
-                  const party = allParties.find((p: any) => String(p.id) === String(invoice.partyId));
-                  if (party) {
-                    party.balance = Number(party.balance || 0) + Number(invoice.balance || 0);
-                    repository.upsertParty(party);
+                  // Re-fetch fresh parties list (old party balance may have been updated above)
+                  const freshParties = repository.getParties();
+                  const newParty = freshParties.find((p: any) => String(p.id) === String(invoice.partyId));
+                  if (newParty) {
+                    // Apply new purchase: subtract (more negative = more to-pay).
+                    newParty.balance = Number(newParty.balance || 0) - Number(invoice.balance || 0);
+                    repository.upsertParty(newParty);
                   }
                 }
               } catch (txError) {
@@ -3757,19 +3793,26 @@ function sqliteApiPlugin() {
 
               try {
                 const allItems = repository.getItems();
-                for (const lineItem of lineItems) {
+                for (let j = 0; j < lineItems.length; j++) {
+                  const lineItem = lineItems[j];
                   if (!lineItem.itemId || !lineItem.quantity) continue;
                   const dbItem = allItems.find((i: any) => i.id === lineItem.itemId);
                   if (!dbItem) continue;
 
                   const isSecondary = lineItem.unit === dbItem.secondary_unit;
-                  // Apply updated purchase stock
+                  // Use a stable lineItemId consistent with the removal step above
+                  const newLineItemId = lineItem.id || `line_${j}`;
+                  // Apply updated purchase stock and recreate the FIFO layer
                   repository.addPurchaseStock(
                     lineItem.itemId,
                     lineItem.quantity,
                     isSecondary,
                     dbItem.conversion_rate,
-                    lineItem.price ?? 0
+                    lineItem.price ?? 0,
+                    id,
+                    newLineItemId,
+                    invoice.date,
+                    dbItem.name
                   );
                 }
               } catch (stockError) {
@@ -3848,7 +3891,8 @@ function sqliteApiPlugin() {
                   const allParties = repository.getParties();
                   const party = allParties.find((p: any) => String(p.id) === String(existingInvoice.party_id));
                   if (party) {
-                    party.balance = Number(party.balance || 0) - Number(existingInvoice.balance || 0);
+                    // Deleting a purchase reverts its effect: add back (make less negative = less to-pay).
+                    party.balance = Number(party.balance || 0) + Number(existingInvoice.balance || 0);
                     repository.upsertParty(party);
                   }
                 } catch (balanceError) {

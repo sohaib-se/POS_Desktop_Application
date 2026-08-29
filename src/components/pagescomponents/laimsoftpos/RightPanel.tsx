@@ -14,6 +14,7 @@ interface RightPanelProps {
   isSaving: boolean;
   handleSaveSale: () => void;
   filteredCustomers: PartyOption[];
+  onAddParty?: () => void;
 }
 
 export function RightPanel({
@@ -27,6 +28,7 @@ export function RightPanel({
   isSaving,
   handleSaveSale,
   filteredCustomers,
+  onAddParty,
 }: RightPanelProps) {
   const [currency] = useSettings('settings.businessCurrency', { code: 'PKR', symbol: 'Rs' });
   const [currencyDisplay] = useSettings<'abbreviation' | 'icon'>('settings.currencyDisplay', 'abbreviation');
@@ -107,7 +109,7 @@ export function RightPanel({
                 style={{ padding: "12px 16px", borderBottom: "1px solid #e5e7eb", display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer" }}
                 onMouseDown={(e) => {
                   e.preventDefault();
-                  // For now, this just closes the dropdown as LaimsoftPos doesn't have an Add Party modal
+                  onAddParty?.();
                   setDropdownOpen(false);
                 }}
               >

@@ -111,8 +111,8 @@ export function TransactionsCard({
 
   return (
     <Card className="bg-white rounded-md flex flex-col flex-1 overflow-hidden shadow-sm p-0">
-      <CardContent className="p-0">
-        <div className="flex items-center justify-between px-6 pt-4 pb-2">
+      <CardContent className="p-0 flex flex-col flex-1 min-h-0">
+        <div className="flex items-center justify-between px-6 pt-4 pb-2 shrink-0">
           <h3 className="text-base font-bold text-[#222B45] tracking-wide">
             TRANSACTIONS
           </h3>
@@ -173,7 +173,7 @@ export function TransactionsCard({
             </button>
           </div>
         </div>
-        <div className="border-t border-[#E3EAF2] rounded-b-lg overflow-x-auto">
+        <div className="border-t border-[#E3EAF2] rounded-b-lg overflow-auto flex-1 min-h-0">
           <table className="w-full text-sm">
             <thead className="bg-[#F7F9FB] sticky top-0 z-10">
               <tr>

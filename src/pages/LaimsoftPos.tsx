@@ -8,6 +8,7 @@ import { RightPanel } from "../components/pagescomponents/laimsoftpos/RightPanel
 import { Modals } from "../components/pagescomponents/laimsoftpos/Modals";
 import { ConfirmActionModal } from "@/components/common/ConfirmActionModal";
 import { useSettings } from "@/hooks/useSettings";
+import { AddPartyDialog } from "../components/pagescomponents/parties/AddPartyDialog";
 
 interface LaimsoftPosProps {
   onClose?: () => void;
@@ -71,6 +72,113 @@ export function LaimsoftPos({ onClose }: LaimsoftPosProps) {
   const [modalDiscountAmount, setModalDiscountAmount] = useState("");
   const [modalDescription, setModalDescription] = useState("");
   const [stopSaleOnNegativeStock] = useSettings('settings.stopSaleOnNegativeStock', false);
+
+  // Add Party State
+  const [showAddParty, setShowAddParty] = useState(false);
+  const [showCreditLimitError, setShowCreditLimitError] = useState(false);
+  const [isSavingParty, setIsSavingParty] = useState(false);
+  const [activePartyTab, setActivePartyTab] = useState<"address" | "credit">("address");
+  const [showShippingAddress, setShowShippingAddress] = useState(false);
+  const [partyForm, setPartyForm] = useState({
+    name: "",
+    phoneNumber: "",
+    email: "",
+    billingAddress: "",
+    shippingAddress: "",
+    openingBalance: "",
+    asOfDate: new Date().toLocaleDateString("en-IN"),
+    balanceType: "to-receive" as "to-pay" | "to-receive",
+    creditLimit: "no-limit" as "no-limit" | "custom",
+    creditLimitAmount: "",
+  });
+
+  const resetPartyForm = () => {
+    setPartyForm({
+      name: "",
+      phoneNumber: "",
+      email: "",
+      billingAddress: "",
+      shippingAddress: "",
+      openingBalance: "",
+      asOfDate: new Date().toLocaleDateString("en-IN"),
+      balanceType: "to-receive",
+      creditLimit: "no-limit",
+      creditLimitAmount: "",
+    });
+    setActivePartyTab("address");
+  };
+
+  const handleSaveParty = async (options?: { closeDialog?: boolean; resetForm?: boolean }) => {
+    if (!partyForm.name.trim() || isSavingParty) return;
+
+    if (partyForm.creditLimit === 'custom' && partyForm.creditLimitAmount && partyForm.balanceType === 'to-receive') {
+      const openingBalance = Number(partyForm.openingBalance || 0);
+      const creditLimitAmount = Number(partyForm.creditLimitAmount || 0);
+      if (Math.abs(openingBalance) > creditLimitAmount) {
+        setShowCreditLimitError(true);
+        return;
+      }
+    }
+
+    const shouldCloseDialog = options?.closeDialog ?? true;
+    const shouldResetForm = options?.resetForm ?? true;
+    setIsSavingParty(true);
+    
+    try {
+      const openingBalance = Number(partyForm.openingBalance || 0);
+      const balance = Number.isFinite(openingBalance)
+        ? partyForm.balanceType === 'to-pay'
+          ? -Math.abs(openingBalance)
+          : Math.abs(openingBalance)
+        : 0;
+
+      const response = await fetch('/api/parties', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: partyForm.name,
+          phone: partyForm.phoneNumber,
+          email: partyForm.email,
+          address: partyForm.billingAddress,
+          shippingAddress: partyForm.shippingAddress,
+          balance,
+          creditLimit: partyForm.creditLimit === 'custom' ? Number(partyForm.creditLimitAmount) : null,
+          asOfDate: partyForm.asOfDate,
+          type: 'customer',
+        }),
+      });
+
+      if (!response.ok) throw new Error('Failed to save party');
+
+      const createdParty = await response.json();
+
+      const normalizedParty: PartyOption = {
+        id: createdParty.id,
+        name: createdParty.name,
+        phone: createdParty.phone || "",
+        balance: Number(createdParty.balance ?? 0),
+        type: createdParty.type || "customer",
+      };
+
+      setParties((prev) => [...prev, normalizedParty].sort((a, b) => a.name.localeCompare(b.name)));
+      
+      updateTab({
+          customerSelectedId: normalizedParty.id,
+          customerSearchText: normalizedParty.name,
+      });
+
+      showToast(`Party ${normalizedParty.name} added successfully!`, "success");
+
+      if (shouldResetForm) resetPartyForm();
+      if (shouldCloseDialog) setShowAddParty(false);
+
+    } catch (error) {
+      console.error(error);
+      showToast("Failed to save party. Please try again.", "error");
+    } finally {
+      setIsSavingParty(false);
+    }
+  };
 
   const searchInputRef = useRef<HTMLInputElement>(null);
 
@@ -638,8 +746,8 @@ export function LaimsoftPos({ onClose }: LaimsoftPosProps) {
           receivedLessThanTotal={receivedLessThanTotal}
           isSaving={isSaving}
           handleSaveSale={handleSaveSale}
-
           filteredCustomers={filteredCustomers}
+          onAddParty={() => setShowAddParty(true)}
         />
       </div>
 
@@ -671,6 +779,28 @@ export function LaimsoftPos({ onClose }: LaimsoftPosProps) {
         setModalDescription={setModalDescription}
         saveModal={saveModal}
         items={items}
+      />
+
+      <AddPartyDialog
+        showAddParty={showAddParty}
+        setShowAddParty={setShowAddParty}
+        partyBeingEdited={null}
+        setPartyBeingEdited={() => {}}
+        resetPartyForm={resetPartyForm}
+        partyForm={partyForm}
+        setPartyForm={setPartyForm}
+        activeTab={activePartyTab}
+        setActiveTab={setActivePartyTab}
+        showShippingAddress={showShippingAddress}
+        setShowShippingAddress={setShowShippingAddress}
+        handleSaveParty={handleSaveParty}
+        isSavingParty={isSavingParty}
+        partyPendingDelete={null}
+        setPartyPendingDelete={() => {}}
+        isDeletingParty={false}
+        handleDeleteParty={async () => {}}
+        showCreditLimitError={showCreditLimitError}
+        setShowCreditLimitError={setShowCreditLimitError}
       />
     </div>
   );

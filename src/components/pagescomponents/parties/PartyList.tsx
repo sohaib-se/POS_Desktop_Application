@@ -121,7 +121,7 @@ export function PartyList({
                         : "text-gray-900"
                     }`}
                   >
-                    {party.balance.toFixed(2)}
+                    {Math.abs(party.balance).toFixed(2)}
                   </td>
                 </tr>
               ))}

@@ -65,6 +65,41 @@ export function EstimateRowMenu({
         <Pencil className={`w-4 h-4 ${targetItem.status === "Converted" ? "text-gray-400" : "text-gray-500"}`} />
         Edit
       </button>
+      {(targetItem.attachmentImagePath || targetItem.attachmentDocumentPath) && (
+        <button
+          className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"
+          onClick={() => {
+            const getExtension = (path: string) => {
+              const match = path.match(/\.[0-9a-z]+$/i);
+              return match ? match[0] : "";
+            };
+
+            if (targetItem.attachmentImagePath) {
+              const ext = getExtension(targetItem.attachmentImagePath);
+              const a = document.createElement('a');
+              a.href = targetItem.attachmentImagePath;
+              a.download = `estimate_${targetItem.referenceNo}_image${ext}`;
+              a.target = '_blank';
+              a.click();
+            }
+            if (targetItem.attachmentDocumentPath) {
+              setTimeout(() => {
+                const ext = getExtension(targetItem.attachmentDocumentPath!);
+                const a = document.createElement('a');
+                a.href = targetItem.attachmentDocumentPath!;
+                a.download = `estimate_${targetItem.referenceNo}_document${ext}`;
+                a.target = '_blank';
+                a.click();
+              }, 100);
+            }
+            setOpenRowMenuId(null);
+            setOpenRowMenuPosition(null);
+          }}
+        >
+          <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></svg>
+          Download Attachments
+        </button>
+      )}
       <button
         className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50"
         onClick={() => {

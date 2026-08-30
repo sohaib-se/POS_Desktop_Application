@@ -11,6 +11,8 @@ function sqliteApiPlugin() {
       const appDataRoot = path.join(process.cwd(), 'app_data');
       const itemsImagesRoot = path.join(appDataRoot, 'items_images');
       const saleAttachmentsRoot = path.join(appDataRoot, 'sale_attachments');
+      const purchaseAttachmentsRoot = path.join(appDataRoot, 'purchase_attachments');
+      const estimateAttachmentsRoot = path.join(appDataRoot, 'estimate_attachments');
       const paymentInAttachmentsRoot = path.join(appDataRoot, 'paymentin_attachments');
       const paymentOutAttachmentsRoot = path.join(appDataRoot, 'paymentout_attachments');
       const bankAccountAttachmentsRoot = path.join(appDataRoot, 'bank_account_attachments');
@@ -71,6 +73,74 @@ function sqliteApiPlugin() {
 
       const removeManagedAttachmentFile = (rawPath: unknown) => {
         const absolutePath = resolveManagedAttachmentPath(rawPath);
+        if (!absolutePath || !fs.existsSync(absolutePath)) {
+          return;
+        }
+
+        const stats = fs.statSync(absolutePath);
+        if (!stats.isFile()) {
+          return;
+        }
+
+        fs.unlinkSync(absolutePath);
+      };
+
+      const resolveManagedPurchaseAttachmentPath = (rawPath: unknown) => {
+        if (!rawPath || typeof rawPath !== 'string') {
+          return null;
+        }
+
+        const trimmedPath = rawPath.trim();
+        if (!trimmedPath.startsWith('/app_data/purchase_attachments/')) {
+          return null;
+        }
+
+        const relativePath = trimmedPath.replace(/^\/app_data\//, '');
+        const absolutePath = path.join(appDataRoot, relativePath);
+
+        if (!absolutePath.startsWith(purchaseAttachmentsRoot)) {
+          return null;
+        }
+
+        return absolutePath;
+      };
+
+      const removeManagedPurchaseAttachmentFile = (rawPath: unknown) => {
+        const absolutePath = resolveManagedPurchaseAttachmentPath(rawPath);
+        if (!absolutePath || !fs.existsSync(absolutePath)) {
+          return;
+        }
+
+        const stats = fs.statSync(absolutePath);
+        if (!stats.isFile()) {
+          return;
+        }
+
+        fs.unlinkSync(absolutePath);
+      };
+
+      const resolveManagedEstimateAttachmentPath = (rawPath: unknown) => {
+        if (!rawPath || typeof rawPath !== 'string') {
+          return null;
+        }
+
+        const trimmedPath = rawPath.trim();
+        if (!trimmedPath.startsWith('/app_data/estimate_attachments/')) {
+          return null;
+        }
+
+        const relativePath = trimmedPath.replace(/^\/app_data\//, '');
+        const absolutePath = path.join(appDataRoot, relativePath);
+
+        if (!absolutePath.startsWith(estimateAttachmentsRoot)) {
+          return null;
+        }
+
+        return absolutePath;
+      };
+
+      const removeManagedEstimateAttachmentFile = (rawPath: unknown) => {
+        const absolutePath = resolveManagedEstimateAttachmentPath(rawPath);
         if (!absolutePath || !fs.existsSync(absolutePath)) {
           return;
         }
@@ -1543,6 +1613,30 @@ function sqliteApiPlugin() {
           const repository = await import('./database/sqlite/repository.mjs');
           const requestUrl = new URL(req.url ?? '/', 'http://localhost');
 
+          const resolveEstimateAttachment = (rawValue: unknown, prefix: string) => {
+            if (!rawValue || typeof rawValue !== 'string') {
+              return null;
+            }
+
+            const trimmedValue = rawValue.trim();
+            if (!trimmedValue) {
+              return null;
+            }
+
+            if (trimmedValue.startsWith('/app_data/estimate_attachments/')) {
+              return {
+                filePath: trimmedValue,
+                fileName: path.basename(trimmedValue),
+              };
+            }
+
+            return saveDataUrlToAppData({
+              dataUrl: trimmedValue,
+              prefix,
+              targetRoot: estimateAttachmentsRoot,
+            });
+          };
+
           if (req.method === 'GET') {
             const records = repository.getEstimates();
             res.statusCode = 200;
@@ -1575,18 +1669,10 @@ function sqliteApiPlugin() {
               const amount = Number(payload.amount ?? 0);
               const balance = Number(payload.balance ?? 0);
 
-              const imageFile = saveDataUrlToAppData({
-                dataUrl: payload.imageDataUrl,
-                prefix: 'estimate_image',
-                targetRoot: saleAttachmentsRoot,
-              });
+              const imageFile = resolveEstimateAttachment(payload.imageDataUrl, 'estimate_image');
               createdImagePath = imageFile?.filePath ?? null;
 
-              const documentFile = saveDataUrlToAppData({
-                dataUrl: payload.documentDataUrl,
-                prefix: 'estimate_document',
-                targetRoot: saleAttachmentsRoot,
-              });
+              const documentFile = resolveEstimateAttachment(payload.documentDataUrl, 'estimate_document');
               createdDocumentPath = documentFile?.filePath ?? null;
 
               const estimate = {
@@ -1620,8 +1706,8 @@ function sqliteApiPlugin() {
               res.end(JSON.stringify(estimate));
               return;
             } catch (err) {
-              if (createdImagePath) { try { fs.unlinkSync(createdImagePath); } catch (e) { } }
-              if (createdDocumentPath) { try { fs.unlinkSync(createdDocumentPath); } catch (e) { } }
+              if (createdImagePath) { removeManagedEstimateAttachmentFile(createdImagePath); }
+              if (createdDocumentPath) { removeManagedEstimateAttachmentFile(createdDocumentPath); }
               console.error('Error saving estimate:', err);
               res.statusCode = 500;
               res.setHeader('Content-Type', 'application/json');
@@ -1644,23 +1730,26 @@ function sqliteApiPlugin() {
             let createdImagePath: string | null = null;
             let createdDocumentPath: string | null = null;
 
+            const existingEstimate = repository.getEstimates().find((e: any) => String(e.id) === String(id));
+
             try {
               const payload = await parseJsonBody(req);
               const lineItems = Array.isArray(payload.lineItems) ? payload.lineItems : [];
 
-              const imageFile = saveDataUrlToAppData({
-                dataUrl: payload.imageDataUrl,
-                prefix: 'estimate_image',
-                targetRoot: saleAttachmentsRoot,
-              });
+              const imageFile = resolveEstimateAttachment(payload.imageDataUrl, 'estimate_image');
               createdImagePath = imageFile?.filePath ?? null;
 
-              const documentFile = saveDataUrlToAppData({
-                dataUrl: payload.documentDataUrl,
-                prefix: 'estimate_document',
-                targetRoot: saleAttachmentsRoot,
-              });
+              const documentFile = resolveEstimateAttachment(payload.documentDataUrl, 'estimate_document');
               createdDocumentPath = documentFile?.filePath ?? null;
+
+              if (existingEstimate) {
+                if (createdImagePath !== existingEstimate.attachmentImagePath && existingEstimate.attachmentImagePath) {
+                  removeManagedEstimateAttachmentFile(existingEstimate.attachmentImagePath);
+                }
+                if (createdDocumentPath !== existingEstimate.attachmentDocumentPath && existingEstimate.attachmentDocumentPath) {
+                  removeManagedEstimateAttachmentFile(existingEstimate.attachmentDocumentPath);
+                }
+              }
 
               const estimate = {
                 referenceNo: String(payload.referenceNo ?? repository.getNextEstimateNo()),
@@ -1692,8 +1781,8 @@ function sqliteApiPlugin() {
               res.end(JSON.stringify({ ...estimate, id }));
               return;
             } catch (err) {
-              if (createdImagePath) { try { fs.unlinkSync(createdImagePath); } catch (e) { } }
-              if (createdDocumentPath) { try { fs.unlinkSync(createdDocumentPath); } catch (e) { } }
+              if (createdImagePath) { removeManagedEstimateAttachmentFile(createdImagePath); }
+              if (createdDocumentPath) { removeManagedEstimateAttachmentFile(createdDocumentPath); }
               console.error('Error updating estimate:', err);
               res.statusCode = 500;
               res.end(JSON.stringify({ message: 'Failed to update estimate.' }));
@@ -1707,6 +1796,16 @@ function sqliteApiPlugin() {
             const id = (pathId || queryId || '').trim();
 
             if (id) {
+              const existingEstimate = repository.getEstimates().find((e: any) => String(e.id) === String(id));
+              if (existingEstimate) {
+                if (existingEstimate.attachmentImagePath) {
+                  removeManagedEstimateAttachmentFile(existingEstimate.attachmentImagePath);
+                }
+                if (existingEstimate.attachmentDocumentPath) {
+                  removeManagedEstimateAttachmentFile(existingEstimate.attachmentDocumentPath);
+                }
+              }
+
               repository.deleteEstimate(id);
               res.statusCode = 204;
               res.end();
@@ -2834,6 +2933,7 @@ function sqliteApiPlugin() {
             });
           };
 
+
           if (req.method === 'GET') {
             const expenseRecords = repository.getExpenseRecords();
             res.statusCode = 200;
@@ -3442,6 +3542,30 @@ function sqliteApiPlugin() {
           const repository = await import('./database/sqlite/repository.mjs');
           const requestUrl = new URL(req.url ?? '/', 'http://localhost');
 
+          const resolvePurchaseAttachment = (rawValue: unknown, prefix: string) => {
+            if (!rawValue || typeof rawValue !== 'string') {
+              return null;
+            }
+
+            const trimmedValue = rawValue.trim();
+            if (!trimmedValue) {
+              return null;
+            }
+
+            if (trimmedValue.startsWith('/app_data/purchase_attachments/')) {
+              return {
+                filePath: trimmedValue,
+                fileName: path.basename(trimmedValue),
+              };
+            }
+
+            return saveDataUrlToAppData({
+              dataUrl: trimmedValue,
+              prefix,
+              targetRoot: purchaseAttachmentsRoot,
+            });
+          };
+
           if (req.method === 'GET') {
             const purchaseBills = repository.getPurchaseBills();
             res.statusCode = 200;
@@ -3474,18 +3598,10 @@ function sqliteApiPlugin() {
               const amount = Number(payload.amount ?? 0);
               const balance = Number(payload.balance ?? 0);
 
-              const imageFile = saveDataUrlToAppData({
-                dataUrl: payload.imageDataUrl,
-                prefix: 'purchase_bill_image',
-                targetRoot: saleAttachmentsRoot,
-              });
+              const imageFile = resolvePurchaseAttachment(payload.imageDataUrl, 'purchase_bill_image');
               createdImagePath = imageFile?.filePath ?? null;
 
-              const documentFile = saveDataUrlToAppData({
-                dataUrl: payload.documentDataUrl,
-                prefix: 'purchase_bill_document',
-                targetRoot: saleAttachmentsRoot,
-              });
+              const documentFile = resolvePurchaseAttachment(payload.documentDataUrl, 'purchase_bill_document');
               createdDocumentPath = documentFile?.filePath ?? null;
 
               const invoice = {
@@ -3607,6 +3723,7 @@ function sqliteApiPlugin() {
           if (req.method === 'PUT') {
             let createdImagePath: string | null = null;
             let createdDocumentPath: string | null = null;
+            let existingInvoice: any = null;
 
             try {
               const pathId = requestUrl.pathname.split('/').filter(Boolean)[0];
@@ -3620,7 +3737,7 @@ function sqliteApiPlugin() {
                 return;
               }
 
-              const existingInvoice = repository.getPurchaseBillById(id);
+              existingInvoice = repository.getPurchaseBillById(id);
               if (!existingInvoice) {
                 res.statusCode = 404;
                 res.setHeader('Content-Type', 'application/json');
@@ -3635,20 +3752,12 @@ function sqliteApiPlugin() {
                 : JSON.parse(existingInvoice.line_items_json ?? '[]');
 
               const imageFile = payload.imageDataUrl
-                ? saveDataUrlToAppData({
-                  dataUrl: payload.imageDataUrl,
-                  prefix: 'purchase_bill_image',
-                  targetRoot: saleAttachmentsRoot,
-                })
+                ? resolvePurchaseAttachment(payload.imageDataUrl, 'purchase_bill_image')
                 : null;
               createdImagePath = imageFile?.filePath ?? null;
 
               const documentFile = payload.documentDataUrl
-                ? saveDataUrlToAppData({
-                  dataUrl: payload.documentDataUrl,
-                  prefix: 'purchase_bill_document',
-                  targetRoot: saleAttachmentsRoot,
-                })
+                ? resolvePurchaseAttachment(payload.documentDataUrl, 'purchase_bill_document')
                 : null;
               createdDocumentPath = documentFile?.filePath ?? null;
 
@@ -3693,10 +3802,10 @@ function sqliteApiPlugin() {
                 status: resolvedBalance === 0 ? 'Paid' : 'Unpaid',
                 description: payload.description ? String(payload.description) : existingInvoice.description ?? null,
                 lineItemsJson: JSON.stringify(lineItems),
-                attachmentImagePath: createdImagePath ?? existingInvoice.attachment_image_path ?? null,
-                attachmentImageName: imageFile?.fileName ?? existingInvoice.attachment_image_name ?? null,
-                attachmentDocumentPath: createdDocumentPath ?? existingInvoice.attachment_document_path ?? null,
-                attachmentDocumentName: documentFile?.fileName ?? existingInvoice.attachment_document_name ?? null,
+                attachmentImagePath: createdImagePath,
+                attachmentImageName: imageFile?.fileName ?? null,
+                attachmentDocumentPath: createdDocumentPath,
+                attachmentDocumentName: documentFile?.fileName ?? null,
               };
 
               repository.updatePurchaseBill(id, invoice);
@@ -3819,24 +3928,24 @@ function sqliteApiPlugin() {
                 console.error("Failed to add stock for purchase edit:", stockError);
               }
 
-              if (createdImagePath && existingInvoice.attachment_image_path && existingInvoice.attachment_image_path !== createdImagePath) {
-                removeManagedAttachmentFile(existingInvoice.attachment_image_path);
+              if (createdImagePath !== existingInvoice.attachment_image_path && existingInvoice.attachment_image_path) {
+                removeManagedPurchaseAttachmentFile(existingInvoice.attachment_image_path);
               }
 
-              if (createdDocumentPath && existingInvoice.attachment_document_path && existingInvoice.attachment_document_path !== createdDocumentPath) {
-                removeManagedAttachmentFile(existingInvoice.attachment_document_path);
+              if (createdDocumentPath !== existingInvoice.attachment_document_path && existingInvoice.attachment_document_path) {
+                removeManagedPurchaseAttachmentFile(existingInvoice.attachment_document_path);
               }
 
               res.statusCode = 200;
               res.setHeader('Content-Type', 'application/json');
               res.end(JSON.stringify({ id, ...invoice }));
             } catch {
-              if (createdImagePath) {
-                removeManagedAttachmentFile(createdImagePath);
+              if (createdImagePath && createdImagePath !== existingInvoice?.attachment_image_path) {
+                removeManagedPurchaseAttachmentFile(createdImagePath);
               }
 
-              if (createdDocumentPath) {
-                removeManagedAttachmentFile(createdDocumentPath);
+              if (createdDocumentPath && createdDocumentPath !== existingInvoice?.attachment_document_path) {
+                removeManagedPurchaseAttachmentFile(createdDocumentPath);
               }
 
               res.statusCode = 400;
@@ -3898,6 +4007,14 @@ function sqliteApiPlugin() {
                 } catch (balanceError) {
                   console.error('Failed to restore party balance:', balanceError);
                 }
+              }
+
+              if (existingInvoice.attachment_image_path) {
+                removeManagedPurchaseAttachmentFile(existingInvoice.attachment_image_path);
+              }
+
+              if (existingInvoice.attachment_document_path) {
+                removeManagedPurchaseAttachmentFile(existingInvoice.attachment_document_path);
               }
 
               try {

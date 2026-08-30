@@ -21,4 +21,8 @@ export interface SaleTab {
   showDescriptionInput: boolean;
   image: File | null;
   document: File | null;
+  imageDataUrl?: string;
+  imageFileName?: string;
+  documentDataUrl?: string;
+  documentFileName?: string;
 }

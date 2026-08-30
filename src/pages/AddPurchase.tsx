@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useEffect } from "react";
 import type { PurchaseBillEditData } from "@/types";
 import { PurchaseTabBar } from "@/components/pagescomponents/addpurchase/PurchaseTabBar";
 import { PurchaseTopBar } from "@/components/pagescomponents/addpurchase/PurchaseTopBar";
@@ -120,35 +120,7 @@ function formatDateForDisplay(date: Date) {
   return date.toLocaleDateString("en-GB");
 }
 
-function useColumnResize(initial: number[]) {
-  const [widths, setWidths] = useState(initial);
-  const resizing = useRef<{ col: number; startX: number; startW: number } | null>(null);
 
-  const startResize = useCallback((col: number, e: React.MouseEvent) => {
-    e.preventDefault();
-    resizing.current = { col, startX: e.clientX, startW: widths[col] };
-
-    const onMove = (ev: MouseEvent) => {
-      if (!resizing.current) return;
-      const delta = ev.clientX - resizing.current.startX;
-      const newW = Math.max(50, resizing.current.startW + delta);
-      setWidths((prev) => {
-        const next = [...prev];
-        next[resizing.current!.col] = newW;
-        return next;
-      });
-    };
-    const onUp = () => {
-      resizing.current = null;
-      window.removeEventListener("mousemove", onMove);
-      window.removeEventListener("mouseup", onUp);
-    };
-    window.addEventListener("mousemove", onMove);
-    window.addEventListener("mouseup", onUp);
-  }, [widths]);
-
-  return { widths, startResize };
-}
 
 export function AddPurchase({ onSave, onShare, onClose, initialInvoice }: AddPurchaseProps) {
   const [tabs, setTabs] = useState<PurchaseTab[]>([createDefaultTab(1)]);
@@ -285,10 +257,10 @@ export function AddPurchase({ onSave, onShare, onClose, initialInvoice }: AddPur
         roundOff: Boolean(initialInvoice.roundOff),
         description: initialInvoice.description ?? "",
         showDescriptionInput: Boolean(initialInvoice.description),
-        imageDataUrl: "",
-        imageFileName: "",
-        documentDataUrl: "",
-        documentFileName: "",
+        imageDataUrl: initialInvoice.attachmentImagePath ?? "",
+        imageFileName: initialInvoice.attachmentImageName ?? "",
+        documentDataUrl: initialInvoice.attachmentDocumentPath ?? "",
+        documentFileName: initialInvoice.attachmentDocumentName ?? "",
         paid: initialInvoice.balance !== undefined && initialInvoice.amount !== undefined ? String(Number(initialInvoice.amount) - Number(initialInvoice.balance)) : "",
         paidAll: initialInvoice.balance === 0,
         paymentType: String(initialInvoice.paymentType || initialInvoice.paymentMode || "Cash"),
@@ -349,7 +321,6 @@ export function AddPurchase({ onSave, onShare, onClose, initialInvoice }: AddPur
   }, []);
 
   // col widths: [#, ITEM, QTY, UNIT, PRICE/UNIT, AMOUNT]
-  const { widths, startResize } = useColumnResize([42, 340, 90, 110, 130, 120]);
 
   const activeTab = tabs.find((t) => t.id === activeTabId)!;
   const displayedInvoiceNo = initialInvoice?.invoiceNo ?? nextInvoiceNo;
@@ -753,8 +724,6 @@ export function AddPurchase({ onSave, onShare, onClose, initialInvoice }: AddPur
         
         <PurchaseTable
           activeTab={activeTab}
-          widths={widths}
-          startResize={startResize}
           updateRowItem={updateRowItem}
           items={items}
           updateRow={updateRow}

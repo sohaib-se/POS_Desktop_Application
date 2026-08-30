@@ -57,13 +57,13 @@ export function BottomSection({
               ADD DESCRIPTION
             </button>
           )}
-          {activeTab.image ? (
+          {activeTab.image || activeTab.imageDataUrl ? (
             <div
               style={{ position: "relative", width: 220, height: 140, border: "1px solid #e5e7eb", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}
               onMouseEnter={(e) => { (e.currentTarget.lastChild as HTMLElement).style.opacity = "1"; }}
               onMouseLeave={(e) => { (e.currentTarget.lastChild as HTMLElement).style.opacity = "0"; }}
             >
-              <img src={URL.createObjectURL(activeTab.image)} style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain" }} alt="Attachment" />
+              <img src={activeTab.image ? URL.createObjectURL(activeTab.image) : activeTab.imageDataUrl} style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain" }} alt="Attachment" />
               <div
                 style={{
                   position: "absolute", bottom: 0, left: 0, right: 0, height: 40, background: "rgba(0,0,0,0.55)",
@@ -72,7 +72,7 @@ export function BottomSection({
                 }}
               >
                 <div style={{ cursor: "pointer" }} onClick={() => imageRef.current?.click()}>CHANGE</div>
-                <div style={{ cursor: "pointer" }} onClick={() => updateTab({ image: null })}>DELETE</div>
+                <div style={{ cursor: "pointer" }} onClick={() => updateTab({ image: null, imageDataUrl: "" })}>DELETE</div>
               </div>
             </div>
           ) : (
@@ -83,18 +83,18 @@ export function BottomSection({
           )}
           <input type="file" accept="image/*" style={{ display: "none" }} ref={imageRef} onChange={(e) => { if (e.target.files?.[0]) updateTab({ image: e.target.files[0] }) }} />
           
-          {activeTab.document ? (
+          {activeTab.document || activeTab.documentDataUrl ? (
             <div style={{ display: "flex", flexDirection: "column", gap: 8, width: 220 }}>
               <div style={{ border: "1px dashed #d1d5db", padding: 8, display: "flex", alignItems: "center", justifyContent: "center" }}>
                 <div style={{ background: "#f8fafc", padding: "8px 10px", display: "flex", alignItems: "center", gap: 6, borderRadius: 2, width: "100%", overflow: "hidden" }}>
                   <svg width="14" height="14" fill="none" stroke="#059669" strokeWidth="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /></svg>
                   <span style={{ color: "#059669", fontSize: 11, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                    {activeTab.document.name} added successfully
+                    {activeTab.document ? activeTab.document.name : activeTab.documentFileName || "Document"} added successfully
                   </span>
                 </div>
               </div>
               <div style={{ display: "flex", alignItems: "center", justifyItems: "center", justifyContent: "space-between", padding: "0 4px" }}>
-                <Trash2 size={16} style={{ cursor: "pointer", color: "#f87171" }} onClick={() => updateTab({ document: null })} />
+                <Trash2 size={16} style={{ cursor: "pointer", color: "#f87171" }} onClick={() => updateTab({ document: null, documentDataUrl: "" })} />
                 <div
                   style={{ display: "flex", alignItems: "center", gap: 6, color: "#3b82f6", fontSize: 13, fontWeight: 500, cursor: "pointer" }}
                   onClick={() => {
@@ -105,6 +105,12 @@ export function BottomSection({
                        a.download = activeTab.document.name;
                        a.click();
                        URL.revokeObjectURL(url);
+                     } else if (activeTab.documentDataUrl) {
+                       const a = document.createElement('a');
+                       a.href = activeTab.documentDataUrl;
+                       a.download = activeTab.documentFileName || 'document';
+                       a.target = '_blank';
+                       a.click();
                      }
                   }}
                 >

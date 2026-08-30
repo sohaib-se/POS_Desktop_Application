@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect } from "react";
 import type { SaleRow, SaleTab } from "../components/pagescomponents/addestimate/types";
 import { TabBar } from "../components/pagescomponents/addestimate/TabBar";
 import { TopBar } from "../components/pagescomponents/addestimate/TopBar";
@@ -27,10 +27,6 @@ function parseLineItems(lineItemsJson?: string | null) {
   }
 }
 
-const unitOptions = [
-  "NONE", "PCS", "KG", "G", "L", "ML", "M", "CM", "MM",
-  "DOZEN", "BOX", "PACK", "BAG", "BOTTLE", "CAN", "SET",
-];
 const taxOptions = ["NONE", "GST 5%", "GST 12%", "GST 18%", "GST 28%"];
 
 let globalRowId = 3;
@@ -59,36 +55,6 @@ function createDefaultTab(id: number): SaleTab {
     image: null,
     document: null,
   };
-}
-
-function useColumnResize(initial: number[]) {
-  const [widths, setWidths] = useState(initial);
-  const resizing = useRef<{ col: number; startX: number; startW: number } | null>(null);
-
-  const startResize = useCallback((col: number, e: React.MouseEvent) => {
-    e.preventDefault();
-    resizing.current = { col, startX: e.clientX, startW: widths[col] };
-
-    const onMove = (ev: MouseEvent) => {
-      if (!resizing.current) return;
-      const delta = ev.clientX - resizing.current.startX;
-      const newW = Math.max(50, resizing.current.startW + delta);
-      setWidths((prev) => {
-        const next = [...prev];
-        next[resizing.current!.col] = newW;
-        return next;
-      });
-    };
-    const onUp = () => {
-      resizing.current = null;
-      window.removeEventListener("mousemove", onMove);
-      window.removeEventListener("mouseup", onUp);
-    };
-    window.addEventListener("mousemove", onMove);
-    window.addEventListener("mouseup", onUp);
-  }, [widths]);
-
-  return { widths, startResize };
 }
 
 export function AddEstimate({ onSave, onShare, onClose, initialEstimate }: AddEstimateProps) {
@@ -212,6 +178,10 @@ export function AddEstimate({ onSave, onShare, onClose, initialEstimate }: AddEs
         showDescriptionInput: Boolean(initialEstimate.description),
         image: null,
         document: null,
+        imageDataUrl: initialEstimate.attachmentImagePath ?? "",
+        imageFileName: initialEstimate.attachmentImageName ?? "",
+        documentDataUrl: initialEstimate.attachmentDocumentPath ?? "",
+        documentFileName: initialEstimate.attachmentDocumentName ?? "",
       },
     ]);
     setActiveTabId(1);
@@ -263,8 +233,7 @@ export function AddEstimate({ onSave, onShare, onClose, initialEstimate }: AddEs
     fetchInitialData();
   }, []);
 
-  // col widths: [#, ITEM, QTY, UNIT, PRICE/UNIT, AMOUNT]
-  const { widths, startResize } = useColumnResize([42, 340, 90, 110, 130, 120]);
+
 
   const activeTab = tabs.find((t) => t.id === activeTabId)!;
 
@@ -295,11 +264,11 @@ export function AddEstimate({ onSave, onShare, onClose, initialEstimate }: AddEs
       
       const lineItems = tab.rows.filter(r => r.item && r.qty && r.pricePerUnit).map(r => ({ ...r }));
       
-      let imageDataUrl = null;
+      let imageDataUrl = tab.imageDataUrl || null;
       if (tab.image) {
         imageDataUrl = await fileToDataUrl(tab.image);
       }
-      let documentDataUrl = null;
+      let documentDataUrl = tab.documentDataUrl || null;
       if (tab.document) {
         documentDataUrl = await fileToDataUrl(tab.document);
       }
@@ -560,12 +529,9 @@ export function AddEstimate({ onSave, onShare, onClose, initialEstimate }: AddEs
           updateRow={updateRow}
           removeRow={removeRow}
           addRow={addRow}
-          widths={widths}
-          startResize={startResize}
           totalQty={totalQty}
           totalAmount={totalAmount}
           fmt={fmt}
-          unitOptions={unitOptions}
           items={items}
         />
 

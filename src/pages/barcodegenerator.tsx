@@ -11,11 +11,12 @@ import {
   type ActiveFields,
 } from "@/components/pagescomponents/utilities/barcodegenerator/barcodeTypes";
 import type { Item } from "@/types";
+import { useSettings } from "@/hooks/useSettings";
 
 export function BarcodeGenerator() {
   // ── Printer & Size settings (shared across all child components) ──────────
-  const [printerSettings, setPrinterSettings] = useState<PrinterSettings>(DEFAULT_PRINTER_SETTINGS);
-  const [activeFields, setActiveFields] = useState<ActiveFields>(DEFAULT_ACTIVE_FIELDS);
+  const [printerSettings, setPrinterSettings] = useSettings<PrinterSettings>("barcode_generator_printer_settings", DEFAULT_PRINTER_SETTINGS);
+  const [activeFields, setActiveFields] = useSettings<ActiveFields>("barcode_generator_active_fields", DEFAULT_ACTIVE_FIELDS);
 
   // ── Form state ─────────────────────────────────────────────────────────────
   const [formData, setFormData] = useState<BarcodeFormData>({

@@ -82,10 +82,10 @@ export function AddExpense({ onSave, onShare, onClose, initialExpense }: AddExpe
         rows,
         description: initialExpense.description || "",
         showDescriptionInput: !!initialExpense.description,
-        imageDataUrl: "",
-        imageFileName: "",
-        documentDataUrl: "",
-        documentFileName: "",
+        imageDataUrl: initialExpense.attachment_image_path || "",
+        imageFileName: initialExpense.attachment_image_name || "",
+        documentDataUrl: initialExpense.attachment_document_path || "",
+        documentFileName: initialExpense.attachment_document_name || "",
         expenseRecordId: initialExpense.id
       }];
     }

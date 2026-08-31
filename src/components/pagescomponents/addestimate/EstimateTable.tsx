@@ -1,5 +1,4 @@
 import { useState, useRef, useEffect } from "react";
-import type { MouseEvent } from "react";
 import type { SaleRow, SaleTab } from "./types";
 import { Trash2 } from "lucide-react";
 
@@ -98,20 +97,7 @@ function ItemSearchCell({ row, items, updateRow, handleItemSelect }: ItemSearchC
   );
 }
 
-// Resize handle between columns
-const ResizeHandle = ({ col, startResize }: { col: number; startResize: (col: number, e: MouseEvent) => void }) => (
-  <div
-    onMouseDown={(e) => startResize(col, e)}
-    style={{
-      position: "absolute", right: 0, top: 0,
-      width: 6, height: "100%", cursor: "col-resize",
-      display: "flex", alignItems: "center", justifyContent: "center",
-      zIndex: 10,
-    }}
-  >
-    <div style={{ width: 1, height: "60%", background: "#d1d5db" }} />
-  </div>
-);
+
 
 function UnitDropdown({ value, options, onChange }: { value: string; options: string[]; onChange: (v: string) => void }) {
   const [open, setOpen] = useState(false);
@@ -163,12 +149,9 @@ interface EstimateTableProps {
   updateRow: (rowId: number, field: keyof SaleRow | Partial<SaleRow>, value?: string) => void;
   removeRow: (rowId: number) => void;
   addRow: () => void;
-  widths: number[];
-  startResize: (col: number, e: MouseEvent) => void;
   totalQty: number;
   totalAmount: number;
   fmt: (n: number) => string;
-  unitOptions: string[];
   items?: any[];
 }
 
@@ -177,12 +160,9 @@ export function EstimateTable({
   updateRow,
   removeRow,
   addRow,
-  widths,
-  startResize,
   totalQty,
   totalAmount,
   fmt,
-  unitOptions,
   items = []
 }: EstimateTableProps) {
   const handleItemSelect = (rowId: number, itemName: string) => {
@@ -190,11 +170,10 @@ export function EstimateTable({
     if (selectedItem) {
       const salePrice = selectedItem.salePrice ?? selectedItem.sale_price;
       const rawUnit = selectedItem.primaryUnit || selectedItem.primary_unit || selectedItem.unit || "NONE";
-      const unit = String(rawUnit).toUpperCase();
       updateRow(rowId, {
         item: itemName,
         pricePerUnit: salePrice ? String(salePrice) : "",
-        unit: unitOptions.includes(unit) ? unit : "NONE",
+        unit: String(rawUnit),
         qty: "1"
       });
     } else {
@@ -203,7 +182,7 @@ export function EstimateTable({
   };
 
   return (
-    <div className="estimate-table-container" style={{ background: "#fff", paddingBottom: 80 }}>
+    <div className="estimate-table-container" style={{ background: "#fff", paddingBottom: 80, flex: 1, display: "flex", flexDirection: "column" }}>
       <style>{`
         .estimate-table-container tbody td input, 
         .estimate-table-container tbody td select {
@@ -220,32 +199,32 @@ export function EstimateTable({
       `}</style>
       <table style={{ width: "100%", borderCollapse: "collapse", tableLayout: "fixed" }}>
         <colgroup>
-          <col style={{ width: widths[0] }} />
-          <col style={{ width: widths[1] }} />
-          <col style={{ width: widths[2] }} />
-          <col style={{ width: widths[3] }} />
-          <col style={{ width: widths[4] }} />
-          <col style={{ width: widths[5] }} />
+          <col style={{ width: "5%" }} />
+          <col style={{ width: "35%" }} />
+          <col style={{ width: "15%" }} />
+          <col style={{ width: "15%" }} />
+          <col style={{ width: "15%" }} />
+          <col style={{ width: "15%" }} />
         </colgroup>
         <thead>
           <tr style={{ background: "#f3f6f9", borderTop: "1px solid #e5e7eb", borderBottom: "1px solid #e5e7eb" }}>
             <th style={{ position: "relative", padding: "8px 0", textAlign: "center", fontSize: 12, fontWeight: 600, color: "#6b7280", borderRight: "1px solid #e5e7eb", letterSpacing: "0.04em" }}>
-              #<ResizeHandle col={0} startResize={startResize} />
+              #
             </th>
             <th style={{ position: "relative", padding: "8px 10px", textAlign: "left", fontSize: 12, fontWeight: 600, color: "#6b7280", borderRight: "1px solid #e5e7eb", letterSpacing: "0.04em" }}>
-              ITEM<ResizeHandle col={1} startResize={startResize} />
+              ITEM
             </th>
             <th style={{ position: "relative", padding: "8px 10px", textAlign: "right", fontSize: 12, fontWeight: 600, color: "#6b7280", borderRight: "1px solid #e5e7eb", letterSpacing: "0.04em" }}>
-              QTY<ResizeHandle col={2} startResize={startResize} />
+              QTY
             </th>
             <th style={{ position: "relative", padding: "8px 10px", textAlign: "left", fontSize: 12, fontWeight: 600, color: "#6b7280", borderRight: "1px solid #e5e7eb", letterSpacing: "0.04em" }}>
-              UNIT<ResizeHandle col={3} startResize={startResize} />
+              UNIT
             </th>
             <th style={{ position: "relative", padding: "8px 10px", textAlign: "right", fontSize: 12, fontWeight: 600, color: "#6b7280", borderRight: "1px solid #e5e7eb", letterSpacing: "0.04em" }}>
-              PRICE/UNIT<ResizeHandle col={4} startResize={startResize} />
+              PRICE/UNIT
             </th>
             <th style={{ position: "relative", padding: "8px 10px", textAlign: "right", fontSize: 12, fontWeight: 600, color: "#6b7280", borderRight: "1px solid #e5e7eb", letterSpacing: "0.04em" }}>
-              AMOUNT<ResizeHandle col={5} startResize={startResize} />
+              AMOUNT
             </th>
           </tr>
         </thead>

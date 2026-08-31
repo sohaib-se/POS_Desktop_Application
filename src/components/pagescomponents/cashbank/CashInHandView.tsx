@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { AlignJustify, Filter, MoreVertical, Info, Trash2, Pencil } from "lucide-react";
+import { AlignJustify, MoreVertical, Trash2, Pencil } from "lucide-react";
 import { useSettings } from "@/hooks/useSettings";
 import { EnterPasscodeScreen } from "@/components/common/EnterPasscodeScreen";
 import { ConfirmDeleteModal } from "@/components/common/ConfirmDeleteModal";
@@ -72,12 +72,6 @@ export function CashInHandView({
     setPasscodeAction(null);
   };
 
-  const openEdit = (tx: any) => {
-    setEditingTransaction(tx);
-    setEditAmount(Math.abs(Number(tx.amount)).toString());
-    setContextMenu(null);
-  };
-
   const isTransfer = (tx: any) =>
     String(tx.id).endsWith('-cash') ||
     String(tx.name || '').toLowerCase().includes('transfer');
@@ -124,7 +118,6 @@ export function CashInHandView({
                   >
                     <div className="flex items-center gap-1">
                       {col}
-                      <Filter className="w-3 h-3" />
                     </div>
                   </th>
                 ))}

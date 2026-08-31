@@ -1,4 +1,3 @@
-import { Info } from "lucide-react";
 import { BarcodeLabel } from "./BarcodeLabel";
 import type { BarcodeFormData } from "./BarcodeGeneratorForm";
 import type { Item } from "@/types";
@@ -14,7 +13,6 @@ export function BarcodeGeneratorPreview({ formData, items = [], companyName = ""
     <div className="w-[350px] border-l border-gray-200 pl-8 flex flex-col items-center">
       <div className="flex items-center gap-2 mb-6 w-full justify-center">
         <h4 className="font-semibold text-gray-700">Preview</h4>
-        <Info className="w-4 h-4 text-indigo-500 cursor-pointer" />
       </div>
       
       <div className="flex-1 w-full flex items-center justify-center relative min-h-[300px]">

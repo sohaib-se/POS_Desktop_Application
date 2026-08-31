@@ -1,5 +1,5 @@
 import React from "react";
-import { Search, Plus, ChevronDown } from "lucide-react";
+import { Search, Plus } from "lucide-react";
 import { Card, CardHeader, CardContent } from "./ui";
 import type { Item, ItemContextMenuState } from "./types";
 
@@ -72,7 +72,6 @@ export function ProductList({
           >
             <Plus className="w-5 h-5" />
             Add Item
-            <ChevronDown className="w-4 h-4 ml-1" />
           </button>
         </div>
       </CardHeader>

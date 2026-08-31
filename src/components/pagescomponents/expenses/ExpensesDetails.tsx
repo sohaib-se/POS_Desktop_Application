@@ -223,16 +223,16 @@ export function ExpensesDetails({
                 <thead className="bg-gray-50 sticky top-0">
                   <tr>
                     <th className="px-4 py-3 text-left font-medium text-gray-600 text-xs">
-                      DATE ⚲
+                      DATE
                     </th>
                     <th className="px-4 py-3 text-left font-medium text-gray-600 text-xs">
-                      EXP NO. ⚲
+                      EXP NO.
                     </th>
                     <th className="px-4 py-3 text-left font-medium text-gray-600 text-xs">
-                      PAYMENT TYPE ⚲
+                      PAYMENT TYPE
                     </th>
                     <th className="px-4 py-3 text-right font-medium text-gray-600 text-xs">
-                      AMOUNT ⚲
+                      AMOUNT
                     </th>
                     <th className="px-4 py-3 text-center font-medium text-gray-600 text-xs w-12">
                       ACTION
@@ -384,16 +384,16 @@ export function ExpensesDetails({
                   <thead className="bg-gray-50 sticky top-0">
                   <tr>
                     <th className="px-4 py-3 text-left font-medium text-gray-600 text-xs">
-                      DATE ⚲
+                      DATE
                     </th>
                     <th className="px-4 py-3 text-left font-medium text-gray-600 text-xs">
-                      EXP NO. ⚲
+                      EXP NO.
                     </th>
                     <th className="px-4 py-3 text-left font-medium text-gray-600 text-xs">
-                      PAYMENT TYPE ⚲
+                      PAYMENT TYPE
                     </th>
                     <th className="px-4 py-3 text-right font-medium text-gray-600 text-xs">
-                      AMOUNT ⚲
+                      AMOUNT
                     </th>
                     <th className="px-4 py-3 text-center font-medium text-gray-600 text-xs w-12">
                       ACTION

@@ -14,6 +14,7 @@ interface AddPaymentOutModalProps {
   setSelectedParty: (party: string) => void;
   partyOptions: any[];
   selectedPartyBalance: number;
+  systemName?: string;
   paymentType: string;
   setPaymentType: (type: string) => void;
   bankAccounts: any[];
@@ -42,6 +43,7 @@ export function AddPaymentOutModal({
   setSelectedParty,
   partyOptions,
   selectedPartyBalance,
+  systemName,
   paymentType,
   setPaymentType,
   bankAccounts,
@@ -110,9 +112,17 @@ export function AddPaymentOutModal({
                     </select>
                     <ChevronDown className="absolute right-3 top-3.5 h-4 w-4 text-slate-400 pointer-events-none" />
                   </div>
-                  <p className="mt-1.5 text-[12px] font-medium text-[#E53935]">
-                    BAL: {selectedPartyBalance}
-                  </p>
+                  {selectedPartyBalance !== 0 ? (
+                    <p className={`mt-1.5 text-[12px] font-medium ${selectedPartyBalance < 0 ? 'text-[#E53935]' : 'text-[#43A047]'}`}>
+                      {selectedPartyBalance < 0
+                        ? `Payable balance by ${systemName || "System"}: ${Math.abs(selectedPartyBalance)}`
+                        : `Receivable balance by ${systemName || "System"}: ${Math.abs(selectedPartyBalance)}`}
+                    </p>
+                  ) : (
+                    <p className="mt-1.5 text-[12px] font-medium text-slate-500">
+                      BAL: 0
+                    </p>
+                  )}
                 </div>
 
                 <div className="relative w-[180px]">

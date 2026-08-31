@@ -178,6 +178,10 @@ export interface PurchaseBillEditData {
   balance: number;
   description?: string;
   lineItemsJson?: string | null;
+  attachmentImagePath?: string | null;
+  attachmentImageName?: string | null;
+  attachmentDocumentPath?: string | null;
+  attachmentDocumentName?: string | null;
 }
 
 export type ViewType = 

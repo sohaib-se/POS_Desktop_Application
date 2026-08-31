@@ -1,4 +1,4 @@
-import { Search, Pencil, Trash2 } from "lucide-react";
+import { Search, Pencil, Trash2, Download } from "lucide-react";
 import type { PurchaseBillViewRow } from "./types";
 
 interface PurchaseBillContextMenuProps {
@@ -27,9 +27,11 @@ export function PurchaseBillContextMenu({
   const targetInvoice = invoiceRows.find((row) => row.id === openRowMenuId) ?? null;
   if (!targetInvoice) return null;
 
+  const hasAttachment = Boolean(targetInvoice.attachmentImagePath || targetInvoice.attachmentDocumentPath);
+
   return (
     <div
-      className="fixed z-50 w-36 overflow-hidden rounded-lg border border-gray-200 bg-white shadow-lg"
+      className="fixed z-50 w-48 overflow-hidden rounded-lg border border-gray-200 bg-white shadow-lg"
       style={{ left: openRowMenuPosition.left, top: openRowMenuPosition.top }}
       onClick={(event) => event.stopPropagation()}
     >
@@ -55,6 +57,44 @@ export function PurchaseBillContextMenu({
         <Pencil className="w-4 h-4 text-gray-500" />
         Edit
       </button>
+      {hasAttachment && (
+        <button
+          className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-gray-50"
+          onClick={() => {
+            const getExtension = (path: string) => {
+              const match = path.match(/\.[0-9a-z]+$/i);
+              return match ? match[0] : "";
+            };
+
+            if (targetInvoice.attachmentImagePath) {
+              const ext = getExtension(targetInvoice.attachmentImagePath);
+              const a = document.createElement("a");
+              a.href = targetInvoice.attachmentImagePath;
+              a.download = `purchase_bill_${targetInvoice.invoiceNo}_image${ext}`;
+              document.body.appendChild(a);
+              a.click();
+              document.body.removeChild(a);
+            }
+            if (targetInvoice.attachmentDocumentPath) {
+              const docPath = targetInvoice.attachmentDocumentPath;
+              const ext = getExtension(docPath);
+              setTimeout(() => {
+                const a = document.createElement("a");
+                a.href = docPath;
+                a.download = `purchase_bill_${targetInvoice.invoiceNo}_doc${ext}`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+              }, 100);
+            }
+            setOpenRowMenuId(null);
+            setOpenRowMenuPosition(null);
+          }}
+        >
+          <Download className="w-4 h-4 text-gray-500" />
+          Download Attachments
+        </button>
+      )}
       <button
         className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50"
         onClick={() => handleDeleteInvoice(targetInvoice)}

@@ -279,6 +279,11 @@ export function PaymentIn() {
   const totalAmount = filteredRecords.reduce((sum, p) => sum + p.amount, 0);
   const totalReceived = totalAmount;
 
+  const totalReceivable = parties.reduce((sum, p) => {
+    const bal = Number(p.balance || 0);
+    return bal > 0 ? sum + bal : sum;
+  }, 0);
+
   const partyOptions = parties.map(p => ({
     value: String(p.id),
     label: p.name,
@@ -303,7 +308,7 @@ export function PaymentIn() {
       paymentType,
       reference: "",
       description: showDescription ? description : "",
-      imageDataUrl: imageDataUrl || undefined,
+      imageDataUrl: imageDataUrl || null,
     };
     try {
       const method = editingRecordId ? 'PUT' : 'POST';
@@ -387,6 +392,7 @@ export function PaymentIn() {
         <PaymentInSummary
           totalAmount={totalAmount}
           totalReceived={totalReceived}
+          totalReceivable={totalReceivable}
         />
 
         {isLoading ? (
@@ -466,6 +472,7 @@ export function PaymentIn() {
           setSelectedParty={setSelectedParty}
           partyOptions={partyOptions}
           selectedPartyBalance={selectedPartyBalance}
+          systemName={businessProfile?.business_name || businessProfile?.businessName || "System"}
           paymentType={paymentType}
           setPaymentType={setPaymentType}
           bankAccounts={bankAccounts}

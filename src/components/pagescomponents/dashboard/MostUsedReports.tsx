@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { ChevronRight, MinusCircle, X } from "lucide-react";
+import { useSettings } from "../../../hooks/useSettings";
 
 const AVAILABLE_REPORTS = [
   "Sale",
@@ -44,7 +45,7 @@ export function MostUsedReports({
   onViewChange?: (view: any) => void;
   onOpenReport?: (category: string, name: string) => void;
 }) {
-  const [selectedReports, setSelectedReports] = useState<string[]>([
+  const [selectedReports, setSelectedReports] = useSettings<string[]>("dashboard_most_used_reports", [
     "Sale",
     "Purchase",
     "Day book",

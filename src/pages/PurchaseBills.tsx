@@ -105,6 +105,10 @@ export function PurchaseBills({ onBack }: PurchaseBillsProps = {}) {
         roundOffAmount: Number(invoice.round_off_amount ?? 0),
         description: invoice.description ?? undefined,
         lineItemsJson: invoice.line_items_json ?? null,
+        attachmentImagePath: invoice.attachment_image_path ?? null,
+        attachmentImageName: invoice.attachment_image_name ?? null,
+        attachmentDocumentPath: invoice.attachment_document_path ?? null,
+        attachmentDocumentName: invoice.attachment_document_name ?? null,
       }));
 
       setInvoiceRows(normalizedRows);

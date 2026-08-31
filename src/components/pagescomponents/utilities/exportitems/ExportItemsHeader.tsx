@@ -1,27 +1,45 @@
-import { FileSpreadsheet, Download, CheckCircle2, Loader2 } from "lucide-react";
+import {
+  FileSpreadsheet,
+  Download,
+  CheckCircle2,
+  Loader2,
+  Package,
+  Tag,
+  DollarSign,
+  BarChart2,
+  Calendar,
+  Hash,
+  Layers,
+  ArrowRightLeft,
+  Image,
+  ShoppingCart,
+  TrendingUp,
+  Boxes,
+} from "lucide-react";
 import { useState } from "react";
 import * as XLSX from "xlsx-js-style";
 
+const FIELD_META = [
+  { label: "Item Name",                  icon: Package,        color: "text-violet-500" },
+  { label: "Category",                   icon: Tag,            color: "text-blue-500"   },
+  { label: "Item Code",                  icon: Hash,           color: "text-cyan-500"   },
+  { label: "Primary Unit",               icon: Layers,         color: "text-teal-500"   },
+  { label: "Secondary Unit",             icon: Layers,         color: "text-teal-400"   },
+  { label: "Conversion Rate",            icon: ArrowRightLeft, color: "text-indigo-500" },
+  { label: "Item Image",                 icon: Image,          color: "text-pink-500"   },
+  { label: "Sale Price",                 icon: DollarSign,     color: "text-green-500"  },
+  { label: "Wholesale Price",            icon: TrendingUp,     color: "text-emerald-500"},
+  { label: "Purchase Price",             icon: ShoppingCart,   color: "text-orange-500" },
+  { label: "Minimum Wholesale Quantity", icon: BarChart2,      color: "text-amber-500"  },
+  { label: "Opening Stock",              icon: Boxes,          color: "text-sky-500"    },
+  { label: "At Price",                   icon: DollarSign,     color: "text-lime-600"   },
+  { label: "As Of Date",                 icon: Calendar,       color: "text-rose-400"   },
+  { label: "Manufacturing Date",         icon: Calendar,       color: "text-purple-500" },
+  { label: "Expiry Date",                icon: Calendar,       color: "text-red-400"    },
+];
+
 export function ExportItemsHeader() {
   const [isExporting, setIsExporting] = useState(false);
-  const exportFields = [
-    "Item Name",
-    "Category",
-    "Item Code",
-    "Primary Unit",
-    "Secondary Unit",
-    "Conversion Rate",
-    "Item Image",
-    "Sale Price",
-    "Wholesale Price",
-    "Purchase Price",
-    "Minimum Wholesale Quantity",
-    "Opening Stock",
-    "At Price",
-    "As Of Date",
-    "Manufacturing Date",
-    "Expiry Date"
-  ];
 
   const handleExport = async () => {
     try {
@@ -81,40 +99,112 @@ export function ExportItemsHeader() {
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-      {/* Top Banner */}
-      <div className="bg-gradient-to-r from-red-50 to-white px-5 py-5 flex flex-col items-center border-b border-red-100">
-        <div className="w-12 h-12 bg-white rounded-full shadow-sm flex items-center justify-center mb-3 border-[3px] border-red-50">
-          <FileSpreadsheet className="w-6 h-6 text-[#E53935]" />
+    <div className="flex flex-col gap-6 animate-fadeIn">
+
+      {/* ── Page Title Row ─────────────────────────────────────────── */}
+      <div className="flex items-center justify-between pb-4 border-b border-gray-200">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-lg bg-[#E53935]/10 flex items-center justify-center">
+            <FileSpreadsheet className="w-5 h-5 text-[#E53935]" />
+          </div>
+          <div>
+            <h2 className="text-xl font-bold text-[#3B4256]">Export Items</h2>
+            <p className="text-xs text-gray-400 mt-0.5">Download your complete inventory as an Excel spreadsheet</p>
+          </div>
         </div>
-        <h2 className="text-xl font-bold text-gray-900 mb-1">Export Inventory Data</h2>
-        <p className="text-gray-500 text-sm text-center max-w-md mb-4">
-          Download a comprehensive spreadsheet containing all your inventory items, pricing details, and current stock levels.
-        </p>
-        <button 
+
+        <button
           onClick={handleExport}
           disabled={isExporting}
-          className="flex items-center gap-2 bg-[#E53935] hover:bg-red-600 disabled:bg-red-400 text-white px-5 py-2 rounded-full text-sm font-semibold shadow-md hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5"
+          className="flex items-center gap-2 bg-[#E53935] hover:bg-red-600 disabled:bg-red-300 text-white px-5 py-2.5 rounded-lg text-sm font-semibold shadow-sm hover:shadow-md transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0"
         >
-          {isExporting ? <Loader2 className="w-5 h-5 animate-spin" /> : <Download className="w-5 h-5" />}
-          {isExporting ? "Exporting..." : "Export to Excel"}
+          {isExporting
+            ? <Loader2 className="w-4 h-4 animate-spin" />
+            : <Download className="w-4 h-4" />}
+          {isExporting ? "Exporting…" : "Export to Excel"}
         </button>
       </div>
 
-      {/* Main Content Area */}
-      <div className="px-5 py-5">
-        <h3 className="text-xs font-semibold text-gray-700 uppercase tracking-wider mb-3">
-          Included Fields
-        </h3>
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mb-0">
-          {exportFields.map((field, idx) => (
-            <div key={idx} className="flex items-center gap-2 text-gray-600 bg-gray-50 px-3 py-2 rounded-lg border border-gray-100">
-              <CheckCircle2 className="w-3.5 h-3.5 text-[#E53935]" />
-              <span className="text-xs font-medium">{field}</span>
+      {/* ── Two-column body ───────────────────────────────────────── */}
+      <div className="grid grid-cols-3 gap-6">
+
+        {/* Left column: info cards */}
+        <div className="col-span-1 flex flex-col gap-4">
+
+          {/* What you get */}
+          <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-5">
+            <h3 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+              <span className="w-1 h-4 rounded-full bg-[#E53935] inline-block" />
+              What you'll get
+            </h3>
+            <ul className="space-y-2.5 text-sm text-gray-600">
+              <li className="flex items-start gap-2">
+                <CheckCircle2 className="w-4 h-4 text-[#E53935] mt-0.5 shrink-0" />
+                <span>All inventory items with full pricing details</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <CheckCircle2 className="w-4 h-4 text-[#E53935] mt-0.5 shrink-0" />
+                <span>Current stock levels &amp; opening stock data</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <CheckCircle2 className="w-4 h-4 text-[#E53935] mt-0.5 shrink-0" />
+                <span>Manufacturing &amp; expiry dates where available</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <CheckCircle2 className="w-4 h-4 text-[#E53935] mt-0.5 shrink-0" />
+                <span>Excel-formatted with styled headers, ready to use</span>
+              </li>
+            </ul>
+          </div>
+
+          {/* Format info */}
+          <div className="bg-[#F8FAFC] border border-gray-200 rounded-xl p-5">
+            <h3 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+              <span className="w-1 h-4 rounded-full bg-blue-500 inline-block" />
+              File details
+            </h3>
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between items-center">
+                <span className="text-gray-500">Format</span>
+                <span className="font-medium text-gray-700 bg-gray-100 px-2 py-0.5 rounded text-xs">.xlsx</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-gray-500">Sheet name</span>
+                <span className="font-medium text-gray-700 bg-gray-100 px-2 py-0.5 rounded text-xs">Inventory</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-gray-500">Filename</span>
+                <span className="font-medium text-gray-700 bg-gray-100 px-2 py-0.5 rounded text-xs">Inventory_Items.xlsx</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-gray-500">Columns</span>
+                <span className="font-medium text-gray-700 bg-gray-100 px-2 py-0.5 rounded text-xs">{FIELD_META.length} fields</span>
+              </div>
             </div>
-          ))}
+          </div>
         </div>
 
+        {/* Right column: fields grid */}
+        <div className="col-span-2 bg-white border border-gray-200 rounded-xl shadow-sm p-5">
+          <h3 className="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
+            <span className="w-1 h-4 rounded-full bg-green-500 inline-block" />
+            Included fields
+            <span className="ml-auto text-xs font-normal text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
+              {FIELD_META.length} columns
+            </span>
+          </h3>
+          <div className="grid grid-cols-2 gap-2">
+            {FIELD_META.map(({ label, icon: Icon, color }, idx) => (
+              <div
+                key={idx}
+                className="flex items-center gap-2.5 bg-gray-50 hover:bg-gray-100 border border-gray-100 hover:border-gray-200 px-3 py-2.5 rounded-lg transition-colors duration-150 group"
+              >
+                <Icon className={`w-3.5 h-3.5 ${color} shrink-0`} />
+                <span className="text-xs font-medium text-gray-600 group-hover:text-gray-800 transition-colors">{label}</span>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     </div>
   );

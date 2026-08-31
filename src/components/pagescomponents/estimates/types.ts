@@ -16,4 +16,8 @@ export interface EstimateRecord {
   roundOff?: boolean;
   roundOffAmount?: number;
   description?: string;
+  attachmentImagePath?: string | null;
+  attachmentImageName?: string | null;
+  attachmentDocumentPath?: string | null;
+  attachmentDocumentName?: string | null;
 }

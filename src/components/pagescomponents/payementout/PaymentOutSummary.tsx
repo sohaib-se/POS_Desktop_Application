@@ -3,10 +3,10 @@ import { useSettings } from "@/hooks/useSettings";
 interface PaymentOutSummaryProps {
   totalAmount: number;
   totalPaid: number;
-  totalOpen: number;
+  totalPayable: number;
 }
 
-export function PaymentOutSummary({ totalAmount, totalPaid, totalOpen }: PaymentOutSummaryProps) {
+export function PaymentOutSummary({ totalAmount, totalPaid, totalPayable }: PaymentOutSummaryProps) {
   const [currency] = useSettings('settings.businessCurrency', { code: 'PKR', symbol: 'Rs' });
   const [currencyDisplay] = useSettings<'abbreviation' | 'icon'>('settings.currencyDisplay', 'abbreviation');
   const currencyStr = currencyDisplay === 'icon' ? currency.symbol : currency.code;
@@ -26,7 +26,7 @@ export function PaymentOutSummary({ totalAmount, totalPaid, totalOpen }: Payment
         <div className="flex items-center gap-3 text-xs text-[#6B6B83] mt-1">
           <span>Paid: {currencyStr} {totalPaid.toFixed(2)}</span>
           <span>|</span>
-          <span>Open: {currencyStr} {totalOpen.toFixed(2)}</span>
+          <span>Total Payable Balance: {currencyStr} {totalPayable.toFixed(2)}</span>
         </div>
       </div>
     </div>

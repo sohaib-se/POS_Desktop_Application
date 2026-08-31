@@ -3265,6 +3265,88 @@ function sqliteApiPlugin() {
 
               repository.updateSaleInvoice(id, invoice);
 
+              // ── 1. Stock: restore old line items, then deduct new line items ──────
+              try {
+                const oldLineItems = JSON.parse(existingInvoice.line_items_json || '[]');
+                const allItemsBeforeRestore = repository.getItems();
+                for (const oldItem of oldLineItems) {
+                  if (!oldItem.itemId || !oldItem.quantity) continue;
+                  const dbItem = allItemsBeforeRestore.find((i: any) => String(i.id) === String(oldItem.itemId));
+                  if (!dbItem) continue;
+                  const isSecondary = oldItem.unit === dbItem.secondary_unit;
+                  repository.restoreItemStockFifo(
+                    oldItem.itemId,
+                    Number(oldItem.quantity),
+                    isSecondary,
+                    dbItem.conversion_rate
+                  );
+                }
+
+                const allItemsAfterRestore = repository.getItems();
+                for (const newItem of lineItems) {
+                  if (!newItem.itemId || !newItem.quantity) continue;
+                  const dbItem = allItemsAfterRestore.find((i: any) => String(i.id) === String(newItem.itemId));
+                  if (!dbItem) continue;
+                  const isSecondary = newItem.unit === dbItem.secondary_unit;
+                  repository.deductItemStockFifo(
+                    newItem.itemId,
+                    Number(newItem.quantity),
+                    isSecondary,
+                    dbItem.conversion_rate
+                  );
+                }
+              } catch (stockError) {
+                console.error('[Edit Sale] Failed to update stock:', stockError);
+              }
+
+              // ── 2. Party balance: reverse old contribution, apply new ────────────
+              try {
+                const oldBalance = Number(existingInvoice.balance || 0);
+                const oldPartyId = existingInvoice.party_id;
+                if (oldPartyId && oldBalance > 0) {
+                  const allParties = repository.getParties();
+                  const oldParty = allParties.find((p: any) => String(p.id) === String(oldPartyId));
+                  if (oldParty) {
+                    oldParty.balance = Number(oldParty.balance || 0) - oldBalance;
+                    repository.upsertParty(oldParty);
+                  }
+                }
+
+                const newBalance = Number(invoice.balance || 0);
+                const newPartyId = invoice.partyId;
+                if (newPartyId && newBalance > 0) {
+                  const allParties = repository.getParties();
+                  const newParty = allParties.find((p: any) => String(p.id) === String(newPartyId));
+                  if (newParty) {
+                    newParty.balance = Number(newParty.balance || 0) + newBalance;
+                    repository.upsertParty(newParty);
+                  }
+                }
+              } catch (balanceError) {
+                console.error('[Edit Sale] Failed to update party balance:', balanceError);
+              }
+
+              // ── 3. Cash-in-hand: delete old transaction, recreate with new amount ─
+              try {
+                repository.deleteCashInHandTransactionsForSale(id);
+
+                const newPaymentModeLower = String(invoice.paymentMode).toLowerCase();
+                const newTotalAmount = Number(invoice.amount || 0);
+                const newReceivedAmount = Math.max(0, newTotalAmount - Number(invoice.balance || 0));
+
+                if ((newPaymentModeLower === 'cash' || newPaymentModeLower === 'credit') && newReceivedAmount > 0) {
+                  repository.addCashInHandTransaction({
+                    id: id + '_cash_pos',
+                    date: invoice.date,
+                    name: invoice.partyName || 'Cash Sale',
+                    type: 'POS Sale',
+                    amount: newReceivedAmount,
+                  });
+                }
+              } catch (txError) {
+                console.error('[Edit Sale] Failed to update cash transaction:', txError);
+              }
+
               if (createdImagePath && existingInvoice.attachment_image_path && existingInvoice.attachment_image_path !== createdImagePath) {
                 removeManagedAttachmentFile(existingInvoice.attachment_image_path);
               }

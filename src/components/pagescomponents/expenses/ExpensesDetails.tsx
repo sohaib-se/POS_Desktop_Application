@@ -43,7 +43,7 @@ export function ExpensesDetails({
   const [searchQuery, setSearchQuery] = useState("");
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const searchContainerRef = useRef<HTMLDivElement>(null);
-  
+
   const placeholders = ["Exp No.", "Payment Type", "Amount"];
   const [placeholderIndex, setPlaceholderIndex] = useState(0);
 
@@ -73,8 +73,8 @@ export function ExpensesDetails({
 
   const categoryRecords = selectedCategory
     ? expenseRecordList.filter(
-        (r) => r.category_id === selectedCategory.id && Number(r.amount) > 0
-      )
+      (r) => r.category_id === selectedCategory.id && Number(r.amount) > 0
+    )
     : [];
 
   const filteredCategoryRecords = categoryRecords.filter(record => {
@@ -94,21 +94,21 @@ export function ExpensesDetails({
   // Records for a specific item (any record that has a line_item containing this item)
   const itemRecords = selectedExpenseItem
     ? expenseRecordList.filter((r) => {
-        if (!r.line_items_json) return false;
-        try {
-          const items = JSON.parse(r.line_items_json) as Array<{
-            name?: string;
-            itemId?: string;
-          }>;
-          return items.some(
-            (li) =>
-              li.name === selectedExpenseItem.name ||
-              li.itemId === selectedExpenseItem.id
-          );
-        } catch {
-          return false;
-        }
-      })
+      if (!r.line_items_json) return false;
+      try {
+        const items = JSON.parse(r.line_items_json) as Array<{
+          name?: string;
+          itemId?: string;
+        }>;
+        return items.some(
+          (li) =>
+            li.name === selectedExpenseItem.name ||
+            li.itemId === selectedExpenseItem.id
+        );
+      } catch {
+        return false;
+      }
+    })
     : [];
 
   const filteredItemRecords = itemRecords.filter(record => {
@@ -123,23 +123,23 @@ export function ExpensesDetails({
   // Total amount spent on selected item across all records
   const itemTotal = selectedExpenseItem
     ? expenseRecordList.reduce((sum, r) => {
-        if (!r.line_items_json) return sum;
-        try {
-          const items = JSON.parse(r.line_items_json) as Array<{
-            name?: string;
-            itemId?: string;
-            amount?: number;
-          }>;
-          const match = items.find(
-            (li) =>
-              li.name === selectedExpenseItem.name ||
-              li.itemId === selectedExpenseItem.id
-          );
-          return sum + Number(match?.amount ?? 0);
-        } catch {
-          return sum;
-        }
-      }, 0)
+      if (!r.line_items_json) return sum;
+      try {
+        const items = JSON.parse(r.line_items_json) as Array<{
+          name?: string;
+          itemId?: string;
+          amount?: number;
+        }>;
+        const match = items.find(
+          (li) =>
+            li.name === selectedExpenseItem.name ||
+            li.itemId === selectedExpenseItem.id
+        );
+        return sum + Number(match?.amount ?? 0);
+      } catch {
+        return sum;
+      }
+    }, 0)
     : 0;
 
   return (
@@ -170,12 +170,11 @@ export function ExpensesDetails({
                   TRANSACTIONS
                 </h3>
                 <div className="flex gap-2 items-center h-10" ref={searchContainerRef}>
-                  <div 
-                    className={`flex items-center overflow-hidden transition-all duration-300 ease-out rounded-full h-9 ${
-                      showSearchInput 
-                        ? "w-64 bg-white border border-blue-500 ring-4 ring-blue-50" 
-                        : "w-9 bg-transparent border border-transparent hover:bg-gray-100 cursor-pointer"
-                    }`}
+                  <div
+                    className={`flex items-center overflow-hidden transition-all duration-300 ease-out rounded-full h-9 ${showSearchInput
+                      ? "w-64 bg-white border border-blue-500 ring-4 ring-blue-50"
+                      : "w-9 bg-transparent border border-transparent hover:bg-gray-100 cursor-pointer"
+                      }`}
                     onClick={(e) => {
                       if (!showSearchInput) {
                         e.stopPropagation();
@@ -187,8 +186,7 @@ export function ExpensesDetails({
                     <div className="flex items-center justify-center h-full w-9 shrink-0">
                       <Search className={`w-4 h-4 ${showSearchInput ? "text-gray-400" : "text-gray-500"}`} />
                     </div>
-                    <div className={`relative flex-1 h-full flex items-center transition-opacity duration-200 ${
-                        showSearchInput ? "opacity-100 delay-100" : "opacity-0"
+                    <div className={`relative flex-1 h-full flex items-center transition-opacity duration-200 ${showSearchInput ? "opacity-100 delay-100" : "opacity-0"
                       }`}>
                       <input
                         ref={searchInputRef}
@@ -204,9 +202,8 @@ export function ExpensesDetails({
                             {placeholders.map((ph, idx) => (
                               <span
                                 key={ph}
-                                className={`absolute top-0 left-0 flex items-center h-full transition-all duration-700 ease-in-out ${
-                                  idx === placeholderIndex ? "opacity-100 translate-y-0" : "opacity-0 translate-y-3"
-                                }`}
+                                className={`absolute top-0 left-0 flex items-center h-full transition-all duration-700 ease-in-out ${idx === placeholderIndex ? "opacity-100 translate-y-0" : "opacity-0 translate-y-3"
+                                  }`}
                               >
                                 {ph}
                               </span>
@@ -265,16 +262,59 @@ export function ExpensesDetails({
                     ))
                   ) : (
                     <tr>
-                      <td
-                        colSpan={5}
-                        className="px-4 py-10 text-center text-gray-400 text-sm"
-                      >
-                        No transactions found for this category.
-                      </td>
+                      <th className="px-4 py-3 text-left font-medium text-gray-600 text-xs">
+                        DATE ⚲
+                      </th>
+                      <th className="px-4 py-3 text-left font-medium text-gray-600 text-xs">
+                        EXP NO. ⚲
+                      </th>
+                      <th className="px-4 py-3 text-left font-medium text-gray-600 text-xs">
+                        PAYMENT TYPE ⚲
+                      </th>
+                      <th className="px-4 py-3 text-right font-medium text-gray-600 text-xs">
+                        AMOUNT ⚲
+                      </th>
+                      <th className="px-4 py-3 text-center font-medium text-gray-600 text-xs w-12">
+                        ACTION
+                      </th>
                     </tr>
-                  )}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {filteredCategoryRecords.length > 0 ? (
+                      filteredCategoryRecords.map((record) => (
+                        <tr
+                          key={record.id}
+                          className="border-b border-gray-100 hover:bg-gray-50"
+                        >
+                          <td className="px-4 py-3">
+                            {formatDate(record.created_at)}
+                          </td>
+                          <td className="px-4 py-3">{record.expense_no ?? "-"}</td>
+                          <td className="px-4 py-3">{record.payment_type}</td>
+                          <td className="px-4 py-3 text-right">
+                            {Number(record.amount).toFixed(2)}
+                          </td>
+                          <td className="px-2 py-3 text-center w-12">
+                            <ExpenseRowActions
+                              record={record}
+                              onEditRecord={(r) => onEditRecord && onEditRecord(r)}
+                              onDeleteRecord={(r) => onDeleteRecord && onDeleteRecord(r)}
+                            />
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td
+                          colSpan={5}
+                          className="px-4 py-10 text-center text-gray-400 text-sm"
+                        >
+                          No transactions found for this category.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
               </div>
             </div>
           </>
@@ -331,12 +371,11 @@ export function ExpensesDetails({
                   TRANSACTIONS
                 </h3>
                 <div className="flex gap-2 items-center h-10" ref={searchContainerRef}>
-                  <div 
-                    className={`flex items-center overflow-hidden transition-all duration-300 ease-out rounded-full h-9 ${
-                      showSearchInput 
-                        ? "w-64 bg-white border border-blue-500 ring-4 ring-blue-50" 
-                        : "w-9 bg-transparent border border-transparent hover:bg-gray-100 cursor-pointer"
-                    }`}
+                  <div
+                    className={`flex items-center overflow-hidden transition-all duration-300 ease-out rounded-full h-9 ${showSearchInput
+                      ? "w-64 bg-white border border-blue-500 ring-4 ring-blue-50"
+                      : "w-9 bg-transparent border border-transparent hover:bg-gray-100 cursor-pointer"
+                      }`}
                     onClick={(e) => {
                       if (!showSearchInput) {
                         e.stopPropagation();
@@ -348,8 +387,7 @@ export function ExpensesDetails({
                     <div className="flex items-center justify-center h-full w-9 shrink-0">
                       <Search className={`w-4 h-4 ${showSearchInput ? "text-gray-400" : "text-gray-500"}`} />
                     </div>
-                    <div className={`relative flex-1 h-full flex items-center transition-opacity duration-200 ${
-                        showSearchInput ? "opacity-100 delay-100" : "opacity-0"
+                    <div className={`relative flex-1 h-full flex items-center transition-opacity duration-200 ${showSearchInput ? "opacity-100 delay-100" : "opacity-0"
                       }`}>
                       <input
                         ref={searchInputRef}
@@ -365,9 +403,8 @@ export function ExpensesDetails({
                             {placeholders.map((ph, idx) => (
                               <span
                                 key={ph}
-                                className={`absolute top-0 left-0 flex items-center h-full transition-all duration-700 ease-in-out ${
-                                  idx === placeholderIndex ? "opacity-100 translate-y-0" : "opacity-0 translate-y-3"
-                                }`}
+                                className={`absolute top-0 left-0 flex items-center h-full transition-all duration-700 ease-in-out ${idx === placeholderIndex ? "opacity-100 translate-y-0" : "opacity-0 translate-y-3"
+                                  }`}
                               >
                                 {ph}
                               </span>
@@ -449,16 +486,82 @@ export function ExpensesDetails({
                     })
                   ) : (
                     <tr>
-                      <td
-                        colSpan={5}
-                        className="px-4 py-10 text-center text-gray-400 text-sm"
-                      >
-                        No transactions found for this item.
-                      </td>
+                      <th className="px-4 py-3 text-left font-medium text-gray-600 text-xs">
+                        DATE ⚲
+                      </th>
+                      <th className="px-4 py-3 text-left font-medium text-gray-600 text-xs">
+                        EXP NO. ⚲
+                      </th>
+                      <th className="px-4 py-3 text-left font-medium text-gray-600 text-xs">
+                        PAYMENT TYPE ⚲
+                      </th>
+                      <th className="px-4 py-3 text-right font-medium text-gray-600 text-xs">
+                        AMOUNT ⚲
+                      </th>
+                      <th className="px-4 py-3 text-center font-medium text-gray-600 text-xs w-12">
+                        ACTION
+                      </th>
                     </tr>
-                  )}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {filteredItemRecords.length > 0 ? (
+                      filteredItemRecords.map((record) => {
+                        // Extract this item's amount from line_items_json
+                        let itemAmt = 0;
+                        try {
+                          const items = JSON.parse(
+                            record.line_items_json ?? "[]"
+                          ) as Array<{
+                            name?: string;
+                            itemId?: string;
+                            amount?: number;
+                          }>;
+                          const match = items.find(
+                            (li) =>
+                              li.name === selectedExpenseItem.name ||
+                              li.itemId === selectedExpenseItem.id
+                          );
+                          itemAmt = Number(match?.amount ?? 0);
+                        } catch {
+                          itemAmt = 0;
+                        }
+                        return (
+                          <tr
+                            key={record.id}
+                            className="border-b border-gray-100 hover:bg-gray-50"
+                          >
+                            <td className="px-4 py-3">
+                              {formatDate(record.created_at)}
+                            </td>
+                            <td className="px-4 py-3">
+                              {record.expense_no ?? "-"}
+                            </td>
+                            <td className="px-4 py-3">{record.payment_type}</td>
+                            <td className="px-4 py-3 text-right">
+                              {itemAmt.toFixed(2)}
+                            </td>
+                            <td className="px-2 py-3 text-center w-12">
+                              <ExpenseRowActions
+                                record={record}
+                                onEditRecord={(r) => onEditRecord && onEditRecord(r)}
+                                onDeleteRecord={(r) => onDeleteRecord && onDeleteRecord(r)}
+                              />
+                            </td>
+                          </tr>
+                        );
+                      })
+                    ) : (
+                      <tr>
+                        <td
+                          colSpan={5}
+                          className="px-4 py-10 text-center text-gray-400 text-sm"
+                        >
+                          No transactions found for this item.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
               </div>
             </div>
           </>

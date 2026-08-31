@@ -19,6 +19,10 @@ export interface ExpenseRecord {
   line_items_json: string | null;
   round_off: number;
   round_off_amount: number;
+  attachment_image_path?: string | null;
+  attachment_image_name?: string | null;
+  attachment_document_path?: string | null;
+  attachment_document_name?: string | null;
   created_at: string;
   updated_at: string;
 }

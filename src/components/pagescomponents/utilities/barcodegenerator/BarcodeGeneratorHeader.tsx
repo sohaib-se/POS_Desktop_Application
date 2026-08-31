@@ -52,7 +52,6 @@ export function BarcodeGeneratorHeader({
     <div className="flex justify-between items-center mb-6 pb-4 border-b border-gray-200">
       <div className="flex items-center gap-2">
         <h3 className="text-xl font-bold text-[#3B4256]">Barcode Generator</h3>
-        <Info className="w-5 h-5 text-gray-400 cursor-pointer hover:text-gray-600" />
       </div>
 
       <div className="flex items-center gap-4 text-sm text-gray-500">

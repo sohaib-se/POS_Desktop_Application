@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useSettings } from "@/hooks/useSettings";
-import { ChevronDown, Filter, MoreVertical, Search } from "lucide-react";
+import { ChevronDown, MoreVertical, Search } from "lucide-react";
 import type { BankAccount } from "./types";
 
 interface AccountDetailProps {
@@ -180,7 +180,6 @@ export function AccountDetail({ account, onDeposit, onEditTransaction, onDeleteT
           {["Payment Type", "Name", "Date", "Amount"].map((col) => (
             <div key={col} className="flex items-center gap-1">
               {col}
-              <Filter className="w-3 h-3" />
             </div>
           ))}
         </div>

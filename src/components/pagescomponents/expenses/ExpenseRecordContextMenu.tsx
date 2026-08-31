@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { MoreVertical, Pencil, Trash2 } from "lucide-react";
+import { MoreVertical, Pencil, Trash2, Download } from "lucide-react";
 import type { ExpenseRecord } from "./types";
 
 interface ExpenseRowActionsProps {
@@ -77,6 +77,43 @@ export function ExpenseRowActions({
             <Pencil className="w-4 h-4 text-gray-500" />
             View/Edit
           </button>
+          {Boolean(record.attachment_image_path || record.attachment_document_path) && (
+            <button
+              className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-gray-50 transition-colors"
+              onClick={() => {
+                const getExtension = (path: string) => {
+                  const match = path.match(/\.[0-9a-z]+$/i);
+                  return match ? match[0] : "";
+                };
+
+                if (record.attachment_image_path) {
+                  const ext = getExtension(record.attachment_image_path);
+                  const a = document.createElement("a");
+                  a.href = record.attachment_image_path;
+                  a.download = `expense_${record.expense_no}_image${ext}`;
+                  document.body.appendChild(a);
+                  a.click();
+                  document.body.removeChild(a);
+                }
+                if (record.attachment_document_path) {
+                  const docPath = record.attachment_document_path;
+                  const ext = getExtension(docPath);
+                  setTimeout(() => {
+                    const a = document.createElement("a");
+                    a.href = docPath;
+                    a.download = `expense_${record.expense_no}_doc${ext}`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                  }, 100);
+                }
+                setOpen(false);
+              }}
+            >
+              <Download className="w-4 h-4 text-gray-500" />
+              Download Attachments
+            </button>
+          )}
           <button
             className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 transition-colors"
             onClick={() => {

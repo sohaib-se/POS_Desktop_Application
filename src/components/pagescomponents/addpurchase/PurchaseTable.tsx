@@ -5,8 +5,6 @@ import { unitOptions } from "./constants";
 
 interface PurchaseTableProps {
   activeTab: PurchaseTab;
-  widths: number[];
-  startResize: (col: number, e: React.MouseEvent) => void;
   updateRowItem: (rowId: number, itemId: string) => void;
   items: ItemOption[];
   updateRow: (rowId: number, field: keyof PurchaseRow, value: string) => void;
@@ -97,8 +95,6 @@ function ItemCell({
 
 export function PurchaseTable({
   activeTab,
-  widths,
-  startResize,
   updateRowItem,
   items,
   updateRow,
@@ -108,18 +104,6 @@ export function PurchaseTable({
   totalAmount,
   fmt,
 }: PurchaseTableProps) {
-  const ResizeHandle = ({ col }: { col: number }) => (
-    <div
-      onMouseDown={(e) => startResize(col, e)}
-      style={{
-        position: "absolute", right: 0, top: 0,
-        width: 6, height: "100%", cursor: "col-resize",
-        display: "flex", alignItems: "center", justifyContent: "center", zIndex: 10,
-      }}
-    >
-      <div style={{ width: 1, height: "60%", background: "#d1d5db" }} />
-    </div>
-  );
 
   const cellStyle: React.CSSProperties = {
     borderRight: "1px solid #e5e7eb",
@@ -149,32 +133,32 @@ export function PurchaseTable({
       `}</style>
       <table style={{ width: "100%", borderCollapse: "collapse", tableLayout: "fixed" }}>
         <colgroup>
-          <col style={{ width: widths[0] }} />
-          <col style={{ width: widths[1] }} />
-          <col style={{ width: widths[2] }} />
-          <col style={{ width: widths[3] }} />
-          <col style={{ width: widths[4] }} />
-          <col style={{ width: widths[5] }} />
+          <col style={{ width: "5%" }} />
+          <col style={{ width: "35%" }} />
+          <col style={{ width: "15%" }} />
+          <col style={{ width: "15%" }} />
+          <col style={{ width: "15%" }} />
+          <col style={{ width: "15%" }} />
         </colgroup>
         <thead>
           <tr style={{ background: "#f3f6f9", borderTop: "1px solid #e5e7eb", borderBottom: "1px solid #e5e7eb" }}>
             <th style={{ position: "relative", padding: "8px 0", textAlign: "center", fontSize: 12, fontWeight: 600, color: "#6b7280", ...cellStyle, letterSpacing: "0.04em" }}>
-              #<ResizeHandle col={0} />
+              #
             </th>
             <th style={{ position: "relative", padding: "8px 10px", textAlign: "left", fontSize: 12, fontWeight: 600, color: "#6b7280", ...cellStyle, letterSpacing: "0.04em" }}>
-              ITEM<ResizeHandle col={1} />
+              ITEM
             </th>
             <th style={{ position: "relative", padding: "8px 10px", textAlign: "right", fontSize: 12, fontWeight: 600, color: "#6b7280", ...cellStyle, letterSpacing: "0.04em" }}>
-              QTY<ResizeHandle col={2} />
+              QTY
             </th>
             <th style={{ position: "relative", padding: "8px 10px", textAlign: "left", fontSize: 12, fontWeight: 600, color: "#6b7280", ...cellStyle, letterSpacing: "0.04em" }}>
-              UNIT<ResizeHandle col={3} />
+              UNIT
             </th>
             <th style={{ position: "relative", padding: "8px 10px", textAlign: "right", fontSize: 12, fontWeight: 600, color: "#6b7280", ...cellStyle, letterSpacing: "0.04em" }}>
-              PRICE/UNIT<ResizeHandle col={4} />
+              PRICE/UNIT
             </th>
             <th style={{ position: "relative", padding: "8px 10px", textAlign: "right", fontSize: 12, fontWeight: 600, color: "#6b7280", ...cellStyle, letterSpacing: "0.04em" }}>
-              AMOUNT<ResizeHandle col={5} />
+              AMOUNT
             </th>
           </tr>
         </thead>

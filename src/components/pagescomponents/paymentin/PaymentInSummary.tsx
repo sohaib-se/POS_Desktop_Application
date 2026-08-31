@@ -3,9 +3,10 @@ import { useSettings } from "@/hooks/useSettings";
 interface PaymentInSummaryProps {
   totalAmount: number;
   totalReceived: number;
+  totalReceivable: number;
 }
 
-export function PaymentInSummary({ totalAmount, totalReceived }: PaymentInSummaryProps) {
+export function PaymentInSummary({ totalAmount, totalReceived, totalReceivable }: PaymentInSummaryProps) {
   const [currency] = useSettings('settings.businessCurrency', { code: 'PKR', symbol: 'Rs' });
   const [currencyDisplay] = useSettings<'abbreviation' | 'icon'>('settings.currencyDisplay', 'abbreviation');
   const currencyStr = currencyDisplay === 'icon' ? currency.symbol : currency.code;
@@ -24,6 +25,8 @@ export function PaymentInSummary({ totalAmount, totalReceived }: PaymentInSummar
         </p>
         <div className="flex items-center gap-3 text-xs text-[#6B6B83] mt-1">
           <span>Received: {currencyStr} {totalReceived.toFixed(2)}</span>
+          <span>|</span>
+          <span>Total Receivable balance: {currencyStr} {totalReceivable.toFixed(2)}</span>
         </div>
       </div>
     </div>

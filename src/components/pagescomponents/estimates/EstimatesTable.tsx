@@ -147,79 +147,90 @@ export function EstimatesTable({
             </tr>
           </thead>
           <tbody>
-            {records.map((estimate) => (
-              <tr
-                key={estimate.id}
-                className="border-b border-gray-100 hover:bg-gray-50"
-              >
-                <td className="px-4 py-3">{estimate.date}</td>
-                <td className="px-4 py-3">{estimate.referenceNo}</td>
-                <td className="px-4 py-3">{estimate.partyName}</td>
-                <td className="px-4 py-3 text-right">
-                  {currencyStr} {estimate.amount.toFixed(2)}
-                </td>
-                <td className="px-4 py-3 text-right">
-                  {currencyStr} {estimate.balance.toFixed(2)}
-                </td>
-                <td className="px-4 py-3">
-                  {estimate.status === "Open" ? (
-                    <span className="text-orange-500">{estimate.status}</span>
-                  ) : estimate.status === "Converted" ? (
-                    <span className="text-blue-600">
-                      {estimate.convertedSaleNo ? `Sale Invoice no. ${estimate.convertedSaleNo}` : "Converted"}
-                    </span>
-                  ) : (
-                    <span className="text-gray-500">{estimate.status}</span>
-                  )}
-                </td>
-                <td className="px-4 py-3 relative">
-                  <div className="flex items-center justify-end gap-2">
-                    <button 
-                      className={`p-1.5 rounded flex items-center gap-1 transition-colors ${
-                        estimate.status === "Converted" 
-                          ? "invisible pointer-events-none" 
-                          : "hover:bg-blue-50 text-blue-600 cursor-pointer"
-                      }`}
-                      title={estimate.status === "Converted" ? "Already Converted" : "Convert to Sale"}
-                      onClick={() => {
-                        if (estimate.status !== "Converted") {
-                          onConvertEstimateToSale(estimate);
-                        }
-                      }}
-                      disabled={estimate.status === "Converted"}
-                    >
-                      <ArrowRightCircle className="w-4 h-4" />
-                      <span className="text-xs font-medium">Convert</span>
-                    </button>
-                    <button
-                      className="p-1.5 hover:bg-gray-100 rounded"
-                      title="More actions"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        const targetRect = event.currentTarget.getBoundingClientRect();
-                        const menuWidth = 144;
-                        const menuHeight = 116; // rough height for 3 items
-                        const nextLeft = Math.max(8, Math.min(targetRect.right - menuWidth, window.innerWidth - menuWidth - 8));
-                        const nextTop = targetRect.bottom + menuHeight > window.innerHeight
-                          ? Math.max(8, targetRect.top - menuHeight - 8)
-                          : targetRect.bottom + 8;
-
-                        setOpenRowMenuPosition((previousPosition) =>
-                          openRowMenuId === estimate.id && previousPosition
-                            ? null
-                            : { left: nextLeft, top: nextTop },
-                        );
-                        setOpenRowMenuId((previous) =>
-                          previous === estimate.id ? null : estimate.id,
-                        );
-                      }}
-                    >
-                      <MoreVertical className="w-4 h-4 text-gray-500" />
-                    </button>
+            {records.length === 0 ? (
+              <tr>
+                <td colSpan={7} className="px-4 py-20 text-center">
+                  <div className="flex flex-col items-center justify-center space-y-3 text-gray-400">
+                    <svg className="w-16 h-16 text-gray-300" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m3.75 9v6m3-3H9m1.5-12H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" /></svg>
+                    <p className="text-gray-500 text-sm font-medium">No estimate records found</p>
                   </div>
                 </td>
               </tr>
-            ))}
+            ) : (
+              records.map((estimate) => (
+                <tr
+                  key={estimate.id}
+                  className="border-b border-gray-100 hover:bg-gray-50"
+                >
+                  <td className="px-4 py-3">{estimate.date}</td>
+                  <td className="px-4 py-3">{estimate.referenceNo}</td>
+                  <td className="px-4 py-3">{estimate.partyName}</td>
+                  <td className="px-4 py-3 text-right">
+                    {currencyStr} {estimate.amount.toFixed(2)}
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    {currencyStr} {estimate.balance.toFixed(2)}
+                  </td>
+                  <td className="px-4 py-3">
+                    {estimate.status === "Open" ? (
+                      <span className="text-orange-500">{estimate.status}</span>
+                    ) : estimate.status === "Converted" ? (
+                      <span className="text-blue-600">
+                        {estimate.convertedSaleNo ? `Sale Invoice no. ${estimate.convertedSaleNo}` : "Converted"}
+                      </span>
+                    ) : (
+                      <span className="text-gray-500">{estimate.status}</span>
+                    )}
+                  </td>
+                  <td className="px-4 py-3 relative">
+                    <div className="flex items-center justify-end gap-2">
+                      <button 
+                        className={`p-1.5 rounded flex items-center gap-1 transition-colors ${
+                          estimate.status === "Converted" 
+                            ? "invisible pointer-events-none" 
+                            : "hover:bg-blue-50 text-blue-600 cursor-pointer"
+                        }`}
+                        title={estimate.status === "Converted" ? "Already Converted" : "Convert to Sale"}
+                        onClick={() => {
+                          if (estimate.status !== "Converted") {
+                            onConvertEstimateToSale(estimate);
+                          }
+                        }}
+                        disabled={estimate.status === "Converted"}
+                      >
+                        <ArrowRightCircle className="w-4 h-4" />
+                        <span className="text-xs font-medium">Convert</span>
+                      </button>
+                      <button
+                        className="p-1.5 hover:bg-gray-100 rounded"
+                        title="More actions"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          const targetRect = event.currentTarget.getBoundingClientRect();
+                          const menuWidth = 144;
+                          const menuHeight = 116; // rough height for 3 items
+                          const nextLeft = Math.max(8, Math.min(targetRect.right - menuWidth, window.innerWidth - menuWidth - 8));
+                          const nextTop = targetRect.bottom + menuHeight > window.innerHeight
+                            ? Math.max(8, targetRect.top - menuHeight - 8)
+                            : targetRect.bottom + 8;
+  
+                          setOpenRowMenuPosition((previousPosition) =>
+                            openRowMenuId === estimate.id && previousPosition
+                              ? null
+                              : { left: nextLeft, top: nextTop },
+                          );
+                          setOpenRowMenuId((previous) =>
+                            previous === estimate.id ? null : estimate.id,
+                          );
+                        }}
+                      >
+                        <MoreVertical className="w-4 h-4 text-gray-500" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>

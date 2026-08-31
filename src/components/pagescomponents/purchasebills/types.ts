@@ -20,6 +20,10 @@ export type PurchaseBillApiRow = {
   balance: number;
   description?: string | null;
   line_items_json?: string | null;
+  attachment_image_path?: string | null;
+  attachment_image_name?: string | null;
+  attachment_document_path?: string | null;
+  attachment_document_name?: string | null;
 };
 
 export type PurchaseBillViewRow = {
@@ -45,6 +49,10 @@ export type PurchaseBillViewRow = {
   roundOffAmount?: number;
   description?: string;
   lineItemsJson?: string | null;
+  attachmentImagePath?: string | null;
+  attachmentImageName?: string | null;
+  attachmentDocumentPath?: string | null;
+  attachmentDocumentName?: string | null;
 };
 
 export type PurchaseBillLineItem = {

@@ -10,6 +10,7 @@ interface AddPaymentInModalProps {
   setSelectedParty: (val: string) => void;
   partyOptions: any[];
   selectedPartyBalance: number;
+  systemName?: string;
   paymentType: string;
   setPaymentType: (val: string) => void;
   bankAccounts: any[];
@@ -75,9 +76,17 @@ export function AddPaymentInModal(props: AddPaymentInModalProps) {
                       </select>
                       <ChevronDown className="absolute right-3 top-3.5 h-4 w-4 text-slate-400 pointer-events-none" />
                     </div>
-                    <p className="mt-1.5 text-[12px] font-medium text-[#E53935]">
-                      BAL: {props.selectedPartyBalance}
-                    </p>
+                    {props.selectedPartyBalance !== 0 ? (
+                      <p className={`mt-1.5 text-[12px] font-medium ${props.selectedPartyBalance < 0 ? 'text-[#E53935]' : 'text-[#43A047]'}`}>
+                        {props.selectedPartyBalance < 0
+                          ? `Payable balance by ${props.systemName || "System"}: ${Math.abs(props.selectedPartyBalance)}`
+                          : `Receivable balance by ${props.systemName || "System"}: ${Math.abs(props.selectedPartyBalance)}`}
+                      </p>
+                    ) : (
+                      <p className="mt-1.5 text-[12px] font-medium text-slate-500">
+                        BAL: 0
+                      </p>
+                    )}
                   </div>
 
                   <div className="relative w-[180px]">

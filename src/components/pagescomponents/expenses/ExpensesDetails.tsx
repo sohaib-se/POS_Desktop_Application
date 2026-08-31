@@ -262,57 +262,14 @@ export function ExpensesDetails({
                     ))
                   ) : (
                     <tr>
-                      <th className="px-4 py-3 text-left font-medium text-gray-600 text-xs">
-                        DATE ⚲
-                      </th>
-                      <th className="px-4 py-3 text-left font-medium text-gray-600 text-xs">
-                        EXP NO. ⚲
-                      </th>
-                      <th className="px-4 py-3 text-left font-medium text-gray-600 text-xs">
-                        PAYMENT TYPE ⚲
-                      </th>
-                      <th className="px-4 py-3 text-right font-medium text-gray-600 text-xs">
-                        AMOUNT ⚲
-                      </th>
-                      <th className="px-4 py-3 text-center font-medium text-gray-600 text-xs w-12">
-                        ACTION
-                      </th>
+                      <td
+                        colSpan={5}
+                        className="px-4 py-10 text-center text-gray-400 text-sm"
+                      >
+                        No transactions found for this category.
+                      </td>
                     </tr>
-                  </thead>
-                  <tbody>
-                    {filteredCategoryRecords.length > 0 ? (
-                      filteredCategoryRecords.map((record) => (
-                        <tr
-                          key={record.id}
-                          className="border-b border-gray-100 hover:bg-gray-50"
-                        >
-                          <td className="px-4 py-3">
-                            {formatDate(record.created_at)}
-                          </td>
-                          <td className="px-4 py-3">{record.expense_no ?? "-"}</td>
-                          <td className="px-4 py-3">{record.payment_type}</td>
-                          <td className="px-4 py-3 text-right">
-                            {Number(record.amount).toFixed(2)}
-                          </td>
-                          <td className="px-2 py-3 text-center w-12">
-                            <ExpenseRowActions
-                              record={record}
-                              onEditRecord={(r) => onEditRecord && onEditRecord(r)}
-                              onDeleteRecord={(r) => onDeleteRecord && onDeleteRecord(r)}
-                            />
-                          </td>
-                        </tr>
-                      ))
-                    ) : (
-                      <tr>
-                        <td
-                          colSpan={5}
-                          className="px-4 py-10 text-center text-gray-400 text-sm"
-                        >
-                          No transactions found for this category.
-                        </td>
-                      </tr>
-                    )}
+                  )}
                   </tbody>
                 </table>
               </div>
@@ -486,80 +443,14 @@ export function ExpensesDetails({
                     })
                   ) : (
                     <tr>
-                      <th className="px-4 py-3 text-left font-medium text-gray-600 text-xs">
-                        DATE ⚲
-                      </th>
-                      <th className="px-4 py-3 text-left font-medium text-gray-600 text-xs">
-                        EXP NO. ⚲
-                      </th>
-                      <th className="px-4 py-3 text-left font-medium text-gray-600 text-xs">
-                        PAYMENT TYPE ⚲
-                      </th>
-                      <th className="px-4 py-3 text-right font-medium text-gray-600 text-xs">
-                        AMOUNT ⚲
-                      </th>
-                      <th className="px-4 py-3 text-center font-medium text-gray-600 text-xs w-12">
-                        ACTION
-                      </th>
+                      <td
+                        colSpan={5}
+                        className="px-4 py-10 text-center text-gray-400 text-sm"
+                      >
+                        No transactions found for this item.
+                      </td>
                     </tr>
-                  </thead>
-                  <tbody>
-                    {filteredItemRecords.length > 0 ? (
-                      filteredItemRecords.map((record) => {
-                        // Extract this item's amount from line_items_json
-                        let itemAmt = 0;
-                        try {
-                          const items = JSON.parse(
-                            record.line_items_json ?? "[]"
-                          ) as Array<{
-                            name?: string;
-                            itemId?: string;
-                            amount?: number;
-                          }>;
-                          const match = items.find(
-                            (li) =>
-                              li.name === selectedExpenseItem.name ||
-                              li.itemId === selectedExpenseItem.id
-                          );
-                          itemAmt = Number(match?.amount ?? 0);
-                        } catch {
-                          itemAmt = 0;
-                        }
-                        return (
-                          <tr
-                            key={record.id}
-                            className="border-b border-gray-100 hover:bg-gray-50"
-                          >
-                            <td className="px-4 py-3">
-                              {formatDate(record.created_at)}
-                            </td>
-                            <td className="px-4 py-3">
-                              {record.expense_no ?? "-"}
-                            </td>
-                            <td className="px-4 py-3">{record.payment_type}</td>
-                            <td className="px-4 py-3 text-right">
-                              {itemAmt.toFixed(2)}
-                            </td>
-                            <td className="px-2 py-3 text-center w-12">
-                              <ExpenseRowActions
-                                record={record}
-                                onEditRecord={(r) => onEditRecord && onEditRecord(r)}
-                                onDeleteRecord={(r) => onDeleteRecord && onDeleteRecord(r)}
-                              />
-                            </td>
-                          </tr>
-                        );
-                      })
-                    ) : (
-                      <tr>
-                        <td
-                          colSpan={5}
-                          className="px-4 py-10 text-center text-gray-400 text-sm"
-                        >
-                          No transactions found for this item.
-                        </td>
-                      </tr>
-                    )}
+                  )}
                   </tbody>
                 </table>
               </div>

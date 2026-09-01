@@ -3000,6 +3000,16 @@ function sqliteApiPlugin() {
           const repository = await import('./database/sqlite/repository.mjs');
           const requestUrl = new URL(req.url ?? '/', 'http://localhost');
 
+          const resolveSaleAttachment = (rawValue: unknown, prefix: string) => {
+            if (!rawValue || typeof rawValue !== 'string') return null;
+            const trimmedValue = rawValue.trim();
+            if (!trimmedValue) return null;
+            if (trimmedValue.startsWith('/app_data/sale_attachments/')) {
+              return { filePath: trimmedValue, fileName: path.basename(trimmedValue) };
+            }
+            return saveDataUrlToAppData({ dataUrl: trimmedValue, prefix, targetRoot: saleAttachmentsRoot });
+          };
+
           if (req.method === 'GET') {
             const saleInvoices = repository.getSaleInvoices();
             res.statusCode = 200;
@@ -3032,17 +3042,9 @@ function sqliteApiPlugin() {
               const amount = Number(payload.amount ?? 0);
               const balance = Number(payload.balance ?? 0);
 
-              const imageFile = saveDataUrlToAppData({
-                dataUrl: payload.imageDataUrl,
-                prefix: 'sale_invoice_image',
-                targetRoot: saleAttachmentsRoot,
-              });
+              const imageFile = resolveSaleAttachment(payload.imageDataUrl, 'sale_invoice_image');
               createdImagePath = imageFile?.filePath ?? null;
-              const documentFile = saveDataUrlToAppData({
-                dataUrl: payload.documentDataUrl,
-                prefix: 'sale_invoice_document',
-                targetRoot: saleAttachmentsRoot,
-              });
+              const documentFile = resolveSaleAttachment(payload.documentDataUrl, 'sale_invoice_document');
               createdDocumentPath = documentFile?.filePath ?? null;
 
               const invoice = {
@@ -3201,21 +3203,13 @@ function sqliteApiPlugin() {
                 ? payload.lineItems
                 : JSON.parse(existingInvoice.line_items_json ?? '[]');
 
-              const imageFile = payload.imageDataUrl
-                ? saveDataUrlToAppData({
-                  dataUrl: payload.imageDataUrl,
-                  prefix: 'sale_invoice_image',
-                  targetRoot: saleAttachmentsRoot,
-                })
+              const imageFile = payload.imageDataUrl !== undefined
+                ? resolveSaleAttachment(payload.imageDataUrl, 'sale_invoice_image')
                 : null;
               createdImagePath = imageFile?.filePath ?? null;
 
-              const documentFile = payload.documentDataUrl
-                ? saveDataUrlToAppData({
-                  dataUrl: payload.documentDataUrl,
-                  prefix: 'sale_invoice_document',
-                  targetRoot: saleAttachmentsRoot,
-                })
+              const documentFile = payload.documentDataUrl !== undefined
+                ? resolveSaleAttachment(payload.documentDataUrl, 'sale_invoice_document')
                 : null;
               createdDocumentPath = documentFile?.filePath ?? null;
 
@@ -3257,10 +3251,10 @@ function sqliteApiPlugin() {
                   : Number(existingInvoice.balance ?? 0),
                 description: payload.description ? String(payload.description) : existingInvoice.description ?? null,
                 lineItemsJson: JSON.stringify(lineItems),
-                attachmentImagePath: createdImagePath ?? existingInvoice.attachment_image_path ?? null,
-                attachmentImageName: imageFile?.fileName ?? existingInvoice.attachment_image_name ?? null,
-                attachmentDocumentPath: createdDocumentPath ?? existingInvoice.attachment_document_path ?? null,
-                attachmentDocumentName: documentFile?.fileName ?? existingInvoice.attachment_document_name ?? null,
+                attachmentImagePath: payload.imageDataUrl !== undefined ? createdImagePath : (existingInvoice.attachment_image_path ?? null),
+                attachmentImageName: payload.imageDataUrl !== undefined ? (imageFile?.fileName ?? null) : (existingInvoice.attachment_image_name ?? null),
+                attachmentDocumentPath: payload.documentDataUrl !== undefined ? createdDocumentPath : (existingInvoice.attachment_document_path ?? null),
+                attachmentDocumentName: payload.documentDataUrl !== undefined ? (documentFile?.fileName ?? null) : (existingInvoice.attachment_document_name ?? null),
               };
 
               repository.updateSaleInvoice(id, invoice);
@@ -3347,11 +3341,11 @@ function sqliteApiPlugin() {
                 console.error('[Edit Sale] Failed to update cash transaction:', txError);
               }
 
-              if (createdImagePath && existingInvoice.attachment_image_path && existingInvoice.attachment_image_path !== createdImagePath) {
+              if (existingInvoice.attachment_image_path && payload.imageDataUrl !== undefined && existingInvoice.attachment_image_path !== createdImagePath) {
                 removeManagedAttachmentFile(existingInvoice.attachment_image_path);
               }
 
-              if (createdDocumentPath && existingInvoice.attachment_document_path && existingInvoice.attachment_document_path !== createdDocumentPath) {
+              if (existingInvoice.attachment_document_path && payload.documentDataUrl !== undefined && existingInvoice.attachment_document_path !== createdDocumentPath) {
                 removeManagedAttachmentFile(existingInvoice.attachment_document_path);
               }
 

@@ -313,6 +313,7 @@ export function AddSale({ onSave, onShare, onClose, initialInvoice, isConversion
       {
         id: 1,
         label: isConversion ? `New Sale` : `Sale #${initialInvoice.invoiceNo}`,
+        invoiceNo: isConversion ? "1" : initialInvoice.invoiceNo,
         paymentMode,
         customerSearch: initialInvoice.partyId ?? initialInvoice.partyName ?? "",
         phoneNo: initialInvoice.partyPhone ?? "",
@@ -336,10 +337,10 @@ export function AddSale({ onSave, onShare, onClose, initialInvoice, isConversion
         roundOff: Boolean(initialInvoice.roundOff),
         description: initialInvoice.description ?? "",
         showDescriptionInput: Boolean(initialInvoice.description),
-        imageDataUrl: "",
-        imageFileName: "",
-        documentDataUrl: "",
-        documentFileName: "",
+        imageDataUrl: initialInvoice.attachmentImagePath ?? "",
+        imageFileName: initialInvoice.attachmentImageName ?? "",
+        documentDataUrl: initialInvoice.attachmentDocumentPath ?? "",
+        documentFileName: initialInvoice.attachmentDocumentName ?? "",
         received: "",
         receivedAll: false,
       },
@@ -410,7 +411,7 @@ export function AddSale({ onSave, onShare, onClose, initialInvoice, isConversion
             }
 
             // Only update label/invoiceNo for brand new (non-edit) tabs
-            const isNewTab = !initialInvoice;
+            const isNewTab = !initialInvoice || isConversion;
             return {
               ...tab,
               customerSearch: updatedCustomerSearch,

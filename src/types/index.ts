@@ -155,6 +155,10 @@ export interface SaleInvoiceEditData {
   balance: number;
   description?: string;
   lineItemsJson?: string | null;
+  attachmentImagePath?: string | null;
+  attachmentImageName?: string | null;
+  attachmentDocumentPath?: string | null;
+  attachmentDocumentName?: string | null;
 }
 
 export interface PurchaseBillEditData {

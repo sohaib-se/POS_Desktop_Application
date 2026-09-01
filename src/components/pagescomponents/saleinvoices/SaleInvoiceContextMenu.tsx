@@ -10,6 +10,7 @@ interface SaleInvoiceContextMenuProps {
   setOpenRowMenuId: (id: string | null) => void;
   setOpenRowMenuPosition: (pos: { left: number; top: number } | null) => void;
   onEditInvoice: (invoice: SaleInvoiceViewRow) => void;
+  handleReturnInvoice: (invoice: SaleInvoiceViewRow) => void;
   handleDeleteInvoice: (invoice: SaleInvoiceViewRow) => void;
 }
 
@@ -21,6 +22,7 @@ export function SaleInvoiceContextMenu({
   setOpenRowMenuId,
   setOpenRowMenuPosition,
   onEditInvoice,
+  handleReturnInvoice,
   handleDeleteInvoice
 }: SaleInvoiceContextMenuProps) {
   if (!openRowMenuId || !openRowMenuPosition) return null;
@@ -45,17 +47,19 @@ export function SaleInvoiceContextMenu({
         <Search className="w-4 h-4 text-gray-500" />
         View
       </button>
-      <button
-        className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-gray-50"
-        onClick={() => {
-          onEditInvoice(targetInvoice);
-          setOpenRowMenuId(null);
-          setOpenRowMenuPosition(null);
-        }}
-      >
-        <Pencil className="w-4 h-4 text-gray-500" />
-        Edit
-      </button>
+      {!targetInvoice.transaction.includes('Returned') && (
+        <button
+          className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-gray-50"
+          onClick={() => {
+            onEditInvoice(targetInvoice);
+            setOpenRowMenuId(null);
+            setOpenRowMenuPosition(null);
+          }}
+        >
+          <Pencil className="w-4 h-4 text-gray-500" />
+          Edit
+        </button>
+      )}
       {(targetInvoice.attachmentImagePath || targetInvoice.attachmentDocumentPath) && (
         <button
           className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-gray-50"
@@ -92,6 +96,19 @@ export function SaleInvoiceContextMenu({
         >
           <Download className="w-4 h-4 text-gray-500" />
           Download Attachments
+        </button>
+      )}
+      {!targetInvoice.transaction.includes('Returned') && (
+        <button
+          className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-amber-600 hover:bg-amber-50"
+          onClick={() => {
+            handleReturnInvoice(targetInvoice);
+            setOpenRowMenuId(null);
+            setOpenRowMenuPosition(null);
+          }}
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-corner-up-left"><polyline points="9 14 4 9 9 4"/><path d="M20 20v-7a4 4 0 0 0-4-4H4"/></svg>
+          Return
         </button>
       )}
       <button

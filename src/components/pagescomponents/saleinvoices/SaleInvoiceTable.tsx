@@ -181,8 +181,8 @@ export function SaleInvoiceTable({
                 <td className="px-4 py-3">{invoice.invoiceNo}</td>
                 <td className="px-4 py-3">{invoice.partyName}</td>
                 <td className="px-4 py-3">
-                  <span className="inline-flex items-center gap-1.5 text-green-600">
-                    <span className="w-2 h-2 rounded-full bg-green-500"></span>
+                  <span className={`inline-flex items-center gap-1.5 ${invoice.transaction?.includes('Returned') ? 'text-amber-600' : 'text-green-600'}`}>
+                    <span className={`w-2 h-2 rounded-full ${invoice.transaction?.includes('Returned') ? 'bg-amber-500' : 'bg-green-500'}`}></span>
                     {invoice.transaction}
                   </span>
                 </td>

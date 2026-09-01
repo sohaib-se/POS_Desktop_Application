@@ -42,9 +42,11 @@ export function SaleInvoices({ onViewChange, onEditInvoice, onBack }: SaleInvoic
 
   const [isPasscodeEnabled] = useSettings('settings.isPasscodeEnabled', false);
   const [isPasscodeForTransactionEnabled] = useSettings('settings.isPasscodeForTransactionEnabled', false);
-  const [passcodeAction, setPasscodeAction] = useState<{ type: 'edit' | 'delete', payload: SaleInvoiceViewRow } | null>(null);
+  const [passcodeAction, setPasscodeAction] = useState<{ type: 'edit' | 'delete' | 'return', payload: SaleInvoiceViewRow } | null>(null);
   const [invoiceToDelete, setInvoiceToDelete] = useState<SaleInvoiceViewRow | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [invoiceToReturn, setInvoiceToReturn] = useState<SaleInvoiceViewRow | null>(null);
+  const [isReturning, setIsReturning] = useState(false);
 
   useEffect(() => {
     if (showSearchInput) {
@@ -234,6 +236,36 @@ export function SaleInvoices({ onViewChange, onEditInvoice, onBack }: SaleInvoic
     }
   };
 
+  const handleReturnInvoice = async () => {
+    if (!invoiceToReturn) return;
+
+    setIsReturning(true);
+    try {
+      const response = await fetch(`/api/sale_invoices/${invoiceToReturn.id}/return`, {
+        method: "POST",
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to return sale invoice");
+      }
+      
+      const { updatedInvoice } = await response.json();
+
+      setInvoiceRows((previousRows) => 
+        previousRows.map((row) => row.id === invoiceToReturn.id ? { ...row, transaction: updatedInvoice.transactionType } : row)
+      );
+      setStatusMessage("Sale invoice returned successfully.");
+      setInvoiceToReturn(null);
+    } catch (error: any) {
+      console.error(error);
+      setStatusMessage(error.message || "Failed to return the selected sale invoice.");
+    } finally {
+      setIsReturning(false);
+      setOpenRowMenuId(null);
+    }
+  };
+
   const handleEditClick = (invoice: SaleInvoiceViewRow) => {
     if (isPasscodeEnabled && isPasscodeForTransactionEnabled) {
       setPasscodeAction({ type: 'edit', payload: invoice });
@@ -251,11 +283,28 @@ export function SaleInvoices({ onViewChange, onEditInvoice, onBack }: SaleInvoic
     }
   };
 
+  const handleReturnClick = (invoice: SaleInvoiceViewRow) => {
+    setOpenRowMenuId(null);
+    if (invoice.transaction.includes("Returned")) {
+      setStatusMessage("This sale is already returned.");
+      return;
+    }
+    if (isPasscodeEnabled && isPasscodeForTransactionEnabled) {
+      setPasscodeAction({ type: 'return', payload: invoice });
+    } else {
+      setInvoiceToReturn(invoice);
+    }
+  };
+
   const handlePasscodeSuccess = () => {
-    if (passcodeAction?.type === 'edit') {
+    if (!passcodeAction) return;
+
+    if (passcodeAction.type === 'edit') {
       onEditInvoice(passcodeAction.payload);
-    } else if (passcodeAction?.type === 'delete') {
+    } else if (passcodeAction.type === 'delete') {
       setInvoiceToDelete(passcodeAction.payload);
+    } else if (passcodeAction.type === 'return') {
+      setInvoiceToReturn(passcodeAction.payload);
     }
     setPasscodeAction(null);
   };
@@ -302,6 +351,7 @@ export function SaleInvoices({ onViewChange, onEditInvoice, onBack }: SaleInvoic
         setOpenRowMenuId={setOpenRowMenuId}
         setOpenRowMenuPosition={setOpenRowMenuPosition}
         onEditInvoice={handleEditClick}
+        handleReturnInvoice={handleReturnClick}
         handleDeleteInvoice={handleDeleteClick}
       />
 
@@ -317,8 +367,19 @@ export function SaleInvoices({ onViewChange, onEditInvoice, onBack }: SaleInvoic
         onClose={() => setInvoiceToDelete(null)}
         onConfirm={handleDeleteInvoice}
         title="Delete Sale Invoice"
-        message={invoiceToDelete ? `Are you sure you want to delete invoice ${invoiceToDelete.invoiceNo} for ${invoiceToDelete.partyName}? This action cannot be undone.` : ""}
-        isDeleting={isDeleting}
+        message="Are you sure you want to delete this sale invoice? This action cannot be undone."
+        confirmText="Delete"
+        confirmLoadingText="Deleting..."
+      />
+
+      <ConfirmDeleteModal
+        isOpen={invoiceToReturn !== null}
+        onClose={() => setInvoiceToReturn(null)}
+        onConfirm={handleReturnInvoice}
+        title="Return Sale Invoice"
+        message="Are you sure you want to return this sale invoice? This will reverse the stock and party balance."
+        confirmText="Return"
+        confirmLoadingText="Returning..."
       />
     </div>
   );

@@ -3018,7 +3018,7 @@ function sqliteApiPlugin() {
             return;
           }
 
-          if (req.method === 'POST') {
+          if (req.method === 'POST' && (requestUrl.pathname === '' || requestUrl.pathname === '/')) {
             let createdImagePath: string | null = null;
             let createdDocumentPath: string | null = null;
 
@@ -3382,43 +3382,45 @@ function sqliteApiPlugin() {
 
             const existingInvoice = repository.getSaleInvoiceById(id);
             if (existingInvoice) {
-              try {
-                const lineItems = JSON.parse(existingInvoice.line_items_json || '[]');
-                const allItems = repository.getItems();
-                for (const lineItem of lineItems) {
-                  if (!lineItem.itemId || !lineItem.quantity) continue;
-                  const dbItem = allItems.find((i: any) => String(i.id) === String(lineItem.itemId));
-                  if (!dbItem) continue;
-
-                  const isSecondary = lineItem.unit === dbItem.secondary_unit;
-                  repository.restoreItemStockFifo(
-                    lineItem.itemId,
-                    Number(lineItem.quantity),
-                    isSecondary,
-                    dbItem.conversion_rate
-                  );
-                }
-              } catch (stockError) {
-                console.error('Failed to restore stock:', stockError);
-              }
-
-              if (String(existingInvoice.payment_mode).toLowerCase() === 'credit' && existingInvoice.party_id) {
+              if (!existingInvoice.transaction_type?.includes('Returned')) {
                 try {
-                  const allParties = repository.getParties();
-                  const party = allParties.find((p: any) => String(p.id) === String(existingInvoice.party_id));
-                  if (party) {
-                    party.balance = Number(party.balance || 0) - Number(existingInvoice.balance || 0);
-                    repository.upsertParty(party);
-                  }
-                } catch (balanceError) {
-                  console.error('Failed to restore party balance:', balanceError);
-                }
-              }
+                  const lineItems = JSON.parse(existingInvoice.line_items_json || '[]');
+                  const allItems = repository.getItems();
+                  for (const lineItem of lineItems) {
+                    if (!lineItem.itemId || !lineItem.quantity) continue;
+                    const dbItem = allItems.find((i: any) => String(i.id) === String(lineItem.itemId));
+                    if (!dbItem) continue;
 
-              try {
-                repository.deleteCashInHandTransactionsForSale(id);
-              } catch (txError) {
-                console.error('Failed to delete cash transaction:', txError);
+                    const isSecondary = lineItem.unit === dbItem.secondary_unit;
+                    repository.restoreItemStockFifo(
+                      lineItem.itemId,
+                      Number(lineItem.quantity),
+                      isSecondary,
+                      dbItem.conversion_rate
+                    );
+                  }
+                } catch (stockError) {
+                  console.error('Failed to restore stock:', stockError);
+                }
+
+                if (String(existingInvoice.payment_mode).toLowerCase() === 'credit' && existingInvoice.party_id) {
+                  try {
+                    const allParties = repository.getParties();
+                    const party = allParties.find((p: any) => String(p.id) === String(existingInvoice.party_id));
+                    if (party) {
+                      party.balance = Number(party.balance || 0) - Number(existingInvoice.balance || 0);
+                      repository.upsertParty(party);
+                    }
+                  } catch (balanceError) {
+                    console.error('Failed to restore party balance:', balanceError);
+                  }
+                }
+
+                try {
+                  repository.deleteCashInHandTransactionsForSale(id);
+                } catch (txError) {
+                  console.error('Failed to delete cash transaction:', txError);
+                }
               }
             }
 
@@ -3447,10 +3449,116 @@ function sqliteApiPlugin() {
             return;
           }
 
+          if (req.method === 'POST' && requestUrl.pathname.endsWith('/return')) {
+            const parts = requestUrl.pathname.split('/').filter(Boolean);
+            let id = '';
+            if (parts.length >= 2 && parts[parts.length - 1] === 'return') {
+              id = parts[parts.length - 2];
+            } else {
+              id = requestUrl.searchParams.get('id') || '';
+            }
+
+            if (!id) {
+              res.statusCode = 400;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify({ message: 'Sale invoice id is required.' }));
+              return;
+            }
+
+            const existingInvoice = repository.getSaleInvoiceById(id);
+            if (!existingInvoice) {
+              res.statusCode = 404;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify({ message: 'Sale invoice not found.' }));
+              return;
+            }
+
+            if (existingInvoice.transaction_type?.includes('Returned')) {
+              res.statusCode = 400;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify({ message: 'Sale invoice is already returned.' }));
+              return;
+            }
+
+            try {
+              const lineItems = JSON.parse(existingInvoice.line_items_json || '[]');
+              const allItems = repository.getItems();
+              for (const lineItem of lineItems) {
+                if (!lineItem.itemId || !lineItem.quantity) continue;
+                const dbItem = allItems.find((i: any) => String(i.id) === String(lineItem.itemId));
+                if (!dbItem) continue;
+
+                const isSecondary = lineItem.unit === dbItem.secondary_unit;
+                repository.restoreItemStockFifo(
+                  lineItem.itemId,
+                  Number(lineItem.quantity),
+                  isSecondary,
+                  dbItem.conversion_rate
+                );
+              }
+            } catch (stockError) {
+              console.error('Failed to restore stock:', stockError);
+            }
+
+            if (String(existingInvoice.payment_mode).toLowerCase() === 'credit' && existingInvoice.party_id) {
+              try {
+                const allParties = repository.getParties();
+                const party = allParties.find((p: any) => String(p.id) === String(existingInvoice.party_id));
+                if (party) {
+                  party.balance = Number(party.balance || 0) - Number(existingInvoice.balance || 0);
+                  repository.upsertParty(party);
+                }
+              } catch (balanceError) {
+                console.error('Failed to restore party balance:', balanceError);
+              }
+            }
+
+            try {
+              repository.deleteCashInHandTransactionsForSale(id);
+            } catch (txError) {
+              console.error('Failed to delete cash transaction:', txError);
+            }
+
+            const updatedInvoice = {
+              invoiceNo: existingInvoice.invoice_no,
+              date: existingInvoice.date,
+              partyName: existingInvoice.party_name,
+              partyId: existingInvoice.party_id,
+              partyPhone: existingInvoice.party_phone,
+              transactionType: 'Returned',
+              paymentType: existingInvoice.payment_type,
+              paymentMode: existingInvoice.payment_mode,
+              subtotal: existingInvoice.subtotal,
+              discountPercent: existingInvoice.discount_percent,
+              discountAmount: existingInvoice.discount_amount,
+              taxLabel: existingInvoice.tax_label,
+              taxRate: existingInvoice.tax_rate,
+              taxAmount: existingInvoice.tax_amount,
+              roundOff: existingInvoice.round_off,
+              roundOffAmount: existingInvoice.round_off_amount,
+              amount: existingInvoice.amount,
+              balance: existingInvoice.balance,
+              description: existingInvoice.description,
+              lineItemsJson: existingInvoice.line_items_json,
+              attachmentImagePath: existingInvoice.attachment_image_path,
+              attachmentImageName: existingInvoice.attachment_image_name,
+              attachmentDocumentPath: existingInvoice.attachment_document_path,
+              attachmentDocumentName: existingInvoice.attachment_document_name,
+            };
+            
+            repository.updateSaleInvoice(id, updatedInvoice);
+
+            res.statusCode = 200;
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({ message: 'Sale returned successfully', updatedInvoice }));
+            return;
+          }
+
           res.statusCode = 405;
           res.setHeader('Content-Type', 'application/json');
           res.end(JSON.stringify({ message: 'Method not allowed.' }));
-        } catch {
+        } catch (err) {
+          console.error("SALE INVOICE 500 ERROR:", err);
           res.statusCode = 500;
           res.setHeader('Content-Type', 'application/json');
           res.end(JSON.stringify({ message: 'Failed to process request.' }));

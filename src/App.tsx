@@ -96,6 +96,8 @@ function App() {
   const [initialReport, setInitialReport] = useState<{ category: string; name: string } | null>(null);
   const [editingSaleInvoice, setEditingSaleInvoice] =
     useState<SaleInvoiceEditData | null>(null);
+  const [editingPosInvoice, setEditingPosInvoice] =
+    useState<SaleInvoiceEditData | null>(null);
   const [editingExpenseRecord, setEditingExpenseRecord] = useState<any | null>(null);
   const [isConvertingEstimate, setIsConvertingEstimate] = useState(false);
   const [settingsInitialTab, setSettingsInitialTab] = useState<string>("general");
@@ -183,6 +185,11 @@ function App() {
     setCurrentView("add-sale");
   };
 
+  const handleEditPosInvoice = (invoice: SaleInvoiceEditData) => {
+    setEditingPosInvoice(invoice);
+    setCurrentView("pos");
+  };
+
   const handleConvertEstimateToSale = (invoiceData: SaleInvoiceEditData) => {
     setEditingSaleInvoice(invoiceData);
     setIsConvertingEstimate(true);
@@ -219,6 +226,7 @@ function App() {
   };
 
   const handleClosePos = () => {
+    setEditingPosInvoice(null);
     setCurrentView(lastStandardView);
   };
 
@@ -245,6 +253,7 @@ function App() {
           <SaleInvoices
             onViewChange={handleViewChange}
             onEditInvoice={handleEditSaleInvoice}
+            onEditPosInvoice={handleEditPosInvoice}
           />
         );
       case "estimates":
@@ -356,7 +365,7 @@ function App() {
 
       {currentView === "pos" && (
         <div className="fixed inset-0 z-[120]">
-          <LaimsoftPos onClose={handleClosePos} />
+          <LaimsoftPos onClose={handleClosePos} initialInvoice={editingPosInvoice} />
         </div>
       )}
 

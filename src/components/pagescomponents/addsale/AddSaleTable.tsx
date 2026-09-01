@@ -157,21 +157,6 @@ function UnitDropdown({ value, options, onChange, disabled }: { value: string; o
   );
 }
 
-// ── Resize Handle ────────────────────────────────────────────────────────────
-const ResizeHandle = ({ col, startResize }: { col: number; startResize: (col: number, e: React.MouseEvent) => void }) => (
-  <div
-    onMouseDown={(e) => startResize(col, e)}
-    style={{
-      position: "absolute", right: 0, top: 0,
-      width: 6, height: "100%", cursor: "col-resize",
-      display: "flex", alignItems: "center", justifyContent: "center",
-      zIndex: 10,
-    }}
-  >
-    <div style={{ width: 1, height: "60%", background: "#d1d5db" }} />
-  </div>
-);
-
 // ── Main Table ───────────────────────────────────────────────────────────────
 interface AddSaleTableProps {
   activeTab: SaleTab;
@@ -180,8 +165,7 @@ interface AddSaleTableProps {
   updateRow: (rowId: number, field: keyof SaleRow, value: string) => void;
   removeRow: (rowId: number) => void;
   addRow: () => void;
-  widths: number[];
-  startResize: (col: number, e: React.MouseEvent) => void;
+
   totalQty: number;
   totalAmount: number;
   onBarcodeClick?: () => void;
@@ -194,8 +178,7 @@ export function AddSaleTable({
   updateRow,
   removeRow,
   addRow,
-  widths,
-  startResize,
+
   totalQty,
   totalAmount,
   onBarcodeClick,
@@ -220,12 +203,12 @@ export function AddSaleTable({
       `}</style>
       <table style={{ width: "100%", borderCollapse: "collapse", tableLayout: "fixed" }}>
         <colgroup>
-          <col style={{ width: widths[0] }} />
-          <col style={{ width: widths[1] }} />
-          <col style={{ width: widths[2] }} />
-          <col style={{ width: widths[3] }} />
-          <col style={{ width: widths[4] }} />
-          <col style={{ width: widths[5] }} />
+          <col style={{ width: 50 }} />
+          <col style={{ width: "auto" }} />
+          <col style={{ width: 120 }} />
+          <col style={{ width: 150 }} />
+          <col style={{ width: 180 }} />
+          <col style={{ width: 180 }} />
         </colgroup>
         <thead>
           <tr style={{ background: "#f3f6f9", borderTop: "1px solid #e5e7eb", borderBottom: "1px solid #e5e7eb" }}>
@@ -257,22 +240,27 @@ export function AddSaleTable({
               ) : (
                 <span>#</span>
               )}
-              <ResizeHandle col={0} startResize={startResize} />
+
             </th>
             <th style={{ position: "relative", padding: "8px 10px", textAlign: "left", fontSize: 12, fontWeight: 600, color: "#6b7280", borderRight: "1px solid #e5e7eb", letterSpacing: "0.04em" }}>
-              ITEM<ResizeHandle col={1} startResize={startResize} />
+              ITEM
+
             </th>
             <th style={{ position: "relative", padding: "8px 10px", textAlign: "right", fontSize: 12, fontWeight: 600, color: "#6b7280", borderRight: "1px solid #e5e7eb", letterSpacing: "0.04em" }}>
-              QTY<ResizeHandle col={2} startResize={startResize} />
+              QTY
+
             </th>
             <th style={{ position: "relative", padding: "8px 10px", textAlign: "left", fontSize: 12, fontWeight: 600, color: "#6b7280", borderRight: "1px solid #e5e7eb", letterSpacing: "0.04em" }}>
-              UNIT<ResizeHandle col={3} startResize={startResize} />
+              UNIT
+
             </th>
             <th style={{ position: "relative", padding: "8px 10px", textAlign: "right", fontSize: 12, fontWeight: 600, color: "#6b7280", borderRight: "1px solid #e5e7eb", letterSpacing: "0.04em" }}>
-              PRICE/UNIT<ResizeHandle col={4} startResize={startResize} />
+              PRICE/UNIT
+
             </th>
             <th style={{ position: "relative", padding: "8px 10px", textAlign: "right", fontSize: 12, fontWeight: 600, color: "#6b7280", borderRight: "1px solid #e5e7eb", letterSpacing: "0.04em" }}>
-              AMOUNT<ResizeHandle col={5} startResize={startResize} />
+              AMOUNT
+
             </th>
           </tr>
         </thead>

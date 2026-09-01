@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import type { PosTab, PosRow, PartyOption, ItemOption, BankOption } from "../components/pagescomponents/laimsoftpos/types";
+import type { SaleInvoiceEditData } from "@/types";
 import { TopHeaderBar } from "../components/pagescomponents/laimsoftpos/TopHeaderBar";
 import { SearchInput } from "../components/pagescomponents/laimsoftpos/SearchInput";
 import { PosTable } from "../components/pagescomponents/laimsoftpos/PosTable";
@@ -12,6 +13,7 @@ import { AddPartyDialog } from "../components/pagescomponents/parties/AddPartyDi
 
 interface LaimsoftPosProps {
   onClose?: () => void;
+  initialInvoice?: SaleInvoiceEditData | null;
 }
 
 let globalRowId = 1;
@@ -37,7 +39,7 @@ function createEmptyTab(invoiceNo: string): PosTab {
   };
 }
 
-export function LaimsoftPos({ onClose }: LaimsoftPosProps) {
+export function LaimsoftPos({ onClose, initialInvoice }: LaimsoftPosProps) {
   const [parties, setParties] = useState<PartyOption[]>([]);
   const [items, setItems] = useState<ItemOption[]>([]);
   const [banks, setBanks] = useState<BankOption[]>([]);
@@ -45,6 +47,9 @@ export function LaimsoftPos({ onClose }: LaimsoftPosProps) {
   const [isSaving, setIsSaving] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
   const [alertState, setAlertState] = useState<{ isOpen: boolean; title: string; message: string }>({ isOpen: false, title: "", message: "" });
+  // When editing an existing POS invoice, store its ID so we can PUT instead of POST
+  const editingInvoiceId = initialInvoice?.id ?? null;
+  const initialInvoiceLoadedRef = useRef(false);
 
   const showToast = useCallback((message: string, type: "success" | "error" = "success") => {
     setToast({ message, type });
@@ -248,7 +253,77 @@ export function LaimsoftPos({ onClose }: LaimsoftPosProps) {
     return () => {
       cancelled = true;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Once lookup data (items, parties) is loaded, populate the tab if we have an initialInvoice to edit
+  useEffect(() => {
+    if (!initialInvoice || initialInvoiceLoadedRef.current || items.length === 0) return;
+    initialInvoiceLoadedRef.current = true;
+
+    // Parse line items from JSON
+    let parsedRows: PosRow[] = [];
+    if (initialInvoice.lineItemsJson) {
+      try {
+        const lineItems = JSON.parse(initialInvoice.lineItemsJson) as Array<{
+          itemId?: string;
+          name?: string;
+          quantity?: number;
+          unit?: string;
+          price?: number;
+        }>;
+        parsedRows = lineItems.map((li) => ({
+          id: globalRowId++,
+          itemId: li.itemId ?? "",
+          itemCode: items.find((i) => String(i.id) === li.itemId)?.code ?? "",
+          itemName: li.name ?? "",
+          qty: String(li.quantity ?? 1),
+          unit: li.unit ?? "NONE",
+          pricePerUnit: String(li.price ?? 0),
+        }));
+      } catch {
+        // ignore parse errors
+      }
+    }
+
+    // Determine payment mode
+    const paymentMode = initialInvoice.paymentMode ?? "Cash";
+
+    // Find matching party
+    const matchedParty = parties.find(
+      (p) => initialInvoice.partyId && String(p.id) === String(initialInvoice.partyId)
+    ) ?? null;
+
+    const totalAmount = parsedRows.reduce(
+      (sum, r) => sum + (Number(r.qty) || 0) * (Number(r.pricePerUnit) || 0),
+      0
+    );
+    const discountAmount = Number(initialInvoice.discountAmount ?? 0);
+    const discountPercent = Number(initialInvoice.discountPercent ?? 0);
+    const amountReceived = String(
+      matchedParty ? (totalAmount - discountAmount - (initialInvoice.balance ?? 0)) : (totalAmount - discountAmount)
+    );
+
+    setTabs((prev) => [
+      {
+        ...prev[0],
+        invoiceNo: initialInvoice.invoiceNo,
+        date: initialInvoice.date,
+        rows: parsedRows,
+        paymentMode,
+        amountReceived,
+        isAmountReceivedDirty: true,
+        customerSelectedId: matchedParty ? matchedParty.id : null,
+        customerSearchText: matchedParty ? matchedParty.name : (initialInvoice.partyName === "Cash Sale" ? "Cash Sale" : initialInvoice.partyName),
+        searchQuery: "",
+        selectedRowId: null,
+        discountPercent: discountPercent > 0 ? String(discountPercent) : "",
+        discountAmount: discountAmount > 0 ? String(discountAmount) : "",
+        description: initialInvoice.description ?? "",
+      },
+      ...prev.slice(1),
+    ]);
+  }, [initialInvoice, items, parties]);
 
   const updateTab = (partial: Partial<PosTab>) => {
     setTabs((prev) =>
@@ -616,8 +691,12 @@ export function LaimsoftPos({ onClose }: LaimsoftPosProps) {
     };
 
     try {
-      const response = await fetch("/api/sale_invoices", {
-        method: "POST",
+      const isEditing = !!editingInvoiceId;
+      const url = isEditing ? `/api/sale_invoices/${editingInvoiceId}` : "/api/sale_invoices";
+      const method = isEditing ? "PUT" : "POST";
+
+      const response = await fetch(url, {
+        method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
@@ -625,6 +704,18 @@ export function LaimsoftPos({ onClose }: LaimsoftPosProps) {
       if (!response.ok) throw new Error("Failed to save sale");
 
       const savedInvoice = (await response.json()) as { invoiceNo?: string; id?: string };
+
+      if (isEditing) {
+        // After successful update, close the POS (go back to sale invoices)
+        showToast(`Sale #${activeTab.invoiceNo} updated successfully!`, "success");
+        // Refresh the sale invoices list if visible
+        window.dispatchEvent(new CustomEvent("sale-invoices-refresh", { detail: { message: `Sale #${activeTab.invoiceNo} updated successfully.` } }));
+        setTimeout(() => {
+          if (onClose) onClose();
+        }, 1000);
+        return;
+      }
+
       const nextInvNo = savedInvoice.invoiceNo 
         ? String(Number(savedInvoice.invoiceNo) + 1)
         : String(Number(activeTab.invoiceNo) + 1);

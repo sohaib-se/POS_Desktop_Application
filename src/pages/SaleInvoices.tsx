@@ -24,10 +24,11 @@ import { ConfirmDeleteModal } from "@/components/common/ConfirmDeleteModal";
 interface SaleInvoicesProps {
   onViewChange: (view: ViewType) => void;
   onEditInvoice: (invoice: SaleInvoiceEditData) => void;
+  onEditPosInvoice?: (invoice: SaleInvoiceEditData) => void;
   onBack?: () => void;
 }
 
-export function SaleInvoices({ onViewChange, onEditInvoice, onBack }: SaleInvoicesProps) {
+export function SaleInvoices({ onViewChange, onEditInvoice, onEditPosInvoice, onBack }: SaleInvoicesProps) {
   const [invoiceRows, setInvoiceRows] = useState<SaleInvoiceViewRow[]>([]);
   const [selectedMonthKey, setSelectedMonthKey] = useState<string>(
     getMonthKeyFromDate(formatDateDisplay(new Date()))
@@ -267,8 +268,11 @@ export function SaleInvoices({ onViewChange, onEditInvoice, onBack }: SaleInvoic
   };
 
   const handleEditClick = (invoice: SaleInvoiceViewRow) => {
+    const isPosInvoice = invoice.description === "POS Sale" || invoice.transaction === "POS Sale";
     if (isPasscodeEnabled && isPasscodeForTransactionEnabled) {
       setPasscodeAction({ type: 'edit', payload: invoice });
+    } else if (isPosInvoice && onEditPosInvoice) {
+      onEditPosInvoice(invoice);
     } else {
       onEditInvoice(invoice);
     }
@@ -300,7 +304,13 @@ export function SaleInvoices({ onViewChange, onEditInvoice, onBack }: SaleInvoic
     if (!passcodeAction) return;
 
     if (passcodeAction.type === 'edit') {
-      onEditInvoice(passcodeAction.payload);
+      const invoice = passcodeAction.payload;
+      const isPosInvoice = invoice.description === "POS Sale" || invoice.transaction === "POS Sale";
+      if (isPosInvoice && onEditPosInvoice) {
+        onEditPosInvoice(invoice);
+      } else {
+        onEditInvoice(invoice);
+      }
     } else if (passcodeAction.type === 'delete') {
       setInvoiceToDelete(passcodeAction.payload);
     } else if (passcodeAction.type === 'return') {

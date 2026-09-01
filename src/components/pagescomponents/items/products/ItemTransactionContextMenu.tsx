@@ -67,17 +67,29 @@ export function ItemTransactionContextMenu({
               View
             </button>
           )}
-          <button
-            className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-gray-50"
-            onClick={() => {
-              onEditTransaction?.(targetTransaction);
-              setOpenRowMenuId(null);
-              setOpenRowMenuPosition(null);
-            }}
-          >
-            <Pencil className="w-4 h-4 text-gray-500" />
-            Edit
-          </button>
+          {(() => {
+            const isReturnedSale = targetTransaction.rawTransaction?.transaction?.includes('Returned');
+            return (
+              <button
+                className={`flex w-full items-center gap-2 px-3 py-2 text-left text-sm ${
+                  isReturnedSale
+                    ? "opacity-50 cursor-not-allowed text-gray-400"
+                    : "hover:bg-gray-50 text-gray-700"
+                }`}
+                disabled={isReturnedSale}
+                title={isReturnedSale ? "Cannot edit a returned sale" : ""}
+                onClick={() => {
+                  if (isReturnedSale) return;
+                  onEditTransaction?.(targetTransaction);
+                  setOpenRowMenuId(null);
+                  setOpenRowMenuPosition(null);
+                }}
+              >
+                <Pencil className={`w-4 h-4 ${isReturnedSale ? 'text-gray-400' : 'text-gray-500'}`} />
+                Edit
+              </button>
+            );
+          })()}
         </>
       <button
         className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50"

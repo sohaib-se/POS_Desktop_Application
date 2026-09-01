@@ -41,6 +41,7 @@ export interface SaleTab {
   documentFileName: string;
   received: string;
   receivedAll: boolean;
+  isDirty?: boolean;
 }
 
 export interface PartyOption {
@@ -182,36 +183,6 @@ function formatDateForDisplay(date: Date) {
   return date.toLocaleDateString("en-GB");
 }
 
-function useColumnResize(initial: number[]) {
-  const [widths, setWidths] = useState(initial);
-  const resizing = useRef<{ col: number; startX: number; startW: number } | null>(null);
-
-  const startResize = useCallback((col: number, e: React.MouseEvent) => {
-    e.preventDefault();
-    resizing.current = { col, startX: e.clientX, startW: widths[col] };
-
-    const onMove = (ev: MouseEvent) => {
-      if (!resizing.current) return;
-      const delta = ev.clientX - resizing.current.startX;
-      const newW = Math.max(50, resizing.current.startW + delta);
-      setWidths((prev) => {
-        const next = [...prev];
-        next[resizing.current!.col] = newW;
-        return next;
-      });
-    };
-    const onUp = () => {
-      resizing.current = null;
-      window.removeEventListener("mousemove", onMove);
-      window.removeEventListener("mouseup", onUp);
-    };
-    window.addEventListener("mousemove", onMove);
-    window.addEventListener("mouseup", onUp);
-  }, [widths]);
-
-  return { widths, startResize };
-}
-
 export function AddSale({ onSave, onShare, onClose, initialInvoice, isConversion }: AddSaleProps) {
   const [tabs, setTabs] = useState<SaleTab[]>([createDefaultTab(1)]);
   const [activeTabId, setActiveTabId] = useState(1);
@@ -313,6 +284,7 @@ export function AddSale({ onSave, onShare, onClose, initialInvoice, isConversion
       {
         id: 1,
         label: isConversion ? `New Sale` : `Sale #${initialInvoice.invoiceNo}`,
+        invoiceNo: isConversion ? "1" : initialInvoice.invoiceNo,
         paymentMode,
         customerSearch: initialInvoice.partyId ?? initialInvoice.partyName ?? "",
         phoneNo: initialInvoice.partyPhone ?? "",
@@ -336,10 +308,10 @@ export function AddSale({ onSave, onShare, onClose, initialInvoice, isConversion
         roundOff: Boolean(initialInvoice.roundOff),
         description: initialInvoice.description ?? "",
         showDescriptionInput: Boolean(initialInvoice.description),
-        imageDataUrl: "",
-        imageFileName: "",
-        documentDataUrl: "",
-        documentFileName: "",
+        imageDataUrl: initialInvoice.attachmentImagePath ?? "",
+        imageFileName: initialInvoice.attachmentImageName ?? "",
+        documentDataUrl: initialInvoice.attachmentDocumentPath ?? "",
+        documentFileName: initialInvoice.attachmentDocumentName ?? "",
         received: "",
         receivedAll: false,
       },
@@ -410,7 +382,7 @@ export function AddSale({ onSave, onShare, onClose, initialInvoice, isConversion
             }
 
             // Only update label/invoiceNo for brand new (non-edit) tabs
-            const isNewTab = !initialInvoice;
+            const isNewTab = !initialInvoice || isConversion;
             return {
               ...tab,
               customerSearch: updatedCustomerSearch,
@@ -439,9 +411,6 @@ export function AddSale({ onSave, onShare, onClose, initialInvoice, isConversion
     };
   }, []);
 
-  // col widths: [#, ITEM, QTY, UNIT, PRICE/UNIT, AMOUNT]
-  const { widths, startResize } = useColumnResize([42, 340, 90, 110, 130, 120]);
-
   const activeTab = tabs.find((t) => t.id === activeTabId)!;
   const displayedInvoiceNo = initialInvoice?.invoiceNo ?? activeTab?.invoiceNo ?? nextInvoiceNo;
   const displayedInvoiceDate = activeTab.invoiceDate ?? (initialInvoice?.date ?? formatDateForDisplay(new Date()));
@@ -449,7 +418,7 @@ export function AddSale({ onSave, onShare, onClose, initialInvoice, isConversion
 
   const updateTab = (partial: Partial<SaleTab>) => {
     setTabs((prev) =>
-      prev.map((t) => (t.id === activeTabId ? { ...t, ...partial } : t))
+      prev.map((t) => (t.id === activeTabId ? { ...t, ...partial, isDirty: true } : t))
     );
   };
 
@@ -733,7 +702,17 @@ export function AddSale({ onSave, onShare, onClose, initialInvoice, isConversion
   const closeTab = (id: number, e: React.MouseEvent) => {
     e.stopPropagation();
     if (tabs.length === 1) return;
-    setTabToClose(id);
+    
+    const tab = tabs.find(t => t.id === id);
+    if (tab && tab.isDirty) {
+      setTabToClose(id);
+    } else {
+      setTabs((prev) => {
+        const remaining = prev.filter((t) => t.id !== id);
+        if (activeTabId === id) setActiveTabId(remaining[remaining.length - 1].id);
+        return remaining;
+      });
+    }
   };
 
   const confirmCloseTab = () => {
@@ -888,7 +867,13 @@ export function AddSale({ onSave, onShare, onClose, initialInvoice, isConversion
         setActiveTabId={setActiveTabId}
         addTab={addTab}
         closeTab={closeTab}
-        onClose={onClose ? () => setIsClosingPage(true) : undefined}
+        onClose={onClose ? () => {
+          if (tabs.some(t => t.isDirty)) {
+            setIsClosingPage(true);
+          } else {
+            onClose();
+          }
+        } : undefined}
       />
 
       <AddSaleTopBar
@@ -915,8 +900,6 @@ export function AddSale({ onSave, onShare, onClose, initialInvoice, isConversion
           updateRow={updateRow}
           removeRow={removeRow}
           addRow={addRow}
-          widths={widths}
-          startResize={startResize}
           totalQty={totalQty}
           totalAmount={totalAmount}
           onBarcodeClick={isBarcodeScanEnabled ? () => setShowBarcodeModal(true) : undefined}

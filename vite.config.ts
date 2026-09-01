@@ -3000,6 +3000,16 @@ function sqliteApiPlugin() {
           const repository = await import('./database/sqlite/repository.mjs');
           const requestUrl = new URL(req.url ?? '/', 'http://localhost');
 
+          const resolveSaleAttachment = (rawValue: unknown, prefix: string) => {
+            if (!rawValue || typeof rawValue !== 'string') return null;
+            const trimmedValue = rawValue.trim();
+            if (!trimmedValue) return null;
+            if (trimmedValue.startsWith('/app_data/sale_attachments/')) {
+              return { filePath: trimmedValue, fileName: path.basename(trimmedValue) };
+            }
+            return saveDataUrlToAppData({ dataUrl: trimmedValue, prefix, targetRoot: saleAttachmentsRoot });
+          };
+
           if (req.method === 'GET') {
             const saleInvoices = repository.getSaleInvoices();
             res.statusCode = 200;
@@ -3008,7 +3018,7 @@ function sqliteApiPlugin() {
             return;
           }
 
-          if (req.method === 'POST') {
+          if (req.method === 'POST' && (requestUrl.pathname === '' || requestUrl.pathname === '/')) {
             let createdImagePath: string | null = null;
             let createdDocumentPath: string | null = null;
 
@@ -3032,17 +3042,9 @@ function sqliteApiPlugin() {
               const amount = Number(payload.amount ?? 0);
               const balance = Number(payload.balance ?? 0);
 
-              const imageFile = saveDataUrlToAppData({
-                dataUrl: payload.imageDataUrl,
-                prefix: 'sale_invoice_image',
-                targetRoot: saleAttachmentsRoot,
-              });
+              const imageFile = resolveSaleAttachment(payload.imageDataUrl, 'sale_invoice_image');
               createdImagePath = imageFile?.filePath ?? null;
-              const documentFile = saveDataUrlToAppData({
-                dataUrl: payload.documentDataUrl,
-                prefix: 'sale_invoice_document',
-                targetRoot: saleAttachmentsRoot,
-              });
+              const documentFile = resolveSaleAttachment(payload.documentDataUrl, 'sale_invoice_document');
               createdDocumentPath = documentFile?.filePath ?? null;
 
               const invoice = {
@@ -3201,21 +3203,13 @@ function sqliteApiPlugin() {
                 ? payload.lineItems
                 : JSON.parse(existingInvoice.line_items_json ?? '[]');
 
-              const imageFile = payload.imageDataUrl
-                ? saveDataUrlToAppData({
-                  dataUrl: payload.imageDataUrl,
-                  prefix: 'sale_invoice_image',
-                  targetRoot: saleAttachmentsRoot,
-                })
+              const imageFile = payload.imageDataUrl !== undefined
+                ? resolveSaleAttachment(payload.imageDataUrl, 'sale_invoice_image')
                 : null;
               createdImagePath = imageFile?.filePath ?? null;
 
-              const documentFile = payload.documentDataUrl
-                ? saveDataUrlToAppData({
-                  dataUrl: payload.documentDataUrl,
-                  prefix: 'sale_invoice_document',
-                  targetRoot: saleAttachmentsRoot,
-                })
+              const documentFile = payload.documentDataUrl !== undefined
+                ? resolveSaleAttachment(payload.documentDataUrl, 'sale_invoice_document')
                 : null;
               createdDocumentPath = documentFile?.filePath ?? null;
 
@@ -3257,10 +3251,10 @@ function sqliteApiPlugin() {
                   : Number(existingInvoice.balance ?? 0),
                 description: payload.description ? String(payload.description) : existingInvoice.description ?? null,
                 lineItemsJson: JSON.stringify(lineItems),
-                attachmentImagePath: createdImagePath ?? existingInvoice.attachment_image_path ?? null,
-                attachmentImageName: imageFile?.fileName ?? existingInvoice.attachment_image_name ?? null,
-                attachmentDocumentPath: createdDocumentPath ?? existingInvoice.attachment_document_path ?? null,
-                attachmentDocumentName: documentFile?.fileName ?? existingInvoice.attachment_document_name ?? null,
+                attachmentImagePath: payload.imageDataUrl !== undefined ? createdImagePath : (existingInvoice.attachment_image_path ?? null),
+                attachmentImageName: payload.imageDataUrl !== undefined ? (imageFile?.fileName ?? null) : (existingInvoice.attachment_image_name ?? null),
+                attachmentDocumentPath: payload.documentDataUrl !== undefined ? createdDocumentPath : (existingInvoice.attachment_document_path ?? null),
+                attachmentDocumentName: payload.documentDataUrl !== undefined ? (documentFile?.fileName ?? null) : (existingInvoice.attachment_document_name ?? null),
               };
 
               repository.updateSaleInvoice(id, invoice);
@@ -3347,11 +3341,11 @@ function sqliteApiPlugin() {
                 console.error('[Edit Sale] Failed to update cash transaction:', txError);
               }
 
-              if (createdImagePath && existingInvoice.attachment_image_path && existingInvoice.attachment_image_path !== createdImagePath) {
+              if (existingInvoice.attachment_image_path && payload.imageDataUrl !== undefined && existingInvoice.attachment_image_path !== createdImagePath) {
                 removeManagedAttachmentFile(existingInvoice.attachment_image_path);
               }
 
-              if (createdDocumentPath && existingInvoice.attachment_document_path && existingInvoice.attachment_document_path !== createdDocumentPath) {
+              if (existingInvoice.attachment_document_path && payload.documentDataUrl !== undefined && existingInvoice.attachment_document_path !== createdDocumentPath) {
                 removeManagedAttachmentFile(existingInvoice.attachment_document_path);
               }
 
@@ -3388,43 +3382,45 @@ function sqliteApiPlugin() {
 
             const existingInvoice = repository.getSaleInvoiceById(id);
             if (existingInvoice) {
-              try {
-                const lineItems = JSON.parse(existingInvoice.line_items_json || '[]');
-                const allItems = repository.getItems();
-                for (const lineItem of lineItems) {
-                  if (!lineItem.itemId || !lineItem.quantity) continue;
-                  const dbItem = allItems.find((i: any) => String(i.id) === String(lineItem.itemId));
-                  if (!dbItem) continue;
-
-                  const isSecondary = lineItem.unit === dbItem.secondary_unit;
-                  repository.restoreItemStockFifo(
-                    lineItem.itemId,
-                    Number(lineItem.quantity),
-                    isSecondary,
-                    dbItem.conversion_rate
-                  );
-                }
-              } catch (stockError) {
-                console.error('Failed to restore stock:', stockError);
-              }
-
-              if (String(existingInvoice.payment_mode).toLowerCase() === 'credit' && existingInvoice.party_id) {
+              if (!existingInvoice.transaction_type?.includes('Returned')) {
                 try {
-                  const allParties = repository.getParties();
-                  const party = allParties.find((p: any) => String(p.id) === String(existingInvoice.party_id));
-                  if (party) {
-                    party.balance = Number(party.balance || 0) - Number(existingInvoice.balance || 0);
-                    repository.upsertParty(party);
-                  }
-                } catch (balanceError) {
-                  console.error('Failed to restore party balance:', balanceError);
-                }
-              }
+                  const lineItems = JSON.parse(existingInvoice.line_items_json || '[]');
+                  const allItems = repository.getItems();
+                  for (const lineItem of lineItems) {
+                    if (!lineItem.itemId || !lineItem.quantity) continue;
+                    const dbItem = allItems.find((i: any) => String(i.id) === String(lineItem.itemId));
+                    if (!dbItem) continue;
 
-              try {
-                repository.deleteCashInHandTransactionsForSale(id);
-              } catch (txError) {
-                console.error('Failed to delete cash transaction:', txError);
+                    const isSecondary = lineItem.unit === dbItem.secondary_unit;
+                    repository.restoreItemStockFifo(
+                      lineItem.itemId,
+                      Number(lineItem.quantity),
+                      isSecondary,
+                      dbItem.conversion_rate
+                    );
+                  }
+                } catch (stockError) {
+                  console.error('Failed to restore stock:', stockError);
+                }
+
+                if (String(existingInvoice.payment_mode).toLowerCase() === 'credit' && existingInvoice.party_id) {
+                  try {
+                    const allParties = repository.getParties();
+                    const party = allParties.find((p: any) => String(p.id) === String(existingInvoice.party_id));
+                    if (party) {
+                      party.balance = Number(party.balance || 0) - Number(existingInvoice.balance || 0);
+                      repository.upsertParty(party);
+                    }
+                  } catch (balanceError) {
+                    console.error('Failed to restore party balance:', balanceError);
+                  }
+                }
+
+                try {
+                  repository.deleteCashInHandTransactionsForSale(id);
+                } catch (txError) {
+                  console.error('Failed to delete cash transaction:', txError);
+                }
               }
             }
 
@@ -3453,10 +3449,116 @@ function sqliteApiPlugin() {
             return;
           }
 
+          if (req.method === 'POST' && requestUrl.pathname.endsWith('/return')) {
+            const parts = requestUrl.pathname.split('/').filter(Boolean);
+            let id = '';
+            if (parts.length >= 2 && parts[parts.length - 1] === 'return') {
+              id = parts[parts.length - 2];
+            } else {
+              id = requestUrl.searchParams.get('id') || '';
+            }
+
+            if (!id) {
+              res.statusCode = 400;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify({ message: 'Sale invoice id is required.' }));
+              return;
+            }
+
+            const existingInvoice = repository.getSaleInvoiceById(id);
+            if (!existingInvoice) {
+              res.statusCode = 404;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify({ message: 'Sale invoice not found.' }));
+              return;
+            }
+
+            if (existingInvoice.transaction_type?.includes('Returned')) {
+              res.statusCode = 400;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify({ message: 'Sale invoice is already returned.' }));
+              return;
+            }
+
+            try {
+              const lineItems = JSON.parse(existingInvoice.line_items_json || '[]');
+              const allItems = repository.getItems();
+              for (const lineItem of lineItems) {
+                if (!lineItem.itemId || !lineItem.quantity) continue;
+                const dbItem = allItems.find((i: any) => String(i.id) === String(lineItem.itemId));
+                if (!dbItem) continue;
+
+                const isSecondary = lineItem.unit === dbItem.secondary_unit;
+                repository.restoreItemStockFifo(
+                  lineItem.itemId,
+                  Number(lineItem.quantity),
+                  isSecondary,
+                  dbItem.conversion_rate
+                );
+              }
+            } catch (stockError) {
+              console.error('Failed to restore stock:', stockError);
+            }
+
+            if (String(existingInvoice.payment_mode).toLowerCase() === 'credit' && existingInvoice.party_id) {
+              try {
+                const allParties = repository.getParties();
+                const party = allParties.find((p: any) => String(p.id) === String(existingInvoice.party_id));
+                if (party) {
+                  party.balance = Number(party.balance || 0) - Number(existingInvoice.balance || 0);
+                  repository.upsertParty(party);
+                }
+              } catch (balanceError) {
+                console.error('Failed to restore party balance:', balanceError);
+              }
+            }
+
+            try {
+              repository.deleteCashInHandTransactionsForSale(id);
+            } catch (txError) {
+              console.error('Failed to delete cash transaction:', txError);
+            }
+
+            const updatedInvoice = {
+              invoiceNo: existingInvoice.invoice_no,
+              date: existingInvoice.date,
+              partyName: existingInvoice.party_name,
+              partyId: existingInvoice.party_id,
+              partyPhone: existingInvoice.party_phone,
+              transactionType: 'Returned',
+              paymentType: existingInvoice.payment_type,
+              paymentMode: existingInvoice.payment_mode,
+              subtotal: existingInvoice.subtotal,
+              discountPercent: existingInvoice.discount_percent,
+              discountAmount: existingInvoice.discount_amount,
+              taxLabel: existingInvoice.tax_label,
+              taxRate: existingInvoice.tax_rate,
+              taxAmount: existingInvoice.tax_amount,
+              roundOff: existingInvoice.round_off,
+              roundOffAmount: existingInvoice.round_off_amount,
+              amount: existingInvoice.amount,
+              balance: existingInvoice.balance,
+              description: existingInvoice.description,
+              lineItemsJson: existingInvoice.line_items_json,
+              attachmentImagePath: existingInvoice.attachment_image_path,
+              attachmentImageName: existingInvoice.attachment_image_name,
+              attachmentDocumentPath: existingInvoice.attachment_document_path,
+              attachmentDocumentName: existingInvoice.attachment_document_name,
+            };
+            
+            repository.updateSaleInvoice(id, updatedInvoice);
+
+            res.statusCode = 200;
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({ message: 'Sale returned successfully', updatedInvoice }));
+            return;
+          }
+
           res.statusCode = 405;
           res.setHeader('Content-Type', 'application/json');
           res.end(JSON.stringify({ message: 'Method not allowed.' }));
-        } catch {
+        } catch (err) {
+          console.error("SALE INVOICE 500 ERROR:", err);
           res.statusCode = 500;
           res.setHeader('Content-Type', 'application/json');
           res.end(JSON.stringify({ message: 'Failed to process request.' }));

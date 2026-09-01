@@ -476,6 +476,8 @@ export function PartyDetails({
             {(() => {
               const invoice = filteredPartyTransactions.find(t => t.id === openRowMenuId);
               const isConvertedEstimate = invoice?.type === 'Estimate' && invoice?.status === 'Converted';
+              const isReturnedSale = invoice?.type === 'Sale' && invoice?.rawRow && String(invoice.rawRow.transaction_type).includes('Returned');
+              const canEdit = !isConvertedEstimate && !isReturnedSale;
               
               return (
                 <>
@@ -533,14 +535,14 @@ export function PartyDetails({
                   </button>
                   <button
                     className={`flex w-full items-center gap-2 px-3 py-2 text-left text-sm ${
-                      isConvertedEstimate
+                      !canEdit
                         ? "opacity-50 cursor-not-allowed text-gray-400"
                         : "hover:bg-gray-50 text-gray-700"
                     }`}
-                    disabled={isConvertedEstimate}
-                    title={isConvertedEstimate ? "Cannot edit a converted estimate" : ""}
+                    disabled={!canEdit}
+                    title={isConvertedEstimate ? "Cannot edit a converted estimate" : isReturnedSale ? "Cannot edit a returned sale" : ""}
                     onClick={() => {
-                      if (isConvertedEstimate) return;
+                      if (!canEdit) return;
                       if (invoice?.rawRow) {
                         if (isPasscodeEnabled && isPasscodeForTransactionEnabled) {
                           setPasscodeAction({ type: 'edit', payload: invoice });
@@ -552,7 +554,7 @@ export function PartyDetails({
                       setOpenRowMenuPosition(null);
                     }}
                   >
-                    <PencilIcon className={`w-4 h-4 ${isConvertedEstimate ? 'text-gray-400' : 'text-gray-500'}`} />
+                    <PencilIcon className={`w-4 h-4 ${!canEdit ? 'text-gray-400' : 'text-gray-500'}`} />
                     Edit
                   </button>
                   <button

@@ -41,6 +41,7 @@ export function Input({
   required,
   readOnly,
   className = "",
+  ...props
 }: InputProps) {
   return (
     <div className={className}>
@@ -56,7 +57,8 @@ export function Input({
         onChange={onChange}
         placeholder={placeholder}
         readOnly={readOnly}
-        className={`w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-100 ${readOnly ? "bg-gray-50" : "bg-white"}`}
+        className={`w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-100 ${readOnly ? "bg-gray-50" : "bg-white"} [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none [appearance:textfield]`}
+        {...props}
       />
     </div>
   );

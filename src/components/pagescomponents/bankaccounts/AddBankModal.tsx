@@ -93,7 +93,13 @@ export function AddBankModal({ open, onClose, onSuccess, initialData }: AddBankM
             placeholder="Enter Opening Balance"
             type="number"
             value={balance}
-            onChange={(e) => setBalance(e.target.value)}
+            onChange={(e) => {
+              const val = e.target.value;
+              if (val === "" || Number(val) >= 0) {
+                setBalance(val);
+              }
+            }}
+            min="0"
           />
           <Input label="As of Date" value={today} readOnly />
         </div>

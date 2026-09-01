@@ -9,6 +9,18 @@ interface AccountDetailProps {
   onEditTransaction?: (tx: any) => void;
   onDeleteTransaction?: (txId: string) => void;
 }
+const parseLocalDate = (dStr: string) => {
+  if (!dStr) return new Date();
+  if (dStr.includes('/')) {
+    const [dd, mm, yyyy] = dStr.split('/');
+    return new Date(Number(yyyy), Number(mm) - 1, Number(dd));
+  }
+  if (dStr.includes('-')) {
+    const [yyyy, mm, dd] = dStr.split('-');
+    return new Date(Number(yyyy), Number(mm) - 1, Number(dd));
+  }
+  return new Date(dStr);
+};
 
 export function AccountDetail({ account, onDeposit, onEditTransaction, onDeleteTransaction }: AccountDetailProps) {
   const [txContextMenu, setTxContextMenu] = useState<{ x: number, y: number, txId: string } | null>(null);
@@ -17,6 +29,11 @@ export function AccountDetail({ account, onDeposit, onEditTransaction, onDeleteT
   const currencyStr = currencyDisplay === 'icon' ? currency.symbol : currency.code;
 
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [monthFilter, setMonthFilter] = useState(() => {
+    const d = new Date();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    return `${d.getFullYear()}-${mm}`;
+  });
 
   const [showSearchInput, setShowSearchInput] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -51,6 +68,15 @@ export function AccountDetail({ account, onDeposit, onEditTransaction, onDeleteT
   }, [showSearchInput, searchQuery]);
 
   const visibleTransactions = account.transactions.filter((tx: any) => {
+    if (monthFilter) {
+      const txDate = parseLocalDate(tx.date);
+      const txMonth = String(txDate.getMonth() + 1).padStart(2, '0');
+      const txYear = txDate.getFullYear();
+      if (`${txYear}-${txMonth}` !== monthFilter) {
+        return false;
+      }
+    }
+
     if (!searchQuery) return true;
     const lowerQuery = searchQuery.toLowerCase();
     const typeMatch = tx.type?.toLowerCase().includes(lowerQuery);
@@ -107,25 +133,18 @@ export function AccountDetail({ account, onDeposit, onEditTransaction, onDeleteT
         </div>
       </div>
 
-      {/* Account meta */}
-      <div className="flex items-center gap-8 px-6 py-3 border-b border-gray-100 text-sm text-gray-500">
-        <div>
-          <span className="mr-2">Bank Name</span>
-          <span className="font-medium text-gray-800">{account.bankName}</span>
-        </div>
-        <div>
-          <span className="mr-2">Account Number</span>
-          <span className="font-medium text-gray-800">
-            {account.accountNumber}
-          </span>
-        </div>
-      </div>
 
       {/* Transactions */}
       <div className="flex-1 overflow-auto">
         <div className="flex items-center justify-between px-6 py-3">
           <h4 className="text-sm font-semibold text-gray-800">Transactions</h4>
           <div className="flex gap-2 items-center h-10" ref={searchContainerRef}>
+            <input
+              type="month"
+              value={monthFilter}
+              onChange={(e) => setMonthFilter(e.target.value)}
+              className="px-3 py-1.5 border border-gray-200 rounded-lg text-sm text-gray-700 bg-white focus:outline-none focus:ring-1 focus:ring-blue-100 focus:border-blue-400 h-9"
+            />
             <div 
               className={`flex items-center overflow-hidden transition-all duration-300 ease-out rounded-full h-9 ${
                 showSearchInput 

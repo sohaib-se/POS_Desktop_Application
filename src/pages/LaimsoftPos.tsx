@@ -47,6 +47,7 @@ export function LaimsoftPos({ onClose, initialInvoice }: LaimsoftPosProps) {
   const [isSaving, setIsSaving] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
   const [alertState, setAlertState] = useState<{ isOpen: boolean; title: string; message: string }>({ isOpen: false, title: "", message: "" });
+  const [confirmCloseState, setConfirmCloseState] = useState<{ isOpen: boolean; type: 'tab' | 'all'; tabId?: number }>({ isOpen: false, type: 'tab' });
   // When editing an existing POS invoice, store its ID so we can PUT instead of POST
   const editingInvoiceId = initialInvoice?.id ?? null;
   const initialInvoiceLoadedRef = useRef(false);
@@ -375,7 +376,7 @@ export function LaimsoftPos({ onClose, initialInvoice }: LaimsoftPosProps) {
         }
       } else if (e.ctrlKey && e.key.toLowerCase() === "w") {
         e.preventDefault();
-        handleCloseTab(activeTabId);
+        requestCloseTab(activeTabId);
       } else if (
         (e.key === "Delete" || e.key === "Backspace") &&
         activeTab.selectedRowId !== null
@@ -442,7 +443,34 @@ export function LaimsoftPos({ onClose, initialInvoice }: LaimsoftPosProps) {
     if (searchInputRef.current) searchInputRef.current.focus();
   };
 
-  const handleCloseTab = (idToClose: number) => {
+  const requestCloseTab = (idToClose: number) => {
+    const tabToClose = tabs.find(t => t.id === idToClose);
+    if (tabToClose && tabToClose.rows.length > 0) {
+      setConfirmCloseState({ isOpen: true, type: 'tab', tabId: idToClose });
+    } else {
+      performCloseTab(idToClose);
+    }
+  };
+
+  const requestCloseAll = () => {
+    const hasAnyUnsaved = tabs.some(t => t.rows.length > 0);
+    if (hasAnyUnsaved) {
+      setConfirmCloseState({ isOpen: true, type: 'all' });
+    } else {
+      if (onClose) onClose();
+    }
+  };
+
+  const confirmCloseAction = () => {
+    if (confirmCloseState.type === 'tab' && confirmCloseState.tabId !== undefined) {
+      performCloseTab(confirmCloseState.tabId);
+    } else if (confirmCloseState.type === 'all') {
+      if (onClose) onClose();
+    }
+    setConfirmCloseState({ isOpen: false, type: 'tab' });
+  };
+
+  const performCloseTab = (idToClose: number) => {
     setTabs((prev) => {
       if (prev.length <= 1) {
         if (onClose) onClose();
@@ -794,9 +822,9 @@ export function LaimsoftPos({ onClose, initialInvoice }: LaimsoftPosProps) {
         tabs={tabs}
         activeTabId={activeTabId}
         setActiveTabId={setActiveTabId}
-        handleCloseTab={handleCloseTab}
+        handleCloseTab={requestCloseTab}
         handleNewBill={handleNewBill}
-        onClose={onClose}
+        onClose={requestCloseAll}
       />
 
       <div className="flex flex-1 p-2 gap-2 overflow-hidden">
@@ -851,6 +879,16 @@ export function LaimsoftPos({ onClose, initialInvoice }: LaimsoftPosProps) {
         message={alertState.message}
         confirmText="OK"
         hideCancel={true}
+      />
+
+      <ConfirmActionModal
+        isOpen={confirmCloseState.isOpen}
+        onClose={() => setConfirmCloseState({ isOpen: false, type: 'tab' })}
+        onConfirm={confirmCloseAction}
+        title="Unsaved Changes"
+        message="You have unsaved changes. Are you sure you want to discard them and close?"
+        confirmText="Discard & Close"
+        cancelText="Cancel"
       />
 
       <Modals

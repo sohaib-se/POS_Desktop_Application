@@ -20,7 +20,7 @@ interface SaleInvoicePrintReportProps {
   invoiceNo: string | number;
   invoiceDate: string;
   customerName: string;
-  businessProfile?: { business_name?: string; phone?: string };
+  businessProfile?: { business_name?: string; phone?: string; logo_url?: string };
   received?: number;
 }
 
@@ -55,6 +55,40 @@ function numberToWords(num: number): string {
   if (thousand) words += chunk(thousand) + "Thousand ";
   if (rest) words += chunk(rest);
   return words.trim();
+}
+
+/* ──────────────────────────── Logo ──────────────────────────────────── */
+
+function InvoiceLogo({ logoUrl, businessName, size = 56 }: { logoUrl?: string; businessName?: string; size?: number }) {
+  if (logoUrl) {
+    return (
+      <img
+        src={logoUrl}
+        alt={businessName ? `${businessName} logo` : "Business logo"}
+        style={{ width: size, height: size, objectFit: "contain", flexShrink: 0 }}
+      />
+    );
+  }
+  // Fallback placeholder so the layout holds steady before a logo is uploaded
+  return (
+    <div
+      style={{
+        width: size,
+        height: size,
+        borderRadius: "50%",
+        backgroundColor: "#E5E5EA",
+        color: "#6B6B80",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        fontWeight: 700,
+        fontSize: size * 0.4,
+        flexShrink: 0,
+      }}
+    >
+      {(businessName || "M").charAt(0).toUpperCase()}
+    </div>
+  );
 }
 
 /* ──────────────────── SaleInvoicePrintReport ───────────────────────── */
@@ -102,9 +136,12 @@ export function SaleInvoicePrintReport({
 
       {/* Company / Bill To / Invoice Details */}
       <div style={{ border: "1px solid #1a1a1a", marginBottom: 16 }}>
-        <div style={{ padding: "8px 12px" }}>
-          <div style={{ fontSize: 20, fontWeight: 700, color: HEADER_COLOR }}>{businessProfile?.business_name || "My Company"}</div>
-          <div style={{ fontSize: 11, color: HEADER_COLOR, marginTop: 2 }}>Phone: <strong>{businessProfile?.phone || ""}</strong></div>
+        <div style={{ padding: "8px 12px", display: "flex", alignItems: "center", gap: 14 }}>
+          <InvoiceLogo logoUrl={businessProfile?.logo_url} businessName={businessProfile?.business_name} size={56} />
+          <div>
+            <div style={{ fontSize: 20, fontWeight: 700, color: HEADER_COLOR }}>{businessProfile?.business_name || "My Company"}</div>
+            <div style={{ fontSize: 11, color: HEADER_COLOR, marginTop: 2 }}>Phone: <strong>{businessProfile?.phone || ""}</strong></div>
+          </div>
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", borderTop: "1px solid #1a1a1a" }}>
           <div style={{ borderRight: "1px solid #1a1a1a" }}>
@@ -205,19 +242,26 @@ function useCompanyInfo() {
   const [info, setInfo] = useState({
     business_name: userProfile.businessName,
     phone: userProfile.phone,
+    logo_url: (userProfile as any).logoUrl as string | undefined,
   });
   useEffect(() => {
     fetch("/api/user_profile")
       .then((r) => r.json())
       .then((d) => {
-        if (d) setInfo({ business_name: d.business_name || userProfile.businessName, phone: d.phone || userProfile.phone });
+        if (d) {
+          setInfo({
+            business_name: d.business_name || userProfile.businessName,
+            phone: d.phone || userProfile.phone,
+            logo_url: d.logo_url || (userProfile as any).logoUrl,
+          });
+        }
       })
       .catch(() => {});
   }, []);
   return info;
 }
 
-export function TallyThemePreview({ _color }: { _color?: string }) {
+export function TallyThemePreview() {
   const company = useCompanyInfo();
   return (
     <div style={{ width: "100%", height: "100%", display: "flex", justifyContent: "center", backgroundColor: "#f3f4f6", padding: "16px 0" }}>

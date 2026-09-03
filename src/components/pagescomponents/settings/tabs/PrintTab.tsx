@@ -1,5 +1,10 @@
 import { useState } from "react";
 import { TallyThemePreview } from "./printTab/Print documents/Tallytheme";
+import { Theme1Preview } from "./printTab/Print documents/Theme1";
+import { Theme2Preview } from "./printTab/Print documents/Theme2";
+import { Theme3Preview } from "./printTab/Print documents/Theme3";
+import { Theme4Preview } from "./printTab/Print documents/Theme4";
+import { TaxThemePreview } from "./printTab/Print documents/TaxTheme";
 
 /* ─────────────────────────────── Types ─────────────────────────────── */
 
@@ -10,7 +15,14 @@ interface Theme {
   label: string;
 }
 
-const REGULAR_THEMES: Theme[] = [{ id: "tally", label: "Tally Theme" }];
+const REGULAR_THEMES: Theme[] = [
+  { id: "tally", label: "Tally Theme" },
+  { id: "theme1", label: "Theme 1" },
+  { id: "theme2", label: "Theme 2" },
+  { id: "theme3", label: "Theme 3" },
+  { id: "theme4", label: "Theme 4" },
+  { id: "taxtheme", label: "Tax Theme" },
+];
 const THERMAL_THEMES: Theme[] = [];
 
 /* ──────────────────── Left panel theme list ─────────────────────────── */
@@ -98,6 +110,21 @@ export function PrintTab() {
   const renderPreview = () => {
     if (activePrinter === "regular" && selectedThemeId === "tally") {
       return <TallyThemePreview />;
+    }
+    if (activePrinter === "regular" && selectedThemeId === "theme1") {
+      return <Theme1Preview />;
+    }
+    if (activePrinter === "regular" && selectedThemeId === "theme2") {
+      return <Theme2Preview />;
+    }
+    if (activePrinter === "regular" && selectedThemeId === "theme3") {
+      return <Theme3Preview />;
+    }
+    if (activePrinter === "regular" && selectedThemeId === "theme4") {
+      return <Theme4Preview />;
+    }
+    if (activePrinter === "regular" && selectedThemeId === "taxtheme") {
+      return <TaxThemePreview />;
     }
     return (
       <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", color: "#9ca3af", fontSize: 14 }}>

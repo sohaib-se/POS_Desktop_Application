@@ -6,10 +6,6 @@ import { RegularCompanyInfoBlock } from "./printTab/RegularCompanyInfoBlock";
 import { RegularItemTableBlock } from "./printTab/RegularItemTableBlock";
 import { RegularTotalsAndTaxesBlock } from "./printTab/RegularTotalsAndTaxesBlock";
 import { RegularFooterBlock } from "./printTab/RegularFooterBlock";
-import { RegularInvoicePreview } from "./printTab/RegularInvoicePreview";
-import { TaxTheme1Preview } from "./printTab/TaxTheme1Preview";
-import { TaxTheme2Preview } from "./printTab/TaxTheme2Preview";
-import { TaxTheme3Preview } from "./printTab/TaxTheme3Preview";
 import { Theme1Preview } from "./printTab/Theme1Preview";
 import { Theme2Preview } from "./printTab/Theme2Preview";
 import { Theme3Preview } from "./printTab/Theme3Preview";
@@ -65,10 +61,6 @@ export function PrintTab() {
   }, [themeColor]);
 
   const regularThemes = [
-    "Tally Theme",
-    "Tax Theme 1",
-    "Tax Theme 2",
-    "Tax Theme 3",
     "Theme 1",
     "Theme 2",
     "Theme 3",
@@ -233,13 +225,9 @@ export function PrintTab() {
           `}</style>
           {currentPrinter === "regular" ? (
             <>
-              {regularThemeIdx === 0 ? <RegularInvoicePreview color={themeColor} /> :
-              regularThemeIdx === 1 ? <TaxTheme1Preview color={themeColor} /> :
-              regularThemeIdx === 2 ? <TaxTheme2Preview color={themeColor} /> :
-              regularThemeIdx === 3 ? <TaxTheme3Preview color={themeColor} /> :
-              regularThemeIdx === 4 ? <Theme1Preview color={themeColor} /> :
-              regularThemeIdx === 5 ? <Theme2Preview color={themeColor} /> :
-              regularThemeIdx === 6 ? <Theme3Preview color={themeColor} /> :
+              {regularThemeIdx === 0 ? <Theme1Preview color={themeColor} /> :
+              regularThemeIdx === 1 ? <Theme2Preview color={themeColor} /> :
+              regularThemeIdx === 2 ? <Theme3Preview color={themeColor} /> :
               <Theme4Preview color={themeColor} />}
             </>
           ) : (

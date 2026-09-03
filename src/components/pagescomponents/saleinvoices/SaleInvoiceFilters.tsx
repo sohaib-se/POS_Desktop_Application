@@ -1,3 +1,5 @@
+import { Calendar } from "lucide-react";
+
 export function SaleInvoiceFilters({
   selectedMonthKey,
   setSelectedMonthKey,
@@ -12,12 +14,15 @@ export function SaleInvoiceFilters({
     >
       <div className="flex items-center gap-2">
         <span className="text-sm text-gray-500">Filter by Month :</span>
-        <input 
-          type="month" 
-          value={selectedMonthKey}
-          onChange={(e) => setSelectedMonthKey(e.target.value)}
-          className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
+        <div className="relative flex items-center">
+          <Calendar className="w-4 h-4 text-gray-500 absolute left-3 pointer-events-none" />
+          <input
+            type="month"
+            value={selectedMonthKey}
+            onChange={(e) => setSelectedMonthKey(e.target.value)}
+            className="pl-9 pr-3 py-1.5 bg-gray-100 rounded-lg text-sm text-gray-700 hover:bg-gray-200 outline-none cursor-pointer border border-transparent focus:border-blue-500 focus:bg-white"
+          />
+        </div>
       </div>
     </div>
   );

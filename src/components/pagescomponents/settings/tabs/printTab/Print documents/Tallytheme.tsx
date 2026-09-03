@@ -59,7 +59,7 @@ function numberToWords(num: number): string {
 
 /* ──────────────────────────── Logo ──────────────────────────────────── */
 
-function InvoiceLogo({ logoUrl, businessName, size = 56 }: { logoUrl?: string; businessName?: string; size?: number }) {
+function InvoiceLogo({ logoUrl, businessName, size = 72 }: { logoUrl?: string; businessName?: string; size?: number }) {
   if (logoUrl) {
     return (
       <img
@@ -75,9 +75,7 @@ function InvoiceLogo({ logoUrl, businessName, size = 56 }: { logoUrl?: string; b
       style={{
         width: size,
         height: size,
-        borderRadius: "50%",
-        backgroundColor: "#E5E5EA",
-        color: "#6B6B80",
+        backgroundColor: "transparent",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
@@ -137,7 +135,7 @@ export function SaleInvoicePrintReport({
       {/* Company / Bill To / Invoice Details */}
       <div style={{ border: "1px solid #1a1a1a", marginBottom: 16 }}>
         <div style={{ padding: "8px 12px", display: "flex", alignItems: "center", gap: 14 }}>
-          <InvoiceLogo logoUrl={businessProfile?.logo_url} businessName={businessProfile?.business_name} size={56} />
+          <InvoiceLogo logoUrl={businessProfile?.logo_url} businessName={businessProfile?.business_name} size={72} />
           <div>
             <div style={{ fontSize: 20, fontWeight: 700, color: HEADER_COLOR }}>{businessProfile?.business_name || "My Company"}</div>
             <div style={{ fontSize: 11, color: HEADER_COLOR, marginTop: 2 }}>Phone: <strong>{businessProfile?.phone || ""}</strong></div>
@@ -242,7 +240,7 @@ function useCompanyInfo() {
   const [info, setInfo] = useState({
     business_name: userProfile.businessName,
     phone: userProfile.phone,
-    logo_url: (userProfile as any).logoUrl as string | undefined,
+    logo_url: userProfile.logo as string | undefined,
   });
   useEffect(() => {
     fetch("/api/user_profile")
@@ -252,7 +250,7 @@ function useCompanyInfo() {
           setInfo({
             business_name: d.business_name || userProfile.businessName,
             phone: d.phone || userProfile.phone,
-            logo_url: d.logo_url || (userProfile as any).logoUrl,
+            logo_url: d.logo_url || d.logo || userProfile.logo,
           });
         }
       })

@@ -59,7 +59,7 @@ function numberToWords(num: number): string {
 
 /* ──────────────────────────── Logo ──────────────────────────────────── */
 
-function InvoiceLogo({ logoUrl, businessName, size = 56 }: { logoUrl?: string; businessName?: string; size?: number }) {
+function InvoiceLogo({ logoUrl, businessName, size = 72 }: { logoUrl?: string; businessName?: string; size?: number }) {
   if (logoUrl) {
     return (
       <img
@@ -75,9 +75,7 @@ function InvoiceLogo({ logoUrl, businessName, size = 56 }: { logoUrl?: string; b
       style={{
         width: size,
         height: size,
-        borderRadius: "50%",
-        backgroundColor: "#E5E5EA",
-        color: "#6B6B80",
+        backgroundColor: "transparent",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
@@ -139,7 +137,7 @@ export function TaxInvoicePrintReport({
       <div style={{ border: `1px solid ${BORDER}` }}>
         {/* Header: logo left, company info right */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", padding: "10px 12px", borderBottom: `1px solid ${BORDER}` }}>
-          <InvoiceLogo logoUrl={businessProfile?.logo_url} businessName={businessProfile?.business_name} size={44} />
+          <InvoiceLogo logoUrl={businessProfile?.logo_url} businessName={businessProfile?.business_name} size={60} />
           <div style={{ textAlign: "right" }}>
             <div style={{ fontSize: 16, fontWeight: 700 }}>{businessProfile?.business_name || "My Company"}</div>
             <div style={{ fontSize: 11, marginTop: 2 }}>Phone no.: {businessProfile?.phone || ""}</div>
@@ -249,7 +247,7 @@ function useCompanyInfo() {
   const [info, setInfo] = useState({
     business_name: userProfile.businessName,
     phone: userProfile.phone,
-    logo_url: (userProfile as any).logoUrl as string | undefined,
+    logo_url: userProfile.logo as string | undefined,
   });
   useEffect(() => {
     fetch("/api/user_profile")
@@ -259,7 +257,7 @@ function useCompanyInfo() {
           setInfo({
             business_name: d.business_name || userProfile.businessName,
             phone: d.phone || userProfile.phone,
-            logo_url: d.logo_url || (userProfile as any).logoUrl,
+            logo_url: d.logo_url || d.logo || userProfile.logo,
           });
         }
       })

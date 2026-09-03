@@ -55,7 +55,7 @@ function numberToWords(num: number): string {
   return words.trim();
 }
 
-function InvoiceLogo({ logoUrl, businessName, size = 56 }: { logoUrl?: string; businessName?: string; size?: number }) {
+function InvoiceLogo({ logoUrl, businessName, size = 72 }: { logoUrl?: string; businessName?: string; size?: number }) {
   if (logoUrl) {
     return (
       <img
@@ -71,9 +71,7 @@ function InvoiceLogo({ logoUrl, businessName, size = 56 }: { logoUrl?: string; b
       style={{
         width: size,
         height: size,
-        borderRadius: "50%",
-        backgroundColor: "#E5E5EA",
-        color: "#6B6B80",
+        backgroundColor: "transparent",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
@@ -128,7 +126,7 @@ export function Theme2InvoicePrintReport({
     <div className="print-area bg-white text-black font-sans w-full max-w-[794px] mx-auto px-10 py-6">
       {/* Business Header */}
       <div className="flex items-center justify-between mb-3">
-        <InvoiceLogo logoUrl={businessProfile?.logo_url} businessName={businessProfile?.business_name} size={56} />
+        <InvoiceLogo logoUrl={businessProfile?.logo_url} businessName={businessProfile?.business_name} size={72} />
         <div className="text-right">
           <h1 className="text-2xl font-bold">{businessProfile?.business_name || "My Company"}</h1>
           <p className="text-sm text-gray-800 mt-0.5">Phone no.: {businessProfile?.phone || ""}</p>
@@ -240,11 +238,11 @@ export function Theme2InvoicePrintReport({
       </div>
 
       {/* Signatory */}
-      <div className="text-center mt-10">
-        <p className="text-sm">For : {businessProfile?.business_name || "My Company"}</p>
-      </div>
-      <div className="text-center mt-16">
-        <p className="text-sm font-bold">Authorized Signatory</p>
+      <div className="flex justify-end mt-10">
+        <div className="text-center">
+          <p className="text-sm">For : {businessProfile?.business_name || "My Company"}</p>
+          <p className="text-sm font-bold mt-16">Authorized Signatory</p>
+        </div>
       </div>
     </div>
   );
@@ -260,7 +258,7 @@ function useCompanyInfo() {
   const [info, setInfo] = useState({
     business_name: userProfile.businessName,
     phone: userProfile.phone,
-    logo_url: (userProfile as any).logoUrl as string | undefined,
+    logo_url: userProfile.logo as string | undefined,
   });
   useEffect(() => {
     fetch("/api/user_profile")
@@ -270,7 +268,7 @@ function useCompanyInfo() {
           setInfo({
             business_name: d.business_name || userProfile.businessName,
             phone: d.phone || userProfile.phone,
-            logo_url: d.logo_url || (userProfile as any).logoUrl,
+            logo_url: d.logo_url || d.logo || userProfile.logo,
           });
         }
       })

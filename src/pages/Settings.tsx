@@ -34,6 +34,13 @@ export function SettingsPage({ onClose, initialTab }: SettingsPageProps = {}) {
     return () => cancelAnimationFrame(frame);
   }, []);
 
+  // Close the fullscreen print tab overlay when ✕ is clicked inside PrintTab
+  useEffect(() => {
+    const handler = () => setActiveTab("general");
+    window.addEventListener("close-print-tab", handler);
+    return () => window.removeEventListener("close-print-tab", handler);
+  }, []);
+
   return (
     <div
       style={{

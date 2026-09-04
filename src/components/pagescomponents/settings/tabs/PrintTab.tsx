@@ -5,6 +5,9 @@ import { Theme2Preview } from "./printTab/Print documents/Theme2";
 import { Theme3Preview } from "./printTab/Print documents/Theme3";
 import { Theme4Preview } from "./printTab/Print documents/Theme4";
 import { TaxThemePreview } from "./printTab/Print documents/TaxTheme";
+import { ThermalTheme1Preview } from "./printTab/Print documents/ThermalTheme1";
+import { ThermalTheme2Preview } from "./printTab/Print documents/ThermalTheme2";
+import { ThermalTheme3Preview } from "./printTab/Print documents/ThermalTheme3";
 
 /* ─────────────────────────────── Types ─────────────────────────────── */
 
@@ -23,7 +26,11 @@ const REGULAR_THEMES: Theme[] = [
   { id: "theme4", label: "Theme 4" },
   { id: "taxtheme", label: "Tax Theme" },
 ];
-const THERMAL_THEMES: Theme[] = [];
+const THERMAL_THEMES: Theme[] = [
+  { id: "thermal1", label: "Thermal Theme 1" },
+  { id: "thermal2", label: "Thermal Theme 2" },
+  { id: "thermal3", label: "Thermal Theme 3" },
+];
 
 /* ──────────────────── Left panel theme list ─────────────────────────── */
 
@@ -125,6 +132,15 @@ export function PrintTab() {
     }
     if (activePrinter === "regular" && selectedThemeId === "taxtheme") {
       return <TaxThemePreview />;
+    }
+    if (activePrinter === "thermal" && selectedThemeId === "thermal1") {
+      return <ThermalTheme1Preview />;
+    }
+    if (activePrinter === "thermal" && selectedThemeId === "thermal2") {
+      return <ThermalTheme2Preview />;
+    }
+    if (activePrinter === "thermal" && selectedThemeId === "thermal3") {
+      return <ThermalTheme3Preview />;
     }
     return (
       <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", color: "#9ca3af", fontSize: 14 }}>

@@ -93,6 +93,7 @@ export function PrintTab() {
   const [selectedThemeId, setSelectedThemeId] = useState<string | null>(() => {
     return localStorage.getItem("print_selectedThemeId") || "tally";
   });
+  const [selectedColor, setSelectedColor] = useState<string>("#a78bfa");
 
   const handlePrinterChange = (p: PrinterType) => {
     setActivePrinter(p);
@@ -309,6 +310,63 @@ export function PrintTab() {
               onSelect={handleThemeSelect}
             />
 
+            {/* ── Color Picker — Regular printer only ── */}
+            {activePrinter === "regular" && (
+              <>
+                <div style={{ borderTop: "1px solid #e5e7eb", margin: "8px 0 0" }} />
+                <div style={{ padding: "12px 14px 14px" }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: "#111827", marginBottom: 10, letterSpacing: 0.1 }}>
+                    Select Color
+                  </div>
+
+                  {/* Selected preview */}
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
+                    <div
+                      style={{
+                        width: 32,
+                        height: 32,
+                        borderRadius: 6,
+                        background: selectedColor,
+                        border: "1px solid rgba(0,0,0,0.12)",
+                        flexShrink: 0,
+                      }}
+                    />
+                    <span style={{ fontSize: 13, fontWeight: 600, color: "#374151" }}>Selected</span>
+                  </div>
+
+                  {/* Swatch grid */}
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 5 }}>
+                    {[
+                      "#a78bfa", "#3b82f6", "#9ca3af", "#6b7280", "#84a07c", "#4ade80", "#06b6d4",
+                      "#16a34a", "#86efac", "#7c2d12", "#7e22ce", "#9f1239", "#92400e", "#b45309",
+                      "#e879f9", "#ec4899", "#f97316", "#d4a574", "#fbcfe8", "#fb923c", "#ef4444",
+                      "#ea580c", "#292524", "#e5e7eb",
+                    ].map((color) => (
+                      <button
+                        key={color}
+                        title={color}
+                        onClick={() => setSelectedColor(color)}
+                        style={{
+                          width: "100%",
+                          aspectRatio: "1",
+                          borderRadius: 5,
+                          background: color,
+                          border: selectedColor === color
+                            ? "2.5px solid #1e40af"
+                            : "1.5px solid rgba(0,0,0,0.10)",
+                          cursor: "pointer",
+                          padding: 0,
+                          outline: selectedColor === color ? "2px solid #93c5fd" : "none",
+                          outlineOffset: 1,
+                          transition: "outline 0.1s, border 0.1s",
+                          boxSizing: "border-box",
+                        }}
+                      />
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
 
           </div>
 

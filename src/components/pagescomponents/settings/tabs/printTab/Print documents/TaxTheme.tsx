@@ -22,6 +22,7 @@ interface TaxInvoicePrintReportProps {
   customerName: string;
   businessProfile?: { business_name?: string; phone?: string; logo_url?: string };
   received?: number;
+  accentColor?: string;
 }
 
 /* ─────────────────────── Dummy preview data ────────────────────────── */
@@ -98,6 +99,7 @@ export function TaxInvoicePrintReport({
   customerName,
   businessProfile,
   received = 0,
+  accentColor,
 }: TaxInvoicePrintReportProps) {
   const [currency] = useSettings("settings.businessCurrency", { code: "PKR", symbol: "Rs" });
   const [currencyDisplay] = useSettings<"abbreviation" | "icon">("settings.currencyDisplay", "abbreviation");
@@ -124,7 +126,7 @@ export function TaxInvoicePrintReport({
   const MIN_ROWS = 10;
   const fillerRows = Math.max(0, MIN_ROWS - records.length);
 
-  const ACCENT = "#8B85D6";
+  const ACCENT = accentColor ?? "#8B85D6";
   const BORDER = "#1a1a1a";
 
   return (
@@ -266,7 +268,7 @@ function useCompanyInfo() {
   return info;
 }
 
-export function TaxThemePreview() {
+export function TaxThemePreview({ accentColor }: { accentColor?: string } = {}) {
   const company = useCompanyInfo();
   return (
     <div style={{ width: "100%", height: "100%", display: "flex", justifyContent: "center", backgroundColor: "#f3f4f6", padding: "16px 0" }}>
@@ -278,6 +280,7 @@ export function TaxThemePreview() {
           customerName="zeeshan"
           businessProfile={company}
           received={0}
+          accentColor={accentColor}
         />
       </div>
     </div>

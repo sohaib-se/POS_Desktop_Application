@@ -20,6 +20,7 @@ interface Theme1InvoicePrintReportProps {
   customerName: string;
   businessProfile?: any;
   received?: number;
+  accentColor?: string;
 }
 
 // Minimal number-to-words for whole rupee amounts (extend as needed for paisa/large numbers)
@@ -92,12 +93,13 @@ export function Theme1InvoicePrintReport({
   customerName,
   businessProfile,
   received = 0,
+  accentColor,
 }: Theme1InvoicePrintReportProps) {
   const [currency] = useSettings('settings.businessCurrency', { code: 'PKR', symbol: 'Rs' });
   const [currencyDisplay] = useSettings<'abbreviation' | 'icon'>('settings.currencyDisplay', 'abbreviation');
   const currencyStr = currencyDisplay === 'icon' ? currency.symbol : currency.code;
 
-  const ACCENT = "#8B85D6";
+  const ACCENT = accentColor ?? "#8B85D6";
 
   const formatDate = (dateStr: string) => {
     if (!dateStr) return "";
@@ -277,7 +279,7 @@ function useCompanyInfo() {
   return info;
 }
 
-export function Theme1Preview() {
+export function Theme1Preview({ accentColor }: { accentColor?: string } = {}) {
   const company = useCompanyInfo();
   return (
     <div style={{ width: "100%", height: "100%", display: "flex", justifyContent: "center", backgroundColor: "#f3f4f6", padding: "16px 0" }}>
@@ -289,6 +291,7 @@ export function Theme1Preview() {
           customerName="zeeshan"
           businessProfile={company}
           received={0}
+          accentColor={accentColor}
         />
       </div>
     </div>

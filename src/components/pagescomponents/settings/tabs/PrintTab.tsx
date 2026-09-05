@@ -3,11 +3,12 @@ import { TallyThemePreview } from "./printTab/Print documents/Tallytheme";
 import { Theme1Preview } from "./printTab/Print documents/Theme1";
 import { Theme2Preview } from "./printTab/Print documents/Theme2";
 import { Theme3Preview } from "./printTab/Print documents/Theme3";
-import { Theme4Preview } from "./printTab/Print documents/Theme4";
+import { ThermalTheme4Preview as Theme4Preview } from "./printTab/Print documents/Theme4";
 import { TaxThemePreview } from "./printTab/Print documents/TaxTheme";
 import { ThermalTheme1Preview } from "./printTab/Print documents/ThermalTheme1";
 import { ThermalTheme2Preview } from "./printTab/Print documents/ThermalTheme2";
 import { ThermalTheme3Preview } from "./printTab/Print documents/ThermalTheme3";
+import { ThermalTheme4Preview } from "./printTab/Print documents/ThermalTheme4";
 
 /* ─────────────────────────────── Types ─────────────────────────────── */
 
@@ -30,6 +31,7 @@ const THERMAL_THEMES: Theme[] = [
   { id: "thermal1", label: "Thermal Theme 1" },
   { id: "thermal2", label: "Thermal Theme 2" },
   { id: "thermal3", label: "Thermal Theme 3" },
+  { id: "thermal4", label: "Thermal Theme 4" },
 ];
 
 /* ──────────────────── Left panel theme list ─────────────────────────── */
@@ -93,7 +95,9 @@ export function PrintTab() {
   const [selectedThemeId, setSelectedThemeId] = useState<string | null>(() => {
     return localStorage.getItem("print_selectedThemeId") || "tally";
   });
-  const [selectedColor, setSelectedColor] = useState<string>("#a78bfa");
+  const [selectedColor, setSelectedColor] = useState<string>(
+    () => localStorage.getItem("print_selectedColor") || "#a78bfa"
+  );
 
   const handlePrinterChange = (p: PrinterType) => {
     setActivePrinter(p);
@@ -120,19 +124,19 @@ export function PrintTab() {
       return <TallyThemePreview />;
     }
     if (activePrinter === "regular" && selectedThemeId === "theme1") {
-      return <Theme1Preview />;
+      return <Theme1Preview accentColor={selectedColor} />;
     }
     if (activePrinter === "regular" && selectedThemeId === "theme2") {
-      return <Theme2Preview />;
+      return <Theme2Preview accentColor={selectedColor} />;
     }
     if (activePrinter === "regular" && selectedThemeId === "theme3") {
-      return <Theme3Preview />;
+      return <Theme3Preview accentColor={selectedColor} />;
     }
     if (activePrinter === "regular" && selectedThemeId === "theme4") {
       return <Theme4Preview />;
     }
     if (activePrinter === "regular" && selectedThemeId === "taxtheme") {
-      return <TaxThemePreview />;
+      return <TaxThemePreview accentColor={selectedColor} />;
     }
     if (activePrinter === "thermal" && selectedThemeId === "thermal1") {
       return <ThermalTheme1Preview />;
@@ -142,6 +146,9 @@ export function PrintTab() {
     }
     if (activePrinter === "thermal" && selectedThemeId === "thermal3") {
       return <ThermalTheme3Preview />;
+    }
+    if (activePrinter === "thermal" && selectedThemeId === "thermal4") {
+      return <ThermalTheme4Preview />;
     }
     return (
       <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", color: "#9ca3af", fontSize: 14 }}>
@@ -345,7 +352,10 @@ export function PrintTab() {
                       <button
                         key={color}
                         title={color}
-                        onClick={() => setSelectedColor(color)}
+                        onClick={() => {
+                        setSelectedColor(color);
+                        localStorage.setItem("print_selectedColor", color);
+                      }}
                         style={{
                           width: "100%",
                           aspectRatio: "1",

@@ -187,39 +187,7 @@ function LinkRow({ label, onClick }: { label: string; onClick?: () => void }) {
   );
 }
 
-function NumberInputRow({
-  label,
-  value,
-  onChange,
-}: {
-  label: string;
-  value: number;
-  onChange: (v: number) => void;
-}) {
-  return (
-    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, minHeight: 28 }}>
-      <span style={{ fontSize: 12, color: "#374151", flex: 1 }}>{label}</span>
-      <input
-        type="number"
-        value={value}
-        onChange={(e) => onChange(Number(e.target.value))}
-        style={{
-          width: 56,
-          border: "1px solid #e5e7eb",
-          borderRadius: 5,
-          padding: "4px 6px",
-          fontSize: 12,
-          color: "#374151",
-          background: "#fff",
-          outline: "none",
-          textAlign: "center",
-        }}
-        onFocus={(e) => (e.currentTarget.style.borderColor = "#3b82f6")}
-        onBlur={(e) => (e.currentTarget.style.borderColor = "#e5e7eb")}
-      />
-    </div>
-  );
-}
+
 
 function ActionButton({ label, onClick }: { label: string; onClick?: () => void }) {
   const [hovered, setHovered] = useState(false);

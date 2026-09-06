@@ -20,9 +20,12 @@ interface TaxInvoicePrintReportProps {
   invoiceNo: string | number;
   invoiceDate: string;
   customerName: string;
-  businessProfile?: { business_name?: string; phone?: string; logo_url?: string };
+  customerContact?: string;
+  businessProfile?: { business_name?: string; phone?: string; logo_url?: string; address?: string; email?: string };
   received?: number;
   accentColor?: string;
+  paymentMode?: string;
+  previousBalance?: number;
 }
 
 /* ─────────────────────── Dummy preview data ────────────────────────── */
@@ -48,7 +51,7 @@ function numberToWords(num: number): string {
   if (num === 0) return "Zero";
   let n = Math.floor(num), words = "";
   const crore = Math.floor(n / 10000000); n %= 10000000;
-  const lakh = Math.floor(n / 100000);   n %= 100000;
+  const lakh = Math.floor(n / 100000); n %= 100000;
   const thousand = Math.floor(n / 1000); n %= 1000;
   const rest = n;
   if (crore) words += chunk(crore) + "Crore ";
@@ -97,9 +100,12 @@ export function TaxInvoicePrintReport({
   invoiceNo,
   invoiceDate,
   customerName,
+  customerContact,
   businessProfile,
   received = 0,
   accentColor,
+  paymentMode,
+  previousBalance,
 }: TaxInvoicePrintReportProps) {
   const [currency] = useSettings("settings.businessCurrency", { code: "PKR", symbol: "Rs" });
   const [currencyDisplay] = useSettings<"abbreviation" | "icon">("settings.currencyDisplay", "abbreviation");
@@ -122,7 +128,10 @@ export function TaxInvoicePrintReport({
   const subTotal = records.reduce((s, r) => s + Number(r.amount || 0), 0);
   const total = subTotal;
   const balance = total - Number(received);
+  const prevBalance = Number(previousBalance ?? 0);
+  const currentBalance = prevBalance + balance;
 
+  // MIN_ROWS/row-height matched to the other themes so this page fills the same length
   const MIN_ROWS = 10;
   const fillerRows = Math.max(0, MIN_ROWS - records.length);
 
@@ -133,36 +142,40 @@ export function TaxInvoicePrintReport({
     <div style={{ background: "#fff", color: "#000", fontFamily: "Inter, system-ui, sans-serif", width: "100%", maxWidth: 794, margin: "0 auto", padding: "24px 40px", boxSizing: "border-box" }}>
       {/* Title (outside the bordered box) */}
       <div style={{ textAlign: "center", marginBottom: 10 }}>
-        <h1 style={{ fontSize: 18, fontWeight: 700, color: "#000", margin: 0 }}>Invoice</h1>
+        <h1 style={{ fontSize: 20, fontWeight: 700, color: "#000", margin: 0 }}>Invoice</h1>
       </div>
 
       <div style={{ border: `1px solid ${BORDER}` }}>
         {/* Header: logo left, company info right */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", padding: "10px 12px", borderBottom: `1px solid ${BORDER}` }}>
-          <InvoiceLogo logoUrl={businessProfile?.logo_url} businessName={businessProfile?.business_name} size={60} />
+          <InvoiceLogo logoUrl={businessProfile?.logo_url} businessName={businessProfile?.business_name} size={64} />
           <div style={{ textAlign: "right" }}>
-            <div style={{ fontSize: 16, fontWeight: 700 }}>{businessProfile?.business_name || "My Company"}</div>
-            <div style={{ fontSize: 11, marginTop: 2 }}>Phone no.: {businessProfile?.phone || ""}</div>
+            <div style={{ fontSize: 20, fontWeight: 700 }}>{businessProfile?.business_name || "My Company"}</div>
+            <div style={{ fontSize: 12, marginTop: 2 }}>{businessProfile?.address || "Jhagra peshawar"}</div>
+            <div style={{ fontSize: 12, marginTop: 2 }}>
+              Phone no.: {businessProfile?.phone || ""} Email: {businessProfile?.email || "msoh@gmail.com"}
+            </div>
           </div>
         </div>
 
         {/* Bill To / Invoice Details bar, split down the middle */}
         <div style={{ display: "flex", backgroundColor: ACCENT, WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }}>
-          <div style={{ width: "50%", padding: "3px 10px", fontSize: 11, fontWeight: 700, color: "#fff" }}>Bill To</div>
-          <div style={{ width: "50%", padding: "3px 10px", fontSize: 11, fontWeight: 700, color: "#fff", textAlign: "right" }}>Invoice Details</div>
+          <div style={{ width: "50%", padding: "3px 10px", fontSize: 12, fontWeight: 700, color: "#fff" }}>Bill To</div>
+          <div style={{ width: "50%", padding: "3px 10px", fontSize: 12, fontWeight: 700, color: "#fff", textAlign: "right" }}>Invoice Details</div>
         </div>
         <div style={{ display: "flex", borderBottom: `1px solid ${BORDER}` }}>
           <div style={{ width: "50%", padding: "6px 10px", borderRight: `1px solid ${BORDER}` }}>
-            <div style={{ fontSize: 12, fontWeight: 700 }}>{customerName}</div>
+            <div style={{ fontSize: 13, fontWeight: 700 }}>{customerName}</div>
+            <div style={{ fontSize: 12, marginTop: 2 }}>Contact No. : {customerContact || "03129955494"}</div>
           </div>
-          <div style={{ width: "50%", padding: "6px 10px", textAlign: "right", fontSize: 11 }}>
+          <div style={{ width: "50%", padding: "6px 10px", textAlign: "right", fontSize: 12 }}>
             <div>Invoice No. : {invoiceNo}</div>
             <div>Date : {formatDate(invoiceDate)}</div>
           </div>
         </div>
 
         {/* Items table */}
-        <table style={{ width: "100%", fontSize: 11, borderCollapse: "collapse" }}>
+        <table style={{ width: "100%", fontSize: 12, borderCollapse: "collapse" }}>
           <thead>
             <tr style={{ backgroundColor: ACCENT, color: "#fff", WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }}>
               <th style={{ padding: "6px 8px", textAlign: "left", fontWeight: 700, border: `1px solid ${BORDER}`, width: 24 }}>#</th>
@@ -186,7 +199,7 @@ export function TaxInvoicePrintReport({
             ))}
             {fillerRows > 0 && (
               <tr>
-                <td style={{ border: `1px solid ${BORDER}`, height: fillerRows * 28 }}></td>
+                <td style={{ border: `1px solid ${BORDER}`, height: fillerRows * 34 }}></td>
                 <td style={{ border: `1px solid ${BORDER}` }}></td>
                 <td style={{ border: `1px solid ${BORDER}` }}></td>
                 <td style={{ border: `1px solid ${BORDER}` }}></td>
@@ -204,39 +217,57 @@ export function TaxInvoicePrintReport({
           </tbody>
         </table>
 
-        {/* Footer: Amounts (top-aligned, right) + Invoice Amount In Words (bottom-aligned, left) */}
+        {/* Footer: Invoice Amount In Words / Payment mode / Terms (left) + Amounts (right) */}
         <div style={{ display: "flex", alignItems: "stretch" }}>
-          <div style={{ width: "50%", borderRight: `1px solid ${BORDER}`, display: "flex", flexDirection: "column", justifyContent: "flex-end" }}>
-            <div style={{ backgroundColor: ACCENT, color: "#fff", fontWeight: 700, fontSize: 11, padding: "3px 10px", WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }}>
+          <div style={{ width: "50%", borderRight: `1px solid ${BORDER}`, display: "flex", flexDirection: "column" }}>
+            <div style={{ backgroundColor: ACCENT, color: "#fff", fontWeight: 700, fontSize: 12, padding: "3px 10px", WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }}>
               Invoice Amount In Words
             </div>
-            <div style={{ padding: "5px 10px", fontSize: 11 }}>
+            <div style={{ padding: "5px 10px", fontSize: 12 }}>
               {numberToWords(total)} {currency.code === "PKR" ? "Rupees" : ""} only
+            </div>
+            <div style={{ backgroundColor: ACCENT, color: "#fff", fontWeight: 700, fontSize: 12, padding: "3px 10px", WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }}>
+              Payment mode
+            </div>
+            <div style={{ padding: "5px 10px", fontSize: 12 }}>
+              {paymentMode || "Credit"}
+            </div>
+            <div style={{ backgroundColor: ACCENT, color: "#fff", fontWeight: 700, fontSize: 12, padding: "3px 10px", WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }}>
+              Terms &amp; Conditions
+            </div>
+            <div style={{ padding: "5px 10px", fontSize: 12 }}>
+              Goods once sold will not be taken back. Payment due within 15 days of invoice date.
             </div>
           </div>
           <div style={{ width: "50%", display: "flex", flexDirection: "column" }}>
-            <div style={{ backgroundColor: ACCENT, color: "#fff", fontWeight: 700, fontSize: 11, padding: "3px 10px", WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }}>
+            <div style={{ backgroundColor: ACCENT, color: "#fff", fontWeight: 700, fontSize: 12, padding: "3px 10px", WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }}>
               Amounts
             </div>
-            <div style={{ display: "flex", justifyContent: "space-between", padding: "3px 10px", fontSize: 11, borderBottom: "1px solid #e5e5e5" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", padding: "3px 10px", fontSize: 12, borderBottom: "1px solid #e5e5e5" }}>
               <span>Sub Total</span><span style={{ whiteSpace: "nowrap" }}>{fmt(subTotal)}</span>
             </div>
-            <div style={{ display: "flex", justifyContent: "space-between", padding: "3px 10px", fontSize: 11, fontWeight: 700, borderBottom: "1px solid #e5e5e5" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", padding: "3px 10px", fontSize: 12, fontWeight: 700, borderBottom: "1px solid #e5e5e5" }}>
               <span>Total</span><span style={{ whiteSpace: "nowrap" }}>{fmt(total)}</span>
             </div>
-            <div style={{ display: "flex", justifyContent: "space-between", padding: "3px 10px", fontSize: 11, borderBottom: "1px solid #e5e5e5" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", padding: "3px 10px", fontSize: 12, borderBottom: "1px solid #e5e5e5" }}>
               <span>Received</span><span style={{ whiteSpace: "nowrap" }}>{fmt(Number(received))}</span>
             </div>
-            <div style={{ display: "flex", justifyContent: "space-between", padding: "3px 10px", fontSize: 11 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", padding: "3px 10px", fontSize: 12, borderBottom: "1px solid #e5e5e5" }}>
               <span>Balance</span><span style={{ whiteSpace: "nowrap" }}>{fmt(balance)}</span>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", padding: "3px 10px", fontSize: 12, marginTop: 8 }}>
+              <span>Previous Balance</span><span style={{ whiteSpace: "nowrap" }}>{fmt(prevBalance)}</span>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", padding: "3px 10px", fontSize: 12, fontWeight: 700 }}>
+              <span>Current Balance</span><span style={{ whiteSpace: "nowrap" }}>{fmt(currentBalance)}</span>
             </div>
           </div>
         </div>
 
         {/* Signatory */}
         <div style={{ padding: "16px 12px", textAlign: "right", borderTop: `1px solid ${BORDER}` }}>
-          <div style={{ fontSize: 11 }}>For : {businessProfile?.business_name || "My Company"}</div>
-          <div style={{ fontSize: 11, fontWeight: 700, marginTop: 40 }}>Authorized Signatory</div>
+          <div style={{ fontSize: 12 }}>For : {businessProfile?.business_name || "My Company"}</div>
+          <div style={{ fontSize: 12, fontWeight: 700, marginTop: 40 }}>Authorized Signatory</div>
         </div>
       </div>
     </div>
@@ -250,6 +281,8 @@ function useCompanyInfo() {
     business_name: userProfile.businessName,
     phone: userProfile.phone,
     logo_url: userProfile.logo as string | undefined,
+    address: (userProfile as any).address,
+    email: (userProfile as any).email,
   });
   useEffect(() => {
     fetch("/api/user_profile")
@@ -260,10 +293,12 @@ function useCompanyInfo() {
             business_name: d.business_name || userProfile.businessName,
             phone: d.phone || userProfile.phone,
             logo_url: d.logo_url || d.logo || userProfile.logo,
+            address: d.address || (userProfile as any).address,
+            email: d.email || (userProfile as any).email,
           });
         }
       })
-      .catch(() => {});
+      .catch(() => { });
   }, []);
   return info;
 }
@@ -278,9 +313,12 @@ export function TaxThemePreview({ accentColor }: { accentColor?: string } = {}) 
           invoiceNo={3}
           invoiceDate="2026-09-03"
           customerName="zeeshan"
+          customerContact="03129955494"
           businessProfile={company}
           received={0}
           accentColor={accentColor}
+          paymentMode="Credit"
+          previousBalance={800}
         />
       </div>
     </div>

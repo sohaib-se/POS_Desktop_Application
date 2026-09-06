@@ -18,9 +18,12 @@ interface Theme3InvoicePrintReportProps {
   invoiceNo: string | number;
   invoiceDate: string;
   customerName: string;
+  customerContact?: string;
   businessProfile?: any;
   received?: number;
   accentColor?: string;
+  paymentMode?: string;
+  previousBalance?: number;
 }
 
 // Minimal number-to-words for whole rupee amounts (extend as needed for paisa/large numbers)
@@ -91,9 +94,12 @@ export function Theme3InvoicePrintReport({
   invoiceNo,
   invoiceDate,
   customerName,
+  customerContact,
   businessProfile,
   received = 0,
   accentColor,
+  paymentMode,
+  previousBalance,
 }: Theme3InvoicePrintReportProps) {
   const [currency] = useSettings('settings.businessCurrency', { code: 'PKR', symbol: 'Rs' });
   const [currencyDisplay] = useSettings<'abbreviation' | 'icon'>('settings.currencyDisplay', 'abbreviation');
@@ -119,6 +125,8 @@ export function Theme3InvoicePrintReport({
   const subTotal = records.reduce((sum, r) => sum + Number(r.amount || 0), 0);
   const total = subTotal;
   const balance = total - Number(received || 0);
+  const prevBalance = Number(previousBalance ?? 0);
+  const currentBalance = prevBalance + balance;
 
   // Pad the item table with blank rows so short invoices still fill a full page, Tally-style
   const MIN_ROWS = 10;
@@ -134,7 +142,10 @@ export function Theme3InvoicePrintReport({
         <InvoiceLogo logoUrl={businessProfile?.logo_url} businessName={businessProfile?.business_name} size={68} />
         <div className="text-right text-white">
           <h1 className="text-xl font-bold">{businessProfile?.business_name || "My Company"}</h1>
-          <p className="text-xs mt-0.5">Phone no.: {businessProfile?.phone || ""}</p>
+          <p className="text-xs mt-0.5">{businessProfile?.address || "Jhagra peshawar"}</p>
+          <p className="text-xs mt-0.5">
+            Phone no.: {businessProfile?.phone || ""} Email: {businessProfile?.email || "msoh@gmail.com"}
+          </p>
         </div>
       </div>
 
@@ -150,7 +161,10 @@ export function Theme3InvoicePrintReport({
         <span>Invoice Details</span>
       </div>
       <div className="flex justify-between mb-4">
-        <p className="text-sm font-bold">{customerName}</p>
+        <div>
+          <p className="text-sm font-bold">{customerName}</p>
+          <p className="text-sm">Contact No. : {customerContact || "03129955494"}</p>
+        </div>
         <div className="text-right text-sm">
           <p>Invoice No. : {invoiceNo}</p>
           <p>Date : {formatDate(invoiceDate)}</p>
@@ -204,7 +218,7 @@ export function Theme3InvoicePrintReport({
         </tbody>
       </table>
 
-      {/* Footer: Amount in words + Amounts */}
+      {/* Footer: Amount in words + Payment mode | Amounts */}
       <div className="flex gap-4">
         <div className="flex-[55]">
           <div
@@ -215,6 +229,26 @@ export function Theme3InvoicePrintReport({
           </div>
           <p className="text-xs mt-1.5">
             {numberToWords(total)} {currency.code === 'PKR' ? 'Rupees' : ''} only
+          </p>
+
+          <div
+            className="px-2 py-1 text-xs font-bold text-white mt-4"
+            style={{ backgroundColor: ACCENT, WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}
+          >
+            Payment mode
+          </div>
+          <p className="text-xs mt-1.5">
+            {paymentMode || "Credit"}
+          </p>
+
+          <div
+            className="px-2 py-1 text-xs font-bold text-white mt-4"
+            style={{ backgroundColor: ACCENT, WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}
+          >
+            Terms &amp; Conditions
+          </div>
+          <p className="text-xs mt-1.5">
+            Goods once sold will not be taken back. Payment due within 15 days of invoice date.
           </p>
         </div>
         <div className="flex-[45]">
@@ -239,6 +273,14 @@ export function Theme3InvoicePrintReport({
           <div className="flex justify-between text-xs px-0 py-1 border-b border-gray-300">
             <span>Balance</span>
             <span className="whitespace-nowrap">{fmt(balance)}</span>
+          </div>
+          <div className="flex justify-between text-xs px-0 py-1 mt-2">
+            <span>Previous Balance</span>
+            <span className="whitespace-nowrap">{fmt(prevBalance)}</span>
+          </div>
+          <div className="flex justify-between text-xs px-0 py-1 font-bold">
+            <span>Current Balance</span>
+            <span className="whitespace-nowrap">{fmt(currentBalance)}</span>
           </div>
         </div>
       </div>
@@ -265,6 +307,8 @@ function useCompanyInfo() {
     business_name: userProfile.businessName,
     phone: userProfile.phone,
     logo_url: userProfile.logo as string | undefined,
+    address: (userProfile as any).address,
+    email: (userProfile as any).email,
   });
   useEffect(() => {
     fetch("/api/user_profile")
@@ -275,10 +319,12 @@ function useCompanyInfo() {
             business_name: d.business_name || userProfile.businessName,
             phone: d.phone || userProfile.phone,
             logo_url: d.logo_url || d.logo || userProfile.logo,
+            address: d.address || (userProfile as any).address,
+            email: d.email || (userProfile as any).email,
           });
         }
       })
-      .catch(() => {});
+      .catch(() => { });
   }, []);
   return info;
 }
@@ -293,9 +339,12 @@ export function Theme3Preview({ accentColor }: { accentColor?: string } = {}) {
           invoiceNo={3}
           invoiceDate="2026-09-03"
           customerName="zeeshan"
+          customerContact="03129955494"
           businessProfile={company}
           received={0}
           accentColor={accentColor}
+          paymentMode="Credit"
+          previousBalance={800}
         />
       </div>
     </div>

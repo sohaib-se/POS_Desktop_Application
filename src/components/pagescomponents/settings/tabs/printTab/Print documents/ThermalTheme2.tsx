@@ -21,11 +21,13 @@ interface ThermalTheme2Props {
     invoiceDate: string;
     customerName: string;
     customerPhone?: string;
-    businessProfile?: { business_name?: string; phone?: string; address?: string; logo_url?: string };
+    businessProfile?: { business_name?: string; phone?: string; address?: string; email?: string; logo_url?: string };
     received?: number;
     discount?: number;
     discountPercent?: number;
     taxPercent?: number;
+    paymentMode?: string;
+    previousBalance?: number;
 }
 
 /* ─────────────────────── Dummy preview data ────────────────────────── */
@@ -136,6 +138,8 @@ export function ThermalSaleInvoiceClassic({
     discount = 0,
     discountPercent,
     taxPercent = 0,
+    paymentMode,
+    previousBalance,
 }: ThermalTheme2Props) {
     const [currency] = useSettings("settings.businessCurrency", { code: "PKR", symbol: "Rs" });
     const [currencyDisplay] = useSettings<"abbreviation" | "icon">(
@@ -150,6 +154,8 @@ export function ThermalSaleInvoiceClassic({
     const taxAmount = (subTotal - Number(discount)) * (Number(taxPercent) / 100);
     const total = subTotal - Number(discount) + taxAmount;
     const balance = total - Number(received);
+    const prevBalance = Number(previousBalance ?? 0);
+    const currentBalance = prevBalance + balance;
 
     const fmt = (n: number) => n.toFixed(2);
 
@@ -184,6 +190,9 @@ export function ThermalSaleInvoiceClassic({
                 )}
                 {businessProfile?.phone && (
                     <div style={{ fontSize: 11, color: "#444" }}>{businessProfile.phone}</div>
+                )}
+                {businessProfile?.email && (
+                    <div style={{ fontSize: 11, color: "#444" }}>Email: {businessProfile.email}</div>
                 )}
             </div>
 
@@ -298,6 +307,20 @@ export function ThermalSaleInvoiceClassic({
                     <span>Balance Due</span>
                     <span>{fmt(balance)}</span>
                 </div>
+                <div style={{ display: "flex", justifyContent: "space-between", padding: "2px 0" }}>
+                    <span>Prev. Balance</span>
+                    <span>{fmt(prevBalance)}</span>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", padding: "2px 0", fontWeight: 700 }}>
+                    <span>Curr. Balance</span>
+                    <span>{fmt(currentBalance)}</span>
+                </div>
+                {paymentMode && (
+                    <div style={{ display: "flex", justifyContent: "space-between", padding: "2px 0" }}>
+                        <span>Pay. Mode</span>
+                        <span>{paymentMode}</span>
+                    </div>
+                )}
             </div>
 
             <SolidDivider />
@@ -320,6 +343,7 @@ function useCompanyInfo() {
         business_name: userProfile.businessName,
         phone: userProfile.phone,
         address: (userProfile as any).address as string | undefined,
+        email: (userProfile as any).email as string | undefined,
         logo_url: userProfile.logo as string | undefined,
     });
 
@@ -332,6 +356,7 @@ function useCompanyInfo() {
                         business_name: d.business_name || userProfile.businessName,
                         phone: d.phone || userProfile.phone,
                         address: d.address || (userProfile as any).address,
+                        email: d.email || (userProfile as any).email,
                         logo_url: d.logo_url || d.logo || userProfile.logo,
                     });
                 }
@@ -373,10 +398,11 @@ export function ThermalTheme2Preview() {
                     customerName="Zeeshan"
                     customerPhone="03129955494"
                     businessProfile={company}
-                    received={50}
-                    discount={50}
-                    discountPercent={50}
+                    received={0}
+                    discount={0}
                     taxPercent={0}
+                    paymentMode="Credit"
+                    previousBalance={800}
                 />
             </div>
         </div>

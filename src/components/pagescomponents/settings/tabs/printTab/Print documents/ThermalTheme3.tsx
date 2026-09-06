@@ -21,10 +21,12 @@ interface ThermalTheme3Props {
     invoiceDate: string;
     customerName: string;
     customerPhone?: string;
-    businessProfile?: { business_name?: string; phone?: string; logo_url?: string };
+    businessProfile?: { business_name?: string; phone?: string; logo_url?: string; address?: string; email?: string };
     received?: number;
     discount?: number;
     discountPercent?: number;
+    paymentMode?: string;
+    previousBalance?: number;
 }
 
 /* ─────────────────────── Dummy preview data ────────────────────────── */
@@ -61,6 +63,8 @@ export function ThermalSaleInvoiceImpact({
     received = 0,
     discount = 0,
     discountPercent,
+    paymentMode,
+    previousBalance,
 }: ThermalTheme3Props) {
     const [currency] = useSettings("settings.businessCurrency", { code: "PKR", symbol: "Rs" });
     const [currencyDisplay] = useSettings<"abbreviation" | "icon">(
@@ -75,6 +79,8 @@ export function ThermalSaleInvoiceImpact({
     const total = subTotal - Number(discount);
     const balance = total - Number(received);
     const youSaved = Number(discount);
+    const prevBalance = Number(previousBalance ?? 0);
+    const currentBalance = prevBalance + balance;
 
     const fmt = (n: number) => n.toFixed(2);
     const businessName = (businessProfile?.business_name || "My Company").toUpperCase();
@@ -114,8 +120,14 @@ export function ThermalSaleInvoiceImpact({
                     />
                 )}
                 <div style={{ fontSize: 15, fontWeight: 800, letterSpacing: 1 }}>{businessName}</div>
+                {businessProfile?.address && (
+                    <div style={{ fontSize: 11 }}>{businessProfile.address}</div>
+                )}
                 {businessProfile?.phone && (
                     <div style={{ fontSize: 11 }}>TEL: {businessProfile.phone}</div>
+                )}
+                {businessProfile?.email && (
+                    <div style={{ fontSize: 11 }}>Email: {businessProfile.email}</div>
                 )}
             </div>
 
@@ -177,6 +189,11 @@ export function ThermalSaleInvoiceImpact({
 
             <div style={row}><span>RECEIVED</span><span>{fmt(Number(received))}</span></div>
             <div style={row}><span>BALANCE</span><span>{fmt(balance)}</span></div>
+            <div style={row}><span>PREV. BALANCE</span><span>{fmt(prevBalance)}</span></div>
+            <div style={{ ...row, fontWeight: 700 }}><span>CURR. BALANCE</span><span>{fmt(currentBalance)}</span></div>
+            {paymentMode && (
+                <div style={row}><span>PAY. MODE</span><span>{paymentMode}</span></div>
+            )}
 
             {youSaved > 0 && (
                 <>
@@ -195,6 +212,8 @@ function useCompanyInfo() {
         business_name: userProfile.businessName,
         phone: userProfile.phone,
         logo_url: userProfile.logo as string | undefined,
+        address: (userProfile as any).address as string | undefined,
+        email: (userProfile as any).email as string | undefined,
     });
 
     useEffect(() => {
@@ -206,6 +225,8 @@ function useCompanyInfo() {
                         business_name: d.business_name || userProfile.businessName,
                         phone: d.phone || userProfile.phone,
                         logo_url: d.logo_url || d.logo || userProfile.logo,
+                        address: d.address || (userProfile as any).address,
+                        email: d.email || (userProfile as any).email,
                     });
                 }
             })
@@ -246,9 +267,10 @@ export function ThermalTheme3Preview() {
                     customerName="Zeeshan"
                     customerPhone="03129955494"
                     businessProfile={company}
-                    received={50}
-                    discount={50}
-                    discountPercent={50}
+                    received={0}
+                    discount={0}
+                    paymentMode="Credit"
+                    previousBalance={800}
                 />
             </div>
         </div>

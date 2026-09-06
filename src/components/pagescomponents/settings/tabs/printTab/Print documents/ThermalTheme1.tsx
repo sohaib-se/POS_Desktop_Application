@@ -21,10 +21,12 @@ interface ThermalTheme1Props {
   invoiceDate: string;
   customerName: string;
   customerPhone?: string;
-  businessProfile?: { business_name?: string; phone?: string; logo_url?: string };
+  businessProfile?: { business_name?: string; phone?: string; logo_url?: string; address?: string; email?: string };
   received?: number;
   discount?: number;
   discountPercent?: number;
+  paymentMode?: string;
+  previousBalance?: number;
 }
 
 /* ─────────────────────── Dummy preview data ────────────────────────── */
@@ -117,6 +119,8 @@ export function ThermalSaleInvoice({
   received = 0,
   discount = 0,
   discountPercent,
+  paymentMode,
+  previousBalance,
 }: ThermalTheme1Props) {
   const [currency] = useSettings("settings.businessCurrency", { code: "PKR", symbol: "Rs" });
   const [currencyDisplay] = useSettings<"abbreviation" | "icon">(
@@ -131,6 +135,8 @@ export function ThermalSaleInvoice({
   const total = subTotal - Number(discount);
   const balance = total - Number(received);
   const youSaved = Number(discount);
+  const prevBalance = Number(previousBalance ?? 0);
+  const currentBalance = prevBalance + balance;
 
   const fmt = (n: number) => n.toFixed(2);
 
@@ -172,10 +178,21 @@ export function ThermalSaleInvoice({
           {businessProfile?.business_name || "My Company"}
         </div>
 
-        {/* Phone — orange */}
+        {/* Address */}
+        {businessProfile?.address && (
+          <div style={{ fontSize: 11, color: "#111", marginTop: 1 }}>
+            {businessProfile.address}
+          </div>
+        )}
+        {/* Phone + Email */}
         {businessProfile?.phone && (
           <div style={{ fontSize: 11, color: "#111", fontWeight: 500 }}>
             Ph.No.: {businessProfile.phone}
+          </div>
+        )}
+        {businessProfile?.email && (
+          <div style={{ fontSize: 11, color: "#111", fontWeight: 500 }}>
+            Email: {businessProfile.email}
           </div>
         )}
       </div>
@@ -378,6 +395,35 @@ export function ThermalSaleInvoice({
             <span style={{ minWidth: 60, textAlign: "right" }}>{fmt(balance)}</span>
           </span>
         </div>
+
+        {/* Previous Balance */}
+        <div style={{ display: "flex", justifyContent: "space-between", lineHeight: 1.9 }}>
+          <span style={{ paddingLeft: 24, color: LABEL_COLOR, fontWeight: 600 }}>Prev. Balance</span>
+          <span style={{ display: "flex", gap: 6, alignItems: "center" }}>
+            <span>:</span>
+            <span style={{ minWidth: 60, textAlign: "right" }}>{fmt(prevBalance)}</span>
+          </span>
+        </div>
+
+        {/* Current Balance */}
+        <div style={{ display: "flex", justifyContent: "space-between", lineHeight: 1.9 }}>
+          <span style={{ paddingLeft: 24, color: LABEL_COLOR, fontWeight: 700 }}>Curr. Balance</span>
+          <span style={{ display: "flex", gap: 6, alignItems: "center" }}>
+            <span>:</span>
+            <span style={{ minWidth: 60, textAlign: "right", fontWeight: 700 }}>{fmt(currentBalance)}</span>
+          </span>
+        </div>
+
+        {/* Payment Mode */}
+        {paymentMode && (
+          <div style={{ display: "flex", justifyContent: "space-between", lineHeight: 1.9 }}>
+            <span style={{ paddingLeft: 24, color: LABEL_COLOR, fontWeight: 600 }}>Pay. Mode</span>
+            <span style={{ display: "flex", gap: 6, alignItems: "center" }}>
+              <span>:</span>
+              <span style={{ minWidth: 60, textAlign: "right" }}>{paymentMode}</span>
+            </span>
+          </div>
+        )}
       </div>
 
       {/* ── You Saved (only shown if discount > 0) ── */}
@@ -408,6 +454,8 @@ function useCompanyInfo() {
     business_name: userProfile.businessName,
     phone: userProfile.phone,
     logo_url: userProfile.logo as string | undefined,
+    address: (userProfile as any).address as string | undefined,
+    email: (userProfile as any).email as string | undefined,
   });
 
   useEffect(() => {
@@ -419,6 +467,8 @@ function useCompanyInfo() {
             business_name: d.business_name || userProfile.businessName,
             phone: d.phone || userProfile.phone,
             logo_url: d.logo_url || d.logo || userProfile.logo,
+            address: d.address || (userProfile as any).address,
+            email: d.email || (userProfile as any).email,
           });
         }
       })
@@ -460,9 +510,10 @@ export function ThermalTheme1Preview() {
           customerName="Zeeshan"
           customerPhone="03129955494"
           businessProfile={company}
-          received={50}
-          discount={50}
-          discountPercent={50}
+          received={0}
+          discount={0}
+          paymentMode="Credit"
+          previousBalance={800}
         />
       </div>
     </div>

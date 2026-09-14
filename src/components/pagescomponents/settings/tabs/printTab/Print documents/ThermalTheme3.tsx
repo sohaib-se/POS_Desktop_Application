@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useSettings } from "@/hooks/useSettings";
 import { userProfile } from "@/data/mockData";
+import { usePrintTotalsSettings } from "@/hooks/usePrintSettings";
 
 /* ─────────────────────────────── Types ─────────────────────────────── */
 
@@ -74,6 +75,8 @@ export function ThermalSaleInvoiceImpact({
     void currencyDisplay;
     void currency;
 
+    const ps = usePrintTotalsSettings();
+
     const totalQuantity = records.reduce((s, r) => s + Number(r.quantity || 0), 0);
     const subTotal = records.reduce((s, r) => s + Number(r.amount || 0), 0);
     const total = subTotal - Number(discount);
@@ -82,7 +85,7 @@ export function ThermalSaleInvoiceImpact({
     const prevBalance = Number(previousBalance ?? 0);
     const currentBalance = prevBalance + balance;
 
-    const fmt = (n: number) => n.toFixed(2);
+    const fmt = (n: number) => ps.amountWithDecimal ? n.toFixed(2) : Math.round(n).toString();
     const businessName = (businessProfile?.business_name || "My Company").toUpperCase();
 
     /* Shared row style — flex space-between, monospace font */
@@ -168,7 +171,7 @@ export function ThermalSaleInvoiceImpact({
 
             {rule("-")}
 
-            <div style={row}><span>TOTAL ITEMS</span><span>{totalQuantity}</span></div>
+            {ps.totalItemQuantity && <div style={row}><span>TOTAL ITEMS</span><span>{totalQuantity}</span></div>}
             <div style={row}><span>SUBTOTAL</span><span>{fmt(subTotal)}</span></div>
 
             {discount > 0 && (
@@ -187,15 +190,17 @@ export function ThermalSaleInvoiceImpact({
 
             {rule("=")}
 
-            <div style={row}><span>RECEIVED</span><span>{fmt(Number(received))}</span></div>
-            <div style={row}><span>BALANCE</span><span>{fmt(balance)}</span></div>
+            {ps.receivedAmount && <div style={row}><span>RECEIVED</span><span>{fmt(Number(received))}</span></div>}
+            {ps.balanceAmount && <div style={row}><span>BALANCE</span><span>{fmt(balance)}</span></div>}
+            {ps.previousBalance && (
             <div style={row}><span>PREV. BALANCE</span><span>{fmt(prevBalance)}</span></div>
-            <div style={{ ...row, fontWeight: 700 }}><span>CURR. BALANCE</span><span>{fmt(currentBalance)}</span></div>
+          )}
+            {ps.currentBalanceOfParty && <div style={{ ...row, fontWeight: 700 }}><span>CURR. BALANCE</span><span>{fmt(currentBalance)}</span></div>}
             {paymentMode && (
                 <div style={row}><span>PAY. MODE</span><span>{paymentMode}</span></div>
             )}
 
-            {youSaved > 0 && (
+            {youSaved > 0 && ps.youSaved && (
                 <>
                     {rule("-")}
                     <div style={row}><span>YOU SAVED</span><span>{fmt(youSaved)}</span></div>

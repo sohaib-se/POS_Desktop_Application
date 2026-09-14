@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { getPrintTotalsSettings, setPrintTotalsSettings } from "@/hooks/usePrintSettings";
 import { PhoneInput } from "@/components/ui/phone-input";
 
 /* ─────────────────────────── Shared primitives ──────────────────────── */
@@ -393,7 +394,9 @@ interface PrintSettings {
   receivedAmount: boolean;
   balanceAmount: boolean;
   currentBalanceOfParty: boolean;
+  previousBalance: boolean;
   taxDetails: boolean;
+  discount: boolean;
   youSaved: boolean;
   // Footer
   printDescription: boolean;
@@ -415,13 +418,16 @@ const DEFAULT_SETTINGS: PrintSettings = {
   companyNameTextSize: "medium",
   invoiceTextSize: "medium",
   itemTableCustomization: false,
-  totalItemQuantity: false,
-  amountWithDecimal: false,
-  receivedAmount: false,
-  balanceAmount: false,
-  currentBalanceOfParty: false,
-  taxDetails: false,
-  youSaved: false,
+  // Totals & Taxes — all enabled by default
+  totalItemQuantity: true,
+  amountWithDecimal: true,
+  receivedAmount: true,
+  balanceAmount: true,
+  currentBalanceOfParty: true,
+  previousBalance: true,
+  taxDetails: true,
+  discount: true,
+  youSaved: true,
   printDescription: false,
   printTermsAndConditions: false,
   printReceivedBy: false,
@@ -432,7 +438,22 @@ const DEFAULT_SETTINGS: PrintSettings = {
 /* ─────────────────────────── RightPanel ────────────────────────────── */
 
 export function RightPanel() {
-  const [settings, setSettings] = useState<PrintSettings>(DEFAULT_SETTINGS);
+  const [settings, setSettings] = useState<PrintSettings>(() => {
+    // Merge persisted Totals & Taxes settings with the rest of the defaults
+    const saved = getPrintTotalsSettings();
+    return {
+      ...DEFAULT_SETTINGS,
+      totalItemQuantity: saved.totalItemQuantity,
+      amountWithDecimal: saved.amountWithDecimal,
+      receivedAmount: saved.receivedAmount,
+      balanceAmount: saved.balanceAmount,
+      currentBalanceOfParty: saved.currentBalanceOfParty,
+      previousBalance: saved.previousBalance,
+      taxDetails: saved.taxDetails,
+      discount: saved.discount,
+      youSaved: saved.youSaved,
+    };
+  });
   const [saveStatus, setSaveStatus] = useState<"saving" | "saved" | "error" | null>(null);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Keep a ref in sync so the debounced callback can read the latest values
@@ -458,8 +479,31 @@ export function RightPanel() {
       .catch(() => {});
   }, []);
 
-  const set = <K extends keyof PrintSettings>(key: K, value: PrintSettings[K]) =>
-    setSettings((prev) => ({ ...prev, [key]: value }));
+  const TOTALS_KEYS = new Set([
+    "totalItemQuantity", "amountWithDecimal", "receivedAmount",
+    "balanceAmount", "currentBalanceOfParty", "previousBalance", "taxDetails", "discount", "youSaved",
+  ] as const);
+
+  const set = <K extends keyof PrintSettings>(key: K, value: PrintSettings[K]) => {
+    setSettings((prev) => {
+      const next = { ...prev, [key]: value };
+      // Sync Totals & Taxes toggles to localStorage immediately
+      if (TOTALS_KEYS.has(key as any)) {
+        setPrintTotalsSettings({
+          totalItemQuantity: next.totalItemQuantity,
+          amountWithDecimal: next.amountWithDecimal,
+          receivedAmount: next.receivedAmount,
+          balanceAmount: next.balanceAmount,
+          currentBalanceOfParty: next.currentBalanceOfParty,
+          previousBalance: next.previousBalance,
+          taxDetails: next.taxDetails,
+          discount: next.discount,
+          youSaved: next.youSaved,
+        });
+      }
+      return next;
+    });
+  };
 
   /* ── Save profile fields to API (debounced 600ms) ── */
   const saveProfileField = (patch: Partial<{
@@ -587,8 +631,10 @@ export function RightPanel() {
         <ToggleRow label="Amount with Decimal e.g. 0.00" checked={settings.amountWithDecimal} onChange={(v) => set("amountWithDecimal", v)} />
         <ToggleRow label="Received Amount" checked={settings.receivedAmount} onChange={(v) => set("receivedAmount", v)} />
         <ToggleRow label="Balance Amount" checked={settings.balanceAmount} onChange={(v) => set("balanceAmount", v)} />
+        <ToggleRow label="Previous Balance" checked={settings.previousBalance} onChange={(v) => set("previousBalance", v)} />
         <ToggleRow label="Current Balance of Party" checked={settings.currentBalanceOfParty} onChange={(v) => set("currentBalanceOfParty", v)} />
         <ToggleRow label="Tax Details" checked={settings.taxDetails} onChange={(v) => set("taxDetails", v)} />
+        <ToggleRow label="Discount" checked={settings.discount} onChange={(v) => set("discount", v)} />
         <ToggleRow label="You Saved" checked={settings.youSaved} onChange={(v) => set("youSaved", v)} />
       </SettingsSection>
 

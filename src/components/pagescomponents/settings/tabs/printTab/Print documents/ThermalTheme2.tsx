@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useSettings } from "@/hooks/useSettings";
 import { userProfile } from "@/data/mockData";
+import { usePrintTotalsSettings } from "@/hooks/usePrintSettings";
 
 /* ─────────────────────────────── Types ─────────────────────────────── */
 
@@ -149,6 +150,8 @@ export function ThermalSaleInvoiceClassic({
     void currencyDisplay;
     void currency;
 
+    const ps = usePrintTotalsSettings();
+
     const totalQuantity = records.reduce((s, r) => s + Number(r.quantity || 0), 0);
     const subTotal = records.reduce((s, r) => s + Number(r.amount || 0), 0);
     const taxAmount = (subTotal - Number(discount)) * (Number(taxPercent) / 100);
@@ -157,7 +160,7 @@ export function ThermalSaleInvoiceClassic({
     const prevBalance = Number(previousBalance ?? 0);
     const currentBalance = prevBalance + balance;
 
-    const fmt = (n: number) => n.toFixed(2);
+    const fmt = (n: number) => ps.amountWithDecimal ? n.toFixed(2) : Math.round(n).toString();
 
     return (
         <div
@@ -252,9 +255,13 @@ export function ThermalSaleInvoiceClassic({
                     </tr>
                     <tr>
                         <td style={{ padding: "3px 0", fontWeight: 600 }}>Items</td>
-                        <td style={{ padding: "3px 0", textAlign: "center", fontWeight: 600 }}>
-                            {totalQuantity}
-                        </td>
+                        {ps.totalItemQuantity ? (
+                            <td style={{ padding: "3px 0", textAlign: "center", fontWeight: 600 }}>
+                                {totalQuantity}
+                            </td>
+                        ) : (
+                            <td />
+                        )}
                         <td colSpan={2} />
                     </tr>
                 </tbody>
@@ -274,7 +281,7 @@ export function ThermalSaleInvoiceClassic({
                     </div>
                 )}
 
-                {taxPercent > 0 && (
+                {taxPercent > 0 && ps.taxDetails && (
                     <div style={{ display: "flex", justifyContent: "space-between", padding: "2px 0" }}>
                         <span>Tax ({taxPercent}%)</span>
                         <span>{fmt(taxAmount)}</span>
@@ -299,22 +306,30 @@ export function ThermalSaleInvoiceClassic({
             </div>
 
             <div style={{ fontSize: 12 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", padding: "2px 0" }}>
-                    <span>Received</span>
-                    <span>{fmt(Number(received))}</span>
-                </div>
-                <div style={{ display: "flex", justifyContent: "space-between", padding: "2px 0", fontWeight: 700 }}>
-                    <span>Balance Due</span>
-                    <span>{fmt(balance)}</span>
-                </div>
-                <div style={{ display: "flex", justifyContent: "space-between", padding: "2px 0" }}>
-                    <span>Prev. Balance</span>
-                    <span>{fmt(prevBalance)}</span>
-                </div>
-                <div style={{ display: "flex", justifyContent: "space-between", padding: "2px 0", fontWeight: 700 }}>
-                    <span>Curr. Balance</span>
-                    <span>{fmt(currentBalance)}</span>
-                </div>
+                {ps.receivedAmount && (
+                    <div style={{ display: "flex", justifyContent: "space-between", padding: "2px 0" }}>
+                        <span>Received</span>
+                        <span>{fmt(Number(received))}</span>
+                    </div>
+                )}
+                {ps.balanceAmount && (
+                    <div style={{ display: "flex", justifyContent: "space-between", padding: "2px 0", fontWeight: 700 }}>
+                        <span>Balance Due</span>
+                        <span>{fmt(balance)}</span>
+                    </div>
+                )}
+                {ps.previousBalance && (
+                    <div style={{ display: "flex", justifyContent: "space-between", padding: "2px 0", color: "#111" }}>
+                        <span>Previous Balance:</span>
+                        <span>{fmt(prevBalance)}</span>
+                    </div>
+                )}
+                {ps.currentBalanceOfParty && (
+                    <div style={{ display: "flex", justifyContent: "space-between", padding: "2px 0", fontWeight: 700 }}>
+                        <span>Curr. Balance</span>
+                        <span>{fmt(currentBalance)}</span>
+                    </div>
+                )}
                 {paymentMode && (
                     <div style={{ display: "flex", justifyContent: "space-between", padding: "2px 0" }}>
                         <span>Pay. Mode</span>

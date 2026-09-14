@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useSettings } from "@/hooks/useSettings";
 import { userProfile } from "@/data/mockData";
+import { usePrintTotalsSettings } from "@/hooks/usePrintSettings";
 
 interface SaleInvoiceLineItem {
   id?: string | number;
@@ -24,6 +25,9 @@ interface Theme4InvoicePrintReportProps {
   accentColor?: string;
   paymentMode?: string;
   previousBalance?: number;
+  discount?: number;
+  discountPercent?: number;
+  taxPercent?: number;
 }
 
 // Minimal number-to-words for whole rupee amounts (extend as needed for paisa/large numbers)
@@ -100,6 +104,9 @@ export function Theme4InvoicePrintReport({
   accentColor,
   paymentMode,
   previousBalance,
+  discount = 0,
+  discountPercent = 0,
+  taxPercent = 0,
 }: Theme4InvoicePrintReportProps) {
   const [currency] = useSettings('settings.businessCurrency', { code: 'PKR', symbol: 'Rs' });
   const [currencyDisplay] = useSettings<'abbreviation' | 'icon'>('settings.currencyDisplay', 'abbreviation');
@@ -119,14 +126,18 @@ export function Theme4InvoicePrintReport({
     return dateStr;
   };
 
-  const fmt = (n: number) => `${currencyStr} ${n.toFixed(2)}`;
-
   const totalQuantity = records.reduce((sum, r) => sum + Number(r.quantity || 0), 0);
   const subTotal = records.reduce((sum, r) => sum + Number(r.amount || 0), 0);
-  const total = subTotal;
+  const discountAmount = discount > 0 ? discount : (discountPercent > 0 ? subTotal * discountPercent / 100 : 0);
+  const taxAmount = taxPercent > 0 ? (subTotal - discountAmount) * taxPercent / 100 : 0;
+  const total = subTotal - discountAmount + taxAmount;
   const balance = total - Number(received || 0);
   const prevBalance = Number(previousBalance ?? 0);
   const currentBalance = prevBalance + balance;
+
+  const ps = usePrintTotalsSettings();
+
+  const fmt = (n: number) => `${currencyStr} ${ps.amountWithDecimal ? n.toFixed(2) : Math.round(n).toString()}`;
 
   // Pad the item table with blank rows so short invoices still fill a full page, Tally-style
   const MIN_ROWS = 10;
@@ -186,10 +197,10 @@ export function Theme4InvoicePrintReport({
               <td className="py-1 px-2 text-right">{record.quantity ?? ""}</td>
               <td className="py-1 px-2 text-right">{record.unit || ""}</td>
               <td className="py-1 px-2 text-right whitespace-nowrap">
-                {currencyStr} {Number(record.pricePerUnit ?? record.price_per_unit ?? 0).toFixed(2)}
+                {currencyStr} {ps.amountWithDecimal ? Number(record.pricePerUnit ?? record.price_per_unit ?? 0).toFixed(2) : Math.round(Number(record.pricePerUnit ?? record.price_per_unit ?? 0)).toString()}
               </td>
               <td className="py-1 px-2 text-right whitespace-nowrap">
-                {currencyStr} {Number(record.amount || 0).toFixed(2)}
+                {currencyStr} {ps.amountWithDecimal ? Number(record.amount || 0).toFixed(2) : Math.round(Number(record.amount || 0)).toString()}
               </td>
             </tr>
           ))}
@@ -209,7 +220,7 @@ export function Theme4InvoicePrintReport({
       {/* Total row */}
       <div className="flex justify-between items-center border-t border-b border-gray-400 py-1.5 mb-4">
         <span className="text-sm font-bold pl-2">Total</span>
-        <span className="text-sm font-bold">{totalQuantity}</span>
+        {ps.totalItemQuantity && <span className="text-sm font-bold">{totalQuantity}</span>}
         <span className="text-sm font-bold pr-2 whitespace-nowrap">{fmt(total)}</span>
       </div>
 
@@ -231,26 +242,52 @@ export function Theme4InvoicePrintReport({
             <span>Sub Total</span>
             <span className="whitespace-nowrap">{fmt(subTotal)}</span>
           </div>
+          {ps.discount && discountAmount > 0 && (
+            <div className="flex justify-between text-xs px-0 py-1 border-b border-gray-300 text-green-700">
+              <span>Discount {discountPercent > 0 ? `(${discountPercent}%)` : ""}</span>
+              <span className="whitespace-nowrap">- {fmt(discountAmount)}</span>
+            </div>
+          )}
+          {ps.taxDetails && taxAmount > 0 && (
+            <div className="flex justify-between text-xs px-0 py-1 border-b border-gray-300">
+              <span>Tax ({taxPercent}%)</span>
+              <span className="whitespace-nowrap">{fmt(taxAmount)}</span>
+            </div>
+          )}
+          {ps.youSaved && discountAmount > 0 && (
+            <div className="flex justify-between text-xs px-0 py-1 border-b border-gray-300 text-green-700 font-semibold">
+              <span>You Saved</span>
+              <span className="whitespace-nowrap">{fmt(discountAmount)}</span>
+            </div>
+          )}
           <div className="flex justify-between text-xs px-0 py-1 border-b border-gray-300 font-bold">
             <span>Total</span>
             <span className="whitespace-nowrap">{fmt(total)}</span>
           </div>
-          <div className="flex justify-between text-xs px-0 py-1 border-b border-gray-300">
-            <span>Received</span>
-            <span className="whitespace-nowrap">{fmt(Number(received || 0))}</span>
-          </div>
-          <div className="flex justify-between text-xs px-0 py-1 border-b border-gray-300">
-            <span>Balance</span>
-            <span className="whitespace-nowrap">{fmt(balance)}</span>
-          </div>
-          <div className="flex justify-between text-xs px-0 py-1 mt-2">
-            <span>Previous Balance</span>
-            <span className="whitespace-nowrap">{fmt(prevBalance)}</span>
-          </div>
-          <div className="flex justify-between text-xs px-0 py-1 font-bold">
-            <span>Current Balance</span>
-            <span className="whitespace-nowrap">{fmt(currentBalance)}</span>
-          </div>
+          {ps.receivedAmount && (
+            <div className="flex justify-between text-xs px-0 py-1 border-b border-gray-300">
+              <span>Received</span>
+              <span className="whitespace-nowrap">{fmt(Number(received || 0))}</span>
+            </div>
+          )}
+          {ps.balanceAmount && (
+            <div className="flex justify-between text-xs px-0 py-1 border-b border-gray-300">
+              <span>Balance</span>
+              <span className="whitespace-nowrap">{fmt(balance)}</span>
+            </div>
+          )}
+          {ps.previousBalance && (
+            <div className="flex justify-between text-xs px-0 py-1 mt-2">
+              <span>Previous Balance</span>
+              <span className="whitespace-nowrap">{fmt(prevBalance)}</span>
+            </div>
+          )}
+          {ps.currentBalanceOfParty && (
+            <div className="flex justify-between text-xs px-0 py-1 font-bold">
+              <span>Current Balance</span>
+              <span className="whitespace-nowrap">{fmt(currentBalance)}</span>
+            </div>
+          )}
         </div>
       </div>
 
@@ -314,6 +351,9 @@ export function Theme4Preview({ accentColor }: { accentColor?: string } = {}) {
           accentColor={accentColor}
           paymentMode="Credit"
           previousBalance={800}
+          discount={10}
+          discountPercent={10}
+          taxPercent={5}
         />
       </div>
     </div>

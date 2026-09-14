@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useSettings } from "@/hooks/useSettings";
 import { userProfile } from "@/data/mockData";
+import { usePrintTotalsSettings } from "@/hooks/usePrintSettings";
 
 /* ─────────────────────────────── Types ─────────────────────────────── */
 
@@ -26,11 +27,14 @@ interface TaxInvoicePrintReportProps {
   accentColor?: string;
   paymentMode?: string;
   previousBalance?: number;
+  discount?: number;
+  discountPercent?: number;
+  taxPercent?: number;
 }
 
 /* ─────────────────────── Dummy preview data ────────────────────────── */
 
-const TAX_DUMMY_RECORDS: TaxInvoiceLineItem[] = [
+const DUMMY_RECORDS: TaxInvoiceLineItem[] = [
   { id: 1, itemName: "Book", quantity: 1, unit: "Bt", pricePerUnit: 100, amount: 100 },
 ];
 
@@ -106,6 +110,9 @@ export function TaxInvoicePrintReport({
   accentColor,
   paymentMode,
   previousBalance,
+  discount = 0,
+  discountPercent = 0,
+  taxPercent = 0,
 }: TaxInvoicePrintReportProps) {
   const [currency] = useSettings("settings.businessCurrency", { code: "PKR", symbol: "Rs" });
   const [currencyDisplay] = useSettings<"abbreviation" | "icon">("settings.currencyDisplay", "abbreviation");
@@ -123,13 +130,18 @@ export function TaxInvoicePrintReport({
     return dateStr;
   };
 
-  const fmt = (n: number) => `${currencyStr} ${n.toFixed(2)}`;
-  const totalQuantity = records.reduce((s, r) => s + Number(r.quantity || 0), 0);
   const subTotal = records.reduce((s, r) => s + Number(r.amount || 0), 0);
-  const total = subTotal;
+  const totalQuantity = records.reduce((s, r) => s + Number(r.quantity || 0), 0);
+  const discountAmount = discount > 0 ? discount : (discountPercent > 0 ? subTotal * discountPercent / 100 : 0);
+  const taxAmount = taxPercent > 0 ? (subTotal - discountAmount) * taxPercent / 100 : 0;
+  const total = subTotal - discountAmount + taxAmount;
   const balance = total - Number(received);
   const prevBalance = Number(previousBalance ?? 0);
   const currentBalance = prevBalance + balance;
+
+  const ps = usePrintTotalsSettings();
+
+  const fmt = (n: number) => `${currencyStr} ${ps.amountWithDecimal ? n.toFixed(2) : Math.round(n).toString()}`;
 
   // MIN_ROWS/row-height matched to the other themes so this page fills the same length
   const MIN_ROWS = 10;
@@ -193,8 +205,8 @@ export function TaxInvoicePrintReport({
                 <td style={{ padding: "4px 8px", border: `1px solid ${BORDER}`, fontWeight: 700 }}>{r.itemName || r.item_name || ""}</td>
                 <td style={{ padding: "4px 8px", border: `1px solid ${BORDER}`, textAlign: "right" }}>{r.quantity ?? ""}</td>
                 <td style={{ padding: "4px 8px", border: `1px solid ${BORDER}`, textAlign: "right" }}>{r.unit || ""}</td>
-                <td style={{ padding: "4px 8px", border: `1px solid ${BORDER}`, textAlign: "right", whiteSpace: "nowrap" }}>{currencyStr} {Number(r.pricePerUnit ?? r.price_per_unit ?? 0).toFixed(2)}</td>
-                <td style={{ padding: "4px 8px", border: `1px solid ${BORDER}`, textAlign: "right", whiteSpace: "nowrap" }}>{currencyStr} {Number(r.amount || 0).toFixed(2)}</td>
+                <td style={{ padding: "4px 8px", border: `1px solid ${BORDER}`, textAlign: "right", whiteSpace: "nowrap" }}>{currencyStr} {ps.amountWithDecimal ? Number(r.pricePerUnit ?? r.price_per_unit ?? 0).toFixed(2) : Math.round(Number(r.pricePerUnit ?? r.price_per_unit ?? 0)).toString()}</td>
+                <td style={{ padding: "4px 8px", border: `1px solid ${BORDER}`, textAlign: "right", whiteSpace: "nowrap" }}>{currencyStr} {ps.amountWithDecimal ? Number(r.amount || 0).toFixed(2) : Math.round(Number(r.amount || 0)).toString()}</td>
               </tr>
             ))}
             {fillerRows > 0 && (
@@ -209,7 +221,11 @@ export function TaxInvoicePrintReport({
             )}
             <tr style={{ fontWeight: 700 }}>
               <td style={{ padding: "6px 8px", border: `1px solid ${BORDER}` }} colSpan={2}>Total</td>
-              <td style={{ padding: "6px 8px", border: `1px solid ${BORDER}`, textAlign: "right" }}>{totalQuantity}</td>
+              {ps.totalItemQuantity ? (
+                <td style={{ padding: "6px 8px", border: `1px solid ${BORDER}`, textAlign: "right" }}>{totalQuantity}</td>
+              ) : (
+                <td style={{ border: `1px solid ${BORDER}` }}></td>
+              )}
               <td style={{ border: `1px solid ${BORDER}` }}></td>
               <td style={{ border: `1px solid ${BORDER}` }}></td>
               <td style={{ padding: "6px 8px", border: `1px solid ${BORDER}`, textAlign: "right", whiteSpace: "nowrap" }}>{fmt(total)}</td>
@@ -246,21 +262,44 @@ export function TaxInvoicePrintReport({
             <div style={{ display: "flex", justifyContent: "space-between", padding: "3px 10px", fontSize: 12, borderBottom: "1px solid #e5e5e5" }}>
               <span>Sub Total</span><span style={{ whiteSpace: "nowrap" }}>{fmt(subTotal)}</span>
             </div>
+            {ps.discount && discountAmount > 0 && (
+              <div style={{ display: "flex", justifyContent: "space-between", padding: "3px 10px", fontSize: 12, borderBottom: "1px solid #e5e5e5", color: "green" }}>
+                <span>Discount {discountPercent > 0 ? `(${discountPercent}%)` : ""}</span><span style={{ whiteSpace: "nowrap" }}>- {fmt(discountAmount)}</span>
+              </div>
+            )}
+            {ps.taxDetails && taxAmount > 0 && (
+              <div style={{ display: "flex", justifyContent: "space-between", padding: "3px 10px", fontSize: 12, borderBottom: "1px solid #e5e5e5" }}>
+                <span>Tax ({taxPercent}%)</span><span style={{ whiteSpace: "nowrap" }}>{fmt(taxAmount)}</span>
+              </div>
+            )}
+            {ps.youSaved && discountAmount > 0 && (
+              <div style={{ display: "flex", justifyContent: "space-between", padding: "3px 10px", fontSize: 12, borderBottom: "1px solid #e5e5e5", color: "green", fontWeight: 700 }}>
+                <span>You Saved</span><span style={{ whiteSpace: "nowrap" }}>{fmt(discountAmount)}</span>
+              </div>
+            )}
             <div style={{ display: "flex", justifyContent: "space-between", padding: "3px 10px", fontSize: 12, fontWeight: 700, borderBottom: "1px solid #e5e5e5" }}>
               <span>Total</span><span style={{ whiteSpace: "nowrap" }}>{fmt(total)}</span>
             </div>
-            <div style={{ display: "flex", justifyContent: "space-between", padding: "3px 10px", fontSize: 12, borderBottom: "1px solid #e5e5e5" }}>
-              <span>Received</span><span style={{ whiteSpace: "nowrap" }}>{fmt(Number(received))}</span>
-            </div>
-            <div style={{ display: "flex", justifyContent: "space-between", padding: "3px 10px", fontSize: 12, borderBottom: "1px solid #e5e5e5" }}>
-              <span>Balance</span><span style={{ whiteSpace: "nowrap" }}>{fmt(balance)}</span>
-            </div>
-            <div style={{ display: "flex", justifyContent: "space-between", padding: "3px 10px", fontSize: 12, marginTop: 8 }}>
-              <span>Previous Balance</span><span style={{ whiteSpace: "nowrap" }}>{fmt(prevBalance)}</span>
-            </div>
-            <div style={{ display: "flex", justifyContent: "space-between", padding: "3px 10px", fontSize: 12, fontWeight: 700 }}>
-              <span>Current Balance</span><span style={{ whiteSpace: "nowrap" }}>{fmt(currentBalance)}</span>
-            </div>
+            {ps.receivedAmount && (
+              <div style={{ display: "flex", justifyContent: "space-between", padding: "3px 10px", fontSize: 12, borderBottom: "1px solid #e5e5e5" }}>
+                <span>Received</span><span style={{ whiteSpace: "nowrap" }}>{fmt(Number(received))}</span>
+              </div>
+            )}
+            {ps.balanceAmount && (
+              <div style={{ display: "flex", justifyContent: "space-between", padding: "3px 10px", fontSize: 12, borderBottom: "1px solid #e5e5e5" }}>
+                <span>Balance</span><span style={{ whiteSpace: "nowrap" }}>{fmt(balance)}</span>
+              </div>
+            )}
+            {ps.previousBalance && (
+              <div style={{ display: "flex", justifyContent: "space-between", padding: "3px 10px", fontSize: 12, marginTop: 8 }}>
+                <span>Previous Balance</span><span style={{ whiteSpace: "nowrap" }}>{fmt(prevBalance)}</span>
+              </div>
+            )}
+            {ps.currentBalanceOfParty && (
+              <div style={{ display: "flex", justifyContent: "space-between", padding: "3px 10px", fontSize: 12, fontWeight: 700 }}>
+                <span>Current Balance</span><span style={{ whiteSpace: "nowrap" }}>{fmt(currentBalance)}</span>
+              </div>
+            )}
           </div>
         </div>
 
@@ -309,7 +348,7 @@ export function TaxThemePreview({ accentColor }: { accentColor?: string } = {}) 
     <div style={{ width: "100%", height: "100%", display: "flex", justifyContent: "center", backgroundColor: "#f3f4f6", padding: "16px 0" }}>
       <div style={{ zoom: 0.88, transformOrigin: "top center", width: 900, flexShrink: 0 }}>
         <TaxInvoicePrintReport
-          records={TAX_DUMMY_RECORDS}
+          records={DUMMY_RECORDS}
           invoiceNo={3}
           invoiceDate="2026-09-03"
           customerName="zeeshan"
@@ -319,6 +358,9 @@ export function TaxThemePreview({ accentColor }: { accentColor?: string } = {}) 
           accentColor={accentColor}
           paymentMode="Credit"
           previousBalance={800}
+          discount={10}
+          discountPercent={10}
+          taxPercent={5}
         />
       </div>
     </div>

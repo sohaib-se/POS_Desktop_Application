@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useSettings } from "@/hooks/useSettings";
 import { userProfile } from "@/data/mockData";
+import { usePrintTotalsSettings } from "@/hooks/usePrintSettings";
 
 /* ─────────────────────────────── Types ─────────────────────────────── */
 
@@ -130,6 +131,8 @@ export function ThermalSaleInvoice({
   void currencyDisplay;
   void currency;
 
+  const ps = usePrintTotalsSettings();
+
   const totalQuantity = records.reduce((s, r) => s + Number(r.quantity || 0), 0);
   const subTotal = records.reduce((s, r) => s + Number(r.amount || 0), 0);
   const total = subTotal - Number(discount);
@@ -138,7 +141,7 @@ export function ThermalSaleInvoice({
   const prevBalance = Number(previousBalance ?? 0);
   const currentBalance = prevBalance + balance;
 
-  const fmt = (n: number) => n.toFixed(2);
+  const fmt = (n: number) => ps.amountWithDecimal ? n.toFixed(2) : Math.round(n).toString();
 
   /* ── Label color used for summary rows ── */
   const LABEL_COLOR = "#111";
@@ -337,9 +340,13 @@ export function ThermalSaleInvoice({
             >
               Total
             </td>
-            <td style={{ padding: "2px 0", textAlign: "center", fontSize: 12 }}>
-              {totalQuantity}
-            </td>
+            {ps.totalItemQuantity ? (
+              <td style={{ padding: "2px 0", textAlign: "center", fontSize: 12 }}>
+                {totalQuantity}
+              </td>
+            ) : (
+              <td style={{ padding: "2px 0" }} />
+            )}
             <td style={{ padding: "2px 0" }} />
             <td style={{ padding: "2px 0", textAlign: "right", fontSize: 12 }}>
               {fmt(subTotal)}
@@ -379,40 +386,48 @@ export function ThermalSaleInvoice({
         </div>
 
         {/* Received */}
-        <div style={{ display: "flex", justifyContent: "space-between", lineHeight: 1.9 }}>
-          <span style={{ paddingLeft: 24, color: LABEL_COLOR, fontWeight: 600 }}>Received</span>
-          <span style={{ display: "flex", gap: 6, alignItems: "center" }}>
-            <span>:</span>
-            <span style={{ minWidth: 60, textAlign: "right" }}>{fmt(Number(received))}</span>
-          </span>
-        </div>
+        {ps.receivedAmount && (
+          <div style={{ display: "flex", justifyContent: "space-between", lineHeight: 1.9 }}>
+            <span style={{ paddingLeft: 24, color: LABEL_COLOR, fontWeight: 600 }}>Received</span>
+            <span style={{ display: "flex", gap: 6, alignItems: "center" }}>
+              <span>:</span>
+              <span style={{ minWidth: 60, textAlign: "right" }}>{fmt(Number(received))}</span>
+            </span>
+          </div>
+        )}
 
         {/* Balance */}
-        <div style={{ display: "flex", justifyContent: "space-between", lineHeight: 1.9 }}>
-          <span style={{ paddingLeft: 24, color: LABEL_COLOR, fontWeight: 600 }}>Balance</span>
-          <span style={{ display: "flex", gap: 6, alignItems: "center" }}>
-            <span>:</span>
-            <span style={{ minWidth: 60, textAlign: "right" }}>{fmt(balance)}</span>
-          </span>
-        </div>
+        {ps.balanceAmount && (
+          <div style={{ display: "flex", justifyContent: "space-between", lineHeight: 1.9 }}>
+            <span style={{ paddingLeft: 24, color: LABEL_COLOR, fontWeight: 600 }}>Balance</span>
+            <span style={{ display: "flex", gap: 6, alignItems: "center" }}>
+              <span>:</span>
+              <span style={{ minWidth: 60, textAlign: "right" }}>{fmt(balance)}</span>
+            </span>
+          </div>
+        )}
 
         {/* Previous Balance */}
-        <div style={{ display: "flex", justifyContent: "space-between", lineHeight: 1.9 }}>
-          <span style={{ paddingLeft: 24, color: LABEL_COLOR, fontWeight: 600 }}>Prev. Balance</span>
-          <span style={{ display: "flex", gap: 6, alignItems: "center" }}>
-            <span>:</span>
-            <span style={{ minWidth: 60, textAlign: "right" }}>{fmt(prevBalance)}</span>
-          </span>
-        </div>
+        {ps.previousBalance && (
+          <div style={{ display: "flex", justifyContent: "space-between", lineHeight: 1.9 }}>
+            <span style={{ paddingLeft: 24, color: LABEL_COLOR, fontWeight: 600 }}>Prev. Balance</span>
+            <span style={{ display: "flex", gap: 6, alignItems: "center" }}>
+              <span>:</span>
+              <span style={{ minWidth: 60, textAlign: "right" }}>{fmt(prevBalance)}</span>
+            </span>
+          </div>
+        )}
 
         {/* Current Balance */}
-        <div style={{ display: "flex", justifyContent: "space-between", lineHeight: 1.9 }}>
-          <span style={{ paddingLeft: 24, color: LABEL_COLOR, fontWeight: 700 }}>Curr. Balance</span>
-          <span style={{ display: "flex", gap: 6, alignItems: "center" }}>
-            <span>:</span>
-            <span style={{ minWidth: 60, textAlign: "right", fontWeight: 700 }}>{fmt(currentBalance)}</span>
-          </span>
-        </div>
+        {ps.currentBalanceOfParty && (
+          <div style={{ display: "flex", justifyContent: "space-between", lineHeight: 1.9 }}>
+            <span style={{ paddingLeft: 24, color: LABEL_COLOR, fontWeight: 700 }}>Curr. Balance</span>
+            <span style={{ display: "flex", gap: 6, alignItems: "center" }}>
+              <span>:</span>
+              <span style={{ minWidth: 60, textAlign: "right", fontWeight: 700 }}>{fmt(currentBalance)}</span>
+            </span>
+          </div>
+        )}
 
         {/* Payment Mode */}
         {paymentMode && (
@@ -426,8 +441,8 @@ export function ThermalSaleInvoice({
         )}
       </div>
 
-      {/* ── You Saved (only shown if discount > 0) ── */}
-      {youSaved > 0 && (
+      {/* ── You Saved (only shown if discount > 0 AND youSaved toggle is on) ── */}
+      {youSaved > 0 && ps.youSaved && (
         <>
           <DashDivider />
           <div style={{ display: "flex", justifyContent: "space-between", lineHeight: 1.9, fontSize: 12 }}>

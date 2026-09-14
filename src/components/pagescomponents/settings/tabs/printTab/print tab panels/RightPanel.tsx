@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
+import { PhoneInput } from "@/components/ui/phone-input";
 
 /* ─────────────────────────── Shared primitives ──────────────────────── */
 
@@ -90,16 +91,22 @@ function InputRow({
   label,
   value,
   onChange,
+  type = "text",
+  placeholder,
 }: {
   label: string;
   value: string;
   onChange: (v: string) => void;
+  type?: string;
+  placeholder?: string;
 }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
       <span style={{ fontSize: 11, color: "#6b7280", fontWeight: 500 }}>{label}</span>
       <input
+        type={type}
         value={value}
+        placeholder={placeholder}
         onChange={(e) => onChange(e.target.value)}
         style={{
           border: "1px solid #e5e7eb",
@@ -187,8 +194,6 @@ function LinkRow({ label, onClick }: { label: string; onClick?: () => void }) {
   );
 }
 
-
-
 function ActionButton({ label, onClick }: { label: string; onClick?: () => void }) {
   const [hovered, setHovered] = useState(false);
   return (
@@ -213,28 +218,154 @@ function ActionButton({ label, onClick }: { label: string; onClick?: () => void 
   );
 }
 
-function LogoRow({ onChange }: { onChange?: () => void }) {
+/* ─────────────────────── Logo upload row ──────────────────────────── */
+
+function LogoUploadRow({
+  logoUrl,
+  onLogoChange,
+}: {
+  logoUrl: string;
+  onLogoChange: (dataUrl: string) => void;
+}) {
+  const fileRef = useRef<HTMLInputElement>(null);
   const [hovered, setHovered] = useState(false);
+
+  const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => onLogoChange(reader.result as string);
+    reader.readAsDataURL(file);
+    // Reset input so same file can be re-selected
+    e.target.value = "";
+  };
+
   return (
-    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", minHeight: 28 }}>
-      <span style={{ fontSize: 12, color: "#374151" }}>Company Logo</span>
-      <button
-        onClick={onChange}
-        onMouseEnter={() => setHovered(true)}
-        onMouseLeave={() => setHovered(false)}
-        style={{
-          fontSize: 11,
-          color: hovered ? "#111827" : "#374151",
-          border: "1px solid " + (hovered ? "#9ca3af" : "#e5e7eb"),
-          borderRadius: 5,
-          padding: "3px 10px",
-          background: hovered ? "#f3f4f6" : "#fff",
-          cursor: "pointer",
-          transition: "all 0.15s",
-        }}
-      >
-        Change
-      </button>
+    <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+      <span style={{ fontSize: 11, color: "#6b7280", fontWeight: 500 }}>Company Logo</span>
+      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        {/* Preview */}
+        <div
+          style={{
+            width: 52,
+            height: 52,
+            borderRadius: 6,
+            border: "1px solid #e5e7eb",
+            background: "#f9fafb",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            overflow: "hidden",
+            flexShrink: 0,
+          }}
+        >
+          {logoUrl ? (
+            <img
+              src={logoUrl}
+              alt="Company logo"
+              style={{ width: "100%", height: "100%", objectFit: "contain" }}
+            />
+          ) : (
+            <span style={{ fontSize: 9, color: "#9ca3af", textAlign: "center", lineHeight: 1.3 }}>
+              No<br />Logo
+            </span>
+          )}
+        </div>
+
+        {/* Buttons */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 5, flex: 1 }}>
+          <button
+            onClick={() => fileRef.current?.click()}
+            onMouseEnter={() => setHovered(true)}
+            onMouseLeave={() => setHovered(false)}
+            style={{
+              fontSize: 11,
+              color: hovered ? "#111827" : "#374151",
+              border: "1px solid " + (hovered ? "#9ca3af" : "#e5e7eb"),
+              borderRadius: 5,
+              padding: "4px 10px",
+              background: hovered ? "#f3f4f6" : "#fff",
+              cursor: "pointer",
+              transition: "all 0.15s",
+            }}
+          >
+            {logoUrl ? "Change Logo" : "Upload Logo"}
+          </button>
+          {logoUrl && (
+            <button
+              onClick={() => onLogoChange("")}
+              style={{
+                fontSize: 11,
+                color: "#ef4444",
+                border: "1px solid #fecaca",
+                borderRadius: 5,
+                padding: "4px 10px",
+                background: "#fff",
+                cursor: "pointer",
+              }}
+            >
+              Remove
+            </button>
+          )}
+        </div>
+
+        <input
+          ref={fileRef}
+          type="file"
+          accept="image/*"
+          style={{ display: "none" }}
+          onChange={handleFile}
+        />
+      </div>
+    </div>
+  );
+}
+
+/* ─────────────────── Phone input row (inline style version) ─────────── */
+
+function PhoneRow({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+      <span style={{ fontSize: 11, color: "#6b7280", fontWeight: 500 }}>{label}</span>
+      {/* Reuse the exact same PhoneInput as EditProfile — it handles country code + number */}
+      <PhoneInput value={value} onChange={onChange} />
+    </div>
+  );
+}
+
+/* ─────────────────── Save status banner ─────────────────────────────── */
+
+function SaveBanner({ status }: { status: "saving" | "saved" | "error" | null }) {
+  if (!status) return null;
+  const colors = {
+    saving: { bg: "#eff6ff", border: "#bfdbfe", text: "#1d4ed8" },
+    saved: { bg: "#f0fdf4", border: "#bbf7d0", text: "#15803d" },
+    error: { bg: "#fef2f2", border: "#fecaca", text: "#b91c1c" },
+  };
+  const labels = { saving: "Saving…", saved: "✓ Saved", error: "Save failed" };
+  const c = colors[status];
+  return (
+    <div
+      style={{
+        margin: "8px 14px 0",
+        padding: "6px 10px",
+        borderRadius: 5,
+        border: `1px solid ${c.border}`,
+        background: c.bg,
+        fontSize: 11.5,
+        fontWeight: 600,
+        color: c.text,
+      }}
+    >
+      {labels[status]}
     </div>
   );
 }
@@ -242,10 +373,11 @@ function LogoRow({ onChange }: { onChange?: () => void }) {
 /* ──────────────────────── Settings state ────────────────────────────── */
 
 interface PrintSettings {
-  // Header
+  // Header — loaded from profile
   makeRegularDefault: boolean;
   printRepeatHeader: boolean;
   companyName: string;
+  logoUrl: string;
   address: string;
   email: string;
   phoneNumber: string;
@@ -274,10 +406,11 @@ interface PrintSettings {
 const DEFAULT_SETTINGS: PrintSettings = {
   makeRegularDefault: false,
   printRepeatHeader: false,
-  companyName: "jkhkhkj",
+  companyName: "",
+  logoUrl: "",
   address: "",
   email: "",
-  phoneNumber: "3369322038",
+  phoneNumber: "",
   paperSize: "A4",
   companyNameTextSize: "medium",
   invoiceTextSize: "medium",
@@ -300,9 +433,87 @@ const DEFAULT_SETTINGS: PrintSettings = {
 
 export function RightPanel() {
   const [settings, setSettings] = useState<PrintSettings>(DEFAULT_SETTINGS);
+  const [saveStatus, setSaveStatus] = useState<"saving" | "saved" | "error" | null>(null);
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Keep a ref in sync so the debounced callback can read the latest values
+  const settingsRef = useRef(settings);
+  useEffect(() => { settingsRef.current = settings; }, [settings]);
+
+  /* Load profile on mount */
+  useEffect(() => {
+    fetch("/api/user_profile")
+      .then((r) => r.json())
+      .then((d) => {
+        if (d) {
+          setSettings((prev) => ({
+            ...prev,
+            companyName: d.business_name || "",
+            logoUrl: d.logo_url || d.logo || "",
+            address: d.address || "",
+            email: d.email || "",
+            phoneNumber: d.phone || "",
+          }));
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   const set = <K extends keyof PrintSettings>(key: K, value: PrintSettings[K]) =>
     setSettings((prev) => ({ ...prev, [key]: value }));
+
+  /* ── Save profile fields to API (debounced 600ms) ── */
+  const saveProfileField = (patch: Partial<{
+    companyName: string;
+    logo: string;
+    address: string;
+    email: string;
+    phone: string;
+  }>) => {
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = setTimeout(async () => {
+      setSaveStatus("saving");
+      try {
+        const s = settingsRef.current;
+        const res = await fetch("/api/user_profile", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            businessName: patch.companyName ?? s.companyName,
+            phone: patch.phone ?? s.phoneNumber,
+            email: patch.email ?? s.email,
+            address: patch.address ?? s.address,
+            logo: patch.logo !== undefined ? patch.logo : s.logoUrl,
+          }),
+        });
+        setSaveStatus(res.ok ? "saved" : "error");
+        setTimeout(() => setSaveStatus(null), 2500);
+      } catch {
+        setSaveStatus("error");
+      }
+    }, 600);
+  };
+
+  /* Helpers that update local state AND trigger an API save */
+  const handleCompanyName = (v: string) => {
+    set("companyName", v);
+    saveProfileField({ companyName: v });
+  };
+  const handleLogo = (v: string) => {
+    set("logoUrl", v);
+    saveProfileField({ logo: v });
+  };
+  const handleAddress = (v: string) => {
+    set("address", v);
+    saveProfileField({ address: v });
+  };
+  const handleEmail = (v: string) => {
+    set("email", v);
+    saveProfileField({ email: v });
+  };
+  const handlePhone = (v: string) => {
+    set("phoneNumber", v);
+    saveProfileField({ phone: v });
+  };
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%", overflowY: "auto" }}>
@@ -321,52 +532,49 @@ export function RightPanel() {
         Preview Settings
       </div>
 
+      <SaveBanner status={saveStatus} />
+
       {/* ── Print Company Info / Header ── */}
       <SettingsSection title="Print Company Info / Header">
         <ToggleRow label="Make Regular Printer Default" checked={settings.makeRegularDefault} onChange={(v) => set("makeRegularDefault", v)} />
         <ToggleRow label="Print repeat header in all pages" checked={settings.printRepeatHeader} onChange={(v) => set("printRepeatHeader", v)} />
-        <InputRow label="Company Name" value={settings.companyName} onChange={(v) => set("companyName", v)} />
-        <LogoRow />
-        <InputRow label="Address" value={settings.address} onChange={(v) => set("address", v)} />
-        <InputRow label="Email" value={settings.email} onChange={(v) => set("email", v)} />
-        <InputRow label="Phone Number" value={settings.phoneNumber} onChange={(v) => set("phoneNumber", v)} />
+
+        {/* Company Name — synced to profile */}
+        <InputRow
+          label="Company Name"
+          value={settings.companyName}
+          onChange={handleCompanyName}
+          placeholder="Enter company name"
+        />
+
+        {/* Logo upload with preview */}
+        <LogoUploadRow logoUrl={settings.logoUrl} onLogoChange={handleLogo} />
+
+        {/* Address */}
+        <InputRow
+          label="Address"
+          value={settings.address}
+          onChange={handleAddress}
+          placeholder="Enter address"
+        />
+
+        {/* Email */}
+        <InputRow
+          label="Email"
+          value={settings.email}
+          onChange={handleEmail}
+          type="email"
+          placeholder="Enter email"
+        />
+
+        {/* Phone with country code — same PhoneInput as EditProfile */}
+        <PhoneRow
+          label="Phone Number"
+          value={settings.phoneNumber}
+          onChange={handlePhone}
+        />
       </SettingsSection>
 
-      {/* ── Paper ── */}
-      <SettingsSection title="Paper">
-        <SelectRow
-          label="Paper Size"
-          value={settings.paperSize}
-          options={[
-            { label: "A4", value: "A4" },
-            { label: "A5", value: "A5" },
-            { label: "Letter", value: "Letter" },
-            { label: "58mm", value: "58mm" },
-            { label: "80mm", value: "80mm" },
-          ]}
-          onChange={(v) => set("paperSize", v)}
-        />
-        <SelectRow
-          label="Company Name Text Size"
-          value={settings.companyNameTextSize}
-          options={[
-            { label: "Small", value: "small" },
-            { label: "Medium", value: "medium" },
-            { label: "Large", value: "large" },
-          ]}
-          onChange={(v) => set("companyNameTextSize", v)}
-        />
-        <SelectRow
-          label="Invoice Text Size"
-          value={settings.invoiceTextSize}
-          options={[
-            { label: "Small", value: "small" },
-            { label: "Medium", value: "medium" },
-            { label: "Large", value: "large" },
-          ]}
-          onChange={(v) => set("invoiceTextSize", v)}
-        />
-      </SettingsSection>
 
       {/* ── Item Table ── */}
       <SettingsSection title="Item Table">

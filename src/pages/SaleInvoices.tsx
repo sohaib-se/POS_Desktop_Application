@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSettings } from "@/hooks/useSettings";
+import { exportSaleInvoicesToExcel } from "@/utils/exportSaleInvoicesExcel";
 import type { SaleInvoiceEditData, ViewType } from "@/types";
 import type {
   SaleInvoiceApiRow,
@@ -9,7 +10,6 @@ import {
   fallbackSaleInvoices,
   getMonthKeyFromDate,
   formatDateDisplay,
-  createCsvContent,
   monthLabelForFilter,
 } from "../components/pagescomponents/saleinvoices/utils";
 import { SaleInvoiceHeader } from "../components/pagescomponents/saleinvoices/SaleInvoiceHeader";
@@ -43,6 +43,9 @@ export function SaleInvoices({ onViewChange, onEditInvoice, onEditPosInvoice, on
 
   const [isPasscodeEnabled] = useSettings('settings.isPasscodeEnabled', false);
   const [isPasscodeForTransactionEnabled] = useSettings('settings.isPasscodeForTransactionEnabled', false);
+  const [currency] = useSettings('settings.businessCurrency', { code: 'PKR', symbol: 'Rs' });
+  const [currencyDisplay] = useSettings<'abbreviation' | 'icon'>('settings.currencyDisplay', 'abbreviation');
+  const currencyStr = currencyDisplay === 'icon' ? currency.symbol : currency.code;
   const [passcodeAction, setPasscodeAction] = useState<{ type: 'edit' | 'delete' | 'return', payload: SaleInvoiceViewRow } | null>(null);
   const [invoiceToDelete, setInvoiceToDelete] = useState<SaleInvoiceViewRow | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -194,18 +197,19 @@ export function SaleInvoices({ onViewChange, onEditInvoice, onEditPosInvoice, on
   const monthButtonLabel = selectedMonthKey === currentMonthKey ? "This Month" : monthLabelForFilter(selectedMonthKey);
 
   const handleDownloadCsv = () => {
-    const csvContent = createCsvContent(selectedMonthRows);
-    const fileName = selectedMonthKey ? `sale-invoices-${selectedMonthKey}.csv` : "sale-invoices-all-months.csv";
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-
-    link.href = url;
-    link.download = fileName;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+    exportSaleInvoicesToExcel(
+      visibleRows.map((r) => ({
+        date: r.date,
+        invoiceNo: r.invoiceNo,
+        partyName: r.partyName,
+        transaction: r.transaction ?? "",
+        paymentType: r.paymentType ?? "",
+        amount: r.amount,
+        balance: r.balance,
+      })),
+      selectedMonthKey || "all",
+      currencyStr
+    );
   };
 
   const openViewDialog = (invoice: SaleInvoiceViewRow) => {

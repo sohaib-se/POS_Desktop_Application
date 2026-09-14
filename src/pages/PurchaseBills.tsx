@@ -7,8 +7,8 @@ import {
   fallbackPurchaseBills,
   getMonthKeyFromDate,
   formatDateDisplay,
-  createCsvContent,
 } from "../components/pagescomponents/purchasebills/utils";
+import { exportPurchaseBillsToExcel } from "@/utils/exportPurchaseBillsExcel";
 import { PurchaseBillHeader } from "../components/pagescomponents/purchasebills/PurchaseBillHeader";
 import { PurchaseBillFilters } from "../components/pagescomponents/purchasebills/PurchaseBillFilters";
 import { PurchaseBillSummary } from "../components/pagescomponents/purchasebills/PurchaseBillSummary";
@@ -37,6 +37,9 @@ export function PurchaseBills({ onBack }: PurchaseBillsProps = {}) {
 
   const [isPasscodeEnabled] = useSettings('settings.isPasscodeEnabled', false);
   const [isPasscodeForTransactionEnabled] = useSettings('settings.isPasscodeForTransactionEnabled', false);
+  const [currency] = useSettings('settings.businessCurrency', { code: 'PKR', symbol: 'Rs' });
+  const [currencyDisplay] = useSettings<'abbreviation' | 'icon'>('settings.currencyDisplay', 'abbreviation');
+  const currencyStr = currencyDisplay === 'icon' ? currency.symbol : currency.code;
   const [passcodeAction, setPasscodeAction] = useState<{ type: 'edit' | 'delete', payload: PurchaseBillViewRow } | null>(null);
   const [deleteModalState, setDeleteModalState] = useState<{isOpen: boolean, invoice: PurchaseBillViewRow | null}>({isOpen: false, invoice: null});
   const [isDeleting, setIsDeleting] = useState(false);
@@ -180,18 +183,19 @@ export function PurchaseBills({ onBack }: PurchaseBillsProps = {}) {
 
 
   const handleDownloadCsv = () => {
-    const csvContent = createCsvContent(selectedMonthRows);
-    const fileName = selectedMonthKey ? `purchase-bills-${selectedMonthKey}.csv` : "purchase-bills-all-months.csv";
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-
-    link.href = url;
-    link.download = fileName;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+    exportPurchaseBillsToExcel(
+      visibleRows.map((r) => ({
+        date: r.date,
+        invoiceNo: r.invoiceNo,
+        partyName: r.partyName,
+        transaction: r.transaction ?? "",
+        paymentType: r.paymentType ?? "",
+        amount: r.amount,
+        balance: r.balance,
+      })),
+      selectedMonthKey || "all",
+      currencyStr
+    );
   };
 
   const openViewDialog = (invoice: PurchaseBillViewRow) => {

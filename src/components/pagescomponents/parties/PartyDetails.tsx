@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useSettings } from "@/hooks/useSettings";
-import { Edit2, Mail, Search, Printer, MoreVertical, Pencil as PencilIcon, Trash2 as TrashIcon } from "lucide-react";
+import { Edit2, Mail, Search, Printer, MoreVertical, Pencil as PencilIcon, Trash2 as TrashIcon, Calendar } from "lucide-react";
 import type { Party, Transaction, SaleInvoiceEditData, PurchaseBillEditData } from "@/types";
 import { AddPurchase } from "@/pages/AddPurchase";
 import { SaleInvoiceDialog } from "@/components/pagescomponents/saleinvoices/SaleInvoiceDialog";
@@ -13,6 +13,7 @@ import { AddEstimate } from "@/pages/AddEstimate";
 import { EnterPasscodeScreen } from "@/components/common/EnterPasscodeScreen";
 import type { SaleInvoiceViewRow } from "@/components/pagescomponents/saleinvoices/types";
 import type { PurchaseBillViewRow } from "@/components/pagescomponents/purchasebills/types";
+import { PartyTransactionsPrintPreviewModal } from "./PartyTransactionsPrintPreviewModal";
 
 export type PartyTransactionRow = {
   id: string;
@@ -39,6 +40,9 @@ interface PartyDetailsProps {
   setTransactionSearchTerm: (term: string) => void;
   handlePrintTransactions: () => void;
   handleExportExcel: () => void;
+  selectedMonth: string;
+  onSetSelectedMonth: (month: string) => void;
+  businessProfile?: any;
   openEditPartyDialog: (party: Party) => void;
   isReportView?: boolean;
   loadPartiesAndTransactions?: () => Promise<void>;
@@ -55,6 +59,9 @@ export function PartyDetails({
   setTransactionSearchTerm,
   handlePrintTransactions,
   handleExportExcel,
+  selectedMonth,
+  onSetSelectedMonth,
+  businessProfile,
   openEditPartyDialog,
   isReportView,
   loadPartiesAndTransactions,
@@ -66,6 +73,8 @@ export function PartyDetails({
 
   const [isPasscodeEnabled] = useSettings('settings.isPasscodeEnabled', false);
   const [isPasscodeForTransactionEnabled] = useSettings('settings.isPasscodeForTransactionEnabled', false);
+
+  const [showPrintPreview, setShowPrintPreview] = useState(false);
 
   const [openRowMenuId, setOpenRowMenuId] = useState<string | null>(null);
   const [openRowMenuPosition, setOpenRowMenuPosition] = useState<{ left: number; top: number } | null>(null);
@@ -338,7 +347,7 @@ export function PartyDetails({
                   </div>
                 </div>
                 <button
-                  onClick={handlePrintTransactions}
+                  onClick={() => setShowPrintPreview(true)}
                   className="p-1.5 hover:bg-gray-100 rounded"
                 >
                   <Printer className="w-4 h-4 text-gray-500" />
@@ -351,6 +360,22 @@ export function PartyDetails({
                     xls
                   </span>
                 </button>
+                {/* Monthly filter — calendar icon only, native picker on click */}
+                <div className="relative flex items-center">
+                  <button
+                    className="p-1.5 hover:bg-gray-100 rounded-full relative"
+                    title={`Filter by month: ${selectedMonth}`}
+                  >
+                    <Calendar className="w-4 h-4 text-gray-500" />
+                    <input
+                      type="month"
+                      value={selectedMonth}
+                      onChange={(e) => onSetSelectedMonth(e.target.value)}
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                      title="Filter by month"
+                    />
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -634,6 +659,16 @@ export function PartyDetails({
           onCancel={() => setPasscodeAction(null)}
         />
       )}
+
+      {/* Print Preview Modal */}
+      <PartyTransactionsPrintPreviewModal
+        open={showPrintPreview}
+        onOpenChange={setShowPrintPreview}
+        records={filteredPartyTransactions}
+        partyName={selectedParty?.name ?? ""}
+        selectedMonth={selectedMonth}
+        businessProfile={businessProfile}
+      />
     </div>
   );
 }

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useSettings } from "@/hooks/useSettings";
-import { ChevronDown, MoreVertical, Search } from "lucide-react";
+import { ChevronDown, MoreVertical, Search, Calendar } from "lucide-react";
 import type { BankAccount } from "./types";
 
 interface AccountDetailProps {
@@ -139,12 +139,7 @@ export function AccountDetail({ account, onDeposit, onEditTransaction, onDeleteT
         <div className="flex items-center justify-between px-6 py-3">
           <h4 className="text-sm font-semibold text-gray-800">Transactions</h4>
           <div className="flex gap-2 items-center h-10" ref={searchContainerRef}>
-            <input
-              type="month"
-              value={monthFilter}
-              onChange={(e) => setMonthFilter(e.target.value)}
-              className="px-3 py-1.5 border border-gray-200 rounded-lg text-sm text-gray-700 bg-white focus:outline-none focus:ring-1 focus:ring-blue-100 focus:border-blue-400 h-9"
-            />
+            {/* Search bar */}
             <div 
               className={`flex items-center overflow-hidden transition-all duration-300 ease-out rounded-full h-9 ${
                 showSearchInput 
@@ -191,6 +186,23 @@ export function AccountDetail({ account, onDeposit, onEditTransaction, onDeleteT
                 )}
               </div>
             </div>
+
+            {/* Monthly filter — calendar icon only, native picker on click */}
+            <div className="relative flex items-center">
+              <button
+                className="p-1.5 hover:bg-gray-100 rounded-full relative"
+                title={`Filter by month: ${monthFilter}`}
+              >
+                <Calendar className="w-4 h-4 text-gray-500" />
+                <input
+                  type="month"
+                  value={monthFilter}
+                  onChange={(e) => setMonthFilter(e.target.value)}
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                  title="Filter by month"
+                />
+              </button>
+            </div>
           </div>
         </div>
 
@@ -203,7 +215,6 @@ export function AccountDetail({ account, onDeposit, onEditTransaction, onDeleteT
           ))}
         </div>
 
-        {/* Rows */}
         {visibleTransactions.map((tx: any, i: number) => (
           <div
             key={i}
@@ -232,6 +243,11 @@ export function AccountDetail({ account, onDeposit, onEditTransaction, onDeleteT
             </div>
           </div>
         ))}
+        {!visibleTransactions.length && (
+          <div className="px-4 py-10 text-center text-sm text-gray-500">
+            No transactions found for the selected month.
+          </div>
+        )}
       </div>
 
       {txContextMenu && (

@@ -1,10 +1,11 @@
-import { useState } from "react";
-import { AlignJustify, MoreVertical, Trash2, Pencil } from "lucide-react";
+import { useState, useEffect, useRef, useMemo } from "react";
+import { AlignJustify, MoreVertical, Trash2, Pencil, Search, Calendar } from "lucide-react";
 import { useSettings } from "@/hooks/useSettings";
 import { EnterPasscodeScreen } from "@/components/common/EnterPasscodeScreen";
 import { ConfirmDeleteModal } from "@/components/common/ConfirmDeleteModal";
 import { AdjustCashModal } from "./AdjustCashModal";
 import { DetailsModal } from "./DetailsModal";
+import { getMonthKeyFromDate, formatDateDisplay } from "../saleinvoices/utils";
 
 interface CashInHandViewProps {
   totalCash: number;
@@ -49,6 +50,61 @@ export function CashInHandView({
   const [editAmount, setEditAmount] = useState("");
   const [editingAdjustTx, setEditingAdjustTx] = useState<any>(null);
   const [deleteConfirmationId, setDeleteConfirmationId] = useState<string | null>(null);
+
+  const [selectedMonth, setSelectedMonth] = useState<string>(() =>
+    getMonthKeyFromDate(formatDateDisplay(new Date()))
+  );
+  const [searchQuery, setSearchQuery] = useState("");
+  const [showSearchInput, setShowSearchInput] = useState(false);
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
+  const searchContainerRef = useRef<HTMLDivElement | null>(null);
+
+  const placeholders = ["Type", "Name", "Date", "Amount"];
+  const [placeholderIndex, setPlaceholderIndex] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setPlaceholderIndex((prev) => (prev + 1) % placeholders.length);
+    }, 3000);
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        showSearchInput &&
+        searchContainerRef.current &&
+        !searchContainerRef.current.contains(event.target as Node) &&
+        !searchQuery
+      ) {
+        setShowSearchInput(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [showSearchInput, searchQuery]);
+
+  const filteredTransactions = useMemo(() => {
+    return transactions.filter((tx) => {
+      if (selectedMonth) {
+        const txMonthKey = getMonthKeyFromDate(tx.date || "");
+        if (txMonthKey !== selectedMonth) {
+          return false;
+        }
+      }
+      if (searchQuery.trim()) {
+        const query = searchQuery.trim().toLowerCase();
+        const matchType = String(tx.type || "").toLowerCase().includes(query);
+        const matchName = String(tx.name || "").toLowerCase().includes(query);
+        const matchDate = String(tx.date || "").toLowerCase().includes(query);
+        const matchAmount = String(tx.amount || "").toLowerCase().includes(query);
+        return matchType || matchName || matchDate || matchAmount;
+      }
+      return true;
+    });
+  }, [transactions, selectedMonth, searchQuery]);
 
   const handleDeleteClick = (id: string) => {
     setDeleteConfirmationId(id);
@@ -103,10 +159,76 @@ export function CashInHandView({
       {/* Transactions */}
       <div className="flex-1 overflow-auto mx-1 mb-1">
         <div className="bg-white rounded-md shadow-sm min-h-full">
-          <div className="px-6 py-3 border-b border-gray-100">
-            <h3 className="text-sm font-semibold text-gray-800">
+          <div className="flex items-center justify-between px-6 pt-4 pb-2 border-b border-gray-200">
+            <h3 className="text-base font-bold text-[#222B45] tracking-wide uppercase">
               Transactions
             </h3>
+            <div className="flex gap-2 items-center h-10" ref={searchContainerRef}>
+              {/* Search bar */}
+              <div 
+                className={`flex items-center overflow-hidden transition-all duration-300 ease-out rounded-full h-9 ${
+                  showSearchInput 
+                    ? "w-64 bg-white border border-blue-500 ring-4 ring-blue-50" 
+                    : "w-9 bg-transparent border border-transparent hover:bg-gray-100 cursor-pointer"
+                }`}
+                onClick={(e) => {
+                  if (!showSearchInput) {
+                    e.stopPropagation();
+                    setShowSearchInput(true);
+                    setTimeout(() => searchInputRef.current?.focus(), 150);
+                  }
+                }}
+              >
+                <div className="flex items-center justify-center h-full w-9 shrink-0">
+                  <Search className={`w-4 h-4 ${showSearchInput ? "text-gray-400" : "text-gray-500"}`} />
+                </div>
+                <div className={`relative flex-1 h-full flex items-center transition-opacity duration-200 ${
+                    showSearchInput ? "opacity-100 delay-100" : "opacity-0"
+                  }`}>
+                  <input
+                    ref={searchInputRef}
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="bg-transparent border-none outline-none focus:ring-0 focus:outline-none focus:border-transparent text-sm h-full w-full pr-3 relative z-10"
+                  />
+                  {!searchQuery && (
+                    <div className="absolute left-0 pointer-events-none flex items-center h-full w-full overflow-hidden text-gray-400 text-sm">
+                      <span className="whitespace-pre">Search </span>
+                      <div className="relative h-full flex-1 overflow-hidden">
+                        {placeholders.map((ph, idx) => (
+                          <span
+                            key={ph}
+                            className={`absolute top-0 left-0 flex items-center h-full transition-all duration-700 ease-in-out ${
+                              idx === placeholderIndex ? "opacity-100 translate-y-0" : "opacity-0 translate-y-3"
+                            }`}
+                          >
+                            {ph}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Monthly filter — calendar icon only, native picker on click */}
+              <div className="relative flex items-center">
+                <button
+                  className="p-1.5 hover:bg-gray-100 rounded-full relative"
+                  title={`Filter by month: ${selectedMonth}`}
+                >
+                  <Calendar className="w-4 h-4 text-gray-500" />
+                  <input
+                    type="month"
+                    value={selectedMonth}
+                    onChange={(e) => setSelectedMonth(e.target.value)}
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                    title="Filter by month"
+                  />
+                </button>
+              </div>
+            </div>
           </div>
           <table className="w-full text-sm">
             <thead>
@@ -125,7 +247,7 @@ export function CashInHandView({
               </tr>
             </thead>
             <tbody>
-              {transactions.map((tx, i) => {
+              {filteredTransactions.map((tx, i) => {
                 const type = String(tx.type).toLowerCase();
                 const isCashIn = type.includes("in") || type === "sale" || type.includes("add") || type.includes("increase") || type === "pos sale";
                 return (
@@ -164,6 +286,11 @@ export function CashInHandView({
               })}
             </tbody>
           </table>
+          {!filteredTransactions.length && (
+            <div className="px-4 py-10 text-center text-sm text-gray-500">
+              No transactions found for the selected month.
+            </div>
+          )}
         </div>
       </div>
 

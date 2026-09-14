@@ -1,4 +1,4 @@
-import { Search, Printer, MoreVertical } from "lucide-react";
+import { Search, MoreVertical } from "lucide-react";
 import { useSettings } from "@/hooks/useSettings";
 import { useEffect, useRef, useState } from "react";
 import type { SaleInvoiceViewRow } from "./types";
@@ -120,18 +120,11 @@ export function SaleInvoiceTable({
             </div>
           </div>
           <button
-            onClick={() => window.print()}
-            className="p-1.5 hover:bg-[#F7F9FB] rounded"
-            title="Print"
-          >
-            <Printer className="w-4 h-4 text-[#7B8A9A]" />
-          </button>
-          <button
             onClick={(event) => {
               event.stopPropagation();
               handleDownloadCsv();
             }}
-            className="p-1.5 hover:bg-[#F7F9FB] rounded relative"
+            className="p-1.5 hover:bg-[#F7F9FB] rounded relative ml-2"
             title="Download Excel/CSV"
           >
             <span className="bg-green-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">

@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useSettings } from "@/hooks/useSettings";
-import { Search, MoreVertical } from "lucide-react";
+import { Search, MoreVertical, Calendar } from "lucide-react";
 import { Card, CardContent } from "./ui";
 import type { ItemTransactionRow } from "./types";
 import { ItemTransactionContextMenu } from "./ItemTransactionContextMenu";
@@ -25,8 +25,10 @@ type TransactionsCardProps = {
   filteredItemTransactions: ItemTransactionRow[];
   showTransactionSearch: boolean;
   transactionSearchTerm: string;
+  selectedMonth: string; // "YYYY-MM"
   onSetShowTransactionSearch: (show: boolean) => void;
   onSetTransactionSearchTerm: (term: string) => void;
+  onSetSelectedMonth: (month: string) => void;
   onExportExcel: () => void;
   onViewTransaction?: (transaction: ItemTransactionRow) => void;
   onEditTransaction?: (transaction: ItemTransactionRow) => void;
@@ -37,8 +39,10 @@ export function TransactionsCard({
   filteredItemTransactions,
   showTransactionSearch,
   transactionSearchTerm,
+  selectedMonth,
   onSetShowTransactionSearch,
   onSetTransactionSearchTerm,
+  onSetSelectedMonth,
   onExportExcel,
   onViewTransaction,
   onEditTransaction,
@@ -116,61 +120,81 @@ export function TransactionsCard({
           <h3 className="text-base font-bold text-[#222B45] tracking-wide">
             TRANSACTIONS
           </h3>
-          <div className="flex gap-2 items-center h-10" ref={searchContainerRef}>
-            <div 
-              className={`flex items-center overflow-hidden transition-all duration-300 ease-out rounded-full h-9 ${
-                showTransactionSearch 
-                  ? "w-64 bg-white border border-blue-500 ring-4 ring-blue-50" 
-                  : "w-9 bg-transparent border border-transparent hover:bg-gray-100 cursor-pointer"
-              }`}
-              onClick={(e) => {
-                if (!showTransactionSearch) {
-                  e.stopPropagation();
-                  onSetShowTransactionSearch(true);
-                  setTimeout(() => searchInputRef.current?.focus(), 150);
-                }
-              }}
-            >
-              <div className="flex items-center justify-center h-full w-9 shrink-0">
-                <Search className={`w-4 h-4 ${showTransactionSearch ? "text-gray-400" : "text-gray-500"}`} />
-              </div>
-              <div className={`relative flex-1 h-full flex items-center transition-opacity duration-200 ${
-                  showTransactionSearch ? "opacity-100 delay-100" : "opacity-0"
-                }`}>
-                <input
-                  ref={searchInputRef}
-                  type="text"
-                  value={transactionSearchTerm}
-                  onChange={(e) => onSetTransactionSearchTerm(e.target.value)}
-                  className="bg-transparent border-none outline-none focus:ring-0 focus:outline-none focus:border-transparent text-sm h-full w-full pr-3 relative z-10"
-                />
-                {!transactionSearchTerm && (
-                  <div className="absolute left-0 pointer-events-none flex items-center h-full w-full overflow-hidden text-gray-400 text-sm">
-                    <span className="whitespace-pre">Search </span>
-                    <div className="relative h-full flex-1 overflow-hidden">
-                      {placeholders.map((ph, idx) => (
-                        <span
-                          key={ph}
-                          className={`absolute top-0 left-0 flex items-center h-full transition-all duration-700 ease-in-out ${
-                            idx === placeholderIndex ? "opacity-100 translate-y-0" : "opacity-0 translate-y-3"
-                          }`}
-                        >
-                          {ph}
-                        </span>
-                      ))}
+          <div className="flex gap-2 items-center h-10">
+            {/* Search bar */}
+            <div ref={searchContainerRef} className="flex gap-2 items-center h-10">
+              <div 
+                className={`flex items-center overflow-hidden transition-all duration-300 ease-out rounded-full h-9 ${
+                  showTransactionSearch 
+                    ? "w-64 bg-white border border-blue-500 ring-4 ring-blue-50" 
+                    : "w-9 bg-transparent border border-transparent hover:bg-gray-100 cursor-pointer"
+                }`}
+                onClick={(e) => {
+                  if (!showTransactionSearch) {
+                    e.stopPropagation();
+                    onSetShowTransactionSearch(true);
+                    setTimeout(() => searchInputRef.current?.focus(), 150);
+                  }
+                }}
+              >
+                <div className="flex items-center justify-center h-full w-9 shrink-0">
+                  <Search className={`w-4 h-4 ${showTransactionSearch ? "text-gray-400" : "text-gray-500"}`} />
+                </div>
+                <div className={`relative flex-1 h-full flex items-center transition-opacity duration-200 ${
+                    showTransactionSearch ? "opacity-100 delay-100" : "opacity-0"
+                  }`}>
+                  <input
+                    ref={searchInputRef}
+                    type="text"
+                    value={transactionSearchTerm}
+                    onChange={(e) => onSetTransactionSearchTerm(e.target.value)}
+                    className="bg-transparent border-none outline-none focus:ring-0 focus:outline-none focus:border-transparent text-sm h-full w-full pr-3 relative z-10"
+                  />
+                  {!transactionSearchTerm && (
+                    <div className="absolute left-0 pointer-events-none flex items-center h-full w-full overflow-hidden text-gray-400 text-sm">
+                      <span className="whitespace-pre">Search </span>
+                      <div className="relative h-full flex-1 overflow-hidden">
+                        {placeholders.map((ph, idx) => (
+                          <span
+                            key={ph}
+                            className={`absolute top-0 left-0 flex items-center h-full transition-all duration-700 ease-in-out ${
+                              idx === placeholderIndex ? "opacity-100 translate-y-0" : "opacity-0 translate-y-3"
+                            }`}
+                          >
+                            {ph}
+                          </span>
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
+              <button
+                onClick={onExportExcel}
+                className="p-1.5 hover:bg-[#F7F9FB] rounded relative"
+              >
+                <span className="bg-green-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
+                  xls
+                </span>
+              </button>
             </div>
-            <button
-              onClick={onExportExcel}
-              className="p-1.5 hover:bg-[#F7F9FB] rounded relative"
-            >
-              <span className="bg-green-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
-                xls
-              </span>
-            </button>
+            {/* Monthly filter — calendar icon only, native picker on click */}
+            <div className="relative flex items-center">
+              <button
+                className="p-1.5 hover:bg-gray-100 rounded-full relative"
+                title={`Filter by month: ${selectedMonth}`}
+              >
+                <Calendar className="w-4 h-4 text-gray-500" />
+                {/* Invisible native month input stretched over the button */}
+                <input
+                  type="month"
+                  value={selectedMonth}
+                  onChange={(e) => onSetSelectedMonth(e.target.value)}
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                  title="Filter by month"
+                />
+              </button>
+            </div>
           </div>
         </div>
         <div className="border-t border-[#E3EAF2] rounded-b-lg overflow-auto flex-1 min-h-0">

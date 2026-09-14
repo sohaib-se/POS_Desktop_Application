@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { exportItemTransactionsToExcel } from "@/utils/exportItemTransactionsExcel";
+import { useSettings } from "@/hooks/useSettings";
 
 import { Package, Plus } from "lucide-react";
 
@@ -222,6 +224,9 @@ export function ProductsTab({
   const [itemTransactions, setItemTransactions] = useState<ItemTransactionRow[]>([]);
   const [transactionSearchTerm, setTransactionSearchTerm] = useState("");
   const [showTransactionSearch, setShowTransactionSearch] = useState(false);
+  const [selectedMonth, setSelectedMonth] = useState<string>(
+    () => new Date().toISOString().slice(0, 7) // default = current month "YYYY-MM"
+  );
 
   const [viewingSale, setViewingSale] = useState<any | null>(null);
   const [viewingPurchase, setViewingPurchase] = useState<any | null>(null);
@@ -272,6 +277,16 @@ export function ProductsTab({
   }, [itemTransactions, selectedItem]);
 
   const filteredItemTransactions = selectedItemTransactions.filter((t) => {
+    // Month filter
+    if (selectedMonth) {
+      const parseDateLocal = (s: string) => {
+        const m = s?.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+        if (m) return `${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`;
+        return s?.split("T")[0] ?? "";
+      };
+      const isoDate = parseDateLocal(t.date);
+      if (!isoDate.startsWith(selectedMonth)) return false;
+    }
     if (!transactionSearchTerm) return true;
     const term = transactionSearchTerm.toLowerCase();
     return (
@@ -786,25 +801,27 @@ export function ProductsTab({
   };
 
 
+  const [currency] = useSettings('settings.businessCurrency', { code: 'PKR', symbol: 'Rs' });
+  const [currencyDisplay] = useSettings<'abbreviation' | 'icon'>('settings.currencyDisplay', 'abbreviation');
+  const currencyStr = currencyDisplay === 'icon' ? currency.symbol : currency.code;
+
   const handleExportExcel = () => {
     if (!selectedItem) return;
-    const headers = ["Type", "Number", "Date", "Total", "Balance"];
-    const rows = filteredItemTransactions.map((t) => [
-      t.type,
-      t.invoiceNo || "",
-      t.date,
-      t.amount.toFixed(2),
-      t.balance.toFixed(2),
-    ]);
-    const csvContent = [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.setAttribute("download", `${selectedItem.name}_transactions.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    exportItemTransactionsToExcel(
+      selectedItem.name,
+      filteredItemTransactions.map((t) => ({
+        type: t.type,
+        invoiceNo: t.invoiceNo || "",
+        partyName: t.partyName,
+        date: t.date,
+        quantity: t.quantity,
+        unit: t.unit,
+        price: t.price,
+        status: t.status,
+      })),
+      selectedMonth,
+      currencyStr
+    );
   };
 
   const openAddItemModal = () => {
@@ -1279,9 +1296,10 @@ export function ProductsTab({
               filteredItemTransactions={filteredItemTransactions}
               showTransactionSearch={showTransactionSearch}
               transactionSearchTerm={transactionSearchTerm}
+              selectedMonth={selectedMonth}
               onSetShowTransactionSearch={setShowTransactionSearch}
               onSetTransactionSearchTerm={setTransactionSearchTerm}
-
+              onSetSelectedMonth={setSelectedMonth}
               onExportExcel={handleExportExcel}
               onViewTransaction={handleViewTransaction}
               onEditTransaction={handleEditTransaction}

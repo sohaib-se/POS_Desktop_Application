@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
+import { exportPartyTransactionsToExcel } from "@/utils/exportPartyTransactionsExcel";
 import { useSettings } from "@/hooks/useSettings";
 import type { Party, Transaction, SaleInvoiceEditData } from "@/types";
 import { PartiesHeader } from "@/components/pagescomponents/parties/PartiesHeader";
@@ -106,6 +107,10 @@ export function Parties({ isReportView, onBack, onEditSaleInvoice }: PartiesProp
   const [activeTab, setActiveTab] = useState<"address" | "credit">("address");
   const [partyTransactionsFromApi, setPartyTransactionsFromApi] = useState<PartyTransactionRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [selectedMonth, setSelectedMonth] = useState<string>(
+    () => new Date().toISOString().slice(0, 7)
+  );
+  const [businessProfile, setBusinessProfile] = useState<any>(null);
 
   // Cache to prevent flickering on load by predicting the layout
   const cachedHasParties = localStorage.getItem('parties_hasParties') !== 'false';
@@ -175,7 +180,8 @@ export function Parties({ isReportView, onBack, onEditSaleInvoice }: PartiesProp
         purchaseBillsResponse,
         paymentInResponse,
         paymentOutResponse,
-        estimatesResponse
+        estimatesResponse,
+        profileResponse,
       ] = await Promise.all([
         fetch('/api/parties'),
         fetch('/api/sale_invoices'),
@@ -183,7 +189,13 @@ export function Parties({ isReportView, onBack, onEditSaleInvoice }: PartiesProp
         fetch('/api/payment_in_records'),
         fetch('/api/payment_out_records'),
         fetch('/api/estimates'),
+        fetch('/api/user_profile'),
       ]);
+
+      if (profileResponse.ok) {
+        const profileData = await profileResponse.json();
+        setBusinessProfile(profileData);
+      }
 
       if (!partiesResponse.ok) {
         throw new Error('Failed to load parties');
@@ -375,6 +387,17 @@ export function Parties({ isReportView, onBack, onEditSaleInvoice }: PartiesProp
   })();
 
   const filteredPartyTransactions = partyTransactions.filter((t) => {
+    // Month filter
+    if (selectedMonth) {
+      const parseDateToISO = (d: string) => {
+        if (!d) return "";
+        const parts = d.split("/");
+        if (parts.length === 3) return `${parts[2]}-${parts[1].padStart(2,"0")}-${parts[0].padStart(2,"0")}`;
+        return d.split("T")[0] ?? "";
+      };
+      const isoDate = parseDateToISO(t.date);
+      if (!isoDate.startsWith(selectedMonth)) return false;
+    }
     if (!transactionSearchTerm) return true;
     const term = transactionSearchTerm.toLowerCase();
     return (
@@ -466,29 +489,18 @@ export function Parties({ isReportView, onBack, onEditSaleInvoice }: PartiesProp
 
   const handleExportExcel = () => {
     if (!selectedParty) return;
-
-    const headers = ["Type", "Number", "Date", "Total", "Balance"];
-    const rows = filteredPartyTransactions.map(t => [
-      t.type,
-      t.invoiceNo || "",
-      t.date,
-      t.amount.toFixed(2),
-      t.balance.toFixed(2)
-    ]);
-
-    const csvContent = [
-      headers.join(","),
-      ...rows.map(row => row.join(","))
-    ].join("\n");
-
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.setAttribute("download", `${selectedParty.name}_transactions.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    exportPartyTransactionsToExcel(
+      selectedParty.name,
+      filteredPartyTransactions.map((t) => ({
+        type: t.type,
+        invoiceNo: t.invoiceNo || "",
+        date: t.date,
+        amount: t.amount,
+        balance: t.balance,
+      })),
+      selectedMonth,
+      currencyStr
+    );
   };
 
 
@@ -741,6 +753,9 @@ export function Parties({ isReportView, onBack, onEditSaleInvoice }: PartiesProp
             setTransactionSearchTerm={setTransactionSearchTerm}
             handlePrintTransactions={handlePrintTransactions}
             handleExportExcel={handleExportExcel}
+            selectedMonth={selectedMonth}
+            onSetSelectedMonth={setSelectedMonth}
+            businessProfile={businessProfile}
             openEditPartyDialog={openEditPartyDialog}
             isReportView={isReportView}
             loadPartiesAndTransactions={loadPartiesAndTransactions}

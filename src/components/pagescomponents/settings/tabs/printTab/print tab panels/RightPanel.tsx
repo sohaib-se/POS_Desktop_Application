@@ -130,56 +130,7 @@ function InputRow({
 
 
 
-function LinkRow({ label, onClick }: { label: string; onClick?: () => void }) {
-  const [hovered, setHovered] = useState(false);
-  return (
-    <div
-      onClick={onClick}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      style={{
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        padding: "6px 0",
-        cursor: "pointer",
-        borderRadius: 4,
-        transition: "background 0.1s",
-        background: hovered ? "#f3f4f6" : "transparent",
-        margin: "0 -4px",
-        paddingLeft: 4,
-        paddingRight: 4,
-      }}
-    >
-      <span style={{ fontSize: 12, color: hovered ? "#1e40af" : "#374151" }}>{label}</span>
-      <span style={{ fontSize: 13, color: "#9ca3af" }}>›</span>
-    </div>
-  );
-}
 
-function ActionButton({ label, onClick }: { label: string; onClick?: () => void }) {
-  const [hovered, setHovered] = useState(false);
-  return (
-    <button
-      onClick={onClick}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      style={{
-        fontSize: 12,
-        color: hovered ? "#111827" : "#374151",
-        border: "1px solid " + (hovered ? "#9ca3af" : "#e5e7eb"),
-        borderRadius: 5,
-        padding: "5px 10px",
-        background: hovered ? "#f3f4f6" : "#fff",
-        cursor: "pointer",
-        textAlign: "left",
-        transition: "all 0.15s",
-      }}
-    >
-      {label}
-    </button>
-  );
-}
 
 /* ─────────────────────── Logo upload row ──────────────────────────── */
 

@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useSettings } from "@/hooks/useSettings";
 import { userProfile } from "@/data/mockData";
+import { usePrintTotalsSettings } from "@/hooks/usePrintSettings";
 
 /* ─────────────────────────────── Types ─────────────────────────────── */
 
@@ -21,11 +22,13 @@ interface ThermalTheme2Props {
     invoiceDate: string;
     customerName: string;
     customerPhone?: string;
-    businessProfile?: { business_name?: string; phone?: string; address?: string; logo_url?: string };
+    businessProfile?: { business_name?: string; phone?: string; address?: string; email?: string; logo_url?: string };
     received?: number;
     discount?: number;
     discountPercent?: number;
     taxPercent?: number;
+    paymentMode?: string;
+    previousBalance?: number;
 }
 
 /* ─────────────────────── Dummy preview data ────────────────────────── */
@@ -136,6 +139,8 @@ export function ThermalSaleInvoiceClassic({
     discount = 0,
     discountPercent,
     taxPercent = 0,
+    paymentMode,
+    previousBalance,
 }: ThermalTheme2Props) {
     const [currency] = useSettings("settings.businessCurrency", { code: "PKR", symbol: "Rs" });
     const [currencyDisplay] = useSettings<"abbreviation" | "icon">(
@@ -145,13 +150,17 @@ export function ThermalSaleInvoiceClassic({
     void currencyDisplay;
     void currency;
 
+    const ps = usePrintTotalsSettings();
+
     const totalQuantity = records.reduce((s, r) => s + Number(r.quantity || 0), 0);
     const subTotal = records.reduce((s, r) => s + Number(r.amount || 0), 0);
     const taxAmount = (subTotal - Number(discount)) * (Number(taxPercent) / 100);
     const total = subTotal - Number(discount) + taxAmount;
     const balance = total - Number(received);
+    const prevBalance = Number(previousBalance ?? 0);
+    const currentBalance = prevBalance + balance;
 
-    const fmt = (n: number) => n.toFixed(2);
+    const fmt = (n: number) => ps.amountWithDecimal ? n.toFixed(2) : Math.round(n).toString();
 
     return (
         <div
@@ -185,6 +194,9 @@ export function ThermalSaleInvoiceClassic({
                 {businessProfile?.phone && (
                     <div style={{ fontSize: 11, color: "#444" }}>{businessProfile.phone}</div>
                 )}
+                {businessProfile?.email && (
+                    <div style={{ fontSize: 11, color: "#444" }}>Email: {businessProfile.email}</div>
+                )}
             </div>
 
             <SolidDivider thick />
@@ -208,28 +220,30 @@ export function ThermalSaleInvoiceClassic({
                 <thead>
                     <tr>
                         <th style={{ textAlign: "left", padding: "3px 0", fontWeight: 700 }}>Item</th>
-                        <th style={{ textAlign: "center", padding: "3px 0", fontWeight: 700 }}>Qty</th>
-                        <th style={{ textAlign: "right", padding: "3px 0", fontWeight: 700 }}>Price</th>
+                        {ps.showQuantity && <th style={{ textAlign: "center", padding: "3px 0", fontWeight: 700 }}>Qty</th>}
+                        {ps.showPricePerUnit && <th style={{ textAlign: "right", padding: "3px 0", fontWeight: 700 }}>Price</th>}
                         <th style={{ textAlign: "right", padding: "3px 0", fontWeight: 700 }}>Total</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr>
-                        <td colSpan={4} style={{ padding: 0 }}>
+                        <td colSpan={1 + (ps.showQuantity ? 1 : 0) + (ps.showPricePerUnit ? 1 : 0) + 1} style={{ padding: 0 }}>
                             <div style={{ borderTop: "1px solid #111", margin: "2px 0" }} />
                         </td>
                     </tr>
                     {records.map((r, idx) => {
-                        const qtyWithUnit = r.unit ? `${r.quantity ?? ""}${r.unit}` : `${r.quantity ?? ""}`;
+                        const qtyWithUnit = ps.showUnit && r.unit ? `${r.quantity ?? ""}${r.unit}` : `${r.quantity ?? ""}`;
                         return (
                             <tr key={r.id ?? idx}>
                                 <td style={{ padding: "3px 0", wordBreak: "break-word" }}>
                                     {r.itemName || r.item_name || ""}
                                 </td>
-                                <td style={{ padding: "3px 0", textAlign: "center" }}>{qtyWithUnit}</td>
-                                <td style={{ padding: "3px 0", textAlign: "right" }}>
-                                    {fmt(Number(r.pricePerUnit ?? r.price_per_unit ?? 0))}
-                                </td>
+                                {ps.showQuantity && <td style={{ padding: "3px 0", textAlign: "center" }}>{qtyWithUnit}</td>}
+                                {ps.showPricePerUnit && (
+                                    <td style={{ padding: "3px 0", textAlign: "right" }}>
+                                        {fmt(Number(r.pricePerUnit ?? r.price_per_unit ?? 0))}
+                                    </td>
+                                )}
                                 <td style={{ padding: "3px 0", textAlign: "right", fontWeight: 600 }}>
                                     {fmt(Number(r.amount || 0))}
                                 </td>
@@ -237,16 +251,21 @@ export function ThermalSaleInvoiceClassic({
                         );
                     })}
                     <tr>
-                        <td colSpan={4} style={{ padding: 0 }}>
+                        <td colSpan={1 + (ps.showQuantity ? 1 : 0) + (ps.showPricePerUnit ? 1 : 0) + 1} style={{ padding: 0 }}>
                             <div style={{ borderTop: "1px solid #111", margin: "2px 0" }} />
                         </td>
                     </tr>
                     <tr>
                         <td style={{ padding: "3px 0", fontWeight: 600 }}>Items</td>
-                        <td style={{ padding: "3px 0", textAlign: "center", fontWeight: 600 }}>
-                            {totalQuantity}
-                        </td>
-                        <td colSpan={2} />
+                        {ps.showQuantity && ps.totalItemQuantity ? (
+                            <td style={{ padding: "3px 0", textAlign: "center", fontWeight: 600 }}>
+                                {totalQuantity}
+                            </td>
+                        ) : (
+                            ps.showQuantity ? <td /> : null
+                        )}
+                        {ps.showPricePerUnit && <td colSpan={2} />}
+                        {!ps.showPricePerUnit && <td />}
                     </tr>
                 </tbody>
             </table>
@@ -265,7 +284,7 @@ export function ThermalSaleInvoiceClassic({
                     </div>
                 )}
 
-                {taxPercent > 0 && (
+                {taxPercent > 0 && ps.taxDetails && (
                     <div style={{ display: "flex", justifyContent: "space-between", padding: "2px 0" }}>
                         <span>Tax ({taxPercent}%)</span>
                         <span>{fmt(taxAmount)}</span>
@@ -290,14 +309,36 @@ export function ThermalSaleInvoiceClassic({
             </div>
 
             <div style={{ fontSize: 12 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", padding: "2px 0" }}>
-                    <span>Received</span>
-                    <span>{fmt(Number(received))}</span>
-                </div>
-                <div style={{ display: "flex", justifyContent: "space-between", padding: "2px 0", fontWeight: 700 }}>
-                    <span>Balance Due</span>
-                    <span>{fmt(balance)}</span>
-                </div>
+                {ps.receivedAmount && (
+                    <div style={{ display: "flex", justifyContent: "space-between", padding: "2px 0" }}>
+                        <span>Received</span>
+                        <span>{fmt(Number(received))}</span>
+                    </div>
+                )}
+                {ps.balanceAmount && (
+                    <div style={{ display: "flex", justifyContent: "space-between", padding: "2px 0", fontWeight: 700 }}>
+                        <span>Balance Due</span>
+                        <span>{fmt(balance)}</span>
+                    </div>
+                )}
+                {ps.previousBalance && (
+                    <div style={{ display: "flex", justifyContent: "space-between", padding: "2px 0", color: "#111" }}>
+                        <span>Previous Balance:</span>
+                        <span>{fmt(prevBalance)}</span>
+                    </div>
+                )}
+                {ps.currentBalanceOfParty && (
+                    <div style={{ display: "flex", justifyContent: "space-between", padding: "2px 0", fontWeight: 700 }}>
+                        <span>Curr. Balance</span>
+                        <span>{fmt(currentBalance)}</span>
+                    </div>
+                )}
+                {ps.paymentMode && paymentMode && (
+                    <div style={{ display: "flex", justifyContent: "space-between", padding: "2px 0" }}>
+                        <span>Pay. Mode</span>
+                        <span>{paymentMode}</span>
+                    </div>
+                )}
             </div>
 
             <SolidDivider />
@@ -320,6 +361,7 @@ function useCompanyInfo() {
         business_name: userProfile.businessName,
         phone: userProfile.phone,
         address: (userProfile as any).address as string | undefined,
+        email: (userProfile as any).email as string | undefined,
         logo_url: userProfile.logo as string | undefined,
     });
 
@@ -332,6 +374,7 @@ function useCompanyInfo() {
                         business_name: d.business_name || userProfile.businessName,
                         phone: d.phone || userProfile.phone,
                         address: d.address || (userProfile as any).address,
+                        email: d.email || (userProfile as any).email,
                         logo_url: d.logo_url || d.logo || userProfile.logo,
                     });
                 }
@@ -373,10 +416,11 @@ export function ThermalTheme2Preview() {
                     customerName="Zeeshan"
                     customerPhone="03129955494"
                     businessProfile={company}
-                    received={50}
-                    discount={50}
-                    discountPercent={50}
+                    received={0}
+                    discount={0}
                     taxPercent={0}
+                    paymentMode="Credit"
+                    previousBalance={800}
                 />
             </div>
         </div>

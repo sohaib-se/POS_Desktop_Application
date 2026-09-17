@@ -1,8 +1,7 @@
 import { useState, useEffect } from "react";
 import { useSettings } from "@/hooks/useSettings";
 import { userProfile } from "@/data/mockData";
-
-/* ─────────────────────────────── Types ─────────────────────────────── */
+import { usePrintTotalsSettings } from "@/hooks/usePrintSettings";
 
 interface SaleInvoiceLineItem {
   id?: string | number;
@@ -15,255 +14,332 @@ interface SaleInvoiceLineItem {
   amount?: number | string;
 }
 
-interface ThermalTheme4Props {
+interface Theme4InvoicePrintReportProps {
   records: SaleInvoiceLineItem[];
   invoiceNo: string | number;
   invoiceDate: string;
   customerName: string;
-  customerPhone?: string;
-  businessProfile?: { business_name?: string; phone?: string; address?: string; logo_url?: string };
+  customerContact?: string;
+  businessProfile?: any;
   received?: number;
+  accentColor?: string;
+  paymentMode?: string;
+  previousBalance?: number;
   discount?: number;
   discountPercent?: number;
+  taxPercent?: number;
+  description?: string;
 }
 
-/* ─────────────────────── Dummy preview data ────────────────────────── */
+// Minimal number-to-words for whole rupee amounts (extend as needed for paisa/large numbers)
+function numberToWords(num: number): string {
+  const ones = ["", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten",
+    "Eleven", "Twelve", "Thirteen", "Fourteen", "Fifteen", "Sixteen", "Seventeen", "Eighteen", "Nineteen"];
+  const tens = ["", "", "Twenty", "Thirty", "Forty", "Fifty", "Sixty", "Seventy", "Eighty", "Ninety"];
 
-const DUMMY_RECORDS: SaleInvoiceLineItem[] = [
-  { id: 1, itemName: "Book", quantity: 1, unit: "1Box", pricePerUnit: 100, amount: 100 },
-];
+  const chunk = (n: number): string => {
+    if (n === 0) return "";
+    if (n < 20) return ones[n] + " ";
+    if (n < 100) return tens[Math.floor(n / 10)] + " " + chunk(n % 10);
+    return ones[Math.floor(n / 100)] + " Hundred " + chunk(n % 100);
+  };
 
-/* ──────────────────── formatDate / formatTime ────────────────────────── */
+  if (num === 0) return "Zero";
+  let n = Math.floor(num);
+  let words = "";
 
-function formatDate(dateStr: string): string {
-  if (!dateStr) return "";
-  if (dateStr.includes("/")) {
-    const p = dateStr.split("/");
-    if (p.length === 3) return `${p[0].padStart(2, "0")}/${p[1].padStart(2, "0")}/${p[2]}`;
-  } else if (dateStr.includes("-")) {
-    const p = dateStr.split("T")[0].split("-");
-    if (p.length === 3 && p[0].length === 4) return `${p[2]}/${p[1]}/${p[0]}`;
+  const crore = Math.floor(n / 10000000);
+  n %= 10000000;
+  const lakh = Math.floor(n / 100000);
+  n %= 100000;
+  const thousand = Math.floor(n / 1000);
+  n %= 1000;
+  const rest = n;
+
+  if (crore) words += chunk(crore) + "Crore ";
+  if (lakh) words += chunk(lakh) + "Lakh ";
+  if (thousand) words += chunk(thousand) + "Thousand ";
+  if (rest) words += chunk(rest);
+
+  return words.trim();
+}
+
+function InvoiceLogo({ logoUrl, businessName, size = 72 }: { logoUrl?: string; businessName?: string; size?: number }) {
+  if (logoUrl) {
+    return (
+      <img
+        src={logoUrl}
+        alt={businessName ? `${businessName} logo` : "Business logo"}
+        style={{ width: size, height: size, objectFit: "contain", flexShrink: 0 }}
+      />
+    );
   }
-  return dateStr;
-}
-
-function formatTime(dateStr: string): string {
-  const d = new Date(dateStr);
-  if (isNaN(d.getTime())) return "";
-  return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-}
-
-/* ────────── Barcode strip — proportional flex bars, never overflows ──────
-   Widths are relative (flex-grow), not fixed pixels, so the strip always
-   fills the available width exactly regardless of container size.
-------------------------------------------------------------------- */
-
-function BarcodeStrip({ seed = 6 }: { seed?: number | string }) {
-  const str = String(seed) + "receiptbarcode";
-  const bars: number[] = [];
-  for (let i = 0; i < 32; i++) {
-    const code = str.charCodeAt(i % str.length) + i;
-    bars.push((code % 3) + 1); // relative widths 1-3
-  }
+  // Fallback placeholder so the layout holds steady before a logo is uploaded
   return (
-    <div style={{ display: "flex", height: 28, gap: 1 }}>
-      {bars.map((w, i) => (
-        <div key={i} style={{ flex: `${w} ${w} 0`, background: "#000" }} />
-      ))}
+    <div
+      style={{
+        width: size,
+        height: size,
+        backgroundColor: "transparent",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        fontWeight: 700,
+        fontSize: size * 0.4,
+        flexShrink: 0,
+      }}
+    >
+      {(businessName || "M").charAt(0).toUpperCase()}
     </div>
   );
 }
 
-/* ─────────── ThermalSaleInvoiceRetail — plain industry-standard look ───
-   Same building blocks as the reference Theme 3 file — flex rows for
-   meta/summary lines, a real <table> for items, border-based rules —
-   so it renders reliably at any width or font-substitution outcome.
-   No color anywhere: pure black ink on white, ALL-CAPS labels, dashed/
-   solid rules, a barcode footer. This is the plain look nearly every
-   retail register actually prints.
-*/
-
-export function ThermalSaleInvoiceRetail({
+export function Theme4InvoicePrintReport({
   records,
   invoiceNo,
   invoiceDate,
   customerName,
-  customerPhone,
+  customerContact,
   businessProfile,
   received = 0,
+  accentColor,
+  paymentMode,
+  previousBalance,
   discount = 0,
-  discountPercent,
-}: ThermalTheme4Props) {
-  const [currency] = useSettings("settings.businessCurrency", { code: "PKR", symbol: "Rs" });
-  const [currencyDisplay] = useSettings<"abbreviation" | "icon">(
-    "settings.currencyDisplay",
-    "abbreviation"
-  );
-  void currencyDisplay;
-  void currency;
+  discountPercent = 0,
+  taxPercent = 0,
+  description,
+}: Theme4InvoicePrintReportProps) {
+  const [currency] = useSettings('settings.businessCurrency', { code: 'PKR', symbol: 'Rs' });
+  const [currencyDisplay] = useSettings<'abbreviation' | 'icon'>('settings.currencyDisplay', 'abbreviation');
+  const currencyStr = currencyDisplay === 'icon' ? currency.symbol : currency.code;
 
-  const totalQuantity = records.reduce((s, r) => s + Number(r.quantity || 0), 0);
-  const subTotal = records.reduce((s, r) => s + Number(r.amount || 0), 0);
-  const total = subTotal - Number(discount);
-  const balance = total - Number(received);
-  const youSaved = Number(discount);
+  const ACCENT = accentColor ?? "#8B85D6";
 
-  const fmt = (n: number) => n.toFixed(2);
-  const businessName = (businessProfile?.business_name || "My Company").toUpperCase();
-
-  /* Shared row style — flex space-between, monospace font */
-  const row: React.CSSProperties = {
-    display: "flex",
-    justifyContent: "space-between",
-    lineHeight: 1.7,
-    fontSize: 12,
+  const formatDate = (dateStr: string) => {
+    if (!dateStr) return "";
+    if (dateStr.includes('/')) {
+      const parts = dateStr.split('/');
+      if (parts.length === 3) return `${parts[0].padStart(2, '0')}-${parts[1].padStart(2, '0')}-${parts[2]}`;
+    } else if (dateStr.includes('-')) {
+      const parts = dateStr.split('T')[0].split('-');
+      if (parts.length === 3 && parts[0].length === 4) return `${parts[2]}-${parts[1]}-${parts[0]}`;
+    }
+    return dateStr;
   };
-  const rule = (char: "-" | "=") => (
-    <div
-      style={{
-        borderTop: char === "=" ? "2px solid #000" : "1px dashed #555",
-        margin: "5px 0",
-      }}
-    />
-  );
+
+  const totalQuantity = records.reduce((sum, r) => sum + Number(r.quantity || 0), 0);
+  const subTotal = records.reduce((sum, r) => sum + Number(r.amount || 0), 0);
+  const discountAmount = discount > 0 ? discount : (discountPercent > 0 ? subTotal * discountPercent / 100 : 0);
+  const taxAmount = taxPercent > 0 ? (subTotal - discountAmount) * taxPercent / 100 : 0;
+  const total = subTotal - discountAmount + taxAmount;
+  const balance = total - Number(received || 0);
+  const prevBalance = Number(previousBalance ?? 0);
+  const currentBalance = prevBalance + balance;
+
+  const ps = usePrintTotalsSettings();
+
+  const fmt = (n: number) => `${currencyStr} ${ps.amountWithDecimal ? n.toFixed(2) : Math.round(n).toString()}`;
+
+  // Pad the item table with blank rows so short invoices still fill a full page, Tally-style
+  const MIN_ROWS = 10;
+  const fillerRows = Math.max(0, MIN_ROWS - records.length);
 
   return (
-    <div
-      style={{
-        background: "#fff",
-        color: "#000",
-        fontFamily: "'Courier New', Courier, Consolas, monospace",
-        width: "100%",
-        maxWidth: 380,
-        margin: "0 auto",
-        padding: "16px 14px 24px",
-        boxSizing: "border-box",
-        fontSize: 12,
-      }}
-    >
-      {/* ── HEADER ── */}
-      <div style={{ textAlign: "center", marginBottom: 6 }}>
-        {businessProfile?.logo_url && (
-          <img
-            src={businessProfile.logo_url}
-            alt="logo"
-            style={{ width: 52, height: 52, objectFit: "contain", display: "block", margin: "0 auto 4px" }}
-          />
-        )}
-        <div style={{ fontSize: 15, fontWeight: 800, letterSpacing: 1 }}>{businessName}</div>
-        {businessProfile?.address && (
-          <div style={{ fontSize: 11 }}>{businessProfile.address}</div>
-        )}
-        {businessProfile?.phone && (
-          <div style={{ fontSize: 11 }}>TEL: {businessProfile.phone}</div>
-        )}
+    <div className="print-area bg-white text-black font-sans w-full max-w-[794px] mx-auto px-10 py-6">
+      {/* Business Header */}
+      <div className="flex items-start justify-between mb-2">
+        <div>
+          <h1 className="text-xl font-bold">{businessProfile?.business_name || "My Company"}</h1>
+          <p className="text-xs text-gray-800 mt-0.5">{businessProfile?.address || "Jhagra peshawar"}</p>
+          <p className="text-xs text-gray-800 mt-0.5">Phone no. : {businessProfile?.phone || ""}</p>
+          <p className="text-xs text-gray-800 mt-0.5">Email : {businessProfile?.email || "msoh@gmail.com"}</p>
+        </div>
+        <InvoiceLogo logoUrl={businessProfile?.logo_url} businessName={businessProfile?.business_name} size={64} />
       </div>
 
-      {rule("-")}
-      <div style={{ textAlign: "center", fontSize: 13, fontWeight: 700 }}>SALES RECEIPT</div>
-      {rule("-")}
+      {/* Invoice title */}
+      <div className="border-t-2 border-black pt-2 mb-4">
+        <h2 className="text-center text-lg font-bold" style={{ color: ACCENT }}>Invoice</h2>
+      </div>
 
-      {/* ── META ── */}
-      <div style={row}><span>RECEIPT #</span><span>{invoiceNo}</span></div>
-      <div style={row}><span>DATE</span><span>{formatDate(invoiceDate)} {formatTime(invoiceDate)}</span></div>
-      <div style={row}><span>CUSTOMER</span><span>{customerName}</span></div>
-      {customerPhone && <div style={row}><span>PHONE</span><span>{customerPhone}</span></div>}
+      {/* Bill To / Invoice Details */}
+      <div className="flex justify-between mb-1">
+        <p className="text-sm font-bold">Bill To</p>
+        <p className="text-sm font-bold">Invoice Details</p>
+      </div>
+      <div className="flex justify-between mb-1">
+        <p className="text-sm font-bold">{customerName}</p>
+        <div className="text-right text-sm">
+          <p>Invoice No. : {invoiceNo}</p>
+          <p>Date : {formatDate(invoiceDate)}</p>
+        </div>
+      </div>
+      <div className="flex justify-between mb-4">
+        <p className="text-sm">Contact No. : {customerContact || "03129955494"}</p>
+      </div>
 
-      {rule("=")}
-
-      {/* ── ITEMS ── */}
-      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12, fontFamily: "inherit" }}>
-        <thead>
-          <tr>
-            <th style={{ textAlign: "left", fontWeight: 700, padding: "2px 0" }}>ITEM</th>
-            <th style={{ textAlign: "center", fontWeight: 700, padding: "2px 0" }}>QTY</th>
-            <th style={{ textAlign: "right", fontWeight: 700, padding: "2px 0" }}>PRICE</th>
-            <th style={{ textAlign: "right", fontWeight: 700, padding: "2px 0" }}>TOTAL</th>
+      {/* Items table */}
+      <table className="w-full text-xs mb-0 border-collapse">
+        <thead style={{ backgroundColor: ACCENT, WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>
+          <tr className="text-white text-left">
+            {ps.showSno && <th className="py-1.5 px-2 font-bold w-8">#</th>}
+            <th className="py-1.5 px-2 font-bold">Item name</th>
+            {ps.showQuantity && <th className="py-1.5 px-2 font-bold text-right">Quantity</th>}
+            {ps.showUnit && <th className="py-1.5 px-2 font-bold text-right">Unit</th>}
+            {ps.showPricePerUnit && <th className="py-1.5 px-2 font-bold text-right">Price/ Unit</th>}
+            <th className="py-1.5 px-2 font-bold text-right">Amount</th>
           </tr>
         </thead>
         <tbody>
-          {records.map((r, idx) => {
-            const qtyWithUnit = r.unit ? `${r.quantity ?? ""}${r.unit}` : `${r.quantity ?? ""}`;
-            return (
-              <tr key={r.id ?? idx}>
-                <td style={{ padding: "2px 0", wordBreak: "break-word" }}>
-                  {(r.itemName || r.item_name || "").toUpperCase()}
+          {records.map((record, idx) => (
+            <tr key={record.id ?? idx} className="text-xs border-b border-gray-300">
+              {ps.showSno && <td className="py-1 px-2">{idx + 1}</td>}
+              <td className="py-1 px-2 font-bold">{record.itemName || record.item_name || ""}</td>
+              {ps.showQuantity && <td className="py-1 px-2 text-right">{record.quantity ?? ""}</td>}
+              {ps.showUnit && <td className="py-1 px-2 text-right">{record.unit || ""}</td>}
+              {ps.showPricePerUnit && (
+                <td className="py-1 px-2 text-right whitespace-nowrap">
+                  {currencyStr} {ps.amountWithDecimal ? Number(record.pricePerUnit ?? record.price_per_unit ?? 0).toFixed(2) : Math.round(Number(record.pricePerUnit ?? record.price_per_unit ?? 0)).toString()}
                 </td>
-                <td style={{ padding: "2px 0", textAlign: "center" }}>{qtyWithUnit}</td>
-                <td style={{ padding: "2px 0", textAlign: "right" }}>
-                  {fmt(Number(r.pricePerUnit ?? r.price_per_unit ?? 0))}
-                </td>
-                <td style={{ padding: "2px 0", textAlign: "right", fontWeight: 700 }}>
-                  {fmt(Number(r.amount || 0))}
-                </td>
-              </tr>
-            );
-          })}
+              )}
+              <td className="py-1 px-2 text-right whitespace-nowrap">
+                {currencyStr} {ps.amountWithDecimal ? Number(record.amount || 0).toFixed(2) : Math.round(Number(record.amount || 0)).toString()}
+              </td>
+            </tr>
+          ))}
+          {fillerRows > 0 && (
+            <tr>
+              <td style={{ height: `${fillerRows * 34}px` }}></td>
+              <td></td>
+              {ps.showQuantity && <td></td>}
+              {ps.showUnit && <td></td>}
+              {ps.showPricePerUnit && <td></td>}
+              <td></td>
+            </tr>
+          )}
         </tbody>
       </table>
 
-      {rule("-")}
+      {/* Total row */}
+      <div className="flex justify-between items-center border-t border-b border-gray-400 py-1.5 mb-4">
+        <span className="text-sm font-bold pl-2">Total</span>
+        {ps.totalItemQuantity && <span className="text-sm font-bold">{totalQuantity}</span>}
+        <span className="text-sm font-bold pr-2 whitespace-nowrap">{fmt(total)}</span>
+      </div>
 
-      <div style={row}><span>TOTAL QTY</span><span>{totalQuantity}</span></div>
-      <div style={row}><span>SUBTOTAL</span><span>{fmt(subTotal)}</span></div>
+      {/* Footer: Amount in words / Payment mode / Terms + Amounts */}
+      <div className="flex gap-4">
+        <div className="flex-[55] pt-1.5">
+          {ps.amountInWords && (
+            <p className="text-xs">
+              <span className="font-bold">Invoice Amount in Words:</span> {numberToWords(total)} {currency.code === 'PKR' ? 'Rupees' : ''} only
+            </p>
+          )}
 
-      {discount > 0 && (
-        <div style={row}>
-          <span>DISCOUNT{discountPercent != null ? `(${discountPercent}%)` : ""}</span>
-          <span>-{fmt(Number(discount))}</span>
+          {ps.printDescription && (
+            <p className="text-xs mt-2">
+              <span className="font-bold">Description:</span> {description || "No description provided."}
+            </p>
+          )}
+
+          {ps.paymentMode && (
+            <p className="text-xs mt-2">
+              <span className="font-bold">Payment mode:</span> {paymentMode || "Credit"}
+            </p>
+          )}
+
+          {ps.printTermsAndConditions && (
+            <p className="text-xs mt-2">
+              <span className="font-bold">Terms &amp; Conditions:</span> Goods once sold will not be taken back. Payment due within 15 days of invoice date.
+            </p>
+          )}
         </div>
-      )}
-
-      {rule("=")}
-
-      <div style={{ ...row, fontSize: 16, fontWeight: 800, margin: "2px 0" }}>
-        <span>TOTAL</span>
-        <span>{fmt(total)}</span>
+        <div className="flex-[45] border-t border-gray-400">
+          <div className="flex justify-between text-xs px-0 py-1 border-b border-gray-300">
+            <span>Sub Total</span>
+            <span className="whitespace-nowrap">{fmt(subTotal)}</span>
+          </div>
+          {ps.discount && discountAmount > 0 && (
+            <div className="flex justify-between text-xs px-0 py-1 border-b border-gray-300 text-green-700">
+              <span>Discount {discountPercent > 0 ? `(${discountPercent}%)` : ""}</span>
+              <span className="whitespace-nowrap">- {fmt(discountAmount)}</span>
+            </div>
+          )}
+          {ps.taxDetails && taxAmount > 0 && (
+            <div className="flex justify-between text-xs px-0 py-1 border-b border-gray-300">
+              <span>Tax ({taxPercent}%)</span>
+              <span className="whitespace-nowrap">{fmt(taxAmount)}</span>
+            </div>
+          )}
+          {ps.youSaved && discountAmount > 0 && (
+            <div className="flex justify-between text-xs px-0 py-1 border-b border-gray-300 text-green-700 font-semibold">
+              <span>You Saved</span>
+              <span className="whitespace-nowrap">{fmt(discountAmount)}</span>
+            </div>
+          )}
+          <div className="flex justify-between text-xs px-0 py-1 border-b border-gray-300 font-bold">
+            <span>Total</span>
+            <span className="whitespace-nowrap">{fmt(total)}</span>
+          </div>
+          {ps.receivedAmount && (
+            <div className="flex justify-between text-xs px-0 py-1 border-b border-gray-300">
+              <span>Received</span>
+              <span className="whitespace-nowrap">{fmt(Number(received || 0))}</span>
+            </div>
+          )}
+          {ps.balanceAmount && (
+            <div className="flex justify-between text-xs px-0 py-1 border-b border-gray-300">
+              <span>Balance</span>
+              <span className="whitespace-nowrap">{fmt(balance)}</span>
+            </div>
+          )}
+          {ps.previousBalance && (
+            <div className="flex justify-between text-xs px-0 py-1 mt-2">
+              <span>Previous Balance</span>
+              <span className="whitespace-nowrap">{fmt(prevBalance)}</span>
+            </div>
+          )}
+          {ps.currentBalanceOfParty && (
+            <div className="flex justify-between text-xs px-0 py-1 font-bold">
+              <span>Current Balance</span>
+              <span className="whitespace-nowrap">{fmt(currentBalance)}</span>
+            </div>
+          )}
+        </div>
       </div>
 
-      {rule("=")}
-
-      <div style={row}><span>CASH TENDERED</span><span>{fmt(Number(received))}</span></div>
-      <div style={{ ...row, fontWeight: 700 }}>
-        <span>{balance > 0 ? "BALANCE DUE" : "CHANGE DUE"}</span>
-        <span>{fmt(Math.abs(balance))}</span>
-      </div>
-
-      {youSaved > 0 && (
-        <>
-          {rule("-")}
-          <div style={row}><span>YOU SAVED</span><span>{fmt(youSaved)}</span></div>
-        </>
-      )}
-
-      {rule("-")}
-
-      {/* ── FOOTER ── */}
-      <div style={{ textAlign: "center", marginTop: 6 }}>
-        <div style={{ fontSize: 13, fontWeight: 700 }}>THANK YOU</div>
-        <div style={{ fontSize: 10, marginTop: 1 }}>PLEASE RETAIN FOR RETURNS</div>
-      </div>
-
-      <div style={{ marginTop: 12 }}>
-        <BarcodeStrip seed={invoiceNo} />
-        <div style={{ textAlign: "center", fontSize: 11, letterSpacing: 3, marginTop: 3 }}>
-          {String(invoiceNo).padStart(12, "0")}
+      {/* Signatory */}
+      <div className="flex justify-end mt-10">
+        <div className="text-center">
+          <p className="text-sm">For : {businessProfile?.business_name || "My Company"}</p>
+          {businessProfile?.signature && (
+            <img src={businessProfile.signature} alt="Signature" style={{ maxHeight: 60, objectFit: "contain", margin: "10px auto" }} />
+          )}
+          <p className={`text-sm font-bold ${businessProfile?.signature ? 'mt-2' : 'mt-16'}`}>
+            {ps.printSignatureText || "Authorized Signatory"}
+          </p>
         </div>
       </div>
     </div>
   );
 }
 
-/* ───────────────────────── useCompanyInfo ──────────────────────────── */
+/* ─────────────────────── Theme4Preview ─────────────────────────── */
+
+const DUMMY_RECORDS = [
+  { id: 1, itemName: "Book", quantity: 1, unit: "Bt", pricePerUnit: 100, amount: 100 },
+];
 
 function useCompanyInfo() {
   const [info, setInfo] = useState({
     business_name: userProfile.businessName,
     phone: userProfile.phone,
-    address: (userProfile as any).address as string | undefined,
     logo_url: userProfile.logo as string | undefined,
+    address: (userProfile as any).address,
+    email: (userProfile as any).email,
+    signature: (userProfile as any).signature as string | undefined,
   });
-
   useEffect(() => {
     fetch("/api/user_profile")
       .then((r) => r.json())
@@ -272,51 +348,38 @@ function useCompanyInfo() {
           setInfo({
             business_name: d.business_name || userProfile.businessName,
             phone: d.phone || userProfile.phone,
-            address: d.address || (userProfile as any).address,
             logo_url: d.logo_url || d.logo || userProfile.logo,
+            address: d.address || (userProfile as any).address,
+            email: d.email || (userProfile as any).email,
+            signature: d.signature_url || d.signature || undefined,
           });
         }
       })
       .catch(() => { });
   }, []);
-
   return info;
 }
 
-/* ───────────────────────── Preview export ──────────────────────────── */
-
-export function ThermalTheme4Preview() {
+export function Theme4Preview({ accentColor }: { accentColor?: string } = {}) {
   const company = useCompanyInfo();
   return (
-    <div
-      style={{
-        width: "100%",
-        height: "100%",
-        display: "flex",
-        justifyContent: "center",
-        backgroundColor: "#f3f4f6",
-        padding: "24px 0",
-      }}
-    >
-      <div
-        style={{
-          background: "#fff",
-          boxShadow: "0 2px 12px rgba(0,0,0,0.10)",
-          borderRadius: 4,
-          width: 380,
-          flexShrink: 0,
-        }}
-      >
-        <ThermalSaleInvoiceRetail
+    <div style={{ width: "100%", height: "100%", display: "flex", justifyContent: "center", backgroundColor: "#f3f4f6", padding: "16px 0" }}>
+      <div style={{ zoom: 0.88, transformOrigin: "top center", width: 900, flexShrink: 0 }}>
+        <Theme4InvoicePrintReport
           records={DUMMY_RECORDS}
-          invoiceNo={6}
-          invoiceDate="2026-09-04"
-          customerName="Zeeshan"
-          customerPhone="03129955494"
+          invoiceNo={3}
+          invoiceDate="2026-09-03"
+          customerName="zeeshan"
+          customerContact="03129955494"
           businessProfile={company}
-          received={50}
-          discount={50}
-          discountPercent={50}
+          received={0}
+          accentColor={accentColor}
+          paymentMode="Credit"
+          previousBalance={800}
+          discount={10}
+          discountPercent={10}
+          taxPercent={5}
+          description="Thank you for your business!"
         />
       </div>
     </div>

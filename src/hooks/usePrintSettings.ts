@@ -29,6 +29,25 @@ export interface PrintTotalsSettings {
   discount: boolean;
   /** Show "You Saved" row when discount > 0 */
   youSaved: boolean;
+  /** Show Invoice Amount in Words */
+  amountInWords: boolean;
+  /** Show description */
+  printDescription: boolean;
+  /** Show terms and conditions */
+  printTermsAndConditions: boolean;
+  /** Signature text to display */
+  printSignatureText: string;
+  /** Show payment mode */
+  paymentMode: boolean;
+  // ── Item table column visibility ──
+  /** Show the S.NO (#) column in the item table */
+  showSno: boolean;
+  /** Show the Quantity column in the item table */
+  showQuantity: boolean;
+  /** Show the Unit column in the item table */
+  showUnit: boolean;
+  /** Show the Price/Unit column in the item table */
+  showPricePerUnit: boolean;
 }
 
 export const DEFAULT_PRINT_TOTALS: PrintTotalsSettings = {
@@ -41,6 +60,16 @@ export const DEFAULT_PRINT_TOTALS: PrintTotalsSettings = {
   taxDetails: true,
   discount: true,
   youSaved: true,
+  amountInWords: true,
+  printDescription: true,
+  printTermsAndConditions: true,
+  printSignatureText: "Authorized Signatory",
+  paymentMode: true,
+  // Item table columns — all visible by default
+  showSno: true,
+  showQuantity: true,
+  showUnit: true,
+  showPricePerUnit: true,
 };
 
 /** Read settings from localStorage (falls back to defaults). */

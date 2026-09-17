@@ -28,6 +28,7 @@ interface Theme4InvoicePrintReportProps {
   discount?: number;
   discountPercent?: number;
   taxPercent?: number;
+  description?: string;
 }
 
 // Minimal number-to-words for whole rupee amounts (extend as needed for paisa/large numbers)
@@ -107,6 +108,7 @@ export function Theme4InvoicePrintReport({
   discount = 0,
   discountPercent = 0,
   taxPercent = 0,
+  description,
 }: Theme4InvoicePrintReportProps) {
   const [currency] = useSettings('settings.businessCurrency', { code: 'PKR', symbol: 'Rs' });
   const [currencyDisplay] = useSettings<'abbreviation' | 'icon'>('settings.currencyDisplay', 'abbreviation');
@@ -181,24 +183,26 @@ export function Theme4InvoicePrintReport({
       <table className="w-full text-xs mb-0 border-collapse">
         <thead style={{ backgroundColor: ACCENT, WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>
           <tr className="text-white text-left">
-            <th className="py-1.5 px-2 font-bold w-8">#</th>
+            {ps.showSno && <th className="py-1.5 px-2 font-bold w-8">#</th>}
             <th className="py-1.5 px-2 font-bold">Item name</th>
-            <th className="py-1.5 px-2 font-bold text-right">Quantity</th>
-            <th className="py-1.5 px-2 font-bold text-right">Unit</th>
-            <th className="py-1.5 px-2 font-bold text-right">Price/ Unit</th>
+            {ps.showQuantity && <th className="py-1.5 px-2 font-bold text-right">Quantity</th>}
+            {ps.showUnit && <th className="py-1.5 px-2 font-bold text-right">Unit</th>}
+            {ps.showPricePerUnit && <th className="py-1.5 px-2 font-bold text-right">Price/ Unit</th>}
             <th className="py-1.5 px-2 font-bold text-right">Amount</th>
           </tr>
         </thead>
         <tbody>
           {records.map((record, idx) => (
             <tr key={record.id ?? idx} className="text-xs border-b border-gray-300">
-              <td className="py-1 px-2">{idx + 1}</td>
+              {ps.showSno && <td className="py-1 px-2">{idx + 1}</td>}
               <td className="py-1 px-2 font-bold">{record.itemName || record.item_name || ""}</td>
-              <td className="py-1 px-2 text-right">{record.quantity ?? ""}</td>
-              <td className="py-1 px-2 text-right">{record.unit || ""}</td>
-              <td className="py-1 px-2 text-right whitespace-nowrap">
-                {currencyStr} {ps.amountWithDecimal ? Number(record.pricePerUnit ?? record.price_per_unit ?? 0).toFixed(2) : Math.round(Number(record.pricePerUnit ?? record.price_per_unit ?? 0)).toString()}
-              </td>
+              {ps.showQuantity && <td className="py-1 px-2 text-right">{record.quantity ?? ""}</td>}
+              {ps.showUnit && <td className="py-1 px-2 text-right">{record.unit || ""}</td>}
+              {ps.showPricePerUnit && (
+                <td className="py-1 px-2 text-right whitespace-nowrap">
+                  {currencyStr} {ps.amountWithDecimal ? Number(record.pricePerUnit ?? record.price_per_unit ?? 0).toFixed(2) : Math.round(Number(record.pricePerUnit ?? record.price_per_unit ?? 0)).toString()}
+                </td>
+              )}
               <td className="py-1 px-2 text-right whitespace-nowrap">
                 {currencyStr} {ps.amountWithDecimal ? Number(record.amount || 0).toFixed(2) : Math.round(Number(record.amount || 0)).toString()}
               </td>
@@ -208,9 +212,9 @@ export function Theme4InvoicePrintReport({
             <tr>
               <td style={{ height: `${fillerRows * 34}px` }}></td>
               <td></td>
-              <td></td>
-              <td></td>
-              <td></td>
+              {ps.showQuantity && <td></td>}
+              {ps.showUnit && <td></td>}
+              {ps.showPricePerUnit && <td></td>}
               <td></td>
             </tr>
           )}
@@ -227,15 +231,29 @@ export function Theme4InvoicePrintReport({
       {/* Footer: Amount in words / Payment mode / Terms + Amounts */}
       <div className="flex gap-4">
         <div className="flex-[55] pt-1.5">
-          <p className="text-xs">
-            <span className="font-bold">Invoice Amount in Words:</span> {numberToWords(total)} {currency.code === 'PKR' ? 'Rupees' : ''} only
-          </p>
-          <p className="text-xs mt-2">
-            <span className="font-bold">Payment mode:</span> {paymentMode || "Credit"}
-          </p>
-          <p className="text-xs mt-2">
-            <span className="font-bold">Terms &amp; Conditions:</span> Goods once sold will not be taken back. Payment due within 15 days of invoice date.
-          </p>
+          {ps.amountInWords && (
+            <p className="text-xs">
+              <span className="font-bold">Invoice Amount in Words:</span> {numberToWords(total)} {currency.code === 'PKR' ? 'Rupees' : ''} only
+            </p>
+          )}
+
+          {ps.printDescription && (
+            <p className="text-xs mt-2">
+              <span className="font-bold">Description:</span> {description || "No description provided."}
+            </p>
+          )}
+
+          {ps.paymentMode && (
+            <p className="text-xs mt-2">
+              <span className="font-bold">Payment mode:</span> {paymentMode || "Credit"}
+            </p>
+          )}
+
+          {ps.printTermsAndConditions && (
+            <p className="text-xs mt-2">
+              <span className="font-bold">Terms &amp; Conditions:</span> Goods once sold will not be taken back. Payment due within 15 days of invoice date.
+            </p>
+          )}
         </div>
         <div className="flex-[45] border-t border-gray-400">
           <div className="flex justify-between text-xs px-0 py-1 border-b border-gray-300">
@@ -295,7 +313,12 @@ export function Theme4InvoicePrintReport({
       <div className="flex justify-end mt-10">
         <div className="text-center">
           <p className="text-sm">For : {businessProfile?.business_name || "My Company"}</p>
-          <p className="text-sm font-bold mt-16">Authorized Signatory</p>
+          {businessProfile?.signature && (
+            <img src={businessProfile.signature} alt="Signature" style={{ maxHeight: 60, objectFit: "contain", margin: "10px auto" }} />
+          )}
+          <p className={`text-sm font-bold ${businessProfile?.signature ? 'mt-2' : 'mt-16'}`}>
+            {ps.printSignatureText || "Authorized Signatory"}
+          </p>
         </div>
       </div>
     </div>
@@ -315,6 +338,7 @@ function useCompanyInfo() {
     logo_url: userProfile.logo as string | undefined,
     address: (userProfile as any).address,
     email: (userProfile as any).email,
+    signature: (userProfile as any).signature as string | undefined,
   });
   useEffect(() => {
     fetch("/api/user_profile")
@@ -327,6 +351,7 @@ function useCompanyInfo() {
             logo_url: d.logo_url || d.logo || userProfile.logo,
             address: d.address || (userProfile as any).address,
             email: d.email || (userProfile as any).email,
+            signature: d.signature_url || d.signature || undefined,
           });
         }
       })
@@ -354,6 +379,7 @@ export function Theme4Preview({ accentColor }: { accentColor?: string } = {}) {
           discount={10}
           discountPercent={10}
           taxPercent={5}
+          description="Thank you for your business!"
         />
       </div>
     </div>

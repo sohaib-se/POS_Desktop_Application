@@ -28,6 +28,7 @@ interface Theme3InvoicePrintReportProps {
   discount?: number;
   discountPercent?: number;
   taxPercent?: number;
+  description?: string;
 }
 
 // Minimal number-to-words for whole rupee amounts (extend as needed for paisa/large numbers)
@@ -107,6 +108,7 @@ export function Theme3InvoicePrintReport({
   discount = 0,
   discountPercent = 0,
   taxPercent = 0,
+  description,
 }: Theme3InvoicePrintReportProps) {
   const [currency] = useSettings('settings.businessCurrency', { code: 'PKR', symbol: 'Rs' });
   const [currencyDisplay] = useSettings<'abbreviation' | 'icon'>('settings.currencyDisplay', 'abbreviation');
@@ -187,24 +189,26 @@ export function Theme3InvoicePrintReport({
       <table className="w-full text-xs mb-4 border-collapse border" style={{ borderColor: ACCENT }}>
         <thead style={{ backgroundColor: ACCENT, WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>
           <tr className="text-white text-left">
-            <th className="py-1.5 px-2 font-bold w-8 border" style={{ borderColor: ACCENT }}>#</th>
+            {ps.showSno && <th className="py-1.5 px-2 font-bold w-8 border" style={{ borderColor: ACCENT }}>#</th>}
             <th className="py-1.5 px-2 font-bold border" style={{ borderColor: ACCENT }}>Item name</th>
-            <th className="py-1.5 px-2 font-bold text-right border" style={{ borderColor: ACCENT }}>Quantity</th>
-            <th className="py-1.5 px-2 font-bold text-right border" style={{ borderColor: ACCENT }}>Unit</th>
-            <th className="py-1.5 px-2 font-bold text-right border" style={{ borderColor: ACCENT }}>Price/ Unit</th>
+            {ps.showQuantity && <th className="py-1.5 px-2 font-bold text-right border" style={{ borderColor: ACCENT }}>Quantity</th>}
+            {ps.showUnit && <th className="py-1.5 px-2 font-bold text-right border" style={{ borderColor: ACCENT }}>Unit</th>}
+            {ps.showPricePerUnit && <th className="py-1.5 px-2 font-bold text-right border" style={{ borderColor: ACCENT }}>Price/ Unit</th>}
             <th className="py-1.5 px-2 font-bold text-right border" style={{ borderColor: ACCENT }}>Amount</th>
           </tr>
         </thead>
         <tbody>
           {records.map((record, idx) => (
             <tr key={record.id ?? idx} className="text-xs">
-              <td className="py-1 px-2 border" style={{ borderColor: ACCENT }}>{idx + 1}</td>
+              {ps.showSno && <td className="py-1 px-2 border" style={{ borderColor: ACCENT }}>{idx + 1}</td>}
               <td className="py-1 px-2 font-bold border" style={{ borderColor: ACCENT }}>{record.itemName || record.item_name || ""}</td>
-              <td className="py-1 px-2 text-right border" style={{ borderColor: ACCENT }}>{record.quantity ?? ""}</td>
-              <td className="py-1 px-2 text-right border" style={{ borderColor: ACCENT }}>{record.unit || ""}</td>
-              <td className="py-1 px-2 text-right whitespace-nowrap border" style={{ borderColor: ACCENT }}>
-                {currencyStr} {ps.amountWithDecimal ? Number(record.pricePerUnit ?? record.price_per_unit ?? 0).toFixed(2) : Math.round(Number(record.pricePerUnit ?? record.price_per_unit ?? 0)).toString()}
-              </td>
+              {ps.showQuantity && <td className="py-1 px-2 text-right border" style={{ borderColor: ACCENT }}>{record.quantity ?? ""}</td>}
+              {ps.showUnit && <td className="py-1 px-2 text-right border" style={{ borderColor: ACCENT }}>{record.unit || ""}</td>}
+              {ps.showPricePerUnit && (
+                <td className="py-1 px-2 text-right whitespace-nowrap border" style={{ borderColor: ACCENT }}>
+                  {currencyStr} {ps.amountWithDecimal ? Number(record.pricePerUnit ?? record.price_per_unit ?? 0).toFixed(2) : Math.round(Number(record.pricePerUnit ?? record.price_per_unit ?? 0)).toString()}
+                </td>
+              )}
               <td className="py-1 px-2 text-right whitespace-nowrap border" style={{ borderColor: ACCENT }}>
                 {currencyStr} {ps.amountWithDecimal ? Number(record.amount || 0).toFixed(2) : Math.round(Number(record.amount || 0)).toString()}
               </td>
@@ -214,21 +218,21 @@ export function Theme3InvoicePrintReport({
             <tr>
               <td className="border" style={{ borderColor: ACCENT, height: `${fillerRows * 34}px` }}></td>
               <td className="border" style={{ borderColor: ACCENT }}></td>
-              <td className="border" style={{ borderColor: ACCENT }}></td>
-              <td className="border" style={{ borderColor: ACCENT }}></td>
-              <td className="border" style={{ borderColor: ACCENT }}></td>
+              {ps.showQuantity && <td className="border" style={{ borderColor: ACCENT }}></td>}
+              {ps.showUnit && <td className="border" style={{ borderColor: ACCENT }}></td>}
+              {ps.showPricePerUnit && <td className="border" style={{ borderColor: ACCENT }}></td>}
               <td className="border" style={{ borderColor: ACCENT }}></td>
             </tr>
           )}
           <tr className="text-xs font-bold">
-            <td className="py-1.5 px-2 border" style={{ borderColor: ACCENT }} colSpan={2}>Total</td>
-            {ps.totalItemQuantity ? (
-              <td className="py-1.5 px-2 border text-right" style={{ borderColor: ACCENT }}>{totalQuantity}</td>
+            <td className="py-1.5 px-2 border" style={{ borderColor: ACCENT }} colSpan={ps.showSno ? 2 : 1}>Total</td>
+            {ps.showQuantity ? (
+              <td className="py-1.5 px-2 border text-right" style={{ borderColor: ACCENT }}>{ps.totalItemQuantity ? totalQuantity : ""}</td>
             ) : (
               <td className="border" style={{ borderColor: ACCENT }}></td>
             )}
-            <td className="border" style={{ borderColor: ACCENT }}></td>
-            <td className="border" style={{ borderColor: ACCENT }}></td>
+            {ps.showUnit && <td className="border" style={{ borderColor: ACCENT }}></td>}
+            {ps.showPricePerUnit && <td className="border" style={{ borderColor: ACCENT }}></td>}
             <td className="py-1.5 px-2 border text-right whitespace-nowrap" style={{ borderColor: ACCENT }}>{fmt(total)}</td>
           </tr>
         </tbody>
@@ -237,35 +241,61 @@ export function Theme3InvoicePrintReport({
       {/* Footer: Amount in words + Payment mode | Amounts */}
       <div className="flex gap-4">
         <div className="flex-[55]">
-          <div
-            className="px-2 py-1 text-xs font-bold text-white"
-            style={{ backgroundColor: ACCENT, WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}
-          >
-            Invoice Amount In Words
-          </div>
-          <p className="text-xs mt-1.5">
-            {numberToWords(total)} {currency.code === 'PKR' ? 'Rupees' : ''} only
-          </p>
+          {ps.amountInWords && (
+            <>
+              <div
+                className="px-2 py-1 text-xs font-bold text-white"
+                style={{ backgroundColor: ACCENT, WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}
+              >
+                Invoice Amount In Words
+              </div>
+              <p className="text-xs mt-1.5">
+                {numberToWords(total)} {currency.code === 'PKR' ? 'Rupees' : ''} only
+              </p>
+            </>
+          )}
 
-          <div
-            className="px-2 py-1 text-xs font-bold text-white mt-4"
-            style={{ backgroundColor: ACCENT, WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}
-          >
-            Payment mode
-          </div>
-          <p className="text-xs mt-1.5">
-            {paymentMode || "Credit"}
-          </p>
+          {ps.printDescription && (
+            <>
+              <div
+                className="px-2 py-1 text-xs font-bold text-white mt-4"
+                style={{ backgroundColor: ACCENT, WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}
+              >
+                Description
+              </div>
+              <p className="text-xs mt-1.5">
+                {description || "No description provided."}
+              </p>
+            </>
+          )}
 
-          <div
-            className="px-2 py-1 text-xs font-bold text-white mt-4"
-            style={{ backgroundColor: ACCENT, WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}
-          >
-            Terms &amp; Conditions
-          </div>
-          <p className="text-xs mt-1.5">
-            Goods once sold will not be taken back. Payment due within 15 days of invoice date.
-          </p>
+          {ps.paymentMode && (
+            <>
+              <div
+                className="px-2 py-1 text-xs font-bold text-white mt-4"
+                style={{ backgroundColor: ACCENT, WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}
+              >
+                Payment mode
+              </div>
+              <p className="text-xs mt-1.5">
+                {paymentMode || "Credit"}
+              </p>
+            </>
+          )}
+
+          {ps.printTermsAndConditions && (
+            <>
+              <div
+                className="px-2 py-1 text-xs font-bold text-white mt-4"
+                style={{ backgroundColor: ACCENT, WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}
+              >
+                Terms &amp; Conditions
+              </div>
+              <p className="text-xs mt-1.5">
+                Goods once sold will not be taken back. Payment due within 15 days of invoice date.
+              </p>
+            </>
+          )}
         </div>
         <div className="flex-[45]">
           <div
@@ -331,7 +361,12 @@ export function Theme3InvoicePrintReport({
       <div className="flex justify-end mt-10">
         <div className="text-center">
           <p className="text-sm">For : {businessProfile?.business_name || "My Company"}</p>
-          <p className="text-sm font-bold mt-16">Authorized Signatory</p>
+          {businessProfile?.signature && (
+            <img src={businessProfile.signature} alt="Signature" style={{ maxHeight: 60, objectFit: "contain", margin: "10px auto" }} />
+          )}
+          <p className={`text-sm font-bold ${businessProfile?.signature ? 'mt-2' : 'mt-16'}`}>
+            {ps.printSignatureText || "Authorized Signatory"}
+          </p>
         </div>
       </div>
     </div>
@@ -351,6 +386,7 @@ function useCompanyInfo() {
     logo_url: userProfile.logo as string | undefined,
     address: (userProfile as any).address,
     email: (userProfile as any).email,
+    signature: (userProfile as any).signature as string | undefined,
   });
   useEffect(() => {
     fetch("/api/user_profile")
@@ -363,6 +399,7 @@ function useCompanyInfo() {
             logo_url: d.logo_url || d.logo || userProfile.logo,
             address: d.address || (userProfile as any).address,
             email: d.email || (userProfile as any).email,
+            signature: d.signature_url || d.signature || undefined,
           });
         }
       })
@@ -390,6 +427,7 @@ export function Theme3Preview({ accentColor }: { accentColor?: string } = {}) {
           discount={10}
           discountPercent={10}
           taxPercent={5}
+          description="Thank you for your business!"
         />
       </div>
     </div>

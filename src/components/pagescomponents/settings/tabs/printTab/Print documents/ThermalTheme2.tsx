@@ -220,28 +220,30 @@ export function ThermalSaleInvoiceClassic({
                 <thead>
                     <tr>
                         <th style={{ textAlign: "left", padding: "3px 0", fontWeight: 700 }}>Item</th>
-                        <th style={{ textAlign: "center", padding: "3px 0", fontWeight: 700 }}>Qty</th>
-                        <th style={{ textAlign: "right", padding: "3px 0", fontWeight: 700 }}>Price</th>
+                        {ps.showQuantity && <th style={{ textAlign: "center", padding: "3px 0", fontWeight: 700 }}>Qty</th>}
+                        {ps.showPricePerUnit && <th style={{ textAlign: "right", padding: "3px 0", fontWeight: 700 }}>Price</th>}
                         <th style={{ textAlign: "right", padding: "3px 0", fontWeight: 700 }}>Total</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr>
-                        <td colSpan={4} style={{ padding: 0 }}>
+                        <td colSpan={1 + (ps.showQuantity ? 1 : 0) + (ps.showPricePerUnit ? 1 : 0) + 1} style={{ padding: 0 }}>
                             <div style={{ borderTop: "1px solid #111", margin: "2px 0" }} />
                         </td>
                     </tr>
                     {records.map((r, idx) => {
-                        const qtyWithUnit = r.unit ? `${r.quantity ?? ""}${r.unit}` : `${r.quantity ?? ""}`;
+                        const qtyWithUnit = ps.showUnit && r.unit ? `${r.quantity ?? ""}${r.unit}` : `${r.quantity ?? ""}`;
                         return (
                             <tr key={r.id ?? idx}>
                                 <td style={{ padding: "3px 0", wordBreak: "break-word" }}>
                                     {r.itemName || r.item_name || ""}
                                 </td>
-                                <td style={{ padding: "3px 0", textAlign: "center" }}>{qtyWithUnit}</td>
-                                <td style={{ padding: "3px 0", textAlign: "right" }}>
-                                    {fmt(Number(r.pricePerUnit ?? r.price_per_unit ?? 0))}
-                                </td>
+                                {ps.showQuantity && <td style={{ padding: "3px 0", textAlign: "center" }}>{qtyWithUnit}</td>}
+                                {ps.showPricePerUnit && (
+                                    <td style={{ padding: "3px 0", textAlign: "right" }}>
+                                        {fmt(Number(r.pricePerUnit ?? r.price_per_unit ?? 0))}
+                                    </td>
+                                )}
                                 <td style={{ padding: "3px 0", textAlign: "right", fontWeight: 600 }}>
                                     {fmt(Number(r.amount || 0))}
                                 </td>
@@ -249,20 +251,21 @@ export function ThermalSaleInvoiceClassic({
                         );
                     })}
                     <tr>
-                        <td colSpan={4} style={{ padding: 0 }}>
+                        <td colSpan={1 + (ps.showQuantity ? 1 : 0) + (ps.showPricePerUnit ? 1 : 0) + 1} style={{ padding: 0 }}>
                             <div style={{ borderTop: "1px solid #111", margin: "2px 0" }} />
                         </td>
                     </tr>
                     <tr>
                         <td style={{ padding: "3px 0", fontWeight: 600 }}>Items</td>
-                        {ps.totalItemQuantity ? (
+                        {ps.showQuantity && ps.totalItemQuantity ? (
                             <td style={{ padding: "3px 0", textAlign: "center", fontWeight: 600 }}>
                                 {totalQuantity}
                             </td>
                         ) : (
-                            <td />
+                            ps.showQuantity ? <td /> : null
                         )}
-                        <td colSpan={2} />
+                        {ps.showPricePerUnit && <td colSpan={2} />}
+                        {!ps.showPricePerUnit && <td />}
                     </tr>
                 </tbody>
             </table>
@@ -330,7 +333,7 @@ export function ThermalSaleInvoiceClassic({
                         <span>{fmt(currentBalance)}</span>
                     </div>
                 )}
-                {paymentMode && (
+                {ps.paymentMode && paymentMode && (
                     <div style={{ display: "flex", justifyContent: "space-between", padding: "2px 0" }}>
                         <span>Pay. Mode</span>
                         <span>{paymentMode}</span>

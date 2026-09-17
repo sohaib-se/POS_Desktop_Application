@@ -246,36 +246,42 @@ export function ThermalSaleInvoice({
         }}
       >
         <colgroup>
-          <col style={{ width: "7%" }} />   {/* # */}
-          <col style={{ width: "33%" }} />  {/* Name */}
-          <col style={{ width: "16%" }} />  {/* Qty */}
-          <col style={{ width: "22%" }} />  {/* Price */}
+          {ps.showSno && <col style={{ width: "7%" }} />}   {/* # */}
+          <col style={{ width: ps.showSno ? "33%" : "40%" }} />  {/* Name */}
+          {ps.showQuantity && <col style={{ width: "16%" }} />}  {/* Qty */}
+          {ps.showPricePerUnit && <col style={{ width: "22%" }} />}  {/* Price */}
           <col style={{ width: "22%" }} />  {/* Amount */}
         </colgroup>
 
         {/* Column headers */}
         <thead>
           <tr>
-            <th
-              style={{ fontWeight: 700, textAlign: "left", padding: "2px 0", fontSize: 12 }}
-            >
-              #
-            </th>
+            {ps.showSno && (
+              <th
+                style={{ fontWeight: 700, textAlign: "left", padding: "2px 0", fontSize: 12 }}
+              >
+                #
+              </th>
+            )}
             <th
               style={{ fontWeight: 700, textAlign: "left", padding: "2px 0", fontSize: 12 }}
             >
               Name
             </th>
-            <th
-              style={{ fontWeight: 700, textAlign: "center", padding: "2px 0", fontSize: 12 }}
-            >
-              Qty
-            </th>
-            <th
-              style={{ fontWeight: 700, textAlign: "right", padding: "2px 0", fontSize: 12 }}
-            >
-              Price
-            </th>
+            {ps.showQuantity && (
+              <th
+                style={{ fontWeight: 700, textAlign: "center", padding: "2px 0", fontSize: 12 }}
+              >
+                Qty
+              </th>
+            )}
+            {ps.showPricePerUnit && (
+              <th
+                style={{ fontWeight: 700, textAlign: "right", padding: "2px 0", fontSize: 12 }}
+              >
+                Price
+              </th>
+            )}
             <th
               style={{ fontWeight: 700, textAlign: "right", padding: "2px 0", fontSize: 12 }}
             >
@@ -287,21 +293,23 @@ export function ThermalSaleInvoice({
         <tbody>
           {/* Dashed line below headers */}
           <tr>
-            <td colSpan={5} style={{ padding: 0 }}>
+            <td colSpan={2 + (ps.showSno ? 1 : 0) + (ps.showQuantity ? 1 : 0) + (ps.showPricePerUnit ? 1 : 0)} style={{ padding: 0 }}>
               <div style={{ borderTop: "1px dashed #999", margin: "2px 0" }} />
             </td>
           </tr>
 
           {/* Item rows */}
           {records.map((r, idx) => {
-            const qtyWithUnit = r.unit
+            const qtyWithUnit = ps.showUnit && r.unit
               ? `${r.quantity ?? ""}${r.unit}`
               : `${r.quantity ?? ""}`;
             return (
               <tr key={r.id ?? idx}>
-                <td style={{ padding: "2px 0", textAlign: "left", fontSize: 12 }}>
-                  {idx + 1}
-                </td>
+                {ps.showSno && (
+                  <td style={{ padding: "2px 0", textAlign: "left", fontSize: 12 }}>
+                    {idx + 1}
+                  </td>
+                )}
                 <td
                   style={{
                     padding: "2px 0",
@@ -312,12 +320,16 @@ export function ThermalSaleInvoice({
                 >
                   {r.itemName || r.item_name || ""}
                 </td>
-                <td style={{ padding: "2px 0", textAlign: "center", fontSize: 12 }}>
-                  {qtyWithUnit}
-                </td>
-                <td style={{ padding: "2px 0", textAlign: "right", fontSize: 12 }}>
-                  {fmt(Number(r.pricePerUnit ?? r.price_per_unit ?? 0))}
-                </td>
+                {ps.showQuantity && (
+                  <td style={{ padding: "2px 0", textAlign: "center", fontSize: 12 }}>
+                    {qtyWithUnit}
+                  </td>
+                )}
+                {ps.showPricePerUnit && (
+                  <td style={{ padding: "2px 0", textAlign: "right", fontSize: 12 }}>
+                    {fmt(Number(r.pricePerUnit ?? r.price_per_unit ?? 0))}
+                  </td>
+                )}
                 <td style={{ padding: "2px 0", textAlign: "right", fontSize: 12 }}>
                   {fmt(Number(r.amount || 0))}
                 </td>
@@ -327,7 +339,7 @@ export function ThermalSaleInvoice({
 
           {/* Dashed line above Total row */}
           <tr>
-            <td colSpan={5} style={{ padding: 0 }}>
+            <td colSpan={2 + (ps.showSno ? 1 : 0) + (ps.showQuantity ? 1 : 0) + (ps.showPricePerUnit ? 1 : 0)} style={{ padding: 0 }}>
               <div style={{ borderTop: "1px dashed #999", margin: "2px 0" }} />
             </td>
           </tr>
@@ -335,19 +347,17 @@ export function ThermalSaleInvoice({
           {/* Total row */}
           <tr style={{ fontWeight: 700 }}>
             <td
-              colSpan={2}
+              colSpan={1 + (ps.showSno ? 1 : 0)}
               style={{ padding: "2px 0", textAlign: "left", fontSize: 12 }}
             >
               Total
             </td>
-            {ps.totalItemQuantity ? (
+            {ps.showQuantity ? (
               <td style={{ padding: "2px 0", textAlign: "center", fontSize: 12 }}>
-                {totalQuantity}
+                {ps.totalItemQuantity ? totalQuantity : ""}
               </td>
-            ) : (
-              <td style={{ padding: "2px 0" }} />
-            )}
-            <td style={{ padding: "2px 0" }} />
+            ) : null}
+            {ps.showPricePerUnit && <td style={{ padding: "2px 0" }} />}
             <td style={{ padding: "2px 0", textAlign: "right", fontSize: 12 }}>
               {fmt(subTotal)}
             </td>
@@ -430,7 +440,7 @@ export function ThermalSaleInvoice({
         )}
 
         {/* Payment Mode */}
-        {paymentMode && (
+        {ps.paymentMode && paymentMode && (
           <div style={{ display: "flex", justifyContent: "space-between", lineHeight: 1.9 }}>
             <span style={{ paddingLeft: 24, color: LABEL_COLOR, fontWeight: 600 }}>Pay. Mode</span>
             <span style={{ display: "flex", gap: 6, alignItems: "center" }}>

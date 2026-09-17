@@ -22,7 +22,14 @@ interface TaxInvoicePrintReportProps {
   invoiceDate: string;
   customerName: string;
   customerContact?: string;
-  businessProfile?: { business_name?: string; phone?: string; logo_url?: string; address?: string; email?: string };
+  businessProfile?: {
+    business_name?: string;
+    phone?: string;
+    logo_url?: string;
+    address?: string;
+    email?: string;
+    signature?: string;
+  };
   received?: number;
   accentColor?: string;
   paymentMode?: string;
@@ -30,6 +37,7 @@ interface TaxInvoicePrintReportProps {
   discount?: number;
   discountPercent?: number;
   taxPercent?: number;
+  description?: string;
 }
 
 /* ─────────────────────── Dummy preview data ────────────────────────── */
@@ -113,6 +121,7 @@ export function TaxInvoicePrintReport({
   discount = 0,
   discountPercent = 0,
   taxPercent = 0,
+  description,
 }: TaxInvoicePrintReportProps) {
   const [currency] = useSettings("settings.businessCurrency", { code: "PKR", symbol: "Rs" });
   const [currencyDisplay] = useSettings<"abbreviation" | "icon">("settings.currencyDisplay", "abbreviation");
@@ -190,22 +199,22 @@ export function TaxInvoicePrintReport({
         <table style={{ width: "100%", fontSize: 12, borderCollapse: "collapse" }}>
           <thead>
             <tr style={{ backgroundColor: ACCENT, color: "#fff", WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }}>
-              <th style={{ padding: "6px 8px", textAlign: "left", fontWeight: 700, border: `1px solid ${BORDER}`, width: 24 }}>#</th>
+              {ps.showSno && <th style={{ padding: "6px 8px", textAlign: "left", fontWeight: 700, border: `1px solid ${BORDER}`, width: 24 }}>#</th>}
               <th style={{ padding: "6px 8px", textAlign: "left", fontWeight: 700, border: `1px solid ${BORDER}` }}>Item name</th>
-              <th style={{ padding: "6px 8px", textAlign: "right", fontWeight: 700, border: `1px solid ${BORDER}` }}>Quantity</th>
-              <th style={{ padding: "6px 8px", textAlign: "right", fontWeight: 700, border: `1px solid ${BORDER}` }}>Unit</th>
-              <th style={{ padding: "6px 8px", textAlign: "right", fontWeight: 700, border: `1px solid ${BORDER}` }}>Price/ Unit</th>
+              {ps.showQuantity && <th style={{ padding: "6px 8px", textAlign: "right", fontWeight: 700, border: `1px solid ${BORDER}` }}>Quantity</th>}
+              {ps.showUnit && <th style={{ padding: "6px 8px", textAlign: "right", fontWeight: 700, border: `1px solid ${BORDER}` }}>Unit</th>}
+              {ps.showPricePerUnit && <th style={{ padding: "6px 8px", textAlign: "right", fontWeight: 700, border: `1px solid ${BORDER}` }}>Price/ Unit</th>}
               <th style={{ padding: "6px 8px", textAlign: "right", fontWeight: 700, border: `1px solid ${BORDER}` }}>Amount</th>
             </tr>
           </thead>
           <tbody>
             {records.map((r, idx) => (
               <tr key={r.id ?? idx}>
-                <td style={{ padding: "4px 8px", border: `1px solid ${BORDER}` }}>{idx + 1}</td>
+                {ps.showSno && <td style={{ padding: "4px 8px", border: `1px solid ${BORDER}` }}>{idx + 1}</td>}
                 <td style={{ padding: "4px 8px", border: `1px solid ${BORDER}`, fontWeight: 700 }}>{r.itemName || r.item_name || ""}</td>
-                <td style={{ padding: "4px 8px", border: `1px solid ${BORDER}`, textAlign: "right" }}>{r.quantity ?? ""}</td>
-                <td style={{ padding: "4px 8px", border: `1px solid ${BORDER}`, textAlign: "right" }}>{r.unit || ""}</td>
-                <td style={{ padding: "4px 8px", border: `1px solid ${BORDER}`, textAlign: "right", whiteSpace: "nowrap" }}>{currencyStr} {ps.amountWithDecimal ? Number(r.pricePerUnit ?? r.price_per_unit ?? 0).toFixed(2) : Math.round(Number(r.pricePerUnit ?? r.price_per_unit ?? 0)).toString()}</td>
+                {ps.showQuantity && <td style={{ padding: "4px 8px", border: `1px solid ${BORDER}`, textAlign: "right" }}>{r.quantity ?? ""}</td>}
+                {ps.showUnit && <td style={{ padding: "4px 8px", border: `1px solid ${BORDER}`, textAlign: "right" }}>{r.unit || ""}</td>}
+                {ps.showPricePerUnit && <td style={{ padding: "4px 8px", border: `1px solid ${BORDER}`, textAlign: "right", whiteSpace: "nowrap" }}>{currencyStr} {ps.amountWithDecimal ? Number(r.pricePerUnit ?? r.price_per_unit ?? 0).toFixed(2) : Math.round(Number(r.pricePerUnit ?? r.price_per_unit ?? 0)).toString()}</td>}
                 <td style={{ padding: "4px 8px", border: `1px solid ${BORDER}`, textAlign: "right", whiteSpace: "nowrap" }}>{currencyStr} {ps.amountWithDecimal ? Number(r.amount || 0).toFixed(2) : Math.round(Number(r.amount || 0)).toString()}</td>
               </tr>
             ))}
@@ -213,21 +222,21 @@ export function TaxInvoicePrintReport({
               <tr>
                 <td style={{ border: `1px solid ${BORDER}`, height: fillerRows * 34 }}></td>
                 <td style={{ border: `1px solid ${BORDER}` }}></td>
-                <td style={{ border: `1px solid ${BORDER}` }}></td>
-                <td style={{ border: `1px solid ${BORDER}` }}></td>
-                <td style={{ border: `1px solid ${BORDER}` }}></td>
+                {ps.showQuantity && <td style={{ border: `1px solid ${BORDER}` }}></td>}
+                {ps.showUnit && <td style={{ border: `1px solid ${BORDER}` }}></td>}
+                {ps.showPricePerUnit && <td style={{ border: `1px solid ${BORDER}` }}></td>}
                 <td style={{ border: `1px solid ${BORDER}` }}></td>
               </tr>
             )}
             <tr style={{ fontWeight: 700 }}>
-              <td style={{ padding: "6px 8px", border: `1px solid ${BORDER}` }} colSpan={2}>Total</td>
-              {ps.totalItemQuantity ? (
-                <td style={{ padding: "6px 8px", border: `1px solid ${BORDER}`, textAlign: "right" }}>{totalQuantity}</td>
+              <td style={{ padding: "6px 8px", border: `1px solid ${BORDER}` }} colSpan={ps.showSno ? 2 : 1}>Total</td>
+              {ps.showQuantity ? (
+                <td style={{ padding: "6px 8px", border: `1px solid ${BORDER}`, textAlign: "right" }}>{ps.totalItemQuantity ? totalQuantity : ""}</td>
               ) : (
                 <td style={{ border: `1px solid ${BORDER}` }}></td>
               )}
-              <td style={{ border: `1px solid ${BORDER}` }}></td>
-              <td style={{ border: `1px solid ${BORDER}` }}></td>
+              {ps.showUnit && <td style={{ border: `1px solid ${BORDER}` }}></td>}
+              {ps.showPricePerUnit && <td style={{ border: `1px solid ${BORDER}` }}></td>}
               <td style={{ padding: "6px 8px", border: `1px solid ${BORDER}`, textAlign: "right", whiteSpace: "nowrap" }}>{fmt(total)}</td>
             </tr>
           </tbody>
@@ -236,24 +245,49 @@ export function TaxInvoicePrintReport({
         {/* Footer: Invoice Amount In Words / Payment mode / Terms (left) + Amounts (right) */}
         <div style={{ display: "flex", alignItems: "stretch" }}>
           <div style={{ width: "50%", borderRight: `1px solid ${BORDER}`, display: "flex", flexDirection: "column" }}>
-            <div style={{ backgroundColor: ACCENT, color: "#fff", fontWeight: 700, fontSize: 12, padding: "3px 10px", WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }}>
-              Invoice Amount In Words
-            </div>
-            <div style={{ padding: "5px 10px", fontSize: 12 }}>
-              {numberToWords(total)} {currency.code === "PKR" ? "Rupees" : ""} only
-            </div>
-            <div style={{ backgroundColor: ACCENT, color: "#fff", fontWeight: 700, fontSize: 12, padding: "3px 10px", WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }}>
-              Payment mode
-            </div>
-            <div style={{ padding: "5px 10px", fontSize: 12 }}>
-              {paymentMode || "Credit"}
-            </div>
-            <div style={{ backgroundColor: ACCENT, color: "#fff", fontWeight: 700, fontSize: 12, padding: "3px 10px", WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }}>
-              Terms &amp; Conditions
-            </div>
-            <div style={{ padding: "5px 10px", fontSize: 12 }}>
-              Goods once sold will not be taken back. Payment due within 15 days of invoice date.
-            </div>
+            {ps.amountInWords && (
+              <>
+                <div style={{ backgroundColor: ACCENT, color: "#fff", fontWeight: 700, fontSize: 12, padding: "3px 10px", WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }}>
+                  Invoice Amount In Words
+                </div>
+                <div style={{ padding: "5px 10px", fontSize: 12 }}>
+                  {numberToWords(total)} {currency.code === "PKR" ? "Rupees" : ""} only
+                </div>
+              </>
+            )}
+
+            {ps.printDescription && (
+              <>
+                <div style={{ backgroundColor: ACCENT, color: "#fff", fontWeight: 700, fontSize: 12, padding: "3px 10px", WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }}>
+                  Description
+                </div>
+                <div style={{ padding: "5px 10px", fontSize: 12 }}>
+                  {description || "No description provided."}
+                </div>
+              </>
+            )}
+
+            {ps.paymentMode && (
+              <>
+                <div style={{ backgroundColor: ACCENT, color: "#fff", fontWeight: 700, fontSize: 12, padding: "3px 10px", WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }}>
+                  Payment mode
+                </div>
+                <div style={{ padding: "5px 10px", fontSize: 12 }}>
+                  {paymentMode || "Credit"}
+                </div>
+              </>
+            )}
+
+            {ps.printTermsAndConditions && (
+              <>
+                <div style={{ backgroundColor: ACCENT, color: "#fff", fontWeight: 700, fontSize: 12, padding: "3px 10px", WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }}>
+                  Terms &amp; Conditions
+                </div>
+                <div style={{ padding: "5px 10px", fontSize: 12 }}>
+                  Goods once sold will not be taken back. Payment due within 15 days of invoice date.
+                </div>
+              </>
+            )}
           </div>
           <div style={{ width: "50%", display: "flex", flexDirection: "column" }}>
             <div style={{ backgroundColor: ACCENT, color: "#fff", fontWeight: 700, fontSize: 12, padding: "3px 10px", WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }}>
@@ -306,7 +340,12 @@ export function TaxInvoicePrintReport({
         {/* Signatory */}
         <div style={{ padding: "16px 12px", textAlign: "right", borderTop: `1px solid ${BORDER}` }}>
           <div style={{ fontSize: 12 }}>For : {businessProfile?.business_name || "My Company"}</div>
-          <div style={{ fontSize: 12, fontWeight: 700, marginTop: 40 }}>Authorized Signatory</div>
+          {businessProfile?.signature && (
+            <img src={businessProfile.signature} alt="Signature" style={{ maxHeight: 60, objectFit: "contain", margin: "10px 0 10px auto" }} />
+          )}
+          <div style={{ fontSize: 12, fontWeight: 700, marginTop: businessProfile?.signature ? 4 : 40 }}>
+            {ps.printSignatureText || "Authorized Signatory"}
+          </div>
         </div>
       </div>
     </div>
@@ -322,6 +361,7 @@ function useCompanyInfo() {
     logo_url: userProfile.logo as string | undefined,
     address: (userProfile as any).address,
     email: (userProfile as any).email,
+    signature: (userProfile as any).signature as string | undefined,
   });
   useEffect(() => {
     fetch("/api/user_profile")
@@ -334,6 +374,7 @@ function useCompanyInfo() {
             logo_url: d.logo_url || d.logo || userProfile.logo,
             address: d.address || (userProfile as any).address,
             email: d.email || (userProfile as any).email,
+            signature: d.signature_url || d.signature || undefined,
           });
         }
       })
@@ -361,6 +402,7 @@ export function TaxThemePreview({ accentColor }: { accentColor?: string } = {}) 
           discount={10}
           discountPercent={10}
           taxPercent={5}
+          description="Thank you for your business!"
         />
       </div>
     </div>

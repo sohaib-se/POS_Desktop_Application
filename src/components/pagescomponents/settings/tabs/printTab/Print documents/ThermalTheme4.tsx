@@ -172,23 +172,25 @@ export function ThermalSaleInvoiceRetail({
                 <thead>
                     <tr>
                         <th style={{ textAlign: "left", fontWeight: 700, padding: "2px 0" }}>ITEM</th>
-                        <th style={{ textAlign: "center", fontWeight: 700, padding: "2px 0" }}>QTY</th>
-                        <th style={{ textAlign: "right", fontWeight: 700, padding: "2px 0" }}>PRICE</th>
+                        {ps.showQuantity && <th style={{ textAlign: "center", fontWeight: 700, padding: "2px 0" }}>QTY</th>}
+                        {ps.showPricePerUnit && <th style={{ textAlign: "right", fontWeight: 700, padding: "2px 0" }}>PRICE</th>}
                         <th style={{ textAlign: "right", fontWeight: 700, padding: "2px 0" }}>TOTAL</th>
                     </tr>
                 </thead>
                 <tbody>
                     {records.map((r, idx) => {
-                        const qtyWithUnit = r.unit ? `${r.quantity ?? ""}${r.unit}` : `${r.quantity ?? ""}`;
+                        const qtyWithUnit = ps.showUnit && r.unit ? `${r.quantity ?? ""}${r.unit}` : `${r.quantity ?? ""}`;
                         return (
                             <tr key={r.id ?? idx}>
                                 <td style={{ padding: "2px 0", wordBreak: "break-word" }}>
                                     {(r.itemName || r.item_name || "").toUpperCase()}
                                 </td>
-                                <td style={{ padding: "2px 0", textAlign: "center" }}>{qtyWithUnit}</td>
-                                <td style={{ padding: "2px 0", textAlign: "right" }}>
-                                    {fmt(Number(r.pricePerUnit ?? r.price_per_unit ?? 0))}
-                                </td>
+                                {ps.showQuantity && <td style={{ padding: "2px 0", textAlign: "center" }}>{qtyWithUnit}</td>}
+                                {ps.showPricePerUnit && (
+                                    <td style={{ padding: "2px 0", textAlign: "right" }}>
+                                        {fmt(Number(r.pricePerUnit ?? r.price_per_unit ?? 0))}
+                                    </td>
+                                )}
                                 <td style={{ padding: "2px 0", textAlign: "right", fontWeight: 700 }}>
                                     {fmt(Number(r.amount || 0))}
                                 </td>
@@ -230,7 +232,7 @@ export function ThermalSaleInvoiceRetail({
             <div style={row}><span>PREV. BALANCE:</span><span>{fmt(prevBalance)}</span></div>
           )}
             {ps.currentBalanceOfParty && <div style={{ ...row, fontWeight: 700 }}><span>CURR. BALANCE:</span><span>{fmt(currentBalance)}</span></div>}
-            {paymentMode && (
+            {ps.paymentMode && paymentMode && (
                 <div style={row}><span>PAY. MODE:</span><span>{paymentMode}</span></div>
             )}
 

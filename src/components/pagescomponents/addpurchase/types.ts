@@ -41,7 +41,11 @@ export interface PartyOption {
 export interface ItemOption {
   id: string;
   name: string;
+  code?: string;
   purchase_price?: number;
+  sale_price?: number;
+  stock_quantity?: number;
+  stock?: number;
   unit: string;
   primary_unit?: string | null;
   secondary_unit?: string | null;

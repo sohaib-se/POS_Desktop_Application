@@ -481,24 +481,58 @@ export function AddSale({ onSave, onShare, onClose, initialInvoice, isConversion
   };
 
   const updateDiscountPercent = (value: string) => {
-    const percentValue = Number(value || 0);
-    const nextDiscountAmount = Number.isFinite(percentValue)
-      ? (totalAmount * percentValue) / 100
-      : 0;
+    if (value === "") {
+      updateTab({
+        discountPercent: "",
+        discountRs: "",
+      });
+      return;
+    }
+
+    let percentNum = parseFloat(value);
+    if (isNaN(percentNum)) return;
+
+    if (percentNum < 0) percentNum = 0;
+    if (percentNum > 100) percentNum = 100;
+
+    const finalPercentStr = parseFloat(value) > 100 ? "100" : (parseFloat(value) < 0 ? "0" : value);
+    const nextDiscountAmount = totalAmount > 0 ? (totalAmount * percentNum) / 100 : 0;
 
     updateTab({
-      discountPercent: value,
-      discountRs: totalAmount > 0 ? nextDiscountAmount.toFixed(2) : "",
+      discountPercent: finalPercentStr,
+      discountRs: totalAmount > 0 ? (nextDiscountAmount > 0 ? nextDiscountAmount.toFixed(2) : "0") : "",
     });
   };
 
   const updateDiscountAmount = (value: string) => {
-    const amountValue = Number(value || 0);
-    const percentValue = totalAmount > 0 ? (amountValue / totalAmount) * 100 : 0;
+    if (value === "") {
+      updateTab({
+        discountRs: "",
+        discountPercent: "",
+      });
+      return;
+    }
+
+    let amountNum = parseFloat(value);
+    if (isNaN(amountNum)) return;
+
+    if (amountNum < 0) amountNum = 0;
+    if (totalAmount > 0 && amountNum > totalAmount) {
+      amountNum = totalAmount;
+    } else if (totalAmount === 0 && amountNum > 0) {
+      amountNum = 0;
+    }
+
+    const finalAmountStr = (totalAmount > 0 && parseFloat(value) > totalAmount)
+      ? String(totalAmount)
+      : (parseFloat(value) < 0 ? "0" : value);
+
+    const percentValue = totalAmount > 0 ? (amountNum / totalAmount) * 100 : 0;
+    const boundedPercent = Math.min(100, Math.max(0, percentValue));
 
     updateTab({
-      discountRs: value,
-      discountPercent: Number.isFinite(percentValue) ? percentValue.toFixed(2) : "",
+      discountRs: finalAmountStr,
+      discountPercent: totalAmount > 0 ? (boundedPercent > 0 ? boundedPercent.toFixed(2) : "0") : "",
     });
   };
 
@@ -583,7 +617,10 @@ export function AddSale({ onSave, onShare, onClose, initialInvoice, isConversion
       (sum, row) => sum + (Number(row.qty) || 0) * (Number(row.pricePerUnit) || 0),
       0,
     );
-    const discountAmountValue = Number(activeTab.discountRs || 0);
+    const rawDiscountRs = Number(activeTab.discountRs || 0);
+    const discountAmountValue = Math.min(subtotal, Math.max(0, rawDiscountRs));
+    const rawDiscountPct = Number(activeTab.discountPercent || 0);
+    const discountPercentValue = Math.min(100, Math.max(0, rawDiscountPct));
     const taxRateValue = parseTaxRate(activeTab.tax);
     const taxAmountValue = subtotal * taxRateValue;
     const grandTotalValue = subtotal + taxAmountValue - discountAmountValue;
@@ -610,7 +647,7 @@ export function AddSale({ onSave, onShare, onClose, initialInvoice, isConversion
           paymentType: activeTab.paymentMode === "cash" ? "Cash" : "Credit",
           paymentMode: activeTab.paymentMode,
           subtotal,
-          discountPercent: Number(activeTab.discountPercent || 0),
+          discountPercent: discountPercentValue,
           discountAmount: discountAmountValue,
           taxLabel: activeTab.tax,
           taxRate: taxRateValue,
@@ -838,7 +875,8 @@ export function AddSale({ onSave, onShare, onClose, initialInvoice, isConversion
   );
   const taxRate = parseTaxRate(activeTab.tax);
   const taxAmount = totalAmount * taxRate;
-  const discountAmount = activeTab.discountRs ? parseFloat(activeTab.discountRs) : 0;
+  const rawDiscountAmount = activeTab.discountRs ? parseFloat(activeTab.discountRs) : 0;
+  const discountAmount = Math.min(totalAmount, Math.max(0, rawDiscountAmount));
   const grandTotal = totalAmount + taxAmount - discountAmount;
   const roundedTotal = activeTab.roundOff ? Math.round(grandTotal) : grandTotal;
   const roundOffDiff = roundedTotal - grandTotal;

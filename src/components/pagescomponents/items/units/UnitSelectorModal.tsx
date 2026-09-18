@@ -136,14 +136,18 @@ export function UnitSelectorModal({
               </span>
               <input
                 type="number"
+                min="1"
                 className="w-20 border border-gray-300 rounded-lg px-3 py-2 text-sm"
                 placeholder="0"
-                value={unitSelectorConversionRate}
-                onChange={(event) =>
-                  onSetUnitSelectorConversionRate(
-                    Number(event.target.value) || 0
-                  )
-                }
+                value={unitSelectorConversionRate === 0 ? "" : unitSelectorConversionRate}
+                onChange={(event) => {
+                  const val = Number(event.target.value);
+                  if (event.target.value === "") {
+                    onSetUnitSelectorConversionRate(0);
+                  } else if (val >= 1) {
+                    onSetUnitSelectorConversionRate(val);
+                  }
+                }}
               />
               <span className="text-sm text-gray-600">
                 {units.find((u) => u.id === unitSelectorSecondaryUnitId)

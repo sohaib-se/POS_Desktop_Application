@@ -98,19 +98,19 @@ export function saveOpeningBalanceTransaction(partyName, balance, date) {
   const db = openDatabase();
   const id = Date.now().toString();
   if (balance > 0) {
-    // Receivable Opening Balance -> payment_out_records (per user request)
-    const nextNoRow = db.prepare('SELECT COALESCE(MAX(CAST(payment_no AS INTEGER)), 0) + 1 AS nextNo FROM payment_out_records').get();
-    const nextNo = String(Number(nextNoRow?.nextNo ?? 1));
-    db.prepare(`
-      INSERT INTO payment_out_records (id, payment_no, date, party_name, amount, payment_type, description, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, 'Receivable Opening Balance', 'OB', datetime('now'), datetime('now'))
-    `).run(id, nextNo, date, partyName, Math.abs(balance));
-  } else if (balance < 0) {
-    // Payable Opening Balance -> payment_in_records (per user request)
+    // Receivable (To Receive) Opening Balance -> payment_in_records
     const nextNoRow = db.prepare('SELECT COALESCE(MAX(CAST(receipt_no AS INTEGER)), 0) + 1 AS nextNo FROM payment_in_records').get();
     const nextNo = String(Number(nextNoRow?.nextNo ?? 1));
     db.prepare(`
       INSERT INTO payment_in_records (id, receipt_no, date, party_name, amount, payment_type, reference, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, 'Receivable Opening Balance', 'OB', datetime('now'), datetime('now'))
+    `).run(id, nextNo, date, partyName, Math.abs(balance));
+  } else if (balance < 0) {
+    // Payable (To Pay) Opening Balance -> payment_out_records
+    const nextNoRow = db.prepare('SELECT COALESCE(MAX(CAST(payment_no AS INTEGER)), 0) + 1 AS nextNo FROM payment_out_records').get();
+    const nextNo = String(Number(nextNoRow?.nextNo ?? 1));
+    db.prepare(`
+      INSERT INTO payment_out_records (id, payment_no, date, party_name, amount, payment_type, description, created_at, updated_at)
       VALUES (?, ?, ?, ?, ?, 'Payable Opening Balance', 'OB', datetime('now'), datetime('now'))
     `).run(id, nextNo, date, partyName, Math.abs(balance));
   }

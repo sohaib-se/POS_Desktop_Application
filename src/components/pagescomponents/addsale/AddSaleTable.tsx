@@ -69,7 +69,6 @@ function ItemSearchCell({ row, items, updateRowItem, updateRow }: ItemSearchCell
           <div style={{ display: "flex", padding: "8px 12px", borderBottom: "1px solid #e5e7eb", fontSize: 11, color: "#9ca3af", fontWeight: 600 }}>
             <div style={{ flex: 2 }}>ITEM</div>
             <div style={{ flex: 1, textAlign: "right" }}>SALE PRICE</div>
-            <div style={{ flex: 1, textAlign: "right" }}>PURCHASE PRICE</div>
             <div style={{ flex: 1, textAlign: "right" }}>STOCK</div>
           </div>
           {filteredItems.map((item) => {
@@ -91,7 +90,6 @@ function ItemSearchCell({ row, items, updateRowItem, updateRow }: ItemSearchCell
               >
                 <div style={{ flex: 2, color: "#374151" }}>{item.name}</div>
                 <div style={{ flex: 1, textAlign: "right", color: "#4b5563" }}>{salePrice}</div>
-                <div style={{ flex: 1, textAlign: "right", color: "#4b5563" }}>—</div>
                 <div style={{ flex: 1, textAlign: "right", color: stock < 0 ? "#ef4444" : "#4b5563" }}>{stock}</div>
               </div>
             );
@@ -199,6 +197,14 @@ export function AddSaleTable({
         .sale-table-container tbody td:focus-within {
           outline: 2px solid #3b82f6;
           outline-offset: -2px;
+        }
+        .sale-table-container input[type=number]::-webkit-outer-spin-button,
+        .sale-table-container input[type=number]::-webkit-inner-spin-button {
+          -webkit-appearance: none;
+          margin: 0;
+        }
+        .sale-table-container input[type=number] {
+          -moz-appearance: textfield;
         }
       `}</style>
       <table style={{ width: "100%", borderCollapse: "collapse", tableLayout: "fixed" }}>

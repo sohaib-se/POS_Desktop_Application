@@ -1097,11 +1097,7 @@ function sqliteApiPlugin() {
           const requestUrl = new URL(req.url ?? '/', 'http://localhost');
 
           if (req.method === 'GET') {
-            const records = repository.getPaymentInRecords().filter((r: any) =>
-              r.payment_type !== 'Opening Balance' &&
-              r.payment_type !== 'Payable Opening Balance' &&
-              r.payment_type !== 'Receivable Opening Balance'
-            );
+            const records = repository.getPaymentInRecords();
             const mapped = records.map((r: any) => ({
               ...r,
               receiptNo: r.receipt_no,
@@ -1368,11 +1364,7 @@ function sqliteApiPlugin() {
           const requestUrl = new URL(req.url ?? '/', 'http://localhost');
 
           if (req.method === 'GET') {
-            const records = repository.getPaymentOutRecordsReal().filter((r: any) =>
-              r.payment_type !== 'Opening Balance' &&
-              r.payment_type !== 'Payable Opening Balance' &&
-              r.payment_type !== 'Receivable Opening Balance'
-            );
+            const records = repository.getPaymentOutRecordsReal();
             const mapped = records.map((r: any) => ({
               ...r,
               paymentNo: r.payment_no,

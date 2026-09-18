@@ -149,14 +149,10 @@ export function AddSaleBottomActions({
                 <span style={{ color: "#6b7280", width: 68, textAlign: "right" }}>Discount</span>
                 <input type="number"
                   min="0"
+                  max="100"
                   style={{ border: "1px solid #d1d5db", borderRadius: 4, padding: "5px 8px", width: 78, textAlign: "right", fontSize: 13, outline: "none" }}
                   value={activeTab.discountPercent}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    if (val === "" || parseFloat(val) >= 0) {
-                      updateDiscountPercent(val);
-                    }
-                  }}
+                  onChange={(e) => updateDiscountPercent(e.target.value)}
                 />
                 <span style={{ color: "#9ca3af", fontSize: 12 }}>(%)</span>
                 <span style={{ color: "#d1d5db", margin: "0 2px" }}>–</span>
@@ -164,12 +160,7 @@ export function AddSaleBottomActions({
                   min="0"
                   style={{ border: "1px solid #d1d5db", borderRadius: 4, padding: "5px 8px", width: 100, textAlign: "right", fontSize: 13, outline: "none" }}
                   value={activeTab.discountRs}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    if (val === "" || parseFloat(val) >= 0) {
-                      updateDiscountAmount(val);
-                    }
-                  }}
+                  onChange={(e) => updateDiscountAmount(e.target.value)}
                 />
                 <span style={{ color: "#9ca3af", fontSize: 12 }}>(Rs)</span>
               </div>
@@ -237,11 +228,14 @@ export function AddSaleBottomActions({
                     <span style={{ color: "#6b7280" }}>Received All</span>
                   </label>
                   <span style={{ color: "#6b7280", width: 68, textAlign: "right" }}>Received</span>
-                  <input type="number"
+                  <input type="text"
                     style={{ border: "1px solid #d1d5db", borderRadius: 4, padding: "5px 10px", width: 210, textAlign: "right", fontSize: 13, color: "#1f2937", background: "#fff", outline: "none" }}
                     value={activeTab.received || ""}
                     onChange={(e) => {
-                      updateTab({ received: e.target.value, receivedAll: false });
+                      const val = e.target.value;
+                      if (val === "" || /^\d*\.?\d*$/.test(val)) {
+                        updateTab({ received: val, receivedAll: false });
+                      }
                     }}
                   />
                 </div>

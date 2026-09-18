@@ -340,10 +340,16 @@ export function AddPurchase({ onSave, onShare, onClose, initialInvoice }: AddPur
           );
 
           if (nextTab.discountPercent && parseFloat(nextTab.discountPercent) > 0) {
-            const nextDiscountRs = (nextTotalAmount * parseFloat(nextTab.discountPercent)) / 100;
+            let p = parseFloat(nextTab.discountPercent);
+            if (p > 100) p = 100;
+            if (p < 0) p = 0;
+            const nextDiscountRs = (nextTotalAmount * p) / 100;
             nextTab.discountRs = nextTotalAmount > 0 ? nextDiscountRs.toFixed(2) : "";
           } else if (nextTab.discountRs && parseFloat(nextTab.discountRs) > 0) {
-            const percentValue = nextTotalAmount > 0 ? (parseFloat(nextTab.discountRs) / nextTotalAmount) * 100 : 0;
+            let r = parseFloat(nextTab.discountRs);
+            if (r < 0) r = 0;
+            if (nextTotalAmount > 0 && r > nextTotalAmount) r = nextTotalAmount;
+            const percentValue = nextTotalAmount > 0 ? (r / nextTotalAmount) * 100 : 0;
             nextTab.discountPercent = nextTotalAmount > 0 ? percentValue.toFixed(2) : "";
           }
         }
@@ -385,24 +391,52 @@ export function AddPurchase({ onSave, onShare, onClose, initialInvoice }: AddPur
   };
 
   const updateDiscountPercent = (value: string) => {
-    const percentValue = Number(value || 0);
-    const nextDiscountAmount = Number.isFinite(percentValue)
-      ? (totalAmount * percentValue) / 100
-      : 0;
+    if (value === "") {
+      updateTab({
+        discountPercent: "",
+        discountRs: "",
+      });
+      return;
+    }
+
+    let percentNum = parseFloat(value);
+    if (isNaN(percentNum)) return;
+
+    if (percentNum < 0) percentNum = 0;
+    if (percentNum > 100) percentNum = 100;
+
+    const finalPercentStr = parseFloat(value) > 100 ? "100" : (parseFloat(value) < 0 ? "0" : value);
+    const nextDiscountAmount = totalAmount > 0 ? (totalAmount * percentNum) / 100 : 0;
 
     updateTab({
-      discountPercent: value,
-      discountRs: totalAmount > 0 ? nextDiscountAmount.toFixed(2) : "",
+      discountPercent: finalPercentStr,
+      discountRs: totalAmount > 0 ? (nextDiscountAmount > 0 ? nextDiscountAmount.toFixed(2) : "0") : "",
     });
   };
 
   const updateDiscountAmount = (value: string) => {
-    const amountValue = Number(value || 0);
-    const percentValue = totalAmount > 0 ? (amountValue / totalAmount) * 100 : 0;
+    if (value === "") {
+      updateTab({
+        discountRs: "",
+        discountPercent: "",
+      });
+      return;
+    }
+
+    let amountNum = parseFloat(value);
+    if (isNaN(amountNum)) return;
+
+    if (amountNum < 0) amountNum = 0;
+    if (totalAmount > 0 && amountNum > totalAmount) {
+      amountNum = totalAmount;
+    }
+
+    const finalAmountStr = totalAmount > 0 && parseFloat(value) > totalAmount ? String(totalAmount) : (parseFloat(value) < 0 ? "0" : value);
+    const percentValue = totalAmount > 0 ? (amountNum / totalAmount) * 100 : 0;
 
     updateTab({
-      discountRs: value,
-      discountPercent: Number.isFinite(percentValue) ? percentValue.toFixed(2) : "",
+      discountRs: finalAmountStr,
+      discountPercent: totalAmount > 0 ? (percentValue > 0 ? percentValue.toFixed(2) : "0") : "",
     });
   };
 

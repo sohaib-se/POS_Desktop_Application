@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { Trash2 } from "lucide-react";
+import { useSettings } from "@/hooks/useSettings";
 import type { PurchaseTab, ItemOption, PurchaseRow } from "./types";
 import { unitOptions } from "./constants";
 
@@ -15,7 +16,7 @@ interface PurchaseTableProps {
   fmt: (n: number) => string;
 }
 
-// Searchable item cell (replaces plain <select>)
+// Searchable item cell with ITEM, PURCHASE PRICE, and STOCK dropdown
 function ItemCell({
   row,
   items,
@@ -28,6 +29,10 @@ function ItemCell({
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
   const ref = useRef<HTMLDivElement>(null);
+
+  const [currency] = useSettings('settings.businessCurrency', { code: 'PKR', symbol: 'Rs' });
+  const [currencyDisplay] = useSettings<'abbreviation' | 'icon'>('settings.currencyDisplay', 'abbreviation');
+  const currencyStr = currencyDisplay === 'icon' ? (currency?.symbol || 'Rs') : (currency?.code || 'PKR');
 
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
@@ -42,7 +47,8 @@ function ItemCell({
   const selectedItem = items.find(i => i.id === row.itemId);
   const filteredItems = items.filter(i =>
     (i.status !== "inactive" || i.id === row.itemId) &&
-    i.name.toLowerCase().includes(search.toLowerCase())
+    (i.name.toLowerCase().includes(search.toLowerCase()) ||
+     (i.code && i.code.toLowerCase().includes(search.toLowerCase())))
   );
 
   return (
@@ -51,42 +57,58 @@ function ItemCell({
         type="text"
         value={open ? search : (selectedItem ? selectedItem.name : row.item)}
         onChange={(e) => { setSearch(e.target.value); setOpen(true); }}
-        onFocus={() => { setSearch(selectedItem ? selectedItem.name : row.item); }}
+        onFocus={() => { setSearch(selectedItem ? selectedItem.name : row.item); setOpen(true); }}
         onClick={() => { setOpen(true); setSearch(selectedItem ? selectedItem.name : row.item); }}
-        placeholder="Search item..."
+        placeholder="Select Item"
         className="focus:ring-0 focus:outline-none"
         style={{ width: "100%", border: "none", outline: "none", boxShadow: "none", fontSize: 13, color: "#374151", background: "transparent" }}
       />
       {open && (
         <div style={{
-          position: "absolute", top: "100%", left: -8, width: 290,
+          position: "absolute", top: "100%", left: -8, minWidth: 400,
           background: "#fff", border: "1px solid #e5e7eb", borderRadius: 4,
-          marginTop: 2, boxShadow: "0 4px 12px -2px rgba(0,0,0,0.12)",
+          marginTop: 4, boxShadow: "0 4px 12px -2px rgba(0,0,0,0.12)",
           zIndex: 50, maxHeight: 260, overflowY: "auto",
         }}>
+          <div style={{
+            display: "flex", padding: "8px 12px", borderBottom: "1px solid #e5e7eb",
+            fontSize: 11, color: "#9ca3af", fontWeight: 600, background: "#fafafa"
+          }}>
+            <div style={{ flex: 2 }}>ITEM</div>
+            <div style={{ flex: 1.5, textAlign: "right" }}>PURCHASE PRICE</div>
+            <div style={{ flex: 1, textAlign: "right" }}>STOCK</div>
+          </div>
           {filteredItems.length === 0 ? (
             <div style={{ padding: "12px 16px", fontSize: 13, color: "#9ca3af" }}>No items found</div>
-          ) : filteredItems.map(item => (
-            <div
-              key={item.id}
-              onPointerDown={(e) => {
-                e.preventDefault();
-                updateRowItem(row.id, item.id);
-                setSearch("");
-                setOpen(false);
-              }}
-              style={{ padding: "9px 16px", cursor: "pointer", borderBottom: "1px solid #f3f4f6" }}
-              onMouseEnter={(e) => (e.currentTarget.style.background = "#f9fafb")}
-              onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-            >
-              <div style={{ fontSize: 13, fontWeight: 500, color: "#1f2937" }}>{item.name}</div>
-              {item.purchase_price !== undefined && (
-                <div style={{ fontSize: 11, color: "#9ca3af" }}>
-                  Purchase price: ₹{item.purchase_price}
+          ) : filteredItems.map(item => {
+            const purchasePrice = item.purchase_price ?? 0;
+            const stock = item.stock_quantity ?? item.stock ?? 0;
+            return (
+              <div
+                key={item.id}
+                onPointerDown={(e) => {
+                  e.preventDefault();
+                  updateRowItem(row.id, item.id);
+                  setSearch("");
+                  setOpen(false);
+                }}
+                style={{
+                  display: "flex", alignItems: "center", padding: "9px 12px",
+                  cursor: "pointer", borderBottom: "1px solid #f3f4f6", fontSize: 13
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.background = "#f9fafb")}
+                onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+              >
+                <div style={{ flex: 2, color: "#374151", fontWeight: 500 }}>{item.name}</div>
+                <div style={{ flex: 1.5, textAlign: "right", color: "#4b5563" }}>
+                  {currencyStr} {purchasePrice}
                 </div>
-              )}
-            </div>
-          ))}
+                <div style={{ flex: 1, textAlign: "right", color: stock < 0 ? "#ef4444" : "#4b5563" }}>
+                  {stock}
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
     </div>

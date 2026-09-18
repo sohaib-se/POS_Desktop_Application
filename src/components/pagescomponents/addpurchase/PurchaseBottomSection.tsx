@@ -153,6 +153,7 @@ export function PurchaseBottomSection({
               <span style={{ color: "#6b7280", width: 68, textAlign: "right" }}>Discount</span>
               <input type="number"
                 min="0"
+                max="100"
                 style={{ border: "1px solid #d1d5db", borderRadius: 4, padding: "5px 8px", width: 78, textAlign: "right", fontSize: 13, outline: "none" }}
                 value={activeTab.discountPercent}
                 onChange={(e) => updateDiscountPercent(e.target.value)}
@@ -160,7 +161,9 @@ export function PurchaseBottomSection({
                   if (e.key === "-" || e.key === "e") e.preventDefault();
                 }}
                 onBlur={(e) => {
-                  if (Number(e.target.value) < 0) updateDiscountPercent("0");
+                  const val = Number(e.target.value);
+                  if (val < 0) updateDiscountPercent("0");
+                  if (val > 100) updateDiscountPercent("100");
                 }}
               />
               <span style={{ color: "#9ca3af", fontSize: 12 }}>(%)</span>
@@ -174,7 +177,8 @@ export function PurchaseBottomSection({
                   if (e.key === "-" || e.key === "e") e.preventDefault();
                 }}
                 onBlur={(e) => {
-                  if (Number(e.target.value) < 0) updateDiscountAmount("0");
+                  const val = Number(e.target.value);
+                  if (val < 0) updateDiscountAmount("0");
                 }}
               />
               <span style={{ color: "#9ca3af", fontSize: 12 }}>(Rs)</span>
@@ -248,10 +252,24 @@ export function PurchaseBottomSection({
             </label>
             <span style={{ color: "#6b7280", width: 68, textAlign: "right" }}>Paid</span>
             <input type="number"
+              min="0"
               style={{ border: "1px solid #d1d5db", borderRadius: 4, padding: "5px 10px", width: 210, textAlign: "right", fontSize: 13, color: "#1f2937", background: "#fff", outline: "none" }}
               value={activeTab.paid}
+              onKeyDown={(e) => {
+                if (e.key === "-" || e.key === "e") e.preventDefault();
+              }}
               onChange={(e) => {
-                updateTab({ paid: e.target.value, paidAll: false });
+                const val = e.target.value;
+                if (Number(val) < 0) {
+                  updateTab({ paid: "0", paidAll: false });
+                } else {
+                  updateTab({ paid: val, paidAll: false });
+                }
+              }}
+              onBlur={(e) => {
+                if (Number(e.target.value) < 0) {
+                  updateTab({ paid: "0", paidAll: false });
+                }
               }}
             />
           </div>

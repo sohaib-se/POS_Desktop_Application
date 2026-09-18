@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useSettings } from "@/hooks/useSettings";
 import { userProfile } from "@/data/mockData";
+import { usePrintTotalsSettings } from "@/hooks/usePrintSettings";
 
 /* ─────────────────────────────── Types ─────────────────────────────── */
 
@@ -20,8 +21,15 @@ interface SaleInvoicePrintReportProps {
   invoiceNo: string | number;
   invoiceDate: string;
   customerName: string;
-  businessProfile?: { business_name?: string; phone?: string; logo_url?: string };
+  customerContact?: string;
+  businessProfile?: { business_name?: string; phone?: string; logo_url?: string; address?: string; email?: string; signature?: string; };
   received?: number;
+  paymentMode?: string;
+  previousBalance?: number;
+  discount?: number;
+  discountPercent?: number;
+  taxPercent?: number;
+  description?: string;
 }
 
 /* ─────────────────────── Dummy preview data ────────────────────────── */
@@ -47,7 +55,7 @@ function numberToWords(num: number): string {
   if (num === 0) return "Zero";
   let n = Math.floor(num), words = "";
   const crore = Math.floor(n / 10000000); n %= 10000000;
-  const lakh = Math.floor(n / 100000);   n %= 100000;
+  const lakh = Math.floor(n / 100000); n %= 100000;
   const thousand = Math.floor(n / 1000); n %= 1000;
   const rest = n;
   if (crore) words += chunk(crore) + "Crore ";
@@ -96,8 +104,15 @@ export function SaleInvoicePrintReport({
   invoiceNo,
   invoiceDate,
   customerName,
+  customerContact,
   businessProfile,
   received = 0,
+  paymentMode,
+  previousBalance,
+  discount = 0,
+  discountPercent = 0,
+  taxPercent = 0,
+  description,
 }: SaleInvoicePrintReportProps) {
   const [currency] = useSettings("settings.businessCurrency", { code: "PKR", symbol: "Rs" });
   const [currencyDisplay] = useSettings<"abbreviation" | "icon">("settings.currencyDisplay", "abbreviation");
@@ -115,12 +130,18 @@ export function SaleInvoicePrintReport({
     }
     return dateStr;
   };
-
-  const fmt = (n: number) => `${currencyStr} ${n.toFixed(2)}`;
   const totalQuantity = records.reduce((s, r) => s + Number(r.quantity || 0), 0);
   const subTotal = records.reduce((s, r) => s + Number(r.amount || 0), 0);
-  const total = subTotal;
+  const discountAmount = discount > 0 ? discount : (discountPercent > 0 ? subTotal * discountPercent / 100 : 0);
+  const taxAmount = taxPercent > 0 ? (subTotal - discountAmount) * taxPercent / 100 : 0;
+  const total = subTotal - discountAmount + taxAmount;
   const balance = total - Number(received);
+  const prevBalance = Number(previousBalance ?? 0);
+  const currentBalance = prevBalance + balance;
+
+  const ps = usePrintTotalsSettings();
+
+  const fmt = (n: number) => `${currencyStr} ${ps.amountWithDecimal ? n.toFixed(2) : Math.round(n).toString()}`;
 
   const MIN_ROWS = 10;
   const fillerRows = Math.max(0, MIN_ROWS - records.length);
@@ -138,13 +159,18 @@ export function SaleInvoicePrintReport({
           <InvoiceLogo logoUrl={businessProfile?.logo_url} businessName={businessProfile?.business_name} size={72} />
           <div>
             <div style={{ fontSize: 20, fontWeight: 700, color: HEADER_COLOR }}>{businessProfile?.business_name || "My Company"}</div>
-            <div style={{ fontSize: 11, color: HEADER_COLOR, marginTop: 2 }}>Phone: <strong>{businessProfile?.phone || ""}</strong></div>
+            <div style={{ fontSize: 11, color: HEADER_COLOR, marginTop: 2 }}>{businessProfile?.address || "Jhagra peshawar"}</div>
+            <div style={{ fontSize: 11, color: HEADER_COLOR, marginTop: 2 }}>
+              Phone: <strong>{businessProfile?.phone || ""}</strong>
+              <span style={{ marginLeft: 16 }}>Email: <strong>{businessProfile?.email || "msoh@gmail.com"}</strong></span>
+            </div>
           </div>
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", borderTop: "1px solid #1a1a1a" }}>
           <div style={{ borderRight: "1px solid #1a1a1a" }}>
             <div style={{ padding: "4px 12px", fontSize: 11, fontWeight: 700, borderBottom: "1px solid #1a1a1a", backgroundColor: "#F2F2F2", color: HEADER_COLOR }}>Bill To:</div>
             <div style={{ padding: "8px 12px", fontSize: 13, fontWeight: 700 }}>{customerName}</div>
+            <div style={{ padding: "0 12px 8px 12px", fontSize: 11 }}>Contact No: <strong>{customerContact || "03129955494"}</strong></div>
           </div>
           <div>
             <div style={{ padding: "4px 12px", fontSize: 11, fontWeight: 700, borderBottom: "1px solid #1a1a1a", backgroundColor: "#F2F2F2", color: HEADER_COLOR }}>Invoice Details:</div>
@@ -160,62 +186,129 @@ export function SaleInvoicePrintReport({
       <table style={{ width: "100%", fontSize: 11, borderCollapse: "collapse", border: "1px solid #1a1a1a" }}>
         <thead>
           <tr style={{ backgroundColor: "#D3D3D3", color: HEADER_COLOR }}>
-            <th style={{ padding: "6px 8px", textAlign: "left", fontWeight: 700, border: "1px solid #1a1a1a", width: 24 }}>#</th>
+            {ps.showSno && <th style={{ padding: "6px 8px", textAlign: "left", fontWeight: 700, border: "1px solid #1a1a1a", width: 24 }}>#</th>}
             <th style={{ padding: "6px 8px", textAlign: "left", fontWeight: 700, border: "1px solid #1a1a1a" }}>Item name</th>
-            <th style={{ padding: "6px 8px", textAlign: "right", fontWeight: 700, border: "1px solid #1a1a1a" }}>Quantity</th>
-            <th style={{ padding: "6px 8px", textAlign: "right", fontWeight: 700, border: "1px solid #1a1a1a" }}>Unit</th>
-            <th style={{ padding: "6px 8px", textAlign: "right", fontWeight: 700, border: "1px solid #1a1a1a", whiteSpace: "nowrap" }}>Price/ Unit({currencyStr})</th>
+            {ps.showQuantity && <th style={{ padding: "6px 8px", textAlign: "right", fontWeight: 700, border: "1px solid #1a1a1a" }}>Quantity</th>}
+            {ps.showUnit && <th style={{ padding: "6px 8px", textAlign: "right", fontWeight: 700, border: "1px solid #1a1a1a" }}>Unit</th>}
+            {ps.showPricePerUnit && <th style={{ padding: "6px 8px", textAlign: "right", fontWeight: 700, border: "1px solid #1a1a1a", whiteSpace: "nowrap" }}>Price/ Unit({currencyStr})</th>}
             <th style={{ padding: "6px 8px", textAlign: "right", fontWeight: 700, border: "1px solid #1a1a1a", whiteSpace: "nowrap" }}>Amount({currencyStr})</th>
           </tr>
         </thead>
         <tbody>
           {records.map((r, idx) => (
             <tr key={r.id ?? idx}>
-              <td style={{ padding: "4px 8px", border: "1px solid #1a1a1a" }}>{idx + 1}</td>
+              {ps.showSno && <td style={{ padding: "4px 8px", border: "1px solid #1a1a1a" }}>{idx + 1}</td>}
               <td style={{ padding: "4px 8px", border: "1px solid #1a1a1a", fontWeight: 700 }}>{r.itemName || r.item_name || ""}</td>
-              <td style={{ padding: "4px 8px", border: "1px solid #1a1a1a", textAlign: "right" }}>{r.quantity ?? ""}</td>
-              <td style={{ padding: "4px 8px", border: "1px solid #1a1a1a", textAlign: "right" }}>{r.unit || ""}</td>
-              <td style={{ padding: "4px 8px", border: "1px solid #1a1a1a", textAlign: "right", whiteSpace: "nowrap" }}>{currencyStr} {Number(r.pricePerUnit ?? r.price_per_unit ?? 0).toFixed(2)}</td>
-              <td style={{ padding: "4px 8px", border: "1px solid #1a1a1a", textAlign: "right", whiteSpace: "nowrap" }}>{currencyStr} {Number(r.amount || 0).toFixed(2)}</td>
+              {ps.showQuantity && <td style={{ padding: "4px 8px", border: "1px solid #1a1a1a", textAlign: "right" }}>{r.quantity ?? ""}</td>}
+              {ps.showUnit && <td style={{ padding: "4px 8px", border: "1px solid #1a1a1a", textAlign: "right" }}>{r.unit || ""}</td>}
+              {ps.showPricePerUnit && <td style={{ padding: "4px 8px", border: "1px solid #1a1a1a", textAlign: "right", whiteSpace: "nowrap" }}>{currencyStr} {ps.amountWithDecimal ? Number(r.pricePerUnit ?? r.price_per_unit ?? 0).toFixed(2) : Math.round(Number(r.pricePerUnit ?? r.price_per_unit ?? 0)).toString()}</td>}
+              <td style={{ padding: "4px 8px", border: "1px solid #1a1a1a", textAlign: "right", whiteSpace: "nowrap" }}>{currencyStr} {ps.amountWithDecimal ? Number(r.amount || 0).toFixed(2) : Math.round(Number(r.amount || 0)).toString()}</td>
             </tr>
           ))}
           {fillerRows > 0 && (
             <tr>
               <td style={{ border: "1px solid #1a1a1a", height: fillerRows * 28 }}></td>
               <td style={{ border: "1px solid #1a1a1a" }}></td>
-              <td style={{ border: "1px solid #1a1a1a" }}></td>
-              <td style={{ border: "1px solid #1a1a1a" }}></td>
-              <td style={{ border: "1px solid #1a1a1a" }}></td>
+              {ps.showQuantity && <td style={{ border: "1px solid #1a1a1a" }}></td>}
+              {ps.showUnit && <td style={{ border: "1px solid #1a1a1a" }}></td>}
+              {ps.showPricePerUnit && <td style={{ border: "1px solid #1a1a1a" }}></td>}
               <td style={{ border: "1px solid #1a1a1a" }}></td>
             </tr>
           )}
           <tr style={{ fontWeight: 700 }}>
-            <td style={{ padding: "6px 8px", border: "1px solid #1a1a1a" }} colSpan={2}>Total</td>
-            <td style={{ padding: "6px 8px", border: "1px solid #1a1a1a", textAlign: "right" }}>{totalQuantity}</td>
-            <td style={{ border: "1px solid #1a1a1a" }}></td>
-            <td style={{ border: "1px solid #1a1a1a" }}></td>
+            <td style={{ padding: "6px 8px", border: "1px solid #1a1a1a" }} colSpan={ps.showSno ? 2 : 1}>Total</td>
+            {ps.showQuantity ? (
+              <td style={{ padding: "6px 8px", border: "1px solid #1a1a1a", textAlign: "right" }}>{ps.totalItemQuantity ? totalQuantity : ""}</td>
+            ) : (
+              <td style={{ border: "1px solid #1a1a1a" }}></td>
+            )}
+            {ps.showUnit && <td style={{ border: "1px solid #1a1a1a" }}></td>}
+            {ps.showPricePerUnit && <td style={{ border: "1px solid #1a1a1a" }}></td>}
             <td style={{ padding: "6px 8px", border: "1px solid #1a1a1a", textAlign: "right", whiteSpace: "nowrap" }}>{fmt(total)}</td>
           </tr>
         </tbody>
       </table>
 
-      {/* Totals block */}
+      {/* Payment Mode / Terms  +  Totals block */}
       <div style={{ border: "1px solid #1a1a1a", borderTop: "none", marginBottom: 16 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 12px", fontSize: 11, borderBottom: "1px solid #e5e5e5" }}>
-          <span>Sub Total</span><span>:</span><span style={{ whiteSpace: "nowrap" }}>{fmt(subTotal)}</span>
-        </div>
-        <div style={{ display: "flex", justifyContent: "space-between", padding: "6px 12px", fontSize: 13, fontWeight: 700, borderBottom: "1px solid #1a1a1a", borderTop: "1px solid #1a1a1a" }}>
-          <span>Total</span><span>:</span><span style={{ whiteSpace: "nowrap" }}>{fmt(total)}</span>
-        </div>
-        <div style={{ borderBottom: "1px solid #e5e5e5" }}>
-          <div style={{ padding: "4px 12px", fontSize: 11, fontWeight: 700, backgroundColor: "#F2F2F2", color: HEADER_COLOR }}>Invoice Amount in Words:</div>
-          <div style={{ padding: "6px 12px", fontSize: 11 }}>{numberToWords(total)} {currency.code === "PKR" ? "Rupees" : ""} only</div>
-        </div>
-        <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 12px", fontSize: 11, borderBottom: "1px solid #e5e5e5" }}>
-          <span>Received</span><span>:</span><span style={{ whiteSpace: "nowrap" }}>{fmt(Number(received))}</span>
-        </div>
-        <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 12px", fontSize: 11 }}>
-          <span>Balance</span><span>:</span><span style={{ whiteSpace: "nowrap" }}>{fmt(balance)}</span>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr" }}>
+          <div style={{ borderRight: "1px solid #1a1a1a" }}>
+            {ps.paymentMode && (
+              <>
+                <div style={{ padding: "4px 12px", fontSize: 11, fontWeight: 700, borderBottom: "1px solid #1a1a1a", backgroundColor: "#F2F2F2", color: HEADER_COLOR }}>
+                  Payment Mode:
+                </div>
+                <div style={{ padding: "6px 12px", fontSize: 11, borderBottom: "1px solid #e5e5e5" }}>
+                  {paymentMode || "Credit"}
+                </div>
+              </>
+            )}
+            {ps.printTermsAndConditions && (
+              <>
+                <div style={{ padding: "4px 12px", fontSize: 11, fontWeight: 700, borderBottom: "1px solid #1a1a1a", backgroundColor: "#F2F2F2", color: HEADER_COLOR }}>
+                  Terms &amp; Conditions:
+                </div>
+                <div style={{ padding: "6px 12px", fontSize: 11 }}>
+                  Goods once sold will not be taken back. Payment due within 15 days of invoice date.
+                </div>
+              </>
+            )}
+          </div>
+          <div>
+            <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 12px", fontSize: 11, borderBottom: "1px solid #e5e5e5" }}>
+              <span>Sub Total</span><span>:</span><span style={{ whiteSpace: "nowrap" }}>{fmt(subTotal)}</span>
+            </div>
+            {ps.discount && discountAmount > 0 && (
+              <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 12px", fontSize: 11, borderBottom: "1px solid #e5e5e5", color: "green" }}>
+                <span>Discount {discountPercent > 0 ? `(${discountPercent}%)` : ""}</span><span>:</span><span style={{ whiteSpace: "nowrap" }}>- {fmt(discountAmount)}</span>
+              </div>
+            )}
+            {ps.taxDetails && taxAmount > 0 && (
+              <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 12px", fontSize: 11, borderBottom: "1px solid #e5e5e5" }}>
+                <span>Tax ({taxPercent}%)</span><span>:</span><span style={{ whiteSpace: "nowrap" }}>{fmt(taxAmount)}</span>
+              </div>
+            )}
+            {ps.youSaved && discountAmount > 0 && (
+              <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 12px", fontSize: 11, borderBottom: "1px solid #e5e5e5", color: "green", fontWeight: 700 }}>
+                <span>You Saved</span><span>:</span><span style={{ whiteSpace: "nowrap" }}>{fmt(discountAmount)}</span>
+              </div>
+            )}
+            <div style={{ display: "flex", justifyContent: "space-between", padding: "6px 12px", fontSize: 13, fontWeight: 700, borderBottom: "1px solid #1a1a1a" }}>
+              <span>Total</span><span>:</span><span style={{ whiteSpace: "nowrap" }}>{fmt(total)}</span>
+            </div>
+            {ps.amountInWords && (
+              <div style={{ borderBottom: "1px solid #e5e5e5" }}>
+                <div style={{ padding: "4px 12px", fontSize: 11, fontWeight: 700, backgroundColor: "#F2F2F2", color: HEADER_COLOR }}>Invoice Amount in Words:</div>
+                <div style={{ padding: "6px 12px", fontSize: 11 }}>{numberToWords(total)} {currency.code === "PKR" ? "Rupees" : ""} only</div>
+              </div>
+            )}
+            {ps.printDescription && (
+              <div style={{ borderBottom: "1px solid #e5e5e5" }}>
+                <div style={{ padding: "4px 12px", fontSize: 11, fontWeight: 700, backgroundColor: "#F2F2F2", color: HEADER_COLOR }}>Description:</div>
+                <div style={{ padding: "6px 12px", fontSize: 11 }}>{description || "No description provided."}</div>
+              </div>
+            )}
+            {ps.receivedAmount && (
+              <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 12px", fontSize: 11, borderBottom: "1px solid #e5e5e5" }}>
+                <span>Received</span><span>:</span><span style={{ whiteSpace: "nowrap" }}>{fmt(Number(received))}</span>
+              </div>
+            )}
+            {ps.balanceAmount && (
+              <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 12px", fontSize: 11, borderBottom: "1px solid #e5e5e5" }}>
+                <span>Balance</span><span>:</span><span style={{ whiteSpace: "nowrap" }}>{fmt(balance)}</span>
+              </div>
+            )}
+            {ps.previousBalance && (
+              <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 12px", fontSize: 11, borderBottom: "1px solid #e5e5e5" }}>
+                <span>Previous Balance</span><span>:</span><span style={{ whiteSpace: "nowrap" }}>{fmt(prevBalance)}</span>
+              </div>
+            )}
+            {ps.currentBalanceOfParty && (
+              <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 12px", fontSize: 11, fontWeight: 700 }}>
+                <span>Current Balance</span><span>:</span><span style={{ whiteSpace: "nowrap" }}>{fmt(currentBalance)}</span>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -225,8 +318,13 @@ export function SaleInvoicePrintReport({
           <div style={{ padding: "4px 12px", fontSize: 11, fontWeight: 700, borderBottom: "1px solid #1a1a1a", backgroundColor: "#F2F2F2", color: HEADER_COLOR }}>
             For {businessProfile?.business_name || "My Company"}:
           </div>
-          <div style={{ height: 64, display: "flex", alignItems: "flex-end", justifyContent: "center", paddingBottom: 8 }}>
-            <span style={{ fontSize: 11, color: "#555" }}>Authorized Signatory</span>
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-end", paddingBottom: 8, minHeight: 64 }}>
+            {businessProfile?.signature && (
+              <img src={businessProfile.signature} alt="Signature" style={{ maxHeight: 40, objectFit: "contain", marginTop: 8 }} />
+            )}
+            <span style={{ fontSize: 11, color: "#555", marginTop: businessProfile?.signature ? 4 : "auto" }}>
+              {ps.printSignatureText || "Authorized Signatory"}
+            </span>
           </div>
         </div>
       </div>
@@ -241,6 +339,9 @@ function useCompanyInfo() {
     business_name: userProfile.businessName,
     phone: userProfile.phone,
     logo_url: userProfile.logo as string | undefined,
+    address: (userProfile as any).address,
+    email: (userProfile as any).email,
+    signature: (userProfile as any).signature as string | undefined,
   });
   useEffect(() => {
     fetch("/api/user_profile")
@@ -251,10 +352,13 @@ function useCompanyInfo() {
             business_name: d.business_name || userProfile.businessName,
             phone: d.phone || userProfile.phone,
             logo_url: d.logo_url || d.logo || userProfile.logo,
+            address: d.address || (userProfile as any).address,
+            email: d.email || (userProfile as any).email,
+            signature: d.signature_url || d.signature || undefined,
           });
         }
       })
-      .catch(() => {});
+      .catch(() => { });
   }, []);
   return info;
 }
@@ -269,8 +373,15 @@ export function TallyThemePreview() {
           invoiceNo={3}
           invoiceDate="2026-09-03"
           customerName="zeeshan"
+          customerContact="03129955494"
           businessProfile={company}
           received={0}
+          paymentMode="Credit"
+          previousBalance={800}
+          discount={10}
+          discountPercent={10}
+          taxPercent={5}
+          description="Thank you for your business!"
         />
       </div>
     </div>

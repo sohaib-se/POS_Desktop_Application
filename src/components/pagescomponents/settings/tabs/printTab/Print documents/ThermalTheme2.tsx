@@ -277,7 +277,7 @@ export function ThermalSaleInvoiceClassic({
                     <span>{fmt(subTotal)}</span>
                 </div>
 
-                {discount > 0 && (
+                {ps.discount && discount > 0 && (
                     <div style={{ display: "flex", justifyContent: "space-between", padding: "2px 0" }}>
                         <span>Discount{discountPercent != null ? ` (${discountPercent}%)` : ""}</span>
                         <span>-{fmt(Number(discount))}</span>

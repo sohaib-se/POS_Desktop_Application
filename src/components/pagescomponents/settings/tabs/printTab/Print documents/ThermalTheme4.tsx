@@ -205,7 +205,7 @@ export function ThermalSaleInvoiceRetail({
             {ps.totalItemQuantity && <div style={row}><span>TOTAL QTY</span><span>{totalQuantity}</span></div>}
             <div style={row}><span>SUBTOTAL</span><span>{fmt(subTotal)}</span></div>
 
-            {discount > 0 && (
+            {ps.discount && discount > 0 && (
                 <div style={row}>
                     <span>DISCOUNT{discountPercent != null ? `(${discountPercent}%)` : ""}</span>
                     <span>-{fmt(Number(discount))}</span>

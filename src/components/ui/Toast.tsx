@@ -1,9 +1,7 @@
 import { useEffect, useState } from "react";
-import { CheckCircle2, XCircle } from "lucide-react";
+import { CheckCircle2, XCircle, Info } from "lucide-react";
 
-import { AlertCircle, Info } from "lucide-react";
-
-export type ToastType = "success" | "error" | "warning" | "info";
+export type ToastType = "success" | "error" | "info";
 
 interface ToastMessage {
   id: number;
@@ -22,10 +20,6 @@ export const toast = {
   },
   error: (message: string) => {
     const t = { id: nextId++, message, type: "error" as const };
-    toastListeners.forEach(listener => listener(t));
-  },
-  warning: (message: string) => {
-    const t = { id: nextId++, message, type: "warning" as const };
     toastListeners.forEach(listener => listener(t));
   },
   info: (message: string) => {
@@ -67,19 +61,7 @@ function ToastItem({ toast }: { toast: ToastMessage }) {
     return () => clearTimeout(timer);
   }, []);
 
-  let bg = "#10b981";
-  if (toast.type === "error") bg = "#ef4444";
-  else if (toast.type === "warning") bg = "#f59e0b";
-  else if (toast.type === "info") bg = "#3b82f6";
-
-  const renderIcon = () => {
-    switch (toast.type) {
-      case "success": return <CheckCircle2 size={20} strokeWidth={2.5} />;
-      case "error": return <XCircle size={20} strokeWidth={2.5} />;
-      case "warning": return <AlertCircle size={20} strokeWidth={2.5} />;
-      case "info": return <Info size={20} strokeWidth={2.5} />;
-    }
-  };
+  const bg = toast.type === "success" ? "#10b981" : toast.type === "error" ? "#ef4444" : "#3b82f6";
 
   return (
     <div
@@ -97,7 +79,13 @@ function ToastItem({ toast }: { toast: ToastMessage }) {
         transition: "all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1)",
       }}
     >
-      {renderIcon()}
+      {toast.type === "success" ? (
+        <CheckCircle2 size={20} strokeWidth={2.5} />
+      ) : toast.type === "error" ? (
+        <XCircle size={20} strokeWidth={2.5} />
+      ) : (
+        <Info size={20} strokeWidth={2.5} />
+      )}
       <span style={{ fontSize: 14, fontWeight: 500, letterSpacing: "0.01em" }}>{toast.message}</span>
     </div>
   );

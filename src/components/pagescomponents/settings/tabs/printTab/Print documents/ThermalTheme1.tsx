@@ -369,8 +369,8 @@ export function ThermalSaleInvoice({
       {/* Indented rows: Disc / Total / Received / Balance */}
       <div style={{ marginTop: 2, fontSize: 12 }}>
 
-        {/* Discount row — only shown if discount > 0 */}
-        {discount > 0 && (
+        {/* Discount row — only shown if discount > 0 AND discount toggle is on */}
+        {ps.discount && discount > 0 && (
           <div style={{ display: "flex", justifyContent: "space-between", lineHeight: 1.9 }}>
             <span style={{ paddingLeft: 24, color: LABEL_COLOR, fontWeight: 600 }}>
               Disc.{discountPercent != null ? `(${discountPercent}%)` : ""}

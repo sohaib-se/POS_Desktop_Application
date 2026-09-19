@@ -10,6 +10,7 @@ import { AddPartyDialog } from "@/components/pagescomponents/parties/AddPartyDia
 import { toast } from "@/components/ui/Toast";
 import { useSettings } from "@/hooks/useSettings";
 import { ConfirmDeleteModal } from "@/components/common/ConfirmDeleteModal";
+import { PrintTab, type SalePrintData } from "@/components/pagescomponents/settings/tabs/PrintTab";
 
 export interface SaleRow {
   id: number;
@@ -42,6 +43,8 @@ export interface SaleTab {
   received: string;
   receivedAll: boolean;
   isDirty?: boolean;
+  showPreview?: boolean;
+  savedSaleForPreview?: SalePrintData | null;
 }
 
 export interface PartyOption {
@@ -697,35 +700,61 @@ export function AddSale({ onSave, onShare, onClose, initialInvoice, isConversion
 
       toast.success(isEditing ? "Sale updated successfully!" : "Sale saved successfully!");
 
-      onSave?.();
-
-      // Close or update tabs — same pattern as AddEstimate
       const isEditingMode = Boolean(initialInvoice) && !isConversion;
-      if (isEditingMode) {
-        // Editing a single invoice — close the panel
-        onClose?.();
-      } else {
-        setTabs(prev => {
-          const remaining = prev.filter(t => t.id !== activeTabId);
-          if (remaining.length === 0) {
-            // Last tab saved — close the panel
-            setTimeout(() => { onClose?.(); }, 0);
-            return prev;
-          }
-          // Update remaining tabs: each gets the new next invoice number
-          const updated = remaining.map((t) => {
-            return { ...t, invoiceNo: nextNo, label: `Sale #${nextNo}` };
-          });
-          setActiveTabId(updated[updated.length - 1].id);
-          return updated;
-        });
-      }
+      const saleDataForPreview: SalePrintData = {
+        records: validRows.map((r) => ({
+          id: r.id,
+          itemName: r.item,
+          quantity: Number(r.qty) || 0,
+          unit: r.unit === "NONE" ? "" : r.unit,
+          pricePerUnit: Number(r.pricePerUnit) || 0,
+          amount: (Number(r.qty) || 0) * (Number(r.pricePerUnit) || 0),
+        })),
+        invoiceNo: isEditingMode ? (initialInvoice?.invoiceNo ?? activeTab.invoiceNo) : (savedInvoice.invoiceNo || activeTab.invoiceNo || nextInvoiceNo),
+        invoiceDate: activeTab.invoiceDate || displayedInvoiceDate,
+        customerName: selectedParty ? selectedParty.name : (activeTab.customerSearch || "Cash Sale"),
+        customerContact: activeTab.phoneNo || selectedParty?.phone || "",
+        customerPhone: activeTab.phoneNo || selectedParty?.phone || "",
+        received: receivedValue,
+        paymentMode: activeTab.paymentMode === "cash" ? "Cash" : "Credit",
+        previousBalance: selectedParty?.balance || 0,
+        discount: discountAmountValue,
+        discountPercent: Number(activeTab.discountPercent || 0),
+        taxPercent: parseTaxRate(activeTab.tax) * 100,
+        description: activeTab.description,
+      };
+
+      updateTab({
+        showPreview: true,
+        savedSaleForPreview: saleDataForPreview,
+        isDirty: false,
+      });
 
     } catch (error) {
       console.error(error);
       setSaveError("Failed to save the sale. Please try again.");
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleCloseTabPreview = (tabId: number) => {
+    onSave?.();
+    const isEditingMode = Boolean(initialInvoice) && !isConversion;
+    if (isEditingMode) {
+      onClose?.();
+    } else {
+      setTabs((prev) => {
+        const remaining = prev.filter((t) => t.id !== tabId);
+        if (remaining.length === 0) {
+          setTimeout(() => { onClose?.(); }, 0);
+          return prev;
+        }
+        if (activeTabId === tabId) {
+          setActiveTabId(remaining[remaining.length - 1].id);
+        }
+        return remaining;
+      });
     }
   };
 
@@ -738,14 +767,17 @@ export function AddSale({ onSave, onShare, onClose, initialInvoice, isConversion
 
   const closeTab = (id: number, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (tabs.length === 1) return;
     
     const tab = tabs.find(t => t.id === id);
-    if (tab && tab.isDirty) {
+    if (tab && tab.isDirty && !tab.showPreview) {
       setTabToClose(id);
     } else {
       setTabs((prev) => {
         const remaining = prev.filter((t) => t.id !== id);
+        if (remaining.length === 0) {
+          setTimeout(() => { onClose?.(); }, 0);
+          return prev;
+        }
         if (activeTabId === id) setActiveTabId(remaining[remaining.length - 1].id);
         return remaining;
       });
@@ -906,7 +938,7 @@ export function AddSale({ onSave, onShare, onClose, initialInvoice, isConversion
         addTab={addTab}
         closeTab={closeTab}
         onClose={onClose ? () => {
-          if (tabs.some(t => t.isDirty)) {
+          if (tabs.some(t => t.isDirty && !t.showPreview)) {
             setIsClosingPage(true);
           } else {
             onClose();
@@ -914,54 +946,66 @@ export function AddSale({ onSave, onShare, onClose, initialInvoice, isConversion
         } : undefined}
       />
 
-      <AddSaleTopBar
-        activeTab={activeTab}
-        updateTab={updateTab}
-      />
+      {activeTab?.showPreview && activeTab.savedSaleForPreview ? (
+        <div style={{ flex: 1, position: "relative", minHeight: 0 }}>
+          <PrintTab
+            isPreviewMode={true}
+            saleData={activeTab.savedSaleForPreview}
+            onClose={() => handleCloseTabPreview(activeTab.id)}
+          />
+        </div>
+      ) : (
+        <>
+          <AddSaleTopBar
+            activeTab={activeTab}
+            updateTab={updateTab}
+          />
 
-      {/* ── SCROLLABLE CONTENT ── */}
-      <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: 0 }}>
-        <AddSaleCustomerHeader
-          activeTab={activeTab}
-          parties={parties}
-          setActiveTabCustomer={setActiveTabCustomer}
-          updateTab={updateTab}
-          displayedInvoiceNo={displayedInvoiceNo}
-          displayedInvoiceDate={displayedInvoiceDate}
-          setShowAddParty={setShowAddParty}
-        />
+          {/* ── SCROLLABLE CONTENT ── */}
+          <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: 0 }}>
+            <AddSaleCustomerHeader
+              activeTab={activeTab}
+              parties={parties}
+              setActiveTabCustomer={setActiveTabCustomer}
+              updateTab={updateTab}
+              displayedInvoiceNo={displayedInvoiceNo}
+              displayedInvoiceDate={displayedInvoiceDate}
+              setShowAddParty={setShowAddParty}
+            />
 
-        <AddSaleTable
-          activeTab={activeTab}
-          items={items}
-          updateRowItem={updateRowItem}
-          updateRow={updateRow}
-          removeRow={removeRow}
-          addRow={addRow}
-          totalQty={totalQty}
-          totalAmount={totalAmount}
-          onBarcodeClick={isBarcodeScanEnabled ? () => setShowBarcodeModal(true) : undefined}
-        />
+            <AddSaleTable
+              activeTab={activeTab}
+              items={items}
+              updateRowItem={updateRowItem}
+              updateRow={updateRow}
+              removeRow={removeRow}
+              addRow={addRow}
+              totalQty={totalQty}
+              totalAmount={totalAmount}
+              onBarcodeClick={isBarcodeScanEnabled ? () => setShowBarcodeModal(true) : undefined}
+            />
 
-        <AddSaleBottomActions
-          activeTab={activeTab}
-          updateTab={updateTab}
-          updateDiscountPercent={updateDiscountPercent}
-          updateDiscountAmount={updateDiscountAmount}
-          imageInputRef={imageInputRef}
-          documentInputRef={documentInputRef}
-          handleAttachmentSelection={handleAttachmentSelection}
-          taxOptions={taxOptions}
-          taxAmount={taxAmount}
-          roundOffDiff={roundOffDiff}
-          roundedTotal={roundedTotal}
-          computedBalance={computedBalance}
-          saveError={saveError}
-          isSaving={isSaving}
-          handleSaveSale={handleSaveSale}
-          isEditing={Boolean(initialInvoice)}
-        />
-      </div>{/* end scroll */}
+            <AddSaleBottomActions
+              activeTab={activeTab}
+              updateTab={updateTab}
+              updateDiscountPercent={updateDiscountPercent}
+              updateDiscountAmount={updateDiscountAmount}
+              imageInputRef={imageInputRef}
+              documentInputRef={documentInputRef}
+              handleAttachmentSelection={handleAttachmentSelection}
+              taxOptions={taxOptions}
+              taxAmount={taxAmount}
+              roundOffDiff={roundOffDiff}
+              roundedTotal={roundedTotal}
+              computedBalance={computedBalance}
+              saveError={saveError}
+              isSaving={isSaving}
+              handleSaveSale={handleSaveSale}
+              isEditing={Boolean(initialInvoice)}
+            />
+          </div>{/* end scroll */}
+        </>
+      )}
 
       {/* Barcode Scan Modal */}
       {showBarcodeModal && (

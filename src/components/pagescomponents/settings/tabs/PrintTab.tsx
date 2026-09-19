@@ -1,21 +1,88 @@
-import { useState } from "react";
-import { TallyThemePreview } from "./printTab/Print documents/Tallytheme";
-import { Theme1Preview } from "./printTab/Print documents/Theme1";
-import { Theme2Preview } from "./printTab/Print documents/Theme2";
-import { Theme3Preview } from "./printTab/Print documents/Theme3";
-import { Theme4Preview } from "./printTab/Print documents/Theme4";
-import { TaxThemePreview } from "./printTab/Print documents/TaxTheme";
-import { ThermalTheme1Preview } from "./printTab/Print documents/ThermalTheme1";
-import { ThermalTheme2Preview } from "./printTab/Print documents/ThermalTheme2";
-import { ThermalTheme3Preview } from "./printTab/Print documents/ThermalTheme3";
-import { ThermalTheme4Preview } from "./printTab/Print documents/ThermalTheme4";
+import { useState, useEffect } from "react";
+import { SaleInvoicePrintReport, TallyThemePreview } from "./printTab/Print documents/Tallytheme";
+import { Theme1InvoicePrintReport, Theme1Preview } from "./printTab/Print documents/Theme1";
+import { Theme2InvoicePrintReport, Theme2Preview } from "./printTab/Print documents/Theme2";
+import { Theme3InvoicePrintReport, Theme3Preview } from "./printTab/Print documents/Theme3";
+import { Theme4InvoicePrintReport, Theme4Preview } from "./printTab/Print documents/Theme4";
+import { TaxInvoicePrintReport, TaxThemePreview } from "./printTab/Print documents/TaxTheme";
+import { ThermalSaleInvoice, ThermalTheme1Preview } from "./printTab/Print documents/ThermalTheme1";
+import { ThermalSaleInvoiceClassic, ThermalTheme2Preview } from "./printTab/Print documents/ThermalTheme2";
+import { ThermalSaleInvoiceImpact, ThermalTheme3Preview } from "./printTab/Print documents/ThermalTheme3";
+import { ThermalSaleInvoiceRetail, ThermalTheme4Preview } from "./printTab/Print documents/ThermalTheme4";
 import { LeftPanel, REGULAR_THEMES, THERMAL_THEMES } from "./printTab/print tab panels/LeftPanel";
 import { RightPanel } from "./printTab/print tab panels/RightPanel";
+import { PrintPreviewRightPanel } from "./printTab/print tab panels/PrintPreviewRightPanel";
 import type { PrinterType } from "./printTab/print tab panels/LeftPanel";
+import { userProfile } from "@/data/mockData";
+
+export interface SaleInvoiceLineItem {
+  id?: string | number;
+  itemName?: string;
+  item_name?: string;
+  quantity?: number | string;
+  unit?: string;
+  pricePerUnit?: number | string;
+  price_per_unit?: number | string;
+  amount?: number | string;
+}
+
+export interface SalePrintData {
+  records: SaleInvoiceLineItem[];
+  invoiceNo: string | number;
+  invoiceDate: string;
+  customerName: string;
+  customerContact?: string;
+  customerPhone?: string;
+  received?: number;
+  paymentMode?: string;
+  previousBalance?: number;
+  discount?: number;
+  discountPercent?: number;
+  taxPercent?: number;
+  description?: string;
+}
+
+export interface PrintTabProps {
+  isPreviewMode?: boolean;
+  saleData?: SalePrintData | null;
+  onClose?: () => void;
+}
+
+function useCompanyInfo() {
+  const [info, setInfo] = useState({
+    business_name: userProfile.businessName,
+    phone: userProfile.phone,
+    logo_url: userProfile.logo as string | undefined,
+    address: (userProfile as any).address as string | undefined,
+    email: (userProfile as any).email as string | undefined,
+    signature: (userProfile as any).signature as string | undefined,
+  });
+
+  useEffect(() => {
+    fetch("/api/user_profile")
+      .then((r) => r.json())
+      .then((d) => {
+        if (d) {
+          setInfo({
+            business_name: d.business_name || userProfile.businessName,
+            phone: d.phone || userProfile.phone,
+            logo_url: d.logo_url || d.logo || userProfile.logo,
+            address: d.address || (userProfile as any).address,
+            email: d.email || (userProfile as any).email,
+            signature: d.signature_url || d.signature || undefined,
+          });
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  return info;
+}
 
 /* ─────────────────────────── Main component ─────────────────────────── */
 
-export function PrintTab() {
+export function PrintTab({ isPreviewMode = false, saleData = null, onClose }: PrintTabProps) {
+  const companyInfo = useCompanyInfo();
   const [activePrinter, setActivePrinter] = useState<PrinterType>(() =>
     (localStorage.getItem("print_activePrinter") as PrinterType) || "regular"
   );
@@ -25,6 +92,14 @@ export function PrintTab() {
   const [selectedColor, setSelectedColor] = useState<string>(
     () => localStorage.getItem("print_selectedColor") || "#a78bfa"
   );
+
+  const handleClose = () => {
+    if (onClose) {
+      onClose();
+    } else {
+      window.dispatchEvent(new CustomEvent("close-print-tab"));
+    }
+  };
 
   const handlePrinterChange = (p: PrinterType) => {
     setActivePrinter(p);
@@ -49,6 +124,219 @@ export function PrintTab() {
   };
 
   const renderPreview = () => {
+    if (isPreviewMode && saleData) {
+      if (activePrinter === "regular") {
+        let content = null;
+        if (selectedThemeId === "tally") {
+          content = (
+            <SaleInvoicePrintReport
+              records={saleData.records}
+              invoiceNo={saleData.invoiceNo}
+              invoiceDate={saleData.invoiceDate}
+              customerName={saleData.customerName}
+              customerContact={saleData.customerContact || saleData.customerPhone}
+              businessProfile={companyInfo}
+              received={saleData.received || 0}
+              paymentMode={saleData.paymentMode}
+              previousBalance={saleData.previousBalance}
+              discount={saleData.discount}
+              discountPercent={saleData.discountPercent}
+              taxPercent={saleData.taxPercent}
+              description={saleData.description}
+            />
+          );
+        } else if (selectedThemeId === "theme1") {
+          content = (
+            <Theme1InvoicePrintReport
+              records={saleData.records}
+              invoiceNo={saleData.invoiceNo}
+              invoiceDate={saleData.invoiceDate}
+              customerName={saleData.customerName}
+              customerContact={saleData.customerContact || saleData.customerPhone}
+              businessProfile={companyInfo}
+              received={saleData.received || 0}
+              accentColor={selectedColor}
+              paymentMode={saleData.paymentMode}
+              previousBalance={saleData.previousBalance}
+              discount={saleData.discount}
+              discountPercent={saleData.discountPercent}
+              taxPercent={saleData.taxPercent}
+              description={saleData.description}
+            />
+          );
+        } else if (selectedThemeId === "theme2") {
+          content = (
+            <Theme2InvoicePrintReport
+              records={saleData.records}
+              invoiceNo={saleData.invoiceNo}
+              invoiceDate={saleData.invoiceDate}
+              customerName={saleData.customerName}
+              customerContact={saleData.customerContact || saleData.customerPhone}
+              businessProfile={companyInfo}
+              received={saleData.received || 0}
+              accentColor={selectedColor}
+              paymentMode={saleData.paymentMode}
+              previousBalance={saleData.previousBalance}
+              discount={saleData.discount}
+              discountPercent={saleData.discountPercent}
+              taxPercent={saleData.taxPercent}
+              description={saleData.description}
+            />
+          );
+        } else if (selectedThemeId === "theme3") {
+          content = (
+            <Theme3InvoicePrintReport
+              records={saleData.records}
+              invoiceNo={saleData.invoiceNo}
+              invoiceDate={saleData.invoiceDate}
+              customerName={saleData.customerName}
+              customerContact={saleData.customerContact || saleData.customerPhone}
+              businessProfile={companyInfo}
+              received={saleData.received || 0}
+              accentColor={selectedColor}
+              paymentMode={saleData.paymentMode}
+              previousBalance={saleData.previousBalance}
+              discount={saleData.discount}
+              discountPercent={saleData.discountPercent}
+              taxPercent={saleData.taxPercent}
+              description={saleData.description}
+            />
+          );
+        } else if (selectedThemeId === "theme4") {
+          content = (
+            <Theme4InvoicePrintReport
+              records={saleData.records}
+              invoiceNo={saleData.invoiceNo}
+              invoiceDate={saleData.invoiceDate}
+              customerName={saleData.customerName}
+              customerContact={saleData.customerContact || saleData.customerPhone}
+              businessProfile={companyInfo}
+              received={saleData.received || 0}
+              accentColor={selectedColor}
+              paymentMode={saleData.paymentMode}
+              previousBalance={saleData.previousBalance}
+              discount={saleData.discount}
+              discountPercent={saleData.discountPercent}
+              taxPercent={saleData.taxPercent}
+              description={saleData.description}
+            />
+          );
+        } else if (selectedThemeId === "taxtheme") {
+          content = (
+            <TaxInvoicePrintReport
+              records={saleData.records}
+              invoiceNo={saleData.invoiceNo}
+              invoiceDate={saleData.invoiceDate}
+              customerName={saleData.customerName}
+              customerContact={saleData.customerContact || saleData.customerPhone}
+              businessProfile={companyInfo}
+              received={saleData.received || 0}
+              accentColor={selectedColor}
+              paymentMode={saleData.paymentMode}
+              previousBalance={saleData.previousBalance}
+              discount={saleData.discount}
+              discountPercent={saleData.discountPercent}
+              taxPercent={saleData.taxPercent}
+              description={saleData.description}
+            />
+          );
+        }
+
+        return (
+          <div className="print-area-wrapper" style={{ width: "100%", minHeight: "100%", display: "flex", justifyContent: "center", backgroundColor: "#f3f4f6", padding: "16px 0" }}>
+            <div style={{ zoom: 0.88, transformOrigin: "top center", width: 900, flexShrink: 0 }}>
+              {content || (
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", color: "#9ca3af", fontSize: 14 }}>
+                  Select a theme to preview
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      } else if (activePrinter === "thermal") {
+        let content = null;
+        if (selectedThemeId === "thermal1") {
+          content = (
+            <ThermalSaleInvoice
+              records={saleData.records}
+              invoiceNo={saleData.invoiceNo}
+              invoiceDate={saleData.invoiceDate}
+              customerName={saleData.customerName}
+              customerPhone={saleData.customerPhone || saleData.customerContact}
+              businessProfile={companyInfo}
+              received={saleData.received || 0}
+              discount={saleData.discount || 0}
+              discountPercent={saleData.discountPercent}
+              paymentMode={saleData.paymentMode}
+              previousBalance={saleData.previousBalance}
+            />
+          );
+        } else if (selectedThemeId === "thermal2") {
+          content = (
+            <ThermalSaleInvoiceClassic
+              records={saleData.records}
+              invoiceNo={saleData.invoiceNo}
+              invoiceDate={saleData.invoiceDate}
+              customerName={saleData.customerName}
+              customerPhone={saleData.customerPhone || saleData.customerContact}
+              businessProfile={companyInfo}
+              received={saleData.received || 0}
+              discount={saleData.discount || 0}
+              discountPercent={saleData.discountPercent}
+              taxPercent={saleData.taxPercent}
+              paymentMode={saleData.paymentMode}
+              previousBalance={saleData.previousBalance}
+            />
+          );
+        } else if (selectedThemeId === "thermal3") {
+          content = (
+            <ThermalSaleInvoiceImpact
+              records={saleData.records}
+              invoiceNo={saleData.invoiceNo}
+              invoiceDate={saleData.invoiceDate}
+              customerName={saleData.customerName}
+              customerPhone={saleData.customerPhone || saleData.customerContact}
+              businessProfile={companyInfo}
+              received={saleData.received || 0}
+              discount={saleData.discount || 0}
+              discountPercent={saleData.discountPercent}
+              paymentMode={saleData.paymentMode}
+              previousBalance={saleData.previousBalance}
+            />
+          );
+        } else if (selectedThemeId === "thermal4") {
+          content = (
+            <ThermalSaleInvoiceRetail
+              records={saleData.records}
+              invoiceNo={saleData.invoiceNo}
+              invoiceDate={saleData.invoiceDate}
+              customerName={saleData.customerName}
+              customerPhone={saleData.customerPhone || saleData.customerContact}
+              businessProfile={companyInfo}
+              received={saleData.received || 0}
+              discount={saleData.discount || 0}
+              discountPercent={saleData.discountPercent}
+              paymentMode={saleData.paymentMode}
+              previousBalance={saleData.previousBalance}
+            />
+          );
+        }
+
+        return (
+          <div className="print-area-wrapper" style={{ width: "100%", minHeight: "100%", display: "flex", justifyContent: "center", backgroundColor: "#f3f4f6", padding: "24px 0" }}>
+            <div style={{ background: "#fff", boxShadow: "0 2px 12px rgba(0,0,0,0.10)", borderRadius: 4, width: 380, flexShrink: 0 }}>
+              {content || (
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", color: "#9ca3af", fontSize: 14 }}>
+                  Select a theme to preview
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      }
+    }
+
+    // Default dummy previews when not in preview mode with sale data
     if (activePrinter === "regular" && selectedThemeId === "tally") {
       return <TallyThemePreview />;
     }
@@ -97,6 +385,12 @@ export function PrintTab() {
           flex-direction: column;
           font-family: Inter, system-ui, sans-serif;
           overflow: hidden;
+          z-index: 999;
+        }
+        .print-tab-modal.embedded-preview {
+          position: absolute;
+          inset: 0;
+          z-index: 10;
         }
         .print-tab-body {
           display: grid;
@@ -180,11 +474,53 @@ export function PrintTab() {
           background: #f3f4f6;
           color: #111827;
         }
+
+        @media print {
+          @page {
+            size: auto;
+            margin: 0mm;
+          }
+          body * {
+            visibility: hidden !important;
+          }
+          .print-area-wrapper, .print-area-wrapper * {
+            visibility: visible !important;
+          }
+          .print-area-wrapper {
+            position: fixed !important;
+            left: 0 !important;
+            top: 0 !important;
+            width: 100% !important;
+            height: 100% !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            background: #fff !important;
+            overflow: visible !important;
+            zoom: 1 !important;
+          }
+          .print-tab-modal {
+            position: static !important;
+            background: transparent !important;
+          }
+          .print-tab-top-bar, .print-tab-left, .print-tab-right {
+            display: none !important;
+          }
+          .print-tab-body {
+            display: block !important;
+          }
+          .print-tab-center {
+            background: transparent !important;
+            overflow: visible !important;
+          }
+          .print-tab-preview-scroll {
+            overflow: visible !important;
+          }
+        }
       `}</style>
 
-      <div className="print-tab-modal">
+      <div className={`print-tab-modal ${isPreviewMode ? "embedded-preview" : ""}`}>
         {/* ── Top bar ── */}
-        <div style={{
+        <div className="print-tab-top-bar" style={{
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
@@ -194,15 +530,19 @@ export function PrintTab() {
           borderBottom: "1px solid #e5e7eb",
           flexShrink: 0,
         }}>
-          <span style={{ fontSize: 15, fontWeight: 600, color: "#111827" }}>Print Settings</span>
-          <button
-            className="close-btn"
-            aria-label="Close print settings"
-            onClick={() => window.dispatchEvent(new CustomEvent("close-print-tab"))}
-            title="Close"
-          >
-            ✕
-          </button>
+          <span style={{ fontSize: 15, fontWeight: 600, color: "#111827" }}>
+            {isPreviewMode ? "Print Preview" : "Print Settings"}
+          </span>
+          {!isPreviewMode && (
+            <button
+              className="close-btn"
+              aria-label="Close print tab"
+              onClick={handleClose}
+              title="Close"
+            >
+              ✕
+            </button>
+          )}
         </div>
 
         {/* ── Body ── */}
@@ -226,7 +566,11 @@ export function PrintTab() {
 
           {/* ── RIGHT PANEL ── */}
           <div className="print-tab-right">
-            <RightPanel />
+            {isPreviewMode ? (
+              <PrintPreviewRightPanel onClose={handleClose} />
+            ) : (
+              <RightPanel />
+            )}
           </div>
         </div>
       </div>

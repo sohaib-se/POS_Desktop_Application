@@ -448,9 +448,13 @@ const DEFAULT_SETTINGS: PrintSettings = {
   paymentMode: false,
 };
 
-/* ─────────────────────────── RightPanel ────────────────────────────── */
+export interface RightPanelProps {
+  onSave?: () => void;
+  onCancel?: () => void;
+  hasUnsavedChanges?: boolean;
+}
 
-export function RightPanel() {
+export function RightPanel({ onSave, onCancel, hasUnsavedChanges = false }: RightPanelProps = {}) {
   const [settings, setSettings] = useState<PrintSettings>(() => {
     // Merge persisted Totals & Taxes settings with the rest of the defaults
     const saved = getPrintTotalsSettings();
@@ -498,17 +502,17 @@ export function RightPanel() {
       .catch(() => {});
   }, []);
 
-  const TOTALS_KEYS = new Set([
+  const TOTALS_KEYS = new Set<string>([
     "totalItemQuantity", "amountWithDecimal", "receivedAmount",
     "balanceAmount", "currentBalanceOfParty", "previousBalance", "taxDetails", "discount", "youSaved",
     "amountInWords", "printDescription", "printTermsAndConditions", "printSignatureText", "paymentMode"
-  ] as const);
+  ]);
 
   const set = <K extends keyof PrintSettings>(key: K, value: PrintSettings[K]) => {
     setSettings((prev) => {
       const next = { ...prev, [key]: value };
       // Sync Totals & Taxes toggles to localStorage immediately
-      if (TOTALS_KEYS.has(key as any)) {
+      if (TOTALS_KEYS.has(key)) {
         setPrintTotalsSettings({
           // item-table columns are no longer editable from RightPanel;
           // preserve whatever is currently stored
@@ -590,7 +594,7 @@ export function RightPanel() {
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "100%", overflowY: "auto" }}>
+    <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden", background: "#fff" }}>
       {/* Panel title */}
       <div
         style={{
@@ -608,74 +612,169 @@ export function RightPanel() {
 
       <SaveBanner status={saveStatus} />
 
-      {/* ── Print Company Info / Header ── */}
-      <SettingsSection title="Print Company Info / Header">
-        <ToggleRow label="Make Regular Printer Default" checked={settings.makeRegularDefault} onChange={(v) => set("makeRegularDefault", v)} />
+      {/* ── Scrollable Sections ── */}
+      <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column" }}>
+        {/* ── Print Company Info / Header ── */}
+        <SettingsSection title="Print Company Info / Header">
+          <ToggleRow label="Make Regular Printer Default" checked={settings.makeRegularDefault} onChange={(v) => set("makeRegularDefault", v)} />
 
-        {/* Company Name — synced to profile */}
-        <InputRow
-          label="Company Name"
-          value={settings.companyName}
-          onChange={handleCompanyName}
-          placeholder="Enter company name"
-        />
+          {/* Company Name — synced to profile */}
+          <InputRow
+            label="Company Name"
+            value={settings.companyName}
+            onChange={handleCompanyName}
+            placeholder="Enter company name"
+          />
 
-        {/* Logo upload with preview */}
-        <LogoUploadRow logoUrl={settings.logoUrl} onLogoChange={handleLogo} />
+          {/* Logo upload with preview */}
+          <LogoUploadRow logoUrl={settings.logoUrl} onLogoChange={handleLogo} />
 
-        {/* Address */}
-        <InputRow
-          label="Address"
-          value={settings.address}
-          onChange={handleAddress}
-          placeholder="Enter address"
-        />
+          {/* Address */}
+          <InputRow
+            label="Address"
+            value={settings.address}
+            onChange={handleAddress}
+            placeholder="Enter address"
+          />
 
-        {/* Email */}
-        <InputRow
-          label="Email"
-          value={settings.email}
-          onChange={handleEmail}
-          type="email"
-          placeholder="Enter email"
-        />
+          {/* Email */}
+          <InputRow
+            label="Email"
+            value={settings.email}
+            onChange={handleEmail}
+            type="email"
+            placeholder="Enter email"
+          />
 
-        {/* Phone with country code — same PhoneInput as EditProfile */}
-        <PhoneRow
-          label="Phone Number"
-          value={settings.phoneNumber}
-          onChange={handlePhone}
-        />
-      </SettingsSection>
+          {/* Phone with country code — same PhoneInput as EditProfile */}
+          <PhoneRow
+            label="Phone Number"
+            value={settings.phoneNumber}
+            onChange={handlePhone}
+          />
+        </SettingsSection>
 
-      {/* ── Totals & Taxes ── */}
-      <SettingsSection title="Totals & Taxes">
-        <ToggleRow label="Total Item Quantity" checked={settings.totalItemQuantity} onChange={(v) => set("totalItemQuantity", v)} />
-        <ToggleRow label="Amount with Decimal e.g. 0.00" checked={settings.amountWithDecimal} onChange={(v) => set("amountWithDecimal", v)} />
-        <ToggleRow label="Received Amount" checked={settings.receivedAmount} onChange={(v) => set("receivedAmount", v)} />
-        <ToggleRow label="Balance Amount" checked={settings.balanceAmount} onChange={(v) => set("balanceAmount", v)} />
-        <ToggleRow label="Previous Balance" checked={settings.previousBalance} onChange={(v) => set("previousBalance", v)} />
-        <ToggleRow label="Current Balance of Party" checked={settings.currentBalanceOfParty} onChange={(v) => set("currentBalanceOfParty", v)} />
-        <ToggleRow label="Tax Details" checked={settings.taxDetails} onChange={(v) => set("taxDetails", v)} />
-        <ToggleRow label="Discount" checked={settings.discount} onChange={(v) => set("discount", v)} />
-        <ToggleRow label="You Saved" checked={settings.youSaved} onChange={(v) => set("youSaved", v)} />
-      </SettingsSection>
+        {/* ── Totals & Taxes ── */}
+        <SettingsSection title="Totals & Taxes">
+          <ToggleRow label="Total Item Quantity" checked={settings.totalItemQuantity} onChange={(v) => set("totalItemQuantity", v)} />
+          <ToggleRow label="Amount with Decimal e.g. 0.00" checked={settings.amountWithDecimal} onChange={(v) => set("amountWithDecimal", v)} />
+          <ToggleRow label="Received Amount" checked={settings.receivedAmount} onChange={(v) => set("receivedAmount", v)} />
+          <ToggleRow label="Balance Amount" checked={settings.balanceAmount} onChange={(v) => set("balanceAmount", v)} />
+          <ToggleRow label="Previous Balance" checked={settings.previousBalance} onChange={(v) => set("previousBalance", v)} />
+          <ToggleRow label="Current Balance of Party" checked={settings.currentBalanceOfParty} onChange={(v) => set("currentBalanceOfParty", v)} />
+          <ToggleRow label="Tax Details" checked={settings.taxDetails} onChange={(v) => set("taxDetails", v)} />
+          <ToggleRow label="Discount" checked={settings.discount} onChange={(v) => set("discount", v)} />
+          <ToggleRow label="You Saved" checked={settings.youSaved} onChange={(v) => set("youSaved", v)} />
+        </SettingsSection>
 
-      {/* ── Footer ── */}
-      <SettingsSection title="Footer">
-        <ToggleRow label="Invoice Amount in Words" checked={settings.amountInWords} onChange={(v) => set("amountInWords", v)} />
-        <ToggleRow label="Print Description" checked={settings.printDescription} onChange={(v) => set("printDescription", v)} />
-        <ToggleRow label="Print Terms and Conditions" checked={settings.printTermsAndConditions} onChange={(v) => set("printTermsAndConditions", v)} />
-        <ToggleRow label="Payment Mode" checked={settings.paymentMode} onChange={(v) => set("paymentMode", v)} />
-        <InputRow label="Print Signature Text" value={settings.printSignatureText} onChange={(v) => set("printSignatureText", v)} />
-        <SignatureUploadRow 
-          signatureUrl={settings.signatureUrl} 
-          onSignatureChange={(v) => {
-            set("signatureUrl", v);
-            saveProfileField({ signature: v });
-          }} 
-        />
-      </SettingsSection>
+        {/* ── Footer ── */}
+        <SettingsSection title="Footer">
+          <ToggleRow label="Invoice Amount in Words" checked={settings.amountInWords} onChange={(v) => set("amountInWords", v)} />
+          <ToggleRow label="Print Description" checked={settings.printDescription} onChange={(v) => set("printDescription", v)} />
+          <ToggleRow label="Print Terms and Conditions" checked={settings.printTermsAndConditions} onChange={(v) => set("printTermsAndConditions", v)} />
+          <ToggleRow label="Payment Mode" checked={settings.paymentMode} onChange={(v) => set("paymentMode", v)} />
+          <InputRow label="Print Signature Text" value={settings.printSignatureText} onChange={(v) => set("printSignatureText", v)} />
+          <SignatureUploadRow 
+            signatureUrl={settings.signatureUrl} 
+            onSignatureChange={(v) => {
+              set("signatureUrl", v);
+              saveProfileField({ signature: v });
+            }} 
+          />
+        </SettingsSection>
+      </div>
+
+      {/* ── Action Buttons pinned at bottom of Right Panel ── */}
+      <div
+        style={{
+          padding: "12px 14px",
+          borderTop: "1px solid #e5e7eb",
+          background: "#ffffff",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: "8px",
+          flexShrink: 0,
+          boxShadow: "0 -2px 8px rgba(0, 0, 0, 0.04)",
+        }}
+      >
+        {hasUnsavedChanges && (
+          <span
+            title="You have unsaved changes"
+            style={{
+              width: 7,
+              height: 7,
+              borderRadius: "50%",
+              background: "#f59e0b",
+              display: "inline-block",
+              flexShrink: 0,
+            }}
+          />
+        )}
+        <button
+          type="button"
+          onClick={onCancel}
+          style={{
+            flex: 1,
+            padding: "8px 12px",
+            fontSize: "13px",
+            fontWeight: 600,
+            color: "#374151",
+            background: "#ffffff",
+            border: "1.5px solid #d1d5db",
+            borderRadius: "7px",
+            cursor: "pointer",
+            transition: "all 0.15s ease",
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            boxShadow: "0 1px 2px rgba(0, 0, 0, 0.04)",
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = "#f9fafb";
+            e.currentTarget.style.borderColor = "#9ca3af";
+            e.currentTarget.style.color = "#111827";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = "#ffffff";
+            e.currentTarget.style.borderColor = "#d1d5db";
+            e.currentTarget.style.color = "#374151";
+          }}
+        >
+          Cancel
+        </button>
+
+        <button
+          type="button"
+          onClick={onSave}
+          style={{
+            flex: 1.2,
+            padding: "8px 14px",
+            fontSize: "13px",
+            fontWeight: 600,
+            color: "#ffffff",
+            background: "#E53935",
+            border: "none",
+            borderRadius: "7px",
+            cursor: "pointer",
+            transition: "all 0.15s ease",
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            boxShadow: "0 2px 4px rgba(229, 57, 53, 0.25)",
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = "#d32f2f";
+            e.currentTarget.style.transform = "translateY(-1px)";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = "#E53935";
+            e.currentTarget.style.transform = "translateY(0)";
+          }}
+        >
+          Save Changes
+        </button>
+      </div>
     </div>
   );
 }

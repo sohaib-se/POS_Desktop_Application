@@ -13,9 +13,15 @@ import { LeftPanel, REGULAR_THEMES, THERMAL_THEMES } from "./printTab/print tab 
 import { RightPanel } from "./printTab/print tab panels/RightPanel";
 import type { PrinterType } from "./printTab/print tab panels/LeftPanel";
 
+interface PrintTabProps {
+  onSave?: () => void;
+  onCancel?: () => void;
+  hasUnsavedChanges?: boolean;
+}
+
 /* ─────────────────────────── Main component ─────────────────────────── */
 
-export function PrintTab() {
+export function PrintTab({ onSave, onCancel, hasUnsavedChanges }: PrintTabProps = {}) {
   const [activePrinter, setActivePrinter] = useState<PrinterType>(() =>
     (localStorage.getItem("print_activePrinter") as PrinterType) || "regular"
   );
@@ -90,7 +96,7 @@ export function PrintTab() {
     <>
       <style>{`
         .print-tab-modal {
-          position: fixed;
+          position: absolute;
           inset: 0;
           background: #f3f4f6;
           display: flex;
@@ -226,7 +232,7 @@ export function PrintTab() {
 
           {/* ── RIGHT PANEL ── */}
           <div className="print-tab-right">
-            <RightPanel />
+            <RightPanel onSave={onSave} onCancel={onCancel} hasUnsavedChanges={hasUnsavedChanges} />
           </div>
         </div>
       </div>

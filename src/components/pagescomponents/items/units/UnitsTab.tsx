@@ -75,7 +75,7 @@ export function UnitsTab({
   const [showAddConversion, setShowAddConversion] = useState(false);
   const [conversionBaseUnit, setConversionBaseUnit] = useState("");
   const [conversionSecondaryUnit, setConversionSecondaryUnit] = useState("");
-  const [conversionRateValue, setConversionRateValue] = useState(0);
+  const [conversionRateValue, setConversionRateValue] = useState<number | "">("");
   const [conversionSaving, setConversionSaving] = useState(false);
   const [conversionError, setConversionError] = useState("");
   const [conversionBeingEdited, setConversionBeingEdited] =
@@ -269,8 +269,12 @@ export function UnitsTab({
 
   const handleSaveConversion = async () => {
     setConversionError("");
-    if (!conversionBaseUnit || !conversionSecondaryUnit || !conversionRateValue) {
+    if (!conversionBaseUnit || !conversionSecondaryUnit || conversionRateValue === "") {
       setConversionError("All fields are required.");
+      return;
+    }
+    if (conversionRateValue < 1) {
+      setConversionError("Conversion rate must be 1 or greater.");
       return;
     }
     setConversionSaving(true);
@@ -304,7 +308,7 @@ export function UnitsTab({
       setConversionBeingEdited(null);
       setConversionBaseUnit("");
       setConversionSecondaryUnit("");
-      setConversionRateValue(0);
+      setConversionRateValue("");
     } catch {
       setConversionError("Failed to save conversion");
     } finally {
@@ -497,7 +501,7 @@ export function UnitsTab({
           setShowAddConversion(false);
           if (!conversionSaving) {
             setConversionError("");
-            setConversionRateValue(0);
+            setConversionRateValue("");
             setConversionBaseUnit(selectedUnitInTab?.shortName ?? "");
             setConversionSecondaryUnit("");
             setConversionBeingEdited(null);

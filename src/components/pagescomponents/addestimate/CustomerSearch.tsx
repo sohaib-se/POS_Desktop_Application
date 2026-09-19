@@ -24,14 +24,33 @@ export function CustomerSearch({ activeTab, updateTab, parties, setShowAddParty 
     return () => document.removeEventListener("mousedown", handleClick);
   }, []);
 
+  const isPartyMatch = (p: any, key?: string) => {
+    if (!key) return false;
+    if (String(p.id) === String(key)) return true;
+    if (p.name && p.name.trim().toLowerCase() === key.trim().toLowerCase()) return true;
+    const pNum = Number(p.id);
+    const keyNum = Number(key);
+    if (!isNaN(pNum) && !isNaN(keyNum) && pNum === keyNum) return true;
+    return false;
+  };
+
   const selectedParty = useMemo(() => {
-    return parties.find(p => String(p.id) === activeTab.customerSearch || p.name === activeTab.customerSearch);
+    return parties.find(p => isPartyMatch(p, activeTab.customerSearch));
   }, [parties, activeTab.customerSearch]);
 
-  const filteredParties = parties.filter(p => 
-    p.name.toLowerCase().includes(search.toLowerCase()) || 
-    (p.phone && p.phone.includes(search))
-  );
+  useEffect(() => {
+    if (selectedParty) {
+      setSearch(selectedParty.name);
+    } else {
+      setSearch("");
+    }
+  }, [selectedParty]);
+
+  const filteredParties = parties.filter(p => {
+    if (selectedParty && search === selectedParty.name) return true;
+    return p.name.toLowerCase().includes(search.toLowerCase()) || 
+           (p.phone && p.phone.includes(search));
+  });
 
   return (
     <div style={{ background: "#fff", padding: "25px 20px 80px 20px" }}>

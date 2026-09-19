@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useEffect } from "react";
 import type { SaleInvoiceEditData } from "@/types";
 import { AddSaleTabBar } from "@/components/pagescomponents/addsale/AddSaleTabBar";
 import { AddSaleTopBar } from "@/components/pagescomponents/addsale/AddSaleTopBar";
@@ -186,7 +186,7 @@ function formatDateForDisplay(date: Date) {
   return date.toLocaleDateString("en-GB");
 }
 
-export function AddSale({ onSave, onShare, onClose, initialInvoice, isConversion }: AddSaleProps) {
+export function AddSale({ onSave, onClose, initialInvoice, isConversion }: AddSaleProps) {
   const [tabs, setTabs] = useState<SaleTab[]>([createDefaultTab(1)]);
   const [activeTabId, setActiveTabId] = useState(1);
   const [isOpenAnimated, setIsOpenAnimated] = useState(false);
@@ -225,10 +225,11 @@ export function AddSale({ onSave, onShare, onClose, initialInvoice, isConversion
     setActiveTabParty("address");
   };
 
-  const handleSaveParty = async () => {
+  const handleSaveParty = async (options?: { closeDialog?: boolean; resetForm?: boolean }) => {
     setIsSavingParty(true);
     try {
       const payload = {
+        id: partyBeingEdited?.id,
         name: partyForm.name,
         phone: partyForm.phoneNumber,
         email: partyForm.email || null,
@@ -247,14 +248,27 @@ export function AddSale({ onSave, onShare, onClose, initialInvoice, isConversion
         const newParty = await response.json();
         if (newParty) {
           setParties((prev) => {
-            const exists = prev.find(p => p.id === newParty.id);
-            return exists ? prev : [...prev, newParty].sort((a, b) => a.name.localeCompare(b.name));
+            const exists = prev.find(p => String(p.id) === String(newParty.id));
+            const updated = exists
+              ? prev.map(p => String(p.id) === String(newParty.id) ? newParty : p)
+              : [...prev, newParty];
+            return updated.sort((a, b) => a.name.localeCompare(b.name));
           });
+          if (newParty.id) {
+            updateTab({
+              customerSearch: String(newParty.id),
+              phoneNo: newParty.phone ?? "",
+            });
+          }
         }
-        setShowAddParty(false);
-        resetPartyForm();
-        if (newParty && newParty.id) {
-          setActiveTabCustomer(String(newParty.id));
+        const shouldClose = options?.closeDialog !== false;
+        const shouldReset = options?.resetForm !== false;
+        if (shouldClose) {
+          setShowAddParty(false);
+          setPartyBeingEdited(null);
+        }
+        if (shouldReset) {
+          resetPartyForm();
         }
       }
     } catch (err) {
@@ -426,7 +440,11 @@ export function AddSale({ onSave, onShare, onClose, initialInvoice, isConversion
   };
 
   const setActiveTabCustomer = (partyId: string) => {
-    const matchedParty = parties.find((party) => String(party.id) === partyId);
+    const matchedParty = parties.find((party) => 
+      String(party.id) === String(partyId) ||
+      party.name.trim().toLowerCase() === partyId.trim().toLowerCase() ||
+      (!isNaN(Number(party.id)) && !isNaN(Number(partyId)) && Number(party.id) === Number(partyId))
+    );
     updateTab({
       customerSearch: partyId,
       phoneNo: matchedParty?.phone ?? "",

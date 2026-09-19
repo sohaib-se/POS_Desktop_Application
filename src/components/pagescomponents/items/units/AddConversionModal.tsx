@@ -7,13 +7,13 @@ type Props = {
   units: UnitRecord[];
   conversionBaseUnit: string;
   conversionSecondaryUnit: string;
-  conversionRateValue: number;
+  conversionRateValue: number | "";
   conversionSaving: boolean;
   conversionError: string;
   conversionBeingEdited: ConversionRateRecord | null;
   onSetConversionBaseUnit: (unit: string) => void;
   onSetConversionSecondaryUnit: (unit: string) => void;
-  onSetConversionRateValue: (rate: number) => void;
+  onSetConversionRateValue: (rate: number | "") => void;
   onClose: () => void;
   onSave: () => void;
 };
@@ -99,11 +99,17 @@ export function AddConversionModal({
             </span>
             <input
               type="number"
-              min={0}
+              min={1}
+              placeholder="0"
               value={conversionRateValue}
-              onChange={(event) =>
-                onSetConversionRateValue(Number(event.target.value) || 0)
-              }
+              onKeyDown={(e) => {
+                if (e.key === "-") e.preventDefault();
+              }}
+              onChange={(event) => {
+                const val = event.target.value;
+                if (Number(val) < 0) return;
+                onSetConversionRateValue(val === "" ? "" : Number(val));
+              }}
               className="w-24 border border-gray-300 rounded-lg px-3 py-2 text-sm"
             />
             <span className="text-sm text-gray-600">
@@ -116,7 +122,7 @@ export function AddConversionModal({
           <button
             type="button"
             onClick={onSave}
-            disabled={conversionSaving}
+            disabled={conversionSaving || conversionRateValue === "" || conversionRateValue < 1}
             className="w-full bg-[#1976D2] text-white py-2 rounded-lg text-sm font-medium hover:bg-[#1251A3] disabled:opacity-60"
           >
             {conversionSaving ? "Saving..." : "SAVE"}

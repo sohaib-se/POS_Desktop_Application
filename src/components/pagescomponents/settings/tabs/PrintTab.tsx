@@ -79,6 +79,12 @@ function useCompanyInfo() {
   return info;
 }
 
+interface PrintTabProps {
+  onSave?: () => void;
+  onCancel?: () => void;
+  hasUnsavedChanges?: boolean;
+}
+
 /* ─────────────────────────── Main component ─────────────────────────── */
 
 export function PrintTab({ isPreviewMode = false, saleData = null, onClose }: PrintTabProps) {
@@ -378,7 +384,7 @@ export function PrintTab({ isPreviewMode = false, saleData = null, onClose }: Pr
     <>
       <style>{`
         .print-tab-modal {
-          position: fixed;
+          position: absolute;
           inset: 0;
           background: #f3f4f6;
           display: flex;

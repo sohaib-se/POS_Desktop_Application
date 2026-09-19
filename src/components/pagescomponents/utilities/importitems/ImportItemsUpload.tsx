@@ -1,6 +1,7 @@
 import { Upload } from "lucide-react";
 import { useRef, useState } from "react";
 import * as xlsx from "xlsx-js-style";
+import { toast } from "@/components/ui/Toast";
 
 export interface ImportedItem {
   "Item Name": string;
@@ -35,11 +36,52 @@ export function ImportItemsUpload({ onItemsImported }: ImportItemsUploadProps) {
     reader.onload = (e) => {
       const data = e.target?.result;
       if (data) {
-        const workbook = xlsx.read(data, { type: "array" });
-        const firstSheetName = workbook.SheetNames[0];
-        const worksheet = workbook.Sheets[firstSheetName];
-        const json = xlsx.utils.sheet_to_json<ImportedItem>(worksheet);
-        onItemsImported(json);
+        try {
+          const workbook = xlsx.read(data, { type: "array" });
+          const firstSheetName = workbook.SheetNames[0];
+          const worksheet = workbook.Sheets[firstSheetName];
+          
+          const expectedHeaders = [
+            "Item Name",
+            "Category",
+            "Item Code",
+            "Primary Unit",
+            "Secondary Unit",
+            "Conversion Rate",
+            "Item Image",
+            "Sale Price",
+            "Wholesale Price",
+            "Purchase Price",
+            "Minimum Wholesale Quantity",
+            "Low Threshold Quantity",
+            "Opening Stock",
+            "At Price",
+            "As Of Date",
+            "Manufacturing Date",
+            "Expiry Date",
+          ];
+
+          const headerRow = xlsx.utils.sheet_to_json<string[]>(worksheet, { header: 1 })[0] || [];
+          
+          const isValid = expectedHeaders.every(header => headerRow.includes(header));
+          if (!isValid) {
+            toast.error("Invalid file format. Please make sure the file matches the sample format exactly.");
+            return;
+          }
+
+          const json = xlsx.utils.sheet_to_json<ImportedItem>(worksheet);
+          const validItems = json.filter(item => item["Item Name"] && String(item["Item Name"]).trim() !== "");
+          
+          if (validItems.length === 0) {
+            toast.error("No valid items found in the file.");
+            return;
+          }
+          
+          onItemsImported(validItems);
+        } catch (error) {
+          console.error(error);
+          toast.error("Failed to parse the file. Please ensure it is a valid Excel file.");
+        }
       }
     };
     reader.readAsArrayBuffer(file);

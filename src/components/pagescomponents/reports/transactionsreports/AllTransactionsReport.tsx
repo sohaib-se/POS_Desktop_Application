@@ -272,8 +272,8 @@ export function AllTransactionsReport({ onBack, onEditInvoice }: AllTransactions
     });
   }, [searchQuery, selectedMonthRows]);
 
-  const totalSales = selectedMonthRows.filter(r => r.type === 'Sale').reduce((sum, invoice) => sum + invoice.amount, 0);
-  const totalPurchases = selectedMonthRows.filter(r => r.type === 'Purchase').reduce((sum, invoice) => sum + invoice.amount, 0);
+  const totalSales = selectedMonthRows.filter(r => r.type === 'Sale' && !r.rawInvoice.transaction?.includes("Returned")).reduce((sum, invoice) => sum + invoice.amount, 0);
+  const totalPurchases = selectedMonthRows.filter(r => r.type === 'Purchase' && !r.rawInvoice.transaction?.includes("Returned")).reduce((sum, invoice) => sum + invoice.amount, 0);
 
   const currentMonthKey = getMonthKeyFromDate(formatDateDisplay(new Date()));
   const monthButtonLabel = selectedMonthKey === currentMonthKey ? "This Month" : monthLabelForFilter(selectedMonthKey);
@@ -354,7 +354,6 @@ export function AllTransactionsReport({ onBack, onEditInvoice }: AllTransactions
             <ArrowLeft className="w-5 h-5 text-gray-600" />
           </button>
           <h2 className="text-lg font-semibold text-gray-900">All Transactions</h2>
-          <ChevronDown className="w-4 h-4 text-gray-500" />
         </div>
       </div>
 

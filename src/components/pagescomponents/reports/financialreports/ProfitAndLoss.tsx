@@ -81,8 +81,8 @@ export function ProfitAndLoss({ onBack }: ProfitAndLossProps) {
       return true;
     };
 
-    const filteredSales = sales.filter(filterByDate);
-    const filteredPurchases = purchases.filter(filterByDate);
+    const filteredSales = sales.filter(s => filterByDate(s) && !s.transaction_type?.includes("Returned"));
+    const filteredPurchases = purchases.filter(p => filterByDate(p) && !p.transaction_type?.includes("Returned"));
     const filteredExpenses = expenses.filter(filterByDate);
 
     const totalSalesAmount = filteredSales.reduce((sum, s) => sum + Number(s.amount || 0), 0);

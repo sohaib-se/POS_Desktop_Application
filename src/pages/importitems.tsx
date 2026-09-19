@@ -2,7 +2,7 @@ import { useState } from "react";
 import { ImportItemsHeader } from "@/components/pagescomponents/utilities/importitems/ImportItemsHeader";
 import { ImportItemsSteps } from "@/components/pagescomponents/utilities/importitems/ImportItemsSteps";
 import { ImportItemsUpload, type ImportedItem } from "@/components/pagescomponents/utilities/importitems/ImportItemsUpload";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/Toast";
 import type { ViewType } from "@/types";
 
 interface ImportItemsProps {

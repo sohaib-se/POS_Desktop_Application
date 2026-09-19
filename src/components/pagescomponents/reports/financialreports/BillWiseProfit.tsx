@@ -97,8 +97,8 @@ export function BillWiseProfit({ onBack }: BillWiseProfitProps) {
     });
 
     const filteredSales = selectedMonthKey 
-        ? rawSales.filter(s => getMonthKeyFromDate(s.date) === selectedMonthKey)
-        : rawSales;
+        ? rawSales.filter(s => getMonthKeyFromDate(s.date) === selectedMonthKey && !s.transaction_type?.includes("Returned"))
+        : rawSales.filter(s => !s.transaction_type?.includes("Returned"));
 
     const data: SaleProfitData[] = filteredSales.map(sale => {
       const amount = Number(sale.amount || 0);

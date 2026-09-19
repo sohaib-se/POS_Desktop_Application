@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Search, Plus } from "lucide-react";
+import { useSettings } from "@/hooks/useSettings";
 import type { ExpenseCategory } from "@/types";
 import type {
   ExpenseItem,
@@ -40,6 +41,15 @@ export function ExpensesSidebar({
   openEditItemDialog,
   setItemPendingDelete,
 }: ExpensesSidebarProps) {
+  const [currency] = useSettings('settings.businessCurrency', { code: 'PKR', symbol: 'Rs' });
+  const [currencyDisplay] = useSettings<'abbreviation' | 'icon'>('settings.currencyDisplay', 'abbreviation');
+  const currencyStr = currencyDisplay === 'icon' ? currency.symbol : currency.code;
+
+  const totalAllExpenses = expenseRecordList.reduce(
+    (sum, r) => sum + (Number(r.amount) || 0),
+    0
+  );
+
   const [isSearching, setIsSearching] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryContextMenu, setCategoryContextMenu] =
@@ -124,9 +134,25 @@ export function ExpensesSidebar({
   }, [itemContextMenu]);
 
   return (
-    <div className="w-80 flex flex-col bg-white rounded-md shadow-sm overflow-hidden">
-      {/* Search and Add Button */}
-      <div className="p-4 border-b border-gray-200 flex items-center justify-between gap-2 min-h-[65px]">
+    <div className="w-80 flex flex-col gap-1 shrink-0 h-full min-h-0 overflow-hidden">
+      {/* Total Expense Card */}
+      <div className="bg-white rounded-md shadow-sm px-5 h-[72px] flex items-center justify-between shrink-0">
+        <div>
+          <h2 className="text-base font-semibold text-gray-900 tracking-wide">
+            TOTAL EXPENSE
+          </h2>
+        </div>
+        <div className="text-right">
+          <p className="text-lg font-bold text-[#E53935] tracking-tight">
+            {currencyStr} {totalAllExpenses.toFixed(2)}
+          </p>
+        </div>
+      </div>
+
+      {/* Main Categories / Items Container */}
+      <div className="flex-1 flex flex-col bg-white rounded-md shadow-sm overflow-hidden min-h-0">
+        {/* Search and Add Button */}
+        <div className="p-4 border-b border-gray-200 flex items-center justify-between gap-2 min-h-[65px] shrink-0">
         <div className="flex-1 min-w-0">
           {isSearching ? (
             <input
@@ -163,9 +189,9 @@ export function ExpensesSidebar({
       </div>
 
       {/* Table */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto min-h-0">
         <table className="w-full text-sm">
-          <thead className="bg-gray-50 sticky top-0">
+          <thead className="bg-gray-50 sticky top-0 z-10">
             <tr>
               <th className="px-4 py-2 text-left font-medium text-gray-600 text-xs">
                 {activeTab === "category" ? "CATEGORY" : "ITEM"} ↑
@@ -261,6 +287,7 @@ export function ExpensesSidebar({
             )}
           </tbody>
         </table>
+      </div>
       </div>
 
       {categoryContextMenu && (

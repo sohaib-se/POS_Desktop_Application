@@ -287,7 +287,7 @@ function App() {
       case "sync-restore-backup":
         return <RestoreBackup />;
       case "settings":
-        return <SettingsPage initialTab={settingsInitialTab} />;
+        return <SettingsPage onClose={handleCloseSettings} initialTab={settingsInitialTab} />;
       case "utilities":
         return <ImportItems onViewChange={handleViewChange} />;
       case "utilities-import-items":

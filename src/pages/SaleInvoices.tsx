@@ -189,9 +189,10 @@ export function SaleInvoices({ onViewChange, onEditInvoice, onEditPosInvoice, on
     });
   }, [searchQuery, selectedMonthRows]);
 
-  const totalSales = visibleRows.reduce((sum, invoice) => sum + invoice.amount, 0);
-  const totalReceived = visibleRows.filter((invoice) => invoice.balance === 0).reduce((sum, invoice) => sum + invoice.amount, 0);
-  const totalBalance = visibleRows.reduce((sum, invoice) => sum + invoice.balance, 0);
+  const validRows = visibleRows.filter(row => !row.transaction?.includes("Returned"));
+  const totalSales = validRows.reduce((sum, invoice) => sum + invoice.amount, 0);
+  const totalReceived = validRows.filter((invoice) => invoice.balance === 0).reduce((sum, invoice) => sum + invoice.amount, 0);
+  const totalBalance = validRows.reduce((sum, invoice) => sum + invoice.balance, 0);
 
   const currentMonthKey = getMonthKeyFromDate(formatDateDisplay(new Date()));
   const monthButtonLabel = selectedMonthKey === currentMonthKey ? "This Month" : monthLabelForFilter(selectedMonthKey);

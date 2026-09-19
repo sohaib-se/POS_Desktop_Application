@@ -1867,11 +1867,11 @@ function sqliteApiPlugin() {
                 }
 
                 const normalizedBalance = Number(payload.balance ?? 0);
-                const providedId = Number(payload.id);
-                const isNewParty = !Number.isFinite(providedId) || !payload.id;
+                const providedId = payload.id !== undefined && payload.id !== null ? String(payload.id).trim() : '';
+                const isNewParty = !providedId;
                 const normalizedId = !isNewParty
                   ? providedId
-                  : repository.getNextPartyId();
+                  : String(repository.getNextPartyId());
 
                 const party = {
                   id: normalizedId,

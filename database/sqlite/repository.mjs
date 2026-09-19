@@ -62,9 +62,9 @@ export function getParties() {
 
 export function getNextPartyId() {
   const db = openDatabase();
-  const row = db.prepare('SELECT COALESCE(MAX(id), 0) + 1 AS nextId FROM parties').get();
+  const row = db.prepare('SELECT COALESCE(MAX(CAST(id AS REAL)), 0) + 1 AS nextId FROM parties').get();
   db.close();
-  return Number(row?.nextId ?? 1);
+  return String(Math.floor(Number(row?.nextId ?? 1)));
 }
 
 export function upsertParty(party) {

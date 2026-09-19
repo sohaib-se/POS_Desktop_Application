@@ -143,23 +143,21 @@ export function ExpensesDetails({
     : 0;
 
   return (
-    <div className="flex-1 flex flex-col gap-1">
+    <div className="flex-1 flex flex-col gap-1 h-full min-h-0">
       {activeTab === "category" ? (
         selectedCategory ? (
           <>
             {/* Category Info Card */}
-            <div className="bg-white rounded-md shadow-sm px-6 pt-6 pb-4">
-              <div className="flex items-start justify-between">
-                <div>
-                  <h2 className="text-xl font-semibold text-gray-900 mb-1">
-                    {selectedCategory.name.toUpperCase()}
-                  </h2>
-                </div>
-                <div className="text-right">
-                  <p className="text-sm text-[#E53935]">
-                    Total : {currencyStr} {categoryTotal.toFixed(2)}
-                  </p>
-                </div>
+            <div className="bg-white rounded-md shadow-sm px-6 h-[72px] flex items-center justify-between shrink-0">
+              <div>
+                <h2 className="text-xl font-semibold text-gray-900">
+                  {selectedCategory.name.toUpperCase()}
+                </h2>
+              </div>
+              <div className="text-right">
+                <p className="text-lg font-bold text-[#E53935] tracking-tight">
+                  {currencyStr} {categoryTotal.toFixed(2)}
+                </p>
               </div>
             </div>
 
@@ -303,21 +301,19 @@ export function ExpensesDetails({
         selectedExpenseItem ? (
           <>
             {/* Item Info Card */}
-            <div className="bg-white rounded-md shadow-sm px-6 pt-6 pb-4">
-              <div className="flex items-start justify-between">
-                <div>
-                  <h2 className="text-xl font-semibold text-gray-900 mb-1">
-                    {selectedExpenseItem.name.toUpperCase()}
-                  </h2>
-                  <p className="text-sm text-gray-500">
-                    Price : {currencyStr} {selectedExpenseItem.price.toFixed(2)}
-                  </p>
-                </div>
-                <div className="text-right">
-                  <p className="text-sm text-[#E53935]">
-                    Total : {currencyStr} {itemTotal.toFixed(2)}
-                  </p>
-                </div>
+            <div className="bg-white rounded-md shadow-sm px-6 h-[72px] flex items-center justify-between shrink-0">
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900 leading-tight">
+                  {selectedExpenseItem.name.toUpperCase()}
+                </h2>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  Price : {currencyStr} {selectedExpenseItem.price.toFixed(2)}
+                </p>
+              </div>
+              <div className="text-right">
+                <p className="text-lg font-bold text-[#E53935] tracking-tight">
+                  {currencyStr} {itemTotal.toFixed(2)}
+                </p>
               </div>
             </div>
 

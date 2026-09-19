@@ -88,10 +88,11 @@ export function AddEstimate({ onSave, onShare, onClose, initialEstimate }: AddEs
     setActiveTabParty("address");
   };
 
-  const handleSaveParty = async () => {
+  const handleSaveParty = async (options?: { closeDialog?: boolean; resetForm?: boolean }) => {
     setIsSavingParty(true);
     try {
       const payload = {
+        id: partyBeingEdited?.id,
         name: partyForm.name,
         phone: partyForm.phoneNumber,
         email: partyForm.email || null,
@@ -110,16 +111,25 @@ export function AddEstimate({ onSave, onShare, onClose, initialEstimate }: AddEs
         const newParty = await response.json();
         if (newParty) {
           setParties((prev) => {
-            const exists = prev.find(p => p.id === newParty.id);
-            return exists ? prev : [...prev, newParty];
+            const exists = prev.find(p => String(p.id) === String(newParty.id));
+            const updated = exists
+              ? prev.map(p => String(p.id) === String(newParty.id) ? newParty : p)
+              : [...prev, newParty];
+            return updated.sort((a, b) => a.name.localeCompare(b.name));
           });
+          if (newParty.id) {
+            updateTab({ customerSearch: String(newParty.id) });
+          }
         }
-        setShowAddParty(false);
-        resetPartyForm();
-        if (newParty && newParty.id) {
-          updateTab({ customerSearch: String(newParty.id) });
+        const shouldClose = options?.closeDialog !== false;
+        const shouldReset = options?.resetForm !== false;
+        if (shouldClose) {
+          setShowAddParty(false);
+          setPartyBeingEdited(null);
         }
-        fetchParties();
+        if (shouldReset) {
+          resetPartyForm();
+        }
       }
     } catch (err) {
       console.error(err);

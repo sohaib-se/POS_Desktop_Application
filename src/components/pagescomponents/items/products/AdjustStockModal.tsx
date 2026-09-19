@@ -95,9 +95,17 @@ export function AdjustStockModal({
           <div className="w-[180px]">
             <input
               type="number"
+              min="1"
               placeholder="Total Qty"
               value={adjustStockForm.qty}
-              onChange={(e) => onFormChange({ qty: e.target.value })}
+              onKeyDown={(e) => {
+                if (e.key === "-") e.preventDefault();
+              }}
+              onChange={(e) => {
+                const val = e.target.value;
+                if (Number(val) < 0) return;
+                onFormChange({ qty: val });
+              }}
               className="w-full border border-[#D1D5DB] rounded-[4px] px-3 py-[8px] text-[14px] outline-none placeholder:text-[#9CA3AF] text-[#1A202C]"
             />
           </div>
@@ -126,9 +134,17 @@ export function AdjustStockModal({
           <div className="w-[200px]">
             <input
               type="number"
+              min="1"
               placeholder="At Price"
               value={adjustStockForm.atPrice}
-              onChange={(e) => onFormChange({ atPrice: e.target.value })}
+              onKeyDown={(e) => {
+                if (e.key === "-") e.preventDefault();
+              }}
+              onChange={(e) => {
+                const val = e.target.value;
+                if (Number(val) < 0) return;
+                onFormChange({ atPrice: val });
+              }}
               className="w-full border border-[#D1D5DB] rounded-[4px] px-3 py-[8px] text-[14px] outline-none placeholder:text-[#9CA3AF] text-[#1A202C]"
             />
           </div>
@@ -147,7 +163,12 @@ export function AdjustStockModal({
         <div className="flex justify-end pt-2">
           <button
             onClick={onSave}
-            disabled={isSavingAdjustment || !adjustStockForm.qty}
+            disabled={
+              isSavingAdjustment ||
+              !adjustStockForm.qty ||
+              Number(adjustStockForm.qty) < 1 ||
+              (adjustStockForm.atPrice !== "" && Number(adjustStockForm.atPrice) < 1)
+            }
             className="bg-[#1A73E8] hover:bg-[#1557B0] text-white px-8 py-[8px] rounded-[4px] font-semibold text-[14px] transition-colors disabled:opacity-60"
           >
             Save

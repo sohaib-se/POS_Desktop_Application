@@ -159,23 +159,12 @@ export function AddPurchase({ onSave, onShare, onClose, initialInvoice }: AddPur
     setActiveTabParty("address");
   };
 
-  const fetchParties = async () => {
-    try {
-      const res = await fetch("/api/parties");
-      if (res.ok) {
-        const data = await res.json();
-        const sortedParties = data.sort((a: any, b: any) => a.name.localeCompare(b.name));
-        setParties(sortedParties);
-      }
-    } catch (err) {
-      console.error(err);
-    }
-  };
 
-  const handleSaveParty = async () => {
+  const handleSaveParty = async (options?: { closeDialog?: boolean; resetForm?: boolean }) => {
     setIsSavingParty(true);
     try {
       const payload = {
+        id: partyBeingEdited?.id,
         name: partyForm.name,
         phone: partyForm.phoneNumber,
         email: partyForm.email || null,
@@ -194,16 +183,25 @@ export function AddPurchase({ onSave, onShare, onClose, initialInvoice }: AddPur
         const newParty = await response.json();
         if (newParty) {
           setParties((prev) => {
-            const exists = prev.find(p => p.id === newParty.id);
-            return exists ? prev : [...prev, newParty].sort((a, b) => a.name.localeCompare(b.name));
+            const exists = prev.find(p => String(p.id) === String(newParty.id));
+            const updated = exists
+              ? prev.map(p => String(p.id) === String(newParty.id) ? newParty : p)
+              : [...prev, newParty];
+            return updated.sort((a, b) => a.name.localeCompare(b.name));
           });
+          if (newParty.id) {
+            updateTab({ customerSearch: String(newParty.id), phoneNo: newParty.phone ?? "" });
+          }
         }
-        setShowAddParty(false);
-        resetPartyForm();
-        if (newParty && newParty.id) {
-          updateTab({ customerSearch: String(newParty.id), phoneNo: newParty.phone ?? "" });
+        const shouldClose = options?.closeDialog !== false;
+        const shouldReset = options?.resetForm !== false;
+        if (shouldClose) {
+          setShowAddParty(false);
+          setPartyBeingEdited(null);
         }
-        fetchParties();
+        if (shouldReset) {
+          resetPartyForm();
+        }
       }
     } catch (err) {
       console.error(err);
@@ -360,7 +358,11 @@ export function AddPurchase({ onSave, onShare, onClose, initialInvoice }: AddPur
   };
 
   const setActiveTabCustomer = (partyId: string) => {
-    const matchedParty = parties.find((party) => String(party.id) === partyId);
+    const matchedParty = parties.find((party) => 
+      String(party.id) === String(partyId) ||
+      party.name.trim().toLowerCase() === partyId.trim().toLowerCase() ||
+      (!isNaN(Number(party.id)) && !isNaN(Number(partyId)) && Number(party.id) === Number(partyId))
+    );
     updateTab({
       customerSearch: partyId,
       phoneNo: matchedParty?.phone ?? "",
@@ -750,7 +752,6 @@ export function AddPurchase({ onSave, onShare, onClose, initialInvoice }: AddPur
           activeTab={activeTab}
           parties={parties}
           setActiveTabCustomer={setActiveTabCustomer}
-          updateTab={updateTab}
           displayedInvoiceNo={displayedInvoiceNo}
           displayedInvoiceDate={displayedInvoiceDate}
           setShowAddParty={setShowAddParty}

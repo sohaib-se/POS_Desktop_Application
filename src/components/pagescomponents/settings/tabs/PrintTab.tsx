@@ -46,6 +46,9 @@ export interface PrintTabProps {
   isPreviewMode?: boolean;
   saleData?: SalePrintData | null;
   onClose?: () => void;
+  onSave?: () => void;
+  onCancel?: () => void;
+  hasUnsavedChanges?: boolean;
 }
 
 function useCompanyInfo() {
@@ -79,11 +82,6 @@ function useCompanyInfo() {
   return info;
 }
 
-interface PrintTabProps {
-  onSave?: () => void;
-  onCancel?: () => void;
-  hasUnsavedChanges?: boolean;
-}
 
 /* ─────────────────────────── Main component ─────────────────────────── */
 

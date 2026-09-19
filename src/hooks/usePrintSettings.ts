@@ -61,10 +61,10 @@ export const DEFAULT_PRINT_TOTALS: PrintTotalsSettings = {
   discount: true,
   youSaved: true,
   amountInWords: true,
-  printDescription: true,
-  printTermsAndConditions: true,
+  printDescription: false,
+  printTermsAndConditions: false,
   printSignatureText: "Authorized Signatory",
-  paymentMode: true,
+  paymentMode: false,
   // Item table columns — all visible by default
   showSno: true,
   showQuantity: true,

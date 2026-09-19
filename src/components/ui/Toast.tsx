@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
-import { CheckCircle2, XCircle } from "lucide-react";
+import { CheckCircle2, XCircle, Info } from "lucide-react";
 
-export type ToastType = "success" | "error";
+export type ToastType = "success" | "error" | "info";
 
 interface ToastMessage {
   id: number;
@@ -20,6 +20,10 @@ export const toast = {
   },
   error: (message: string) => {
     const t = { id: nextId++, message, type: "error" as const };
+    toastListeners.forEach(listener => listener(t));
+  },
+  info: (message: string) => {
+    const t = { id: nextId++, message, type: "info" as const };
     toastListeners.forEach(listener => listener(t));
   }
 };
@@ -57,7 +61,7 @@ function ToastItem({ toast }: { toast: ToastMessage }) {
     return () => clearTimeout(timer);
   }, []);
 
-  const bg = toast.type === "success" ? "#10b981" : "#ef4444";
+  const bg = toast.type === "success" ? "#10b981" : toast.type === "error" ? "#ef4444" : "#3b82f6";
 
   return (
     <div
@@ -77,8 +81,10 @@ function ToastItem({ toast }: { toast: ToastMessage }) {
     >
       {toast.type === "success" ? (
         <CheckCircle2 size={20} strokeWidth={2.5} />
-      ) : (
+      ) : toast.type === "error" ? (
         <XCircle size={20} strokeWidth={2.5} />
+      ) : (
+        <Info size={20} strokeWidth={2.5} />
       )}
       <span style={{ fontSize: 14, fontWeight: 500, letterSpacing: "0.01em" }}>{toast.message}</span>
     </div>

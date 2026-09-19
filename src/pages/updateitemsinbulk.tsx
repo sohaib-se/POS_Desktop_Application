@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { BulkUpdateTable } from "@/components/pagescomponents/utilities/updateitemsinbulk/BulkUpdateTable";
 import { BulkUpdateFooter } from "@/components/pagescomponents/utilities/updateitemsinbulk/BulkUpdateFooter";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/Toast";
 
 export function UpdateItemsInBulk() {
   const [items, setItems] = useState<any[]>([]);

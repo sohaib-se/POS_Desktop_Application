@@ -262,8 +262,8 @@ export function DaybookReport({ onBack, onEditInvoice }: DaybookReportProps) {
     });
   }, [searchQuery, transactions]);
 
-  const totalSales = transactions.filter(r => r.type === 'Sale').reduce((sum, invoice) => sum + invoice.amount, 0);
-  const totalPurchases = transactions.filter(r => r.type === 'Purchase').reduce((sum, invoice) => sum + invoice.amount, 0);
+  const totalSales = transactions.filter(r => r.type === 'Sale' && !r.rawInvoice.transaction?.includes("Returned")).reduce((sum, invoice) => sum + invoice.amount, 0);
+  const totalPurchases = transactions.filter(r => r.type === 'Purchase' && !r.rawInvoice.transaction?.includes("Returned")).reduce((sum, invoice) => sum + invoice.amount, 0);
 
   const isToday = selectedDate === getTodayYMD();
   const displayDateStr = selectedDate.split('-').reverse().join('/');

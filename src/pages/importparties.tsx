@@ -2,7 +2,7 @@ import { useState } from "react";
 import { ImportPartiesHeader } from "@/components/pagescomponents/utilities/importparties/ImportPartiesHeader";
 import { ImportPartiesSteps } from "@/components/pagescomponents/utilities/importparties/ImportPartiesSteps";
 import { ImportPartiesUpload, type ImportedParty } from "@/components/pagescomponents/utilities/importparties/ImportPartiesUpload";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/Toast";
 import { type ViewType } from "@/types";
 
 interface ImportPartiesProps {

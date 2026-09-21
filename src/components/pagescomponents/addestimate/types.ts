@@ -25,4 +25,6 @@ export interface SaleTab {
   imageFileName?: string;
   documentDataUrl?: string;
   documentFileName?: string;
+  showPreview?: boolean;
+  savedEstimateForPreview?: any;
 }

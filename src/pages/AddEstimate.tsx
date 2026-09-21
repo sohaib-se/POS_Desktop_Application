@@ -9,6 +9,7 @@ import { Footer } from "../components/pagescomponents/addestimate/Footer";
 import { AddPartyDialog } from "../components/pagescomponents/parties/AddPartyDialog";
 import { ConfirmDialog } from "../components/ui/ConfirmDialog";
 import { toast } from "../components/ui/Toast";
+import { PrintTab, type SalePrintData } from "@/components/pagescomponents/settings/tabs/PrintTab";
 
 interface AddEstimateProps {
   onSave?: () => void;
@@ -326,24 +327,46 @@ export function AddEstimate({ onSave, onShare, onClose, initialEstimate }: AddEs
         const newGlobalNext = String(Number(globalNextEstimateNo) + 1);
         setGlobalNextEstimateNo(newGlobalNext);
 
+        const estimateDataForPreview: SalePrintData = {
+          records: lineItems.map((r: any) => ({
+            id: r.id,
+            itemName: r.item,
+            quantity: Number(r.qty) || 0,
+            unit: r.unit === "NONE" ? "" : r.unit,
+            pricePerUnit: Number(r.pricePerUnit) || 0,
+            amount: (Number(r.qty) || 0) * (Number(r.pricePerUnit) || 0),
+          })),
+          invoiceNo: isEditing ? (initialEstimate.referenceNo ?? tab.estimateNo) : tab.estimateNo,
+          invoiceDate: tab.estimateDate,
+          customerName: partyNameStr,
+          customerContact: activeTabPartyDetails?.phone || "",
+          customerPhone: activeTabPartyDetails?.phone || "",
+          received: 0,
+          paymentMode: "Estimate",
+          previousBalance: activeTabPartyDetails?.balance || 0,
+          discount: discountAmount,
+          discountPercent,
+          taxPercent: taxRate * 100,
+          description: tab.description,
+        };
+
         setTabs(prev => {
-          const remaining = prev.filter(t => t.id !== activeTabId);
-          if (remaining.length === 0) {
-            setTimeout(() => { if (onClose) onClose(); }, 0);
-            return prev;
-          }
-          
-          const updatedRemaining = remaining.map(t => {
-            const nextEstNo = String(Number(t.estimateNo) + 1);
-            return {
-              ...t,
-              estimateNo: nextEstNo,
-              label: `Estimate #${nextEstNo}`
-            };
+          return prev.map(t => {
+            if (t.id === activeTabId) {
+              return {
+                ...t,
+                showPreview: true,
+                savedEstimateForPreview: estimateDataForPreview,
+              };
+            } else {
+              const nextEstNo = String(Number(t.estimateNo) + 1);
+              return {
+                ...t,
+                estimateNo: nextEstNo,
+                label: `Estimate #${nextEstNo}`
+              };
+            }
           });
-          
-          setActiveTabId(updatedRemaining[updatedRemaining.length - 1].id);
-          return updatedRemaining;
         });
       } else {
         const err = await response.json();
@@ -359,6 +382,26 @@ export function AddEstimate({ onSave, onShare, onClose, initialEstimate }: AddEs
     setTabs((prev) =>
       prev.map((t) => (t.id === activeTabId ? { ...t, ...partial } : t))
     );
+  };
+
+  const handleCloseTabPreview = (tabId: number) => {
+    if (onSave) onSave();
+    const isEditingMode = Boolean(initialEstimate);
+    if (isEditingMode) {
+      if (onClose) onClose();
+    } else {
+      setTabs((prev) => {
+        const remaining = prev.filter((t) => t.id !== tabId);
+        if (remaining.length === 0) {
+          setTimeout(() => { if (onClose) onClose(); }, 0);
+          return prev;
+        }
+        if (activeTabId === tabId) {
+          setActiveTabId(remaining[remaining.length - 1].id);
+        }
+        return remaining;
+      });
+    }
   };
 
   const hasUnsavedChanges = () => {
@@ -524,15 +567,25 @@ export function AddEstimate({ onSave, onShare, onClose, initialEstimate }: AddEs
         onClose={handleCloseRequest}
       />
 
-      <TopBar />
+      {activeTab?.showPreview && activeTab.savedEstimateForPreview ? (
+        <div style={{ flex: 1, position: "relative", minHeight: 0 }}>
+          <PrintTab
+            isPreviewMode={true}
+            saleData={activeTab.savedEstimateForPreview}
+            onClose={() => handleCloseTabPreview(activeTab.id)}
+          />
+        </div>
+      ) : (
+        <>
+          <TopBar />
 
-      <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: 0 }}>
-        <CustomerSearch
-          activeTab={activeTab}
-          updateTab={updateTab}
-          parties={parties}
-          setShowAddParty={setShowAddParty}
-        />
+          <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: 0 }}>
+            <CustomerSearch
+              activeTab={activeTab}
+              updateTab={updateTab}
+              parties={parties}
+              setShowAddParty={setShowAddParty}
+            />
 
         <EstimateTable
           activeTab={activeTab}
@@ -561,6 +614,8 @@ export function AddEstimate({ onSave, onShare, onClose, initialEstimate }: AddEs
         onShare={onShare}
         onSave={handleSaveEstimate}
       />
+      </>
+      )}
       
       <AddPartyDialog
         showAddParty={showAddParty}

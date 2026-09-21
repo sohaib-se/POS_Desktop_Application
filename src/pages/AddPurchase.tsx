@@ -16,6 +16,7 @@ import type {
 import { AddPartyDialog } from "@/components/pagescomponents/parties/AddPartyDialog";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { toast } from "@/components/ui/Toast";
+import { PrintTab, type SalePrintData } from "@/components/pagescomponents/settings/tabs/PrintTab";
 
 interface AddPurchaseProps {
   onSave?: () => void;
@@ -569,22 +570,59 @@ export function AddPurchase({ onSave, onShare, onClose, initialInvoice }: AddPur
 
       toast.success(isEditing ? "Purchase updated successfully!" : "Purchase saved successfully!");
 
-      setTabs(prev => {
-        const remaining = prev.filter(t => t.id !== activeTabId);
-        if (remaining.length === 0) {
-          setTimeout(() => { if (onClose) onClose(); }, 0);
-          return prev;
-        }
-        setActiveTabId(remaining[remaining.length - 1].id);
-        return remaining;
+      const purchaseDataForPreview: SalePrintData = {
+        records: validRows.map((r) => ({
+          id: r.id,
+          itemName: r.item,
+          quantity: Number(r.qty) || 0,
+          unit: r.unit === "NONE" ? "" : r.unit,
+          pricePerUnit: Number(r.pricePerUnit) || 0,
+          amount: (Number(r.qty) || 0) * (Number(r.pricePerUnit) || 0),
+        })),
+        invoiceNo: isEditing ? (initialInvoice?.invoiceNo ?? displayedInvoiceNo) : (savedInvoice.invoiceNo || nextInvoiceNo),
+        invoiceDate: displayedInvoiceDate,
+        customerName: selectedParty.name,
+        customerContact: activeTab.phoneNo || selectedParty.phone || "",
+        customerPhone: activeTab.phoneNo || selectedParty.phone || "",
+        received: paidAmountValue,
+        paymentMode: activeTab.paymentType === "Cash" ? "Cash" : activeTab.paymentType,
+        previousBalance: selectedParty.balance || 0,
+        discount: discountAmountValue,
+        discountPercent: Number(activeTab.discountPercent || 0),
+        taxPercent: parseTaxRate(activeTab.tax) * 100,
+        description: activeTab.description,
+      };
+
+      updateTab({
+        showPreview: true,
+        savedPurchaseForPreview: purchaseDataForPreview,
       });
 
-      onSave?.();
     } catch (error) {
       console.error(error);
       toast.error("Failed to save the purchase. Please try again.");
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleCloseTabPreview = (tabId: number) => {
+    onSave?.();
+    const isEditingMode = Boolean(initialInvoice);
+    if (isEditingMode) {
+      onClose?.();
+    } else {
+      setTabs((prev) => {
+        const remaining = prev.filter((t) => t.id !== tabId);
+        if (remaining.length === 0) {
+          setTimeout(() => { onClose?.(); }, 0);
+          return prev;
+        }
+        if (activeTabId === tabId) {
+          setActiveTabId(remaining[remaining.length - 1].id);
+        }
+        return remaining;
+      });
     }
   };
 
@@ -745,10 +783,20 @@ export function AddPurchase({ onSave, onShare, onClose, initialInvoice }: AddPur
         displayedInvoiceNo={displayedInvoiceNo}
       />
       
-      <PurchaseTopBar />
+      {activeTab?.showPreview && activeTab.savedPurchaseForPreview ? (
+        <div style={{ flex: 1, position: "relative", minHeight: 0 }}>
+          <PrintTab
+            isPreviewMode={true}
+            saleData={activeTab.savedPurchaseForPreview}
+            onClose={() => handleCloseTabPreview(activeTab.id)}
+          />
+        </div>
+      ) : (
+        <>
+          <PurchaseTopBar />
 
-      <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: 0 }}>
-        <CustomerSearchAndInvoice
+          <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: 0 }}>
+            <CustomerSearchAndInvoice
           activeTab={activeTab}
           parties={parties}
           setActiveTabCustomer={setActiveTabCustomer}
@@ -781,18 +829,20 @@ export function AddPurchase({ onSave, onShare, onClose, initialInvoice }: AddPur
           banks={banks}
           roundedTotal={roundedTotal}
           fmt={fmt}
-          computedBalance={computedBalance}
-          handleAttachmentSelection={handleAttachmentSelection}
-        />
-      </div>
+            computedBalance={computedBalance}
+            handleAttachmentSelection={handleAttachmentSelection}
+          />
+        </div>
 
-      <PurchaseFooter
-        saveError={saveError}
-        onShare={onShare}
-        handleSavePurchase={handleSavePurchase}
-        isSaving={isSaving}
-        initialInvoice={initialInvoice}
-      />
+        <PurchaseFooter
+          saveError={saveError}
+          onShare={onShare}
+          handleSavePurchase={handleSavePurchase}
+          isSaving={isSaving}
+          initialInvoice={initialInvoice}
+        />
+      </>
+      )}
       
       <AddPartyDialog
         showAddParty={showAddParty}

@@ -113,13 +113,18 @@ function App() {
 
     const handleOpenSearch = () => setIsGlobalSearchOpen(true);
 
+    // Refresh sidebar whenever any component (e.g. RightPanel) saves profile changes
+    const handleProfileSaved = () => fetchProfile();
+
     window.addEventListener("keydown", handleKeyDown);
     window.addEventListener("open-global-search", handleOpenSearch);
+    window.addEventListener("profile-saved", handleProfileSaved);
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("open-global-search", handleOpenSearch);
+      window.removeEventListener("profile-saved", handleProfileSaved);
     };
-  }, []);
+  }, [fetchProfile]);
 
   const isOverlayView = (view: ViewType) =>
     view === "add-sale" ||
@@ -217,6 +222,11 @@ function App() {
   };
 
   const handleCloseSettings = () => {
+    // Refresh sidebar logo/name and profile page whenever settings are closed,
+    // so any changes saved in the Print or other tabs are immediately reflected.
+    fetchProfile();
+    // Signal EditProfile (and any other listener) to reload from the DB
+    window.dispatchEvent(new CustomEvent("profile-saved"));
     setCurrentView(lastStandardView);
   };
 

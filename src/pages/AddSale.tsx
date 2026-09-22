@@ -7,7 +7,6 @@ import { AddSaleTable } from "@/components/pagescomponents/addsale/AddSaleTable"
 import { AddSaleBottomActions } from "@/components/pagescomponents/addsale/AddSaleBottomActions";
 import { BarcodeScanModal } from "@/components/pagescomponents/addsale/BarcodeScanModal";
 import { AddPartyDialog } from "@/components/pagescomponents/parties/AddPartyDialog";
-import { toast } from "@/components/ui/Toast";
 import { useSettings } from "@/hooks/useSettings";
 import { ConfirmDeleteModal } from "@/components/common/ConfirmDeleteModal";
 import { PrintTab, type SalePrintData } from "@/components/pagescomponents/settings/tabs/PrintTab";
@@ -715,8 +714,6 @@ export function AddSale({ onSave, onClose, initialInvoice, isConversion }: AddSa
           },
         }),
       );
-
-      toast.success(isEditing ? "Sale updated successfully!" : "Sale saved successfully!");
 
       const isEditingMode = Boolean(initialInvoice) && !isConversion;
       const saleDataForPreview: SalePrintData = {

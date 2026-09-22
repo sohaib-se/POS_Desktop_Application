@@ -79,6 +79,15 @@ function useCompanyInfo() {
       .catch(() => {});
   }, []);
 
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      setInfo(prev => ({ ...prev, ...detail }));
+    };
+    window.addEventListener("print-profile-draft", handler);
+    return () => window.removeEventListener("print-profile-draft", handler);
+  }, []);
+
   return info;
 }
 
@@ -96,8 +105,13 @@ export function PrintTab({ isPreviewMode = false, saleData = null, onClose }: Pr
   const [selectedColor, setSelectedColor] = useState<string>(
     () => localStorage.getItem("print_selectedColor") || "#a78bfa"
   );
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   const handleClose = () => {
+    if (hasUnsavedChanges) {
+      const confirm = window.confirm("You have unsaved changes. Are you sure you want to close?");
+      if (!confirm) return;
+    }
     if (onClose) {
       onClose();
     } else {
@@ -573,7 +587,10 @@ export function PrintTab({ isPreviewMode = false, saleData = null, onClose }: Pr
             {isPreviewMode ? (
               <PrintPreviewRightPanel onClose={handleClose} />
             ) : (
-              <RightPanel />
+              <RightPanel 
+                hasUnsavedChanges={hasUnsavedChanges}
+                onDirtyChange={setHasUnsavedChanges}
+              />
             )}
           </div>
         </div>

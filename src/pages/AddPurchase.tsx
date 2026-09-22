@@ -359,7 +359,7 @@ export function AddPurchase({ onSave, onShare, onClose, initialInvoice }: AddPur
   };
 
   const setActiveTabCustomer = (partyId: string) => {
-    const matchedParty = parties.find((party) => 
+    const matchedParty = parties.find((party) =>
       String(party.id) === String(partyId) ||
       party.name.trim().toLowerCase() === partyId.trim().toLowerCase() ||
       (!isNaN(Number(party.id)) && !isNaN(Number(partyId)) && Number(party.id) === Number(partyId))
@@ -773,99 +773,99 @@ export function AddPurchase({ onSave, onShare, onClose, initialInvoice }: AddPur
         }}
       >
         <PurchaseTabBar
-        tabs={tabs}
-        activeTabId={activeTabId}
-        setActiveTabId={setActiveTabId}
-        addTab={addTab}
-        closeTab={closeTab}
-        onClose={handleCloseRequest}
-        parties={parties}
-        displayedInvoiceNo={displayedInvoiceNo}
-      />
-      
-      {activeTab?.showPreview && activeTab.savedPurchaseForPreview ? (
-        <div style={{ flex: 1, position: "relative", minHeight: 0 }}>
-          <PrintTab
-            isPreviewMode={true}
-            saleData={activeTab.savedPurchaseForPreview}
-            onClose={() => handleCloseTabPreview(activeTab.id)}
-          />
-        </div>
-      ) : (
-        <>
-          <PurchaseTopBar />
-
-          <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: 0 }}>
-            <CustomerSearchAndInvoice
-          activeTab={activeTab}
+          tabs={tabs}
+          activeTabId={activeTabId}
+          setActiveTabId={setActiveTabId}
+          addTab={addTab}
+          closeTab={closeTab}
+          onClose={handleCloseRequest}
           parties={parties}
-          setActiveTabCustomer={setActiveTabCustomer}
           displayedInvoiceNo={displayedInvoiceNo}
-          displayedInvoiceDate={displayedInvoiceDate}
-          setShowAddParty={setShowAddParty}
         />
-        
-        <PurchaseTable
-          activeTab={activeTab}
-          updateRowItem={updateRowItem}
-          items={items}
-          updateRow={updateRow}
-          addRow={addRow}
-          removeRow={removeRow}
-          totalQty={totalQty}
-          totalAmount={totalAmount}
-          fmt={fmt}
-        />
-        
-        <PurchaseBottomSection
-          activeTab={activeTab}
-          updateTab={updateTab}
-          imageInputRef={imageInputRef}
-          documentInputRef={documentInputRef}
-          updateDiscountPercent={updateDiscountPercent}
-          updateDiscountAmount={updateDiscountAmount}
-          taxAmount={taxAmount}
-          roundOffDiff={roundOffDiff}
-          banks={banks}
-          roundedTotal={roundedTotal}
-          fmt={fmt}
-            computedBalance={computedBalance}
-            handleAttachmentSelection={handleAttachmentSelection}
-          />
-        </div>
 
-        <PurchaseFooter
-          saveError={saveError}
-          onShare={onShare}
-          handleSavePurchase={handleSavePurchase}
-          isSaving={isSaving}
-          initialInvoice={initialInvoice}
+        {activeTab?.showPreview && activeTab.savedPurchaseForPreview ? (
+          <div style={{ flex: 1, position: "relative", minHeight: 0 }}>
+            <PrintTab
+              isPreviewMode={true}
+              saleData={activeTab.savedPurchaseForPreview}
+              onClose={() => handleCloseTabPreview(activeTab.id)}
+            />
+          </div>
+        ) : (
+          <>
+            <PurchaseTopBar />
+
+            <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: 0 }}>
+              <CustomerSearchAndInvoice
+                activeTab={activeTab}
+                parties={parties}
+                setActiveTabCustomer={setActiveTabCustomer}
+                displayedInvoiceNo={displayedInvoiceNo}
+                displayedInvoiceDate={displayedInvoiceDate}
+                setShowAddParty={setShowAddParty}
+              />
+
+              <PurchaseTable
+                activeTab={activeTab}
+                updateRowItem={updateRowItem}
+                items={items}
+                updateRow={updateRow}
+                addRow={addRow}
+                removeRow={removeRow}
+                totalQty={totalQty}
+                totalAmount={totalAmount}
+                fmt={fmt}
+              />
+
+              <PurchaseBottomSection
+                activeTab={activeTab}
+                updateTab={updateTab}
+                imageInputRef={imageInputRef}
+                documentInputRef={documentInputRef}
+                updateDiscountPercent={updateDiscountPercent}
+                updateDiscountAmount={updateDiscountAmount}
+                taxAmount={taxAmount}
+                roundOffDiff={roundOffDiff}
+                banks={banks}
+                roundedTotal={roundedTotal}
+                fmt={fmt}
+                computedBalance={computedBalance}
+                handleAttachmentSelection={handleAttachmentSelection}
+              />
+            </div>
+
+            <PurchaseFooter
+              saveError={saveError}
+              onShare={onShare}
+              handleSavePurchase={handleSavePurchase}
+              isSaving={isSaving}
+              initialInvoice={initialInvoice}
+            />
+          </>
+        )}
+
+        <AddPartyDialog
+          showAddParty={showAddParty}
+          setShowAddParty={setShowAddParty}
+          partyBeingEdited={partyBeingEdited}
+          setPartyBeingEdited={setPartyBeingEdited}
+          resetPartyForm={resetPartyForm}
+          partyForm={partyForm}
+          setPartyForm={setPartyForm}
+          activeTab={activeTabParty}
+          setActiveTab={setActiveTabParty}
+          showShippingAddress={showShippingAddress}
+          setShowShippingAddress={setShowShippingAddress}
+          handleSaveParty={handleSaveParty}
+          isSavingParty={isSavingParty}
+          partyPendingDelete={null}
+          setPartyPendingDelete={() => { }}
+          isDeletingParty={false}
+          handleDeleteParty={async () => { }}
+          showCreditLimitError={showCreditLimitError}
+          setShowCreditLimitError={setShowCreditLimitError}
         />
-      </>
-      )}
-      
-      <AddPartyDialog
-        showAddParty={showAddParty}
-        setShowAddParty={setShowAddParty}
-        partyBeingEdited={partyBeingEdited}
-        setPartyBeingEdited={setPartyBeingEdited}
-        resetPartyForm={resetPartyForm}
-        partyForm={partyForm}
-        setPartyForm={setPartyForm}
-        activeTab={activeTabParty}
-        setActiveTab={setActiveTabParty}
-        showShippingAddress={showShippingAddress}
-        setShowShippingAddress={setShowShippingAddress}
-        handleSaveParty={handleSaveParty}
-        isSavingParty={isSavingParty}
-        partyPendingDelete={null}
-        setPartyPendingDelete={() => {}}
-        isDeletingParty={false}
-        handleDeleteParty={async () => {}}
-        showCreditLimitError={showCreditLimitError}
-        setShowCreditLimitError={setShowCreditLimitError}
-      />
-    </div>
+      </div>
 
       <ConfirmDialog
         open={showDiscardDialog}

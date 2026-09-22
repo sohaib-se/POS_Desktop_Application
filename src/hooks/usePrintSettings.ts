@@ -108,8 +108,16 @@ export function usePrintTotalsSettings(): PrintTotalsSettings {
       const detail = (e as CustomEvent<PrintTotalsSettings>).detail;
       setSettings({ ...DEFAULT_PRINT_TOTALS, ...detail });
     };
+    const draftHandler = (e: Event) => {
+      const detail = (e as CustomEvent<Partial<PrintTotalsSettings>>).detail;
+      setSettings(prev => ({ ...prev, ...detail }));
+    };
     window.addEventListener("print-settings-changed", handler);
-    return () => window.removeEventListener("print-settings-changed", handler);
+    window.addEventListener("print-settings-draft", draftHandler);
+    return () => {
+      window.removeEventListener("print-settings-changed", handler);
+      window.removeEventListener("print-settings-draft", draftHandler);
+    };
   }, []);
 
   return settings;

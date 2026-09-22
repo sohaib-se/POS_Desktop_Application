@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { EditProfileHeader } from "../components/pagescomponents/editprofile/EditProfileHeader";
 import { LogoSection } from "../components/pagescomponents/editprofile/LogoSection";
 import { BusinessDetails } from "../components/pagescomponents/editprofile/BusinessDetails";
@@ -32,7 +32,7 @@ export function EditProfile({ onBack, onProfileSaved, setUnsavedChanges }: EditP
     setTimeout(() => setToast(null), 3000);
   };
 
-  useEffect(() => {
+  const loadProfile = useCallback(() => {
     fetch('/api/user_profile')
       .then(res => res.json())
       .then(data => {
@@ -64,6 +64,16 @@ export function EditProfile({ onBack, onProfileSaved, setUnsavedChanges }: EditP
       })
       .catch(console.error);
   }, []);
+
+  // Load on mount
+  useEffect(() => { loadProfile(); }, [loadProfile]);
+
+  // Re-load whenever Settings (or any other source) saves the profile
+  useEffect(() => {
+    const handler = () => loadProfile();
+    window.addEventListener('profile-saved', handler);
+    return () => window.removeEventListener('profile-saved', handler);
+  }, [loadProfile]);
 
   useEffect(() => {
     if (!initialProfileStr) return;

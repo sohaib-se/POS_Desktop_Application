@@ -405,6 +405,16 @@ function useCompanyInfo() {
       })
       .catch(() => { });
   }, []);
+
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      setInfo(prev => ({ ...prev, ...detail }));
+    };
+    window.addEventListener("print-profile-draft", handler);
+    return () => window.removeEventListener("print-profile-draft", handler);
+  }, []);
+
   return info;
 }
 

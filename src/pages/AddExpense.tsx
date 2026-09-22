@@ -361,6 +361,36 @@ export function AddExpense({ onSave, onShare, onClose, initialExpense }: AddExpe
         })
         .filter((row) => row.name || row.quantity || row.price || row.amount);
 
+      for (const item of lineItems) {
+        if (!item.itemId && item.name) {
+          const existingItem = expenseItemList.find(
+            (ei) => ei.name.toLowerCase() === item.name.trim().toLowerCase()
+          );
+          if (existingItem) {
+            item.itemId = existingItem.id;
+          } else {
+            try {
+              const res = await fetch("/api/expense_items", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ name: item.name.trim(), price: item.price || 0 }),
+              });
+              if (res.ok) {
+                const createdItem = await res.json();
+                item.itemId = createdItem.id;
+                item.name = createdItem.name;
+                setExpenseItemList((prev) => {
+                  const next = [...prev, createdItem];
+                  next.sort((a, b) => a.name.localeCompare(b.name));
+                  return next;
+                });
+              }
+            } catch (err) {
+              console.error("Failed to auto-create expense item:", err);
+            }
+          }
+        }
+      }
 
       const computedAmount = lineItems.reduce((sum, row) => sum + (Number(row.amount) || 0), 0);
       const roundOffAmount = activeTab.roundOff ? Math.round(computedAmount) - computedAmount : 0;

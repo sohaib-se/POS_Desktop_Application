@@ -86,7 +86,7 @@ export function PartyTransactionsPrintPreviewModal({
           }
           @page {
             size: A4 portrait;
-            margin: 0;
+            margin: 25mm 0 10mm 0;
           }
         }
       `}</style>

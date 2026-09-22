@@ -197,7 +197,7 @@ export function ExpensesSidebar({
                 {activeTab === "category" ? "CATEGORY" : "ITEM"} ↑
               </th>
               <th className="px-4 py-2 text-right font-medium text-gray-600 text-xs">
-                AMOUNT
+                PRICE
               </th>
             </tr>
           </thead>

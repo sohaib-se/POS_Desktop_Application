@@ -47,7 +47,7 @@ export function PartyTransactionsPrintReport({
   const totalBalance = records.reduce((sum, r) => sum + Number(r.balance || 0), 0);
 
   return (
-    <div className="print-area bg-white text-black font-sans w-full max-w-[794px] mx-auto px-10 py-6">
+    <div className="print-area bg-white text-black font-sans w-full max-w-[794px] mx-auto px-10 pt-16 pb-6">
       {/* Business Header */}
       <div className="text-center mb-4">
         <h1 className="text-base font-bold">{businessProfile?.business_name || "Laimsoft"}</h1>

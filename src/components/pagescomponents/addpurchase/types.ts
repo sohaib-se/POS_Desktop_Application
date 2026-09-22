@@ -36,6 +36,8 @@ export interface PartyOption {
   balance: number;
   type: "customer" | "supplier" | "both";
   status?: 'active' | 'inactive';
+  creditLimit?: number | null;
+  credit_limit?: number | null;
 }
 
 export interface ItemOption {

@@ -497,6 +497,21 @@ export function LaimsoftPos({ onClose, initialInvoice }: LaimsoftPosProps) {
   }, [items, activeTab.searchQuery]);
 
   const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      const currentValue = (e.target as HTMLInputElement).value;
+      if (currentValue) {
+        const exactMatch = items.find(
+          (item) => item.code && item.code.toLowerCase() === currentValue.toLowerCase()
+        );
+
+        if (exactMatch) {
+          e.preventDefault();
+          handleSelectItem(exactMatch);
+          return;
+        }
+      }
+    }
+
     if (!searchFocused || filteredItems.length === 0) return;
 
     if (e.key === "ArrowDown") {
@@ -516,7 +531,20 @@ export function LaimsoftPos({ onClose, initialInvoice }: LaimsoftPosProps) {
   };
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    updateTab({ searchQuery: e.target.value });
+    const value = e.target.value;
+
+    if (value) {
+      const exactMatch = items.find(
+        (item) => item.code && item.code.toLowerCase() === value.toLowerCase()
+      );
+
+      if (exactMatch) {
+        handleSelectItem(exactMatch);
+        return;
+      }
+    }
+
+    updateTab({ searchQuery: value });
     setSearchSelectedIndex(0);
     setSearchFocused(true);
   };

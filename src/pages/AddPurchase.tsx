@@ -501,6 +501,20 @@ export function AddPurchase({ onSave, onShare, onClose, initialInvoice }: AddPur
     const paidAmountValue = Number(activeTab.paid || 0);
     const balanceValue = roundedValue - paidAmountValue;
 
+    if (balanceValue > 0 && selectedParty) {
+      const limit = selectedParty.creditLimit ?? selectedParty.credit_limit;
+      if (limit !== undefined && limit !== null) {
+        const currentBalance = Number(selectedParty.balance) || 0;
+        const currentDebt = Math.abs(currentBalance);
+        const newDebt = currentDebt + balanceValue;
+        
+        if (newDebt > Number(limit)) {
+          setShowCreditLimitError(true);
+          return;
+        }
+      }
+    }
+
     setSaveError("");
     setIsSaving(true);
 

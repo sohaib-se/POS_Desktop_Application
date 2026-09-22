@@ -54,6 +54,8 @@ export interface PartyOption {
   balance: number;
   type: "customer" | "supplier" | "both";
   status?: 'active' | 'inactive';
+  creditLimit?: number | null;
+  credit_limit?: number | null;
 }
 
 export interface ItemOption {
@@ -603,6 +605,18 @@ export function AddSale({ onSave, onClose, initialInvoice, isConversion }: AddSa
     if (isCredit && !selectedParty) {
       setSaveError("Please select a party for credit sale.");
       return;
+    }
+
+    if (isCredit && selectedParty) {
+      const limit = selectedParty.creditLimit ?? selectedParty.credit_limit;
+      if (limit !== undefined && limit !== null) {
+        const currentBalance = Number(selectedParty.balance) || 0;
+        const newBalance = currentBalance + computedBalance;
+        if (newBalance > Number(limit)) {
+          setShowCreditLimitError(true);
+          return;
+        }
+      }
     }
 
     const validRows = activeTab.rows.filter((row) => row.item || row.qty || row.pricePerUnit);

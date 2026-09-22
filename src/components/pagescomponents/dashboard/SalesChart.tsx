@@ -18,7 +18,9 @@ export function SalesChart() {
   const currencyStr = currencyDisplay === 'icon' ? currency.symbol : currency.code;
 
   const [invoices, setInvoices] = useState<any[]>([]);
-  const [selectedMonthKey, setSelectedMonthKey] = useState<string>("");
+  const [selectedMonthKey, setSelectedMonthKey] = useState<string>(
+    getMonthKeyFromDate(formatDateDisplay(new Date()))
+  );
 
   useEffect(() => {
     async function fetchSales() {
@@ -27,17 +29,6 @@ export function SalesChart() {
         if (!response.ok) return;
         const fetchedInvoices = await response.json();
         setInvoices(fetchedInvoices);
-        
-        // Find current month key
-        const currentMonthKey = getMonthKeyFromDate(formatDateDisplay(new Date()));
-        const hasCurrentMonth = fetchedInvoices.some((inv: any) => getMonthKeyFromDate(inv.date) === currentMonthKey);
-        
-        if (hasCurrentMonth) {
-          setSelectedMonthKey(currentMonthKey);
-        } else if (fetchedInvoices.length > 0) {
-          setSelectedMonthKey(getMonthKeyFromDate(fetchedInvoices[0].date));
-        }
-
       } catch (error) {
         console.error("Failed to fetch sales for chart:", error);
       }

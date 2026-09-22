@@ -9,6 +9,7 @@ export function TransactionTab() {
   const [isCashSaleByDefault, setIsCashSaleByDefault] = useSettings('settings.isCashSaleByDefault', false);
   const [isBarcodeScanEnabled, setIsBarcodeScanEnabled] = useSettings('settings.isBarcodeScanEnabled', false);
   const [isPasscodeForTransactionEnabled, setIsPasscodeForTransactionEnabled] = useSettings('settings.isPasscodeForTransactionEnabled', false);
+  const [roundOffLimit, setRoundOffLimit] = useSettings('settings.roundOffLimit', 1);
 
   return (
     <div style={{ 
@@ -75,7 +76,16 @@ export function TransactionTab() {
               >
                 <input
                   type="number"
-                  defaultValue={1}
+                  min={0}
+                  value={roundOffLimit}
+                  onChange={(e) => {
+                    const val = parseInt(e.target.value);
+                    if (!isNaN(val) && val >= 0) {
+                      setRoundOffLimit(val);
+                    } else if (e.target.value === "") {
+                      setRoundOffLimit(0);
+                    }
+                  }}
                   style={{
                     ...inputStyle,
                     width: "44px",
@@ -94,8 +104,18 @@ export function TransactionTab() {
                     background: "#f8fafc"
                   }}
                 >
-                  <button style={{ ...nudgeBtn, padding: "2px 6px" }}>▲</button>
-                  <button style={{ ...nudgeBtn, padding: "2px 6px", borderTop: "1px solid #cbd5e1" }}>
+                  <button 
+                    type="button"
+                    onClick={() => setRoundOffLimit(prev => prev + 1)}
+                    style={{ ...nudgeBtn, padding: "2px 6px" }}
+                  >
+                    ▲
+                  </button>
+                  <button 
+                    type="button"
+                    onClick={() => setRoundOffLimit(prev => Math.max(0, prev - 1))}
+                    style={{ ...nudgeBtn, padding: "2px 6px", borderTop: "1px solid #cbd5e1" }}
+                  >
                     ▼
                   </button>
                 </div>

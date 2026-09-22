@@ -69,7 +69,7 @@ function ItemSearchCell({ row, items, updateRow, handleItemSelect }: ItemSearchC
           {filteredItems.map((item: any) => {
             const salePrice = item.salePrice ?? item.sale_price ?? 0;
             const purchasePrice = item.purchasePrice ?? item.purchase_price ?? 0;
-            const stock = item.stock ?? item.opening_stock ?? 0;
+            const stock = item.stock_quantity ?? item.stock ?? item.opening_stock ?? 0;
             return (
               <div
                 key={item.id}

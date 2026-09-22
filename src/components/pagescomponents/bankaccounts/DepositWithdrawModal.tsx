@@ -132,7 +132,12 @@ export function DepositWithdrawModal({ open, onClose, account, onSuccess, initia
           placeholder={currencyStr}
           type="number"
           value={amount}
-          onChange={(e) => setAmount(e.target.value)}
+          onChange={(e) => {
+            const val = e.target.value;
+            if (val === "" || parseFloat(val) >= 0) {
+              setAmount(val);
+            }
+          }}
         />
 
         <div className="text-sm text-gray-700 py-1">

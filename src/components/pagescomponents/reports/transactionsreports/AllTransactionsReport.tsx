@@ -1,6 +1,7 @@
 import { useSettings } from "@/hooks/useSettings";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowLeft, Calendar, ChevronDown, Search, Printer, MoreVertical, Pencil, Trash2 } from "lucide-react";
+import { ArrowLeft, Calendar, ChevronDown, Search, MoreVertical, Pencil, Trash2 } from "lucide-react";
+import * as XLSXStyle from "xlsx-js-style";
 import { getMonthKeyFromDate, formatDateDisplay, monthLabelForFilter, formatMonthLabel } from "../../saleinvoices/utils";
 import type { SaleInvoiceEditData, PurchaseBillEditData } from "@/types";
 import { SaleInvoiceDialog } from "../../saleinvoices/SaleInvoiceDialog";
@@ -229,12 +230,7 @@ export function AllTransactionsReport({ onBack, onEditInvoice }: AllTransactions
       setTransactions(allTx);
       
       const currentMonthKey = getMonthKeyFromDate(formatDateDisplay(new Date()));
-      const currentMonthExists = allTx.some((row) => row.monthKey === currentMonthKey);
-      if (currentMonthExists) {
-        setSelectedMonthKey(currentMonthKey);
-      } else {
-        setSelectedMonthKey(allTx[0]?.monthKey ?? "");
-      }
+      setSelectedMonthKey(currentMonthKey);
 
     } catch (error) {
       console.error("Failed to load transactions", error);
@@ -278,22 +274,93 @@ export function AllTransactionsReport({ onBack, onEditInvoice }: AllTransactions
   const currentMonthKey = getMonthKeyFromDate(formatDateDisplay(new Date()));
   const monthButtonLabel = selectedMonthKey === currentMonthKey ? "This Month" : monthLabelForFilter(selectedMonthKey);
 
-  const handleDownloadCsv = () => {
-    // simplified csv download for reporting
-    const headers = ["Date", "Type", "Invoice No", "Party Name", "Payment Type", "Amount", "Balance"];
-    const rows = selectedMonthRows.map(row => 
-      [row.date, row.type, row.invoiceNo, row.partyName, row.paymentType, row.amount, row.balance].join(",")
-    );
-    const csvContent = [headers.join(","), ...rows].join("\n");
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = "all-transactions.csv";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+  const handleDownloadExcel = () => {
+    const HEADER_BG = "4382FF";
+    const HEADER_FONT_COLOR = "FFFFFF";
+
+    const thinBorder = (color: string) => ({ style: "thin" as const, color: { rgb: color } });
+    const allBorders = (color: string) => ({
+      left: thinBorder(color),
+      right: thinBorder(color),
+      top: thinBorder(color),
+      bottom: thinBorder(color),
+    });
+
+    const headerStyle: object = {
+      font: { name: "Calibri", sz: 12, bold: true, color: { rgb: HEADER_FONT_COLOR } },
+      fill: { patternType: "solid", fgColor: { rgb: HEADER_BG } },
+      border: allBorders("CCCCCC"),
+      alignment: { horizontal: "center", vertical: "center" },
+    };
+
+    const cellLeft: object = {
+      font: { name: "Calibri", sz: 11 },
+      border: allBorders("E0E0E0"),
+      alignment: { horizontal: "left", vertical: "center" },
+    };
+
+    const cellRight: object = {
+      font: { name: "Calibri", sz: 11 },
+      border: allBorders("E0E0E0"),
+      alignment: { horizontal: "right", vertical: "center" },
+    };
+
+    const headers = ["Date", "Type", "Invoice No.", "Party Name", "Transaction", "Payment Type", "Amount", "Balance"];
+
+    const ws: Record<string, any> = {};
+
+    // Write header row
+    headers.forEach((h, colIdx) => {
+      const cellRef = XLSXStyle.utils.encode_cell({ r: 0, c: colIdx });
+      ws[cellRef] = { v: h, t: "s", s: headerStyle };
+    });
+
+    // Write data rows
+    selectedMonthRows.forEach((row, rowIdx) => {
+      const r = rowIdx + 1;
+      const transactionLabel = row.rawInvoice?.transaction ?? row.type;
+
+      const rowData = [
+        { v: row.date, t: "s" as const },
+        { v: row.type, t: "s" as const },
+        { v: row.invoiceNo, t: "s" as const },
+        { v: row.partyName, t: "s" as const },
+        { v: transactionLabel, t: "s" as const },
+        { v: row.paymentType, t: "s" as const },
+        { v: `${currencyStr} ${Number(row.amount || 0).toFixed(2)}`, t: "s" as const },
+        { v: `${currencyStr} ${Number(row.balance || 0).toFixed(2)}`, t: "s" as const },
+      ];
+
+      rowData.forEach((cell, colIdx) => {
+        const cellRef = XLSXStyle.utils.encode_cell({ r, c: colIdx });
+        ws[cellRef] = { ...cell, s: colIdx >= 6 ? cellRight : cellLeft };
+      });
+    });
+
+    ws["!ref"] = XLSXStyle.utils.encode_range({
+      s: { r: 0, c: 0 },
+      e: { r: Math.max(0, selectedMonthRows.length), c: headers.length - 1 },
+    });
+
+    ws["!cols"] = [
+      { wch: 14 }, // Date
+      { wch: 10 }, // Type
+      { wch: 14 }, // Invoice No.
+      { wch: 24 }, // Party Name
+      { wch: 18 }, // Transaction
+      { wch: 16 }, // Payment Type
+      { wch: 16 }, // Amount
+      { wch: 16 }, // Balance
+    ];
+
+    ws["!rows"] = [{ hpt: 22 }, ...selectedMonthRows.map(() => ({ hpt: 18 }))];
+
+    const wb = XLSXStyle.utils.book_new();
+    XLSXStyle.utils.book_append_sheet(wb, ws, "Transactions");
+
+    const monthLabel = selectedMonthKey || "all";
+    const fileName = `all_transactions_${monthLabel}.xlsx`;
+    XLSXStyle.writeFile(wb, fileName);
   };
 
   const handleDeleteTransaction = (tx: TransactionRow) => {
@@ -500,19 +567,12 @@ export function AllTransactionsReport({ onBack, onEditInvoice }: AllTransactions
               </div>
             </div>
             <button
-              onClick={() => window.print()}
-              className="p-1.5 hover:bg-[#F7F9FB] rounded"
-              title="Print"
-            >
-              <Printer className="w-4 h-4 text-[#7B8A9A]" />
-            </button>
-            <button
               onClick={(event) => {
                 event.stopPropagation();
-                handleDownloadCsv();
+                handleDownloadExcel();
               }}
               className="p-1.5 hover:bg-[#F7F9FB] rounded relative"
-              title="Download Excel/CSV"
+              title="Download Excel"
             >
               <span className="bg-green-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
                 xls
@@ -568,9 +628,6 @@ export function AllTransactionsReport({ onBack, onEditInvoice }: AllTransactions
                     <td className="px-4 py-3 text-right">{currencyStr} {invoice.balance.toLocaleString()}</td>
                     <td className="px-4 py-3 relative">
                       <div className="flex items-center justify-center gap-2">
-                        <button className="p-1.5 hover:bg-gray-100 rounded" title="Print">
-                          <Printer className="w-4 h-4 text-gray-500" />
-                        </button>
 
                         <button
                           className="p-1.5 hover:bg-gray-100 rounded"

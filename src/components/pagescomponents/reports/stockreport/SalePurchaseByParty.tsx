@@ -1,6 +1,7 @@
 import { useSettings } from "@/hooks/useSettings";
 import { useCallback, useEffect, useState, useMemo, useRef } from "react";
 import { ChevronDown, Printer, ArrowLeft, Search } from "lucide-react";
+import * as XLSXStyle from "xlsx-js-style";
 import { getMonthKeyFromDate, formatDateDisplay, formatMonthLabel } from "../../saleinvoices/utils";
 
 interface SalePurchaseByPartyProps {
@@ -190,24 +191,185 @@ export function SalePurchaseByParty({ onBack }: SalePurchaseByPartyProps) {
 
   const handleExportExcel = () => {
     if (displayData.length === 0) return;
-    
-    const headers = ["#", "PARTY NAME", "SALE AMOUNT", "PURCHASE AMOUNT"];
-    const rows = displayData.map((row, index) => [
-        String(index + 1),
-        `"${row.partyName.replace(/"/g, '""')}"`,
-        row.totalSaleAmount > 0 ? row.totalSaleAmount.toFixed(2) : '---',
-        row.totalPurchaseAmount > 0 ? row.totalPurchaseAmount.toFixed(2) : '---'
-    ]);
 
-    const csvContent = [headers.join(","), ...rows.map(r => r.join(","))].join("\n");
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.setAttribute("download", `Sale_Purchase_By_Party.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    const HEADER_BG = "4382FF";
+    const HEADER_FONT_COLOR = "FFFFFF";
+
+    const thinBorder = (color: string) => ({ style: "thin" as const, color: { rgb: color } });
+    const allBorders = (color: string) => ({
+      left: thinBorder(color),
+      right: thinBorder(color),
+      top: thinBorder(color),
+      bottom: thinBorder(color),
+    });
+
+    const headerStyle: object = {
+      font: { name: "Calibri", sz: 12, bold: true, color: { rgb: HEADER_FONT_COLOR } },
+      fill: { patternType: "solid", fgColor: { rgb: HEADER_BG } },
+      border: allBorders("CCCCCC"),
+      alignment: { horizontal: "center", vertical: "center" },
+    };
+
+    const cellLeft: object = {
+      font: { name: "Calibri", sz: 11 },
+      border: allBorders("E0E0E0"),
+      alignment: { horizontal: "left", vertical: "center" },
+    };
+
+    const cellRight: object = {
+      font: { name: "Calibri", sz: 11 },
+      border: allBorders("E0E0E0"),
+      alignment: { horizontal: "right", vertical: "center" },
+    };
+
+    const headers = ["#", "PARTY NAME", "SALE AMOUNT", "PURCHASE AMOUNT"];
+
+    const ws: Record<string, any> = {};
+
+    headers.forEach((h, colIdx) => {
+      const cellRef = XLSXStyle.utils.encode_cell({ r: 0, c: colIdx });
+      ws[cellRef] = { v: h, t: "s", s: headerStyle };
+    });
+
+    displayData.forEach((row, rowIdx) => {
+      const r = rowIdx + 1;
+      const rowData = [
+        { v: r.toString(), t: "s" as const },
+        { v: row.partyName, t: "s" as const },
+        { v: row.totalSaleAmount > 0 ? `${currencyStr} ${row.totalSaleAmount.toFixed(2)}` : "---", t: "s" as const },
+        { v: row.totalPurchaseAmount > 0 ? `${currencyStr} ${row.totalPurchaseAmount.toFixed(2)}` : "---", t: "s" as const },
+      ];
+
+      rowData.forEach((cell, colIdx) => {
+        const cellRef = XLSXStyle.utils.encode_cell({ r, c: colIdx });
+        ws[cellRef] = { ...cell, s: colIdx >= 2 ? cellRight : cellLeft };
+      });
+    });
+
+    const totalsRowIndex = displayData.length + 1;
+    const totalsRowData = [
+      { v: "TOTALS", t: "s" as const },
+      { v: "", t: "s" as const },
+      { v: `${currencyStr} ${totalSale.toFixed(2)}`, t: "s" as const },
+      { v: `${currencyStr} ${totalPurchase.toFixed(2)}`, t: "s" as const },
+    ];
+
+    totalsRowData.forEach((cell, colIdx) => {
+      const cellRef = XLSXStyle.utils.encode_cell({ r: totalsRowIndex, c: colIdx });
+      ws[cellRef] = { 
+        ...cell, 
+        s: {
+          ... (colIdx >= 2 ? cellRight : cellLeft),
+          font: { name: "Calibri", sz: 11, bold: true },
+          fill: { patternType: "solid", fgColor: { rgb: "F8F9FA" } },
+        }
+      };
+    });
+
+    ws["!ref"] = XLSXStyle.utils.encode_range({
+      s: { r: 0, c: 0 },
+      e: { r: totalsRowIndex, c: headers.length - 1 },
+    });
+
+    ws["!cols"] = [
+      { wch: 6 },  // #
+      { wch: 30 }, // PARTY NAME
+      { wch: 20 }, // SALE AMOUNT
+      { wch: 20 }, // PURCHASE AMOUNT
+    ];
+
+    ws["!rows"] = [{ hpt: 22 }, ...displayData.map(() => ({ hpt: 18 })), { hpt: 22 }];
+
+    const wb = XLSXStyle.utils.book_new();
+    XLSXStyle.utils.book_append_sheet(wb, ws, "Sale Purchase By Party");
+
+    XLSXStyle.writeFile(wb, "Sale_Purchase_By_Party.xlsx");
+  };
+
+  const handlePrint = () => {
+    const iframe = document.createElement("iframe");
+    iframe.style.position = "fixed";
+    iframe.style.right = "0";
+    iframe.style.bottom = "0";
+    iframe.style.width = "0";
+    iframe.style.height = "0";
+    iframe.style.border = "0";
+    document.body.appendChild(iframe);
+
+    const title = "Sale/Purchase By Party";
+
+    const rowsHTML = displayData.map((row, i) => {
+      return `
+        <tr>
+          <td class="center">${i + 1}</td>
+          <td>${row.partyName}</td>
+          <td class="right sale">${row.totalSaleAmount > 0 ? `${currencyStr} ${row.totalSaleAmount.toLocaleString(undefined, {minimumFractionDigits: 2})}` : '---'}</td>
+          <td class="right purchase">${row.totalPurchaseAmount > 0 ? `${currencyStr} ${row.totalPurchaseAmount.toLocaleString(undefined, {minimumFractionDigits: 2})}` : '---'}</td>
+        </tr>
+      `;
+    }).join("");
+
+    const html = `
+      <html>
+        <head>
+          <title>${title}</title>
+          <style>
+            body { font-family: Arial, sans-serif; padding: 20px; color: #333; }
+            h2 { text-align: center; margin-bottom: 5px; }
+            h4 { text-align: center; margin-top: 0; color: #666; margin-bottom: 20px; }
+            table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 14px; }
+            th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+            th { background-color: #f8f9fa; font-weight: bold; }
+            td.right, th.right { text-align: right; }
+            td.center, th.center { text-align: center; }
+            .sale { color: #10B981; }
+            .purchase { color: #EF4444; }
+            .totals { margin-top: 20px; font-weight: bold; font-size: 16px; display: flex; justify-content: space-between; }
+          </style>
+        </head>
+        <body>
+          <h2>${title}</h2>
+          <h4>Month: ${monthFilter ? formatMonthLabel(monthFilter) : 'All Time'} | Party: ${partyButtonLabel}</h4>
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Party Name</th>
+                <th class="right">Sale Amount</th>
+                <th class="right">Purchase Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rowsHTML}
+            </tbody>
+            <tfoot>
+              <tr>
+                <th colspan="2">Total</th>
+                <th class="right sale">${currencyStr} ${totalSale.toLocaleString(undefined, {minimumFractionDigits: 2})}</th>
+                <th class="right purchase">${currencyStr} ${totalPurchase.toLocaleString(undefined, {minimumFractionDigits: 2})}</th>
+              </tr>
+            </tfoot>
+          </table>
+        </body>
+      </html>
+    `;
+
+    const iframeDoc = iframe.contentWindow?.document;
+    if (iframeDoc) {
+      iframeDoc.open();
+      iframeDoc.write(html);
+      iframeDoc.close();
+
+      setTimeout(() => {
+        iframe.contentWindow?.focus();
+        iframe.contentWindow?.print();
+        setTimeout(() => {
+          document.body.removeChild(iframe);
+        }, 1000);
+      }, 250);
+    } else {
+      document.body.removeChild(iframe);
+    }
   };
 
   const partyButtonLabel = isAllParties ? "All Firms" : (rawParties.find(p => String(p.id) === selectedPartyFilter)?.name || selectedPartyFilter);
@@ -337,7 +499,7 @@ export function SalePurchaseByParty({ onBack }: SalePurchaseByPartyProps) {
             </span>
             <span className="text-[11px] font-medium leading-none">Excel Report</span>
           </button>
-          <button className="flex flex-col items-center justify-center gap-1 text-gray-700 hover:text-gray-900" onClick={() => window.print()}>
+          <button className="flex flex-col items-center justify-center gap-1 text-gray-700 hover:text-gray-900" onClick={handlePrint}>
             <Printer className="w-5 h-5" />
             <span className="text-[11px] font-medium leading-none">Print</span>
           </button>

@@ -1,7 +1,8 @@
 import { useSettings } from "@/hooks/useSettings";
 import { useCallback, useEffect, useState, useMemo } from "react";
 import { ChevronDown, Printer, ArrowLeft } from "lucide-react";
-import { getMonthKeyFromDate, formatDateDisplay } from "../../saleinvoices/utils";
+import * as XLSXStyle from "xlsx-js-style";
+import { getMonthKeyFromDate, formatDateDisplay, formatMonthLabel } from "../../saleinvoices/utils";
 
 interface PartyReportByItemProps {
   onBack: () => void;
@@ -224,24 +225,172 @@ export function PartyReportByItem({ onBack }: PartyReportByItemProps) {
 
   const handleExportExcel = () => {
     if (displayData.length === 0) return;
+    
+    const HEADER_BG = "4382FF";
+    const HEADER_FONT_COLOR = "FFFFFF";
+
+    const thinBorder = (color: string) => ({ style: "thin" as const, color: { rgb: color } });
+    const allBorders = (color: string) => ({
+      left: thinBorder(color),
+      right: thinBorder(color),
+      top: thinBorder(color),
+      bottom: thinBorder(color),
+    });
+
+    const headerStyle: object = {
+      font: { name: "Calibri", sz: 12, bold: true, color: { rgb: HEADER_FONT_COLOR } },
+      fill: { patternType: "solid", fgColor: { rgb: HEADER_BG } },
+      border: allBorders("CCCCCC"),
+      alignment: { horizontal: "center", vertical: "center" },
+    };
+
+    const cellLeft: object = {
+      font: { name: "Calibri", sz: 11 },
+      border: allBorders("E0E0E0"),
+      alignment: { horizontal: "left", vertical: "center" },
+    };
+
+    const cellRight: object = {
+      font: { name: "Calibri", sz: 11 },
+      border: allBorders("E0E0E0"),
+      alignment: { horizontal: "right", vertical: "center" },
+    };
+
     const headers = ["#", "PARTY NAME", "SALE QUANTITY", "SALE AMOUNT", "PURCHASE QUANTITY", "PURCHASE AMOUNT"];
-    const rows = displayData.map((row, index) => [
-      index + 1,
-      `"${row.partyName.replace(/"/g, '""')}"`,
-      row.saleQty,
-      row.saleAmount.toFixed(2),
-      row.purchaseQty,
-      row.purchaseAmount.toFixed(2)
-    ]);
-    const csvContent = [headers.join(","), ...rows.map(r => r.join(","))].join("\n");
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.setAttribute("download", `Party_Report_By_Item.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+
+    const ws: Record<string, any> = {};
+
+    headers.forEach((h, colIdx) => {
+      const cellRef = XLSXStyle.utils.encode_cell({ r: 0, c: colIdx });
+      ws[cellRef] = { v: h, t: "s", s: headerStyle };
+    });
+
+    displayData.forEach((row, rowIdx) => {
+      const r = rowIdx + 1;
+      const rowData = [
+        { v: r.toString(), t: "s" as const },
+        { v: row.partyName, t: "s" as const },
+        { v: row.saleQty.toString(), t: "s" as const },
+        { v: `${currencyStr} ${row.saleAmount.toFixed(2)}`, t: "s" as const },
+        { v: row.purchaseQty.toString(), t: "s" as const },
+        { v: `${currencyStr} ${row.purchaseAmount.toFixed(2)}`, t: "s" as const },
+      ];
+
+      rowData.forEach((cell, colIdx) => {
+        const cellRef = XLSXStyle.utils.encode_cell({ r, c: colIdx });
+        ws[cellRef] = { ...cell, s: colIdx >= 2 ? cellRight : cellLeft };
+      });
+    });
+
+    ws["!ref"] = XLSXStyle.utils.encode_range({
+      s: { r: 0, c: 0 },
+      e: { r: Math.max(0, displayData.length), c: headers.length - 1 },
+    });
+
+    ws["!cols"] = [
+      { wch: 6 },  // #
+      { wch: 24 }, // PARTY NAME
+      { wch: 16 }, // SALE QUANTITY
+      { wch: 20 }, // SALE AMOUNT
+      { wch: 20 }, // PURCHASE QUANTITY
+      { wch: 20 }, // PURCHASE AMOUNT
+    ];
+
+    ws["!rows"] = [{ hpt: 22 }, ...displayData.map(() => ({ hpt: 18 }))];
+
+    const wb = XLSXStyle.utils.book_new();
+    XLSXStyle.utils.book_append_sheet(wb, ws, "Party Report By Item");
+
+    XLSXStyle.writeFile(wb, "Party_Report_By_Item.xlsx");
+  };
+
+  const handlePrint = () => {
+    const iframe = document.createElement("iframe");
+    iframe.style.position = "fixed";
+    iframe.style.right = "0";
+    iframe.style.bottom = "0";
+    iframe.style.width = "0";
+    iframe.style.height = "0";
+    iframe.style.border = "0";
+    document.body.appendChild(iframe);
+
+    const title = `Party Report By Item`;
+
+    const rowsHTML = displayData.map((row, i) => `
+      <tr>
+        <td class="center">${i + 1}</td>
+        <td>${row.partyName}</td>
+        <td class="center">${row.saleQty}</td>
+        <td class="right">${currencyStr} ${row.saleAmount.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+        <td class="center">${row.purchaseQty}</td>
+        <td class="right">${currencyStr} ${row.purchaseAmount.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+      </tr>
+    `).join("");
+
+    const html = `
+      <html>
+        <head>
+          <title>${title}</title>
+          <style>
+            body { font-family: Arial, sans-serif; padding: 20px; color: #333; }
+            h2 { text-align: center; margin-bottom: 5px; }
+            .filters { text-align: center; margin-bottom: 20px; font-size: 14px; color: #555; }
+            table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 14px; }
+            th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+            th { background-color: #f8f9fa; font-weight: bold; }
+            td.right, th.right { text-align: right; }
+            td.center, th.center { text-align: center; }
+            .totals { margin-top: 20px; font-weight: bold; font-size: 15px; display: flex; justify-content: flex-end; gap: 40px; }
+          </style>
+        </head>
+        <body>
+          <h2>${title}</h2>
+          <div class="filters">
+            Month: <strong>${selectedMonthKey ? formatMonthLabel(selectedMonthKey) : 'All Time'}</strong> | 
+            Category: <strong>${selectedCategory}</strong> | 
+            Item: <strong>${itemButtonLabel}</strong>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th class="center">#</th>
+                <th>Party Name</th>
+                <th class="center">Sale Qty</th>
+                <th class="right">Sale Amount</th>
+                <th class="center">Purchase Qty</th>
+                <th class="right">Purchase Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rowsHTML}
+            </tbody>
+          </table>
+          <div class="totals">
+            <div>Total Sale Qty: ${totalSaleQty}</div>
+            <div>Total Sale Amount: ${currencyStr} ${totalSaleAmount.toLocaleString(undefined, {minimumFractionDigits: 2})}</div>
+            <div>Total Purchase Qty: ${totalPurchaseQty}</div>
+            <div>Total Purchase Amount: ${currencyStr} ${totalPurchaseAmount.toLocaleString(undefined, {minimumFractionDigits: 2})}</div>
+          </div>
+        </body>
+      </html>
+    `;
+
+    const iframeDoc = iframe.contentWindow?.document;
+    if (iframeDoc) {
+      iframeDoc.open();
+      iframeDoc.write(html);
+      iframeDoc.close();
+
+      setTimeout(() => {
+        iframe.contentWindow?.focus();
+        iframe.contentWindow?.print();
+        setTimeout(() => {
+          document.body.removeChild(iframe);
+        }, 1000);
+      }, 250);
+    } else {
+      document.body.removeChild(iframe);
+    }
   };
 
 
@@ -372,7 +521,7 @@ export function PartyReportByItem({ onBack }: PartyReportByItemProps) {
             </span>
             <span className="text-[11px] font-medium leading-none">Excel Report</span>
           </button>
-          <button className="flex flex-col items-center justify-center gap-1 text-gray-700 hover:text-gray-900" onClick={() => window.print()}>
+          <button className="flex flex-col items-center justify-center gap-1 text-gray-700 hover:text-gray-900" onClick={handlePrint}>
             <Printer className="w-5 h-5" />
             <span className="text-[11px] font-medium leading-none">Print</span>
           </button>

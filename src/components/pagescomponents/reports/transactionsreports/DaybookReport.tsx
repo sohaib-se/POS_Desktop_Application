@@ -1,6 +1,7 @@
 import { useSettings } from "@/hooks/useSettings";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowLeft, Calendar, Search, Printer, MoreVertical, Pencil, Trash2 } from "lucide-react";
+import { ArrowLeft, Search, MoreVertical, Pencil, Trash2 } from "lucide-react";
+import * as XLSXStyle from "xlsx-js-style";
 import { formatDateDisplay } from "../../saleinvoices/utils";
 import type { SaleInvoiceEditData, PurchaseBillEditData } from "@/types";
 import { SaleInvoiceDialog } from "../../saleinvoices/SaleInvoiceDialog";
@@ -268,22 +269,94 @@ export function DaybookReport({ onBack, onEditInvoice }: DaybookReportProps) {
   const isToday = selectedDate === getTodayYMD();
   const displayDateStr = selectedDate.split('-').reverse().join('/');
 
-  const handleDownloadCsv = () => {
-    // simplified csv download for reporting
-    const headers = ["Date", "Type", "Invoice No", "Party Name", "Payment Type", "Amount", "Balance"];
-    const rows = visibleRows.map(row => 
-      [row.date, row.type, row.invoiceNo, row.partyName, row.paymentType, row.amount, row.balance].join(",")
-    );
-    const csvContent = [headers.join(","), ...rows].join("\n");
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `daybook-${displayDateStr.replace(/\//g, '-')}.csv`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+  const handleDownloadExcel = () => {
+    const HEADER_BG = "FF4382FF";
+    const HEADER_FONT_COLOR = "FFFFFFFF";
+    const BORDER_COLOR = "CCCCCC";
+
+    const thinBorder = (color: string) => ({ style: "thin" as const, color: { rgb: color } });
+    const allBorders = (color: string) => ({
+      left: thinBorder(color),
+      right: thinBorder(color),
+      top: thinBorder(color),
+      bottom: thinBorder(color),
+    });
+
+    const headerStyle: object = {
+      font: { name: "Calibri", sz: 12, bold: true, color: { rgb: HEADER_FONT_COLOR } },
+      fill: { patternType: "solid", fgColor: { rgb: HEADER_BG } },
+      border: allBorders(BORDER_COLOR),
+      alignment: { horizontal: "center", vertical: "center" },
+    };
+
+    const dataStyle: object = {
+      font: { name: "Calibri", sz: 11 },
+      border: allBorders(BORDER_COLOR),
+      alignment: { horizontal: "left", vertical: "center" },
+    };
+
+    const numStyle: object = {
+      font: { name: "Calibri", sz: 11 },
+      border: allBorders(BORDER_COLOR),
+      alignment: { horizontal: "right", vertical: "center" },
+    };
+
+    const headers = ["Date", "Invoice No.", "Party Name", "Transaction", "Payment Type", "Amount", "Balance"];
+
+    const ws: Record<string, any> = {};
+
+    // Write header row
+    headers.forEach((h, colIdx) => {
+      const cellRef = XLSXStyle.utils.encode_cell({ r: 0, c: colIdx });
+      ws[cellRef] = { v: h, t: "s", s: headerStyle };
+    });
+
+    // Write data rows
+    visibleRows.forEach((row, rowIdx) => {
+      const r = rowIdx + 1; // data starts at row index 1
+      const transactionLabel = row.rawInvoice?.transaction ?? row.type;
+
+      const rowData = [
+        { v: row.date, t: "s" as const },
+        { v: row.invoiceNo, t: "s" as const },
+        { v: row.partyName, t: "s" as const },
+        { v: transactionLabel, t: "s" as const },
+        { v: row.paymentType, t: "s" as const },
+        { v: row.amount, t: "n" as const },
+        { v: row.balance, t: "n" as const },
+      ];
+
+      rowData.forEach((cell, colIdx) => {
+        const cellRef = XLSXStyle.utils.encode_cell({ r, c: colIdx });
+        ws[cellRef] = { ...cell, s: colIdx >= 5 ? numStyle : dataStyle };
+      });
+    });
+
+    // Set worksheet range
+    ws["!ref"] = XLSXStyle.utils.encode_range({
+      s: { r: 0, c: 0 },
+      e: { r: Math.max(0, visibleRows.length), c: headers.length - 1 },
+    });
+
+    // Set column widths to match reference
+    ws["!cols"] = [
+      { wch: 14 }, // Date
+      { wch: 15 }, // Invoice No.
+      { wch: 25 }, // Party Name
+      { wch: 19 }, // Transaction
+      { wch: 17 }, // Payment Type
+      { wch: 17 }, // Amount
+      { wch: 17 }, // Balance
+    ];
+
+    // Set header row height
+    ws["!rows"] = [{ hpt: 22, hpx: 22 }];
+
+    const wb = XLSXStyle.utils.book_new();
+    XLSXStyle.utils.book_append_sheet(wb, ws, "Daybook");
+
+    const fileName = `daybook-${displayDateStr.replace(/\//g, '-')}.xlsx`;
+    XLSXStyle.writeFile(wb, fileName);
   };
 
   const handleDeleteTransaction = (tx: TransactionRow) => {
@@ -444,19 +517,12 @@ export function DaybookReport({ onBack, onEditInvoice }: DaybookReportProps) {
               </div>
             </div>
             <button
-              onClick={() => window.print()}
-              className="p-1.5 hover:bg-[#F7F9FB] rounded"
-              title="Print"
-            >
-              <Printer className="w-4 h-4 text-[#7B8A9A]" />
-            </button>
-            <button
               onClick={(event) => {
                 event.stopPropagation();
-                handleDownloadCsv();
+                handleDownloadExcel();
               }}
               className="p-1.5 hover:bg-[#F7F9FB] rounded relative"
-              title="Download Excel/CSV"
+              title="Download Excel"
             >
               <span className="bg-green-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
                 xls
@@ -512,9 +578,6 @@ export function DaybookReport({ onBack, onEditInvoice }: DaybookReportProps) {
                     <td className="px-4 py-3 text-right">{currencyStr} {invoice.balance.toLocaleString()}</td>
                     <td className="px-4 py-3 relative">
                       <div className="flex items-center justify-center gap-2">
-                        <button className="p-1.5 hover:bg-gray-100 rounded" title="Print">
-                          <Printer className="w-4 h-4 text-gray-500" />
-                        </button>
 
                         <button
                           className="p-1.5 hover:bg-gray-100 rounded"

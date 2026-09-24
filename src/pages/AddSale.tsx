@@ -730,6 +730,7 @@ export function AddSale({ onSave, onClose, initialInvoice, isConversion }: AddSa
         customerName: selectedParty ? selectedParty.name : (activeTab.customerSearch || "Cash Sale"),
         customerContact: activeTab.phoneNo || selectedParty?.phone || "",
         customerPhone: activeTab.phoneNo || selectedParty?.phone || "",
+        customerEmail: (selectedParty as any)?.email || "",
         received: receivedValue,
         paymentMode: activeTab.paymentMode === "cash" ? "Cash" : "Credit",
         previousBalance: selectedParty?.balance || 0,

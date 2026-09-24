@@ -143,7 +143,7 @@ export function SaleInvoicePrintReport({
 
   const fmt = (n: number) => `${currencyStr} ${ps.amountWithDecimal ? n.toFixed(2) : Math.round(n).toString()}`;
 
-  const MIN_ROWS = 10;
+  const MIN_ROWS = 16;
   const fillerRows = Math.max(0, MIN_ROWS - records.length);
 
   return (
@@ -183,7 +183,7 @@ export function SaleInvoicePrintReport({
       </div>
 
       {/* Items table */}
-      <table style={{ width: "100%", fontSize: 11, borderCollapse: "collapse", border: "1px solid #1a1a1a" }}>
+      <table style={{ width: "100%", fontSize: 12, borderCollapse: "collapse", border: "1px solid #1a1a1a" }}>
         <thead>
           <tr style={{ backgroundColor: "#D3D3D3", color: HEADER_COLOR }}>
             {ps.showSno && <th style={{ padding: "6px 8px", textAlign: "left", fontWeight: 700, border: "1px solid #1a1a1a", width: 24 }}>#</th>}
@@ -207,7 +207,7 @@ export function SaleInvoicePrintReport({
           ))}
           {fillerRows > 0 && (
             <tr>
-              <td style={{ border: "1px solid #1a1a1a", height: fillerRows * 28 }}></td>
+              <td style={{ border: "1px solid #1a1a1a", height: fillerRows * 34 }}></td>
               <td style={{ border: "1px solid #1a1a1a" }}></td>
               {ps.showQuantity && <td style={{ border: "1px solid #1a1a1a" }}></td>}
               {ps.showUnit && <td style={{ border: "1px solid #1a1a1a" }}></td>}

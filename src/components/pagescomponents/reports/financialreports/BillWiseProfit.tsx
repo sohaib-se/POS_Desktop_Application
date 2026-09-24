@@ -1,6 +1,7 @@
 import { useSettings } from "@/hooks/useSettings";
-import { ArrowLeft, Search, Filter, Printer, Download, Eye, X } from 'lucide-react';
+import { ArrowLeft, Search, Printer, Download, Eye, X } from 'lucide-react';
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
+import * as XLSXStyle from "xlsx-js-style";
 import { getMonthKeyFromDate, parseLineItems, formatDateDisplay } from '../../saleinvoices/utils';
 
 interface BillWiseProfitProps {
@@ -151,6 +152,201 @@ export function BillWiseProfit({ onBack }: BillWiseProfitProps) {
     );
   }, [displayData]);
 
+  const handleExportExcel = () => {
+    if (displayData.length === 0) return;
+
+    const HEADER_BG = "4382FF";
+    const HEADER_FONT_COLOR = "FFFFFF";
+
+    const thinBorder = (color: string) => ({ style: "thin" as const, color: { rgb: color } });
+    const allBorders = (color: string) => ({
+      left: thinBorder(color),
+      right: thinBorder(color),
+      top: thinBorder(color),
+      bottom: thinBorder(color),
+    });
+
+    const headerStyle: object = {
+      font: { name: "Calibri", sz: 12, bold: true, color: { rgb: HEADER_FONT_COLOR } },
+      fill: { patternType: "solid", fgColor: { rgb: HEADER_BG } },
+      border: allBorders("CCCCCC"),
+      alignment: { horizontal: "center", vertical: "center" },
+    };
+
+    const cellLeft: object = {
+      font: { name: "Calibri", sz: 11 },
+      border: allBorders("E0E0E0"),
+      alignment: { horizontal: "left", vertical: "center" },
+    };
+
+    const cellRight: object = {
+      font: { name: "Calibri", sz: 11 },
+      border: allBorders("E0E0E0"),
+      alignment: { horizontal: "right", vertical: "center" },
+    };
+
+    const headers = ["#", "DATE", "INVOICE NO.", "PARTY NAME", "SALE AMOUNT", "PROFIT (+) / LOSS (-)"];
+
+    const ws: Record<string, any> = {};
+
+    headers.forEach((h, colIdx) => {
+      const cellRef = XLSXStyle.utils.encode_cell({ r: 0, c: colIdx });
+      ws[cellRef] = { v: h, t: "s", s: headerStyle };
+    });
+
+    displayData.forEach((row, rowIdx) => {
+      const r = rowIdx + 1;
+      const rowData = [
+        { v: r.toString(), t: "s" as const },
+        { v: row.date, t: "s" as const },
+        { v: row.invoiceNo || "---", t: "s" as const },
+        { v: row.partyName, t: "s" as const },
+        { v: `${currencyStr} ${row.amount.toFixed(2)}`, t: "s" as const },
+        { v: `${currencyStr} ${row.profit.toFixed(2)}`, t: "s" as const },
+      ];
+
+      rowData.forEach((cell, colIdx) => {
+        const cellRef = XLSXStyle.utils.encode_cell({ r, c: colIdx });
+        ws[cellRef] = { ...cell, s: colIdx >= 4 ? cellRight : cellLeft };
+      });
+    });
+
+    // Add totals row
+    const totalsRowIndex = displayData.length + 1;
+    const totalsRowData = [
+      { v: "TOTALS", t: "s" as const },
+      { v: "", t: "s" as const },
+      { v: "", t: "s" as const },
+      { v: "", t: "s" as const },
+      { v: `${currencyStr} ${totalSales.toFixed(2)}`, t: "s" as const },
+      { v: `${currencyStr} ${totalProfit.toFixed(2)}`, t: "s" as const },
+    ];
+
+    totalsRowData.forEach((cell, colIdx) => {
+      const cellRef = XLSXStyle.utils.encode_cell({ r: totalsRowIndex, c: colIdx });
+      ws[cellRef] = { 
+        ...cell, 
+        s: {
+          ... (colIdx >= 4 ? cellRight : cellLeft),
+          font: { name: "Calibri", sz: 11, bold: true },
+          fill: { patternType: "solid", fgColor: { rgb: "F8F9FA" } },
+        }
+      };
+    });
+
+
+    ws["!ref"] = XLSXStyle.utils.encode_range({
+      s: { r: 0, c: 0 },
+      e: { r: totalsRowIndex, c: headers.length - 1 },
+    });
+
+    ws["!cols"] = [
+      { wch: 6 },  // #
+      { wch: 14 }, // DATE
+      { wch: 14 }, // INVOICE NO.
+      { wch: 24 }, // PARTY NAME
+      { wch: 16 }, // SALE AMOUNT
+      { wch: 20 }, // PROFIT (+) / LOSS (-)
+    ];
+
+    ws["!rows"] = [{ hpt: 22 }, ...displayData.map(() => ({ hpt: 18 })), { hpt: 22 }];
+
+    const wb = XLSXStyle.utils.book_new();
+    XLSXStyle.utils.book_append_sheet(wb, ws, "Bill Wise Profit");
+
+    XLSXStyle.writeFile(wb, "Bill_Wise_Profit.xlsx");
+  };
+
+  const handlePrint = () => {
+    const iframe = document.createElement("iframe");
+    iframe.style.position = "fixed";
+    iframe.style.right = "0";
+    iframe.style.bottom = "0";
+    iframe.style.width = "0";
+    iframe.style.height = "0";
+    iframe.style.border = "0";
+    document.body.appendChild(iframe);
+
+    const title = "Bill Wise Profit";
+
+    const rowsHTML = displayData.map((row, i) => {
+      const profitClass = row.profit >= 0 ? 'profit' : 'loss';
+      return `
+        <tr>
+          <td class="center">${i + 1}</td>
+          <td>${row.date}</td>
+          <td>${row.invoiceNo || '---'}</td>
+          <td>${row.partyName}</td>
+          <td class="right">${currencyStr} ${row.amount.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+          <td class="right ${profitClass}">${currencyStr} ${row.profit.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+        </tr>
+      `;
+    }).join("");
+
+    const totalProfitClass = totalProfit >= 0 ? 'profit' : 'loss';
+
+    const html = `
+      <html>
+        <head>
+          <title>${title}</title>
+          <style>
+            body { font-family: Arial, sans-serif; padding: 20px; color: #333; }
+            h2 { text-align: center; margin-bottom: 5px; }
+            h4 { text-align: center; margin-top: 0; color: #666; margin-bottom: 20px; }
+            table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 14px; }
+            th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+            th { background-color: #f8f9fa; font-weight: bold; }
+            td.right, th.right { text-align: right; }
+            td.center, th.center { text-align: center; }
+            .profit { color: #10B981; font-weight: bold; }
+            .loss { color: #EF4444; font-weight: bold; }
+            .totals { margin-top: 20px; font-weight: bold; font-size: 16px; display: flex; justify-content: space-between; }
+          </style>
+        </head>
+        <body>
+          <h2>${title}</h2>
+          <h4>Month: ${selectedMonthKey || 'All Time'}</h4>
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Date</th>
+                <th>Invoice No.</th>
+                <th>Party Name</th>
+                <th class="right">Sale Amount</th>
+                <th class="right">Profit (+) / Loss (-)</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rowsHTML}
+            </tbody>
+          </table>
+          <div class="totals">
+            <div>Total Sale Amount: <span>${currencyStr} ${totalSales.toLocaleString(undefined, {minimumFractionDigits: 2})}</span></div>
+            <div>Total Profit(+) / Loss(-): <span class="${totalProfitClass}">${currencyStr} ${totalProfit.toLocaleString(undefined, {minimumFractionDigits: 2})}</span></div>
+          </div>
+        </body>
+      </html>
+    `;
+
+    const iframeDoc = iframe.contentWindow?.document;
+    if (iframeDoc) {
+      iframeDoc.open();
+      iframeDoc.write(html);
+      iframeDoc.close();
+
+      setTimeout(() => {
+        iframe.contentWindow?.focus();
+        iframe.contentWindow?.print();
+        setTimeout(() => {
+          document.body.removeChild(iframe);
+        }, 1000);
+      }, 250);
+    } else {
+      document.body.removeChild(iframe);
+    }
+  };
+
   return (
     <div className="h-full flex flex-col bg-gray-50">
       <div className="bg-white px-6 py-4 border-b border-gray-200 flex items-center gap-4 justify-between">
@@ -172,7 +368,6 @@ export function BillWiseProfit({ onBack }: BillWiseProfitProps) {
                 if (!showSearchInput) {
                   e.stopPropagation();
                   setShowSearchInput(true);
-                  setIsMonthMenuOpen(false);
                   setTimeout(() => searchInputRef.current?.focus(), 150);
                 }
               }}
@@ -220,10 +415,10 @@ export function BillWiseProfit({ onBack }: BillWiseProfitProps) {
               className="px-3 py-1.5 border border-gray-300 rounded bg-white text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
             />
           </div>
-          <button className="p-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">
+          <button onClick={handleExportExcel} className="p-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">
             <Download className="w-4 h-4" />
           </button>
-          <button className="p-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">
+          <button onClick={handlePrint} className="p-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">
             <Printer className="w-4 h-4" />
           </button>
         </div>

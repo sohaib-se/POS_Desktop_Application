@@ -119,7 +119,12 @@ export function BankToCashModal({ open, onClose, accounts, onSuccess, initialDat
             placeholder="0" 
             type="number" 
             value={amount}
-            onChange={(e) => setAmount(e.target.value)}
+            onChange={(e) => {
+              const val = e.target.value;
+              if (val === "" || parseFloat(val) >= 0) {
+                setAmount(val);
+              }
+            }}
           />
           <Input 
             type="date" 

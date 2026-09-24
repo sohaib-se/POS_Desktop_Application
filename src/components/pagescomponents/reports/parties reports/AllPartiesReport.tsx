@@ -1,6 +1,7 @@
 import { useSettings } from "@/hooks/useSettings";
 import { useCallback, useEffect, useState, useMemo, useRef } from "react";
 import { ChevronDown, Printer, ArrowLeft, Search } from "lucide-react";
+import * as XLSXStyle from "xlsx-js-style";
 import type { Party } from "@/types";
 
 interface AllPartiesReportProps {
@@ -120,6 +121,36 @@ export function AllPartiesReport({ onBack }: AllPartiesReportProps) {
   const handleExportExcel = () => {
     if (visibleParties.length === 0) return;
 
+    const HEADER_BG = "4382FF";
+    const HEADER_FONT_COLOR = "FFFFFF";
+
+    const thinBorder = (color: string) => ({ style: "thin" as const, color: { rgb: color } });
+    const allBorders = (color: string) => ({
+      left: thinBorder(color),
+      right: thinBorder(color),
+      top: thinBorder(color),
+      bottom: thinBorder(color),
+    });
+
+    const headerStyle: object = {
+      font: { name: "Calibri", sz: 12, bold: true, color: { rgb: HEADER_FONT_COLOR } },
+      fill: { patternType: "solid", fgColor: { rgb: HEADER_BG } },
+      border: allBorders("CCCCCC"),
+      alignment: { horizontal: "center", vertical: "center" },
+    };
+
+    const cellLeft: object = {
+      font: { name: "Calibri", sz: 11 },
+      border: allBorders("E0E0E0"),
+      alignment: { horizontal: "left", vertical: "center" },
+    };
+
+    const cellRight: object = {
+      font: { name: "Calibri", sz: 11 },
+      border: allBorders("E0E0E0"),
+      alignment: { horizontal: "right", vertical: "center" },
+    };
+
     const headers = [
       "#",
       "PARTY NAME",
@@ -130,33 +161,140 @@ export function AllPartiesReport({ onBack }: AllPartiesReportProps) {
       "CREDIT LIMIT"
     ];
 
-    const rows = visibleParties.map((party, index) => {
-      const receivable = party.balance > 0 ? party.balance : 0;
-      const payable = party.balance < 0 ? Math.abs(party.balance) : 0;
-      return [
-        index + 1,
-        `"${party.name.replace(/"/g, '""')}"`,
-        `"${party.email || ''}"`,
-        `"${party.phone || ''}"`,
-        receivable.toFixed(2),
-        payable.toFixed(2),
-        party.creditLimit ? party.creditLimit : ""
-      ];
+    const ws: Record<string, any> = {};
+
+    headers.forEach((h, colIdx) => {
+      const cellRef = XLSXStyle.utils.encode_cell({ r: 0, c: colIdx });
+      ws[cellRef] = { v: h, t: "s", s: headerStyle };
     });
 
-    const csvContent = [
-      headers.join(","),
-      ...rows.map(row => row.join(","))
-    ].join("\n");
+    visibleParties.forEach((party, rowIdx) => {
+      const r = rowIdx + 1;
+      const receivable = party.balance > 0 ? party.balance : 0;
+      const payable = party.balance < 0 ? Math.abs(party.balance) : 0;
+      
+      const rowData = [
+        { v: r.toString(), t: "s" as const },
+        { v: party.name, t: "s" as const },
+        { v: party.email || "---", t: "s" as const },
+        { v: party.phone || "---", t: "s" as const },
+        { v: receivable > 0 ? `${currencyStr} ${receivable.toFixed(2)}` : "---", t: "s" as const },
+        { v: payable > 0 ? `${currencyStr} ${payable.toFixed(2)}` : "---", t: "s" as const },
+        { v: party.creditLimit ? `${currencyStr} ${party.creditLimit}` : "---", t: "s" as const },
+      ];
 
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.setAttribute("download", `All_Parties_Report.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+      rowData.forEach((cell, colIdx) => {
+        const cellRef = XLSXStyle.utils.encode_cell({ r, c: colIdx });
+        ws[cellRef] = { ...cell, s: colIdx >= 4 ? cellRight : cellLeft };
+      });
+    });
+
+    ws["!ref"] = XLSXStyle.utils.encode_range({
+      s: { r: 0, c: 0 },
+      e: { r: Math.max(0, visibleParties.length), c: headers.length - 1 },
+    });
+
+    ws["!cols"] = [
+      { wch: 6 },  // #
+      { wch: 24 }, // PARTY NAME
+      { wch: 24 }, // EMAIL
+      { wch: 16 }, // PHONE NO.
+      { wch: 20 }, // RECEIVABLE BALANCE
+      { wch: 20 }, // PAYABLE BALANCE
+      { wch: 16 }, // CREDIT LIMIT
+    ];
+
+    ws["!rows"] = [{ hpt: 22 }, ...visibleParties.map(() => ({ hpt: 18 }))];
+
+    const wb = XLSXStyle.utils.book_new();
+    XLSXStyle.utils.book_append_sheet(wb, ws, "All Parties");
+
+    XLSXStyle.writeFile(wb, "All_Parties_Report.xlsx");
+  };
+
+  const handlePrint = () => {
+    const iframe = document.createElement("iframe");
+    iframe.style.position = "fixed";
+    iframe.style.right = "0";
+    iframe.style.bottom = "0";
+    iframe.style.width = "0";
+    iframe.style.height = "0";
+    iframe.style.border = "0";
+    document.body.appendChild(iframe);
+
+    const html = `
+      <html>
+        <head>
+          <title>All Parties Report</title>
+          <style>
+            body { font-family: Arial, sans-serif; padding: 20px; color: #333; }
+            h2 { text-align: center; margin-bottom: 20px; }
+            table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 14px; }
+            th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+            th { background-color: #f8f9fa; font-weight: bold; }
+            td.right { text-align: right; }
+            td.center { text-align: center; }
+            .totals { margin-top: 20px; font-weight: bold; font-size: 16px; display: flex; justify-content: space-between; }
+            .totals .receive { color: #10B981; }
+            .totals .pay { color: #EF4444; }
+          </style>
+        </head>
+        <body>
+          <h2>All Parties Report</h2>
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Party Name</th>
+                <th>Email</th>
+                <th>Phone No.</th>
+                <th class="right">Receivable Balance</th>
+                <th class="right">Payable Balance</th>
+                <th class="right">Credit Limit</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${visibleParties.map((party, i) => {
+                const receivable = party.balance > 0 ? party.balance : null;
+                const payable = party.balance < 0 ? Math.abs(party.balance) : null;
+                return `
+                <tr>
+                  <td class="center">${i + 1}</td>
+                  <td>${party.name}</td>
+                  <td>${party.email || '---'}</td>
+                  <td>${party.phone || '---'}</td>
+                  <td class="right">${receivable !== null ? `${currencyStr} ${receivable.toLocaleString(undefined, {minimumFractionDigits: 2})}` : '---'}</td>
+                  <td class="right">${payable !== null ? `${currencyStr} ${payable.toLocaleString(undefined, {minimumFractionDigits: 2})}` : '---'}</td>
+                  <td class="right">${party.creditLimit ? `${currencyStr} ${party.creditLimit.toLocaleString()}` : '---'}</td>
+                </tr>
+                `;
+              }).join("")}
+            </tbody>
+          </table>
+          <div class="totals">
+            <div>Total Receivable: <span class="receive">${currencyStr} ${totalReceivable.toLocaleString(undefined, {minimumFractionDigits: 2})}</span></div>
+            <div>Total Payable: <span class="pay">${currencyStr} ${totalPayable.toLocaleString(undefined, {minimumFractionDigits: 2})}</span></div>
+          </div>
+        </body>
+      </html>
+    `;
+
+    const iframeDoc = iframe.contentWindow?.document;
+    if (iframeDoc) {
+      iframeDoc.open();
+      iframeDoc.write(html);
+      iframeDoc.close();
+
+      setTimeout(() => {
+        iframe.contentWindow?.focus();
+        iframe.contentWindow?.print();
+        setTimeout(() => {
+          document.body.removeChild(iframe);
+        }, 1000);
+      }, 250);
+    } else {
+      document.body.removeChild(iframe);
+    }
   };
 
   const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -277,7 +415,7 @@ export function AllPartiesReport({ onBack }: AllPartiesReportProps) {
             </span>
             <span className="text-[11px] font-medium leading-none">Excel Report</span>
           </button>
-          <button className="flex flex-col items-center justify-center gap-1 text-gray-700 hover:text-gray-900" onClick={() => window.print()}>
+          <button className="flex flex-col items-center justify-center gap-1 text-gray-700 hover:text-gray-900" onClick={handlePrint}>
             <Printer className="w-5 h-5" />
             <span className="text-[11px] font-medium leading-none">Print</span>
           </button>

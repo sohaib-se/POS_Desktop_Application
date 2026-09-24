@@ -139,8 +139,16 @@ export function BottomSection({
                 style={{ border: "1px solid #d1d5db", borderRadius: 4, padding: "5px 8px", width: 78, textAlign: "right", fontSize: 13, outline: "none" }}
                 value={activeTab.discountPercent}
                 onChange={(e) => {
-                  const pct = parseFloat(e.target.value) || 0;
-                  updateTab({ discountPercent: e.target.value, discountRs: totalAmount > 0 ? (totalAmount * pct / 100).toFixed(2) : "" });
+                  let val = e.target.value;
+                  let pct = parseFloat(val);
+                  if (val !== "") {
+                    if (pct < 0) val = "0";
+                    else if (pct > 100) val = "100";
+                    pct = parseFloat(val) || 0;
+                  } else {
+                    pct = 0;
+                  }
+                  updateTab({ discountPercent: val, discountRs: totalAmount > 0 && val !== "" ? (totalAmount * pct / 100).toFixed(2) : "" });
                 }}
               />
               <span style={{ color: "#9ca3af", fontSize: 12 }}>(%)</span>
@@ -148,7 +156,15 @@ export function BottomSection({
               <input type="number"
                 style={{ border: "1px solid #d1d5db", borderRadius: 4, padding: "5px 8px", width: 100, textAlign: "right", fontSize: 13, outline: "none" }}
                 value={activeTab.discountRs}
-                onChange={(e) => updateTab({ discountRs: e.target.value })}
+                onChange={(e) => {
+                  let val = e.target.value;
+                  let rs = parseFloat(val);
+                  if (val !== "") {
+                    if (rs < 0) val = "0";
+                    else if (rs > totalAmount) val = totalAmount.toString();
+                  }
+                  updateTab({ discountRs: val });
+                }}
               />
               <span style={{ color: "#9ca3af", fontSize: 12 }}>(Rs)</span>
             </div>

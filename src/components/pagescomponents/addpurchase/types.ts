@@ -27,6 +27,8 @@ export interface PurchaseTab {
   paid: string;
   paidAll: boolean;
   paymentType: string;
+  showPreview?: boolean;
+  savedPurchaseForPreview?: any;
 }
 
 export interface PartyOption {

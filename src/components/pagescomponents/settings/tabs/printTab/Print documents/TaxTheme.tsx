@@ -153,7 +153,7 @@ export function TaxInvoicePrintReport({
   const fmt = (n: number) => `${currencyStr} ${ps.amountWithDecimal ? n.toFixed(2) : Math.round(n).toString()}`;
 
   // MIN_ROWS/row-height matched to the other themes so this page fills the same length
-  const MIN_ROWS = 10;
+  const MIN_ROWS = 20;
   const fillerRows = Math.max(0, MIN_ROWS - records.length);
 
   const ACCENT = accentColor ?? "#8B85D6";
@@ -380,6 +380,16 @@ function useCompanyInfo() {
       })
       .catch(() => { });
   }, []);
+
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      setInfo(prev => ({ ...prev, ...detail }));
+    };
+    window.addEventListener("print-profile-draft", handler);
+    return () => window.removeEventListener("print-profile-draft", handler);
+  }, []);
+
   return info;
 }
 

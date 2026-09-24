@@ -9,22 +9,18 @@ interface ToastMessage {
   type: ToastType;
 }
 
-// Global emitter for toasts
-const toastListeners = new Set<(toast: ToastMessage) => void>();
-let nextId = 0;
-
 export const toast = {
   success: (message: string) => {
-    const t = { id: nextId++, message, type: "success" as const };
-    toastListeners.forEach(listener => listener(t));
+    const t = { id: Date.now() + Math.random(), message, type: "success" as const };
+    window.dispatchEvent(new CustomEvent("show-toast", { detail: t }));
   },
   error: (message: string) => {
-    const t = { id: nextId++, message, type: "error" as const };
-    toastListeners.forEach(listener => listener(t));
+    const t = { id: Date.now() + Math.random(), message, type: "error" as const };
+    window.dispatchEvent(new CustomEvent("show-toast", { detail: t }));
   },
   info: (message: string) => {
-    const t = { id: nextId++, message, type: "info" as const };
-    toastListeners.forEach(listener => listener(t));
+    const t = { id: Date.now() + Math.random(), message, type: "info" as const };
+    window.dispatchEvent(new CustomEvent("show-toast", { detail: t }));
   }
 };
 
@@ -32,14 +28,17 @@ export function Toaster() {
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
   useEffect(() => {
-    const listener = (toast: ToastMessage) => {
-      setToasts(prev => [...prev, toast]);
+    const listener = (e: Event) => {
+      const toastData = (e as CustomEvent).detail as ToastMessage;
+      setToasts(prev => [...prev, toastData]);
       setTimeout(() => {
-        setToasts(prev => prev.filter(t => t.id !== toast.id));
+        setToasts(prev => prev.filter(t => t.id !== toastData.id));
       }, 3000);
     };
-    toastListeners.add(listener);
-    return () => { toastListeners.delete(listener); };
+    window.addEventListener("show-toast", listener);
+    return () => { 
+      window.removeEventListener("show-toast", listener);
+    };
   }, []);
 
   return (

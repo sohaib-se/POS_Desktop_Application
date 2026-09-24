@@ -358,34 +358,7 @@ function PhoneRow({
   );
 }
 
-/* ─────────────────── Save status banner ─────────────────────────────── */
-
-function SaveBanner({ status }: { status: "saving" | "saved" | "error" | null }) {
-  if (!status) return null;
-  const colors = {
-    saving: { bg: "#eff6ff", border: "#bfdbfe", text: "#1d4ed8" },
-    saved: { bg: "#f0fdf4", border: "#bbf7d0", text: "#15803d" },
-    error: { bg: "#fef2f2", border: "#fecaca", text: "#b91c1c" },
-  };
-  const labels = { saving: "Saving…", saved: "✓ Saved", error: "Save failed" };
-  const c = colors[status];
-  return (
-    <div
-      style={{
-        margin: "8px 14px 0",
-        padding: "6px 10px",
-        borderRadius: 5,
-        border: `1px solid ${c.border}`,
-        background: c.bg,
-        fontSize: 11.5,
-        fontWeight: 600,
-        color: c.text,
-      }}
-    >
-      {labels[status]}
-    </div>
-  );
-}
+/* ─────────────────── Save status banner removed in favor of toast ─────────────────────────────── */
 
 /* ──────────────────────── Settings state ────────────────────────────── */
 
@@ -418,6 +391,9 @@ interface PrintSettings {
   printTermsAndConditions: boolean;
   printSignatureText: string;
   paymentMode: boolean;
+  // Internal removal flags (not persisted directly — handled via DELETE API)
+  logoRemoved: boolean;
+  signatureRemoved: boolean;
 }
 
 const DEFAULT_SETTINGS: PrintSettings = {
@@ -446,16 +422,19 @@ const DEFAULT_SETTINGS: PrintSettings = {
   printTermsAndConditions: false,
   printSignatureText: "Authorized Signatory",
   paymentMode: false,
+  logoRemoved: false,
+  signatureRemoved: false,
 };
 
 export interface RightPanelProps {
   onSave?: () => void;
   onCancel?: () => void;
   hasUnsavedChanges?: boolean;
+  onDirtyChange?: (isDirty: boolean) => void;
 }
 
-export function RightPanel({ onSave, onCancel, hasUnsavedChanges = false }: RightPanelProps = {}) {
-  const [settings, setSettings] = useState<PrintSettings>(() => {
+export function RightPanel({ onSave, onCancel, hasUnsavedChanges = false, onDirtyChange }: RightPanelProps = {}) {
+  const [initialSettings, setInitialSettings] = useState<PrintSettings>(() => {
     // Merge persisted Totals & Taxes settings with the rest of the defaults
     const saved = getPrintTotalsSettings();
     return {
@@ -476,11 +455,29 @@ export function RightPanel({ onSave, onCancel, hasUnsavedChanges = false }: Righ
       paymentMode: saved.paymentMode,
     };
   });
-  const [saveStatus, setSaveStatus] = useState<"saving" | "saved" | "error" | null>(null);
-  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  // Keep a ref in sync so the debounced callback can read the latest values
-  const settingsRef = useRef(settings);
-  useEffect(() => { settingsRef.current = settings; }, [settings]);
+  const [settings, setSettings] = useState<PrintSettings>(initialSettings);
+  const [isDirty, setIsDirty] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [localToast, setLocalToast] = useState<{ message: string, type: "success" | "error" } | null>(null);
+
+  useEffect(() => {
+    const dirty = JSON.stringify(settings) !== JSON.stringify(initialSettings);
+    setIsDirty(dirty);
+    onDirtyChange?.(dirty);
+
+    // Dispatch draft settings to update the preview in real-time
+    window.dispatchEvent(new CustomEvent("print-settings-draft", { detail: settings }));
+    window.dispatchEvent(new CustomEvent("print-profile-draft", {
+      detail: {
+        business_name: settings.companyName,
+        phone: settings.phoneNumber,
+        logo_url: settings.logoUrl,
+        address: settings.address,
+        email: settings.email,
+        signature: settings.signatureUrl,
+      }
+    }));
+  }, [settings, initialSettings, onDirtyChange]);
 
   /* Load profile on mount */
   useEffect(() => {
@@ -488,110 +485,128 @@ export function RightPanel({ onSave, onCancel, hasUnsavedChanges = false }: Righ
       .then((r) => r.json())
       .then((d) => {
         if (d) {
-          setSettings((prev) => ({
-            ...prev,
+          const profileData = {
             companyName: d.business_name || "",
             logoUrl: d.logo_url || d.logo || "",
             signatureUrl: d.signature_url || d.signature || "",
             address: d.address || "",
             email: d.email || "",
             phoneNumber: d.phone || "",
-          }));
+          };
+          setInitialSettings((prev) => ({ ...prev, ...profileData }));
+          setSettings((prev) => ({ ...prev, ...profileData }));
         }
       })
       .catch(() => {});
   }, []);
 
-  const TOTALS_KEYS = new Set<string>([
-    "totalItemQuantity", "amountWithDecimal", "receivedAmount",
-    "balanceAmount", "currentBalanceOfParty", "previousBalance", "taxDetails", "discount", "youSaved",
-    "amountInWords", "printDescription", "printTermsAndConditions", "printSignatureText", "paymentMode"
-  ]);
-
   const set = <K extends keyof PrintSettings>(key: K, value: PrintSettings[K]) => {
-    setSettings((prev) => {
-      const next = { ...prev, [key]: value };
-      // Sync Totals & Taxes toggles to localStorage immediately
-      if (TOTALS_KEYS.has(key)) {
-        setPrintTotalsSettings({
-          // item-table columns are no longer editable from RightPanel;
-          // preserve whatever is currently stored
-          ...getPrintTotalsSettings(),
-          totalItemQuantity: next.totalItemQuantity,
-          amountWithDecimal: next.amountWithDecimal,
-          receivedAmount: next.receivedAmount,
-          balanceAmount: next.balanceAmount,
-          currentBalanceOfParty: next.currentBalanceOfParty,
-          previousBalance: next.previousBalance,
-          taxDetails: next.taxDetails,
-          discount: next.discount,
-          youSaved: next.youSaved,
-          amountInWords: next.amountInWords,
-          printDescription: next.printDescription,
-          printTermsAndConditions: next.printTermsAndConditions,
-          printSignatureText: next.printSignatureText,
-          paymentMode: next.paymentMode,
-        });
-      }
-      return next;
-    });
+    setSettings((prev) => ({ ...prev, [key]: value }));
   };
 
-  /* ── Save profile fields to API (debounced 600ms) ── */
-  const saveProfileField = (patch: Partial<{
-    companyName: string;
-    logo: string;
-    signature: string;
-    address: string;
-    email: string;
-    phone: string;
-  }>) => {
-    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
-    saveTimerRef.current = setTimeout(async () => {
-      setSaveStatus("saving");
-      try {
-        const s = settingsRef.current;
-        const res = await fetch("/api/user_profile", {
-          method: "PUT",
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+      // Step 1: Handle explicit logo/signature removals via the dedicated DELETE endpoint
+      // The regular PUT uses COALESCE so empty-string / null won't clear existing values.
+      if (settings.logoRemoved) {
+        await fetch("/api/delete_profile_image", {
+          method: "DELETE",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            businessName: patch.companyName ?? s.companyName,
-            phone: patch.phone ?? s.phoneNumber,
-            email: patch.email ?? s.email,
-            address: patch.address ?? s.address,
-            logo: patch.logo !== undefined ? patch.logo : s.logoUrl,
-            signature: patch.signature !== undefined ? patch.signature : s.signatureUrl,
-          }),
+          body: JSON.stringify({ field: "logo" }),
         });
-        setSaveStatus(res.ok ? "saved" : "error");
-        setTimeout(() => setSaveStatus(null), 2500);
-      } catch {
-        setSaveStatus("error");
       }
-    }, 600);
+      if (settings.signatureRemoved) {
+        await fetch("/api/delete_profile_image", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ field: "signature" }),
+        });
+      }
+
+      // Step 2: Persist the rest of the profile fields
+      const res = await fetch("/api/user_profile", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          businessName: settings.companyName,
+          phone: settings.phoneNumber,
+          email: settings.email,
+          address: settings.address,
+          // Only send logo/signature when they are NEW uploads (data URLs).
+          // Removals are already handled above; sending empty string here would
+          // be a no-op due to the COALESCE guard in the DB upsert.
+          logo: settings.logoRemoved ? undefined : settings.logoUrl,
+          signature: settings.signatureRemoved ? undefined : settings.signatureUrl,
+        }),
+      });
+      if (res.ok) {
+        setPrintTotalsSettings({
+          ...getPrintTotalsSettings(),
+          totalItemQuantity: settings.totalItemQuantity,
+          amountWithDecimal: settings.amountWithDecimal,
+          receivedAmount: settings.receivedAmount,
+          balanceAmount: settings.balanceAmount,
+          currentBalanceOfParty: settings.currentBalanceOfParty,
+          previousBalance: settings.previousBalance,
+          taxDetails: settings.taxDetails,
+          discount: settings.discount,
+          youSaved: settings.youSaved,
+          amountInWords: settings.amountInWords,
+          printDescription: settings.printDescription,
+          printTermsAndConditions: settings.printTermsAndConditions,
+          printSignatureText: settings.printSignatureText,
+          paymentMode: settings.paymentMode,
+        });
+        // Clear removal flags in the committed baseline
+        const committed = { ...settings, logoRemoved: false, signatureRemoved: false };
+        setInitialSettings(committed);
+        setSettings(committed);
+        setIsSaving(false);
+        setLocalToast({ message: "Settings saved successfully", type: "success" });
+        setTimeout(() => setLocalToast(null), 3000);
+        // Notify App.tsx so it can re-fetch the profile and refresh the sidebar logo
+        window.dispatchEvent(new CustomEvent("profile-saved"));
+        if (onSave) onSave();
+      } else {
+        setIsSaving(false);
+        setLocalToast({ message: "Failed to save settings", type: "error" });
+        setTimeout(() => setLocalToast(null), 3000);
+      }
+    } catch {
+      setIsSaving(false);
+      setLocalToast({ message: "An error occurred while saving", type: "error" });
+      setTimeout(() => setLocalToast(null), 3000);
+    }
   };
 
-  /* Helpers that update local state AND trigger an API save */
-  const handleCompanyName = (v: string) => {
-    set("companyName", v);
-    saveProfileField({ companyName: v });
+  const handleCancel = () => {
+    setSettings(initialSettings);
+    if (onCancel) onCancel();
   };
+
+  const handleCompanyName = (v: string) => set("companyName", v);
   const handleLogo = (v: string) => {
-    set("logoUrl", v);
-    saveProfileField({ logo: v });
+    if (v === "") {
+      // User clicked "Remove" — set removal flag and clear URL
+      setSettings((prev) => ({ ...prev, logoUrl: "", logoRemoved: true }));
+    } else {
+      // New upload — clear any pending removal flag
+      setSettings((prev) => ({ ...prev, logoUrl: v, logoRemoved: false }));
+    }
   };
-  const handleAddress = (v: string) => {
-    set("address", v);
-    saveProfileField({ address: v });
+  const handleSignature = (v: string) => {
+    if (v === "") {
+      // User clicked "Remove" — set removal flag and clear URL
+      setSettings((prev) => ({ ...prev, signatureUrl: "", signatureRemoved: true }));
+    } else {
+      // New upload — clear any pending removal flag
+      setSettings((prev) => ({ ...prev, signatureUrl: v, signatureRemoved: false }));
+    }
   };
-  const handleEmail = (v: string) => {
-    set("email", v);
-    saveProfileField({ email: v });
-  };
-  const handlePhone = (v: string) => {
-    set("phoneNumber", v);
-    saveProfileField({ phone: v });
-  };
+  const handleAddress = (v: string) => set("address", v);
+  const handleEmail = (v: string) => set("email", v);
+  const handlePhone = (v: string) => set("phoneNumber", v);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden", background: "#fff" }}>
@@ -609,8 +624,6 @@ export function RightPanel({ onSave, onCancel, hasUnsavedChanges = false }: Righ
       >
         Preview Settings
       </div>
-
-      <SaveBanner status={saveStatus} />
 
       {/* ── Scrollable Sections ── */}
       <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column" }}>
@@ -676,10 +689,7 @@ export function RightPanel({ onSave, onCancel, hasUnsavedChanges = false }: Righ
           <InputRow label="Print Signature Text" value={settings.printSignatureText} onChange={(v) => set("printSignatureText", v)} />
           <SignatureUploadRow 
             signatureUrl={settings.signatureUrl} 
-            onSignatureChange={(v) => {
-              set("signatureUrl", v);
-              saveProfileField({ signature: v });
-            }} 
+            onSignatureChange={handleSignature} 
           />
         </SettingsSection>
       </div>
@@ -698,7 +708,7 @@ export function RightPanel({ onSave, onCancel, hasUnsavedChanges = false }: Righ
           boxShadow: "0 -2px 8px rgba(0, 0, 0, 0.04)",
         }}
       >
-        {hasUnsavedChanges && (
+        {(hasUnsavedChanges || isDirty) && (
           <span
             title="You have unsaved changes"
             style={{
@@ -713,7 +723,7 @@ export function RightPanel({ onSave, onCancel, hasUnsavedChanges = false }: Righ
         )}
         <button
           type="button"
-          onClick={onCancel}
+          onClick={handleCancel}
           style={{
             flex: 1,
             padding: "8px 12px",
@@ -746,35 +756,75 @@ export function RightPanel({ onSave, onCancel, hasUnsavedChanges = false }: Righ
 
         <button
           type="button"
-          onClick={onSave}
+          onClick={handleSave}
+          disabled={isSaving}
           style={{
             flex: 1.2,
             padding: "8px 14px",
             fontSize: "13px",
             fontWeight: 600,
             color: "#ffffff",
-            background: "#E53935",
+            background: isSaving ? "#ef5350" : "#E53935",
             border: "none",
             borderRadius: "7px",
-            cursor: "pointer",
+            cursor: isSaving ? "not-allowed" : "pointer",
             transition: "all 0.15s ease",
             display: "inline-flex",
             alignItems: "center",
             justifyContent: "center",
             boxShadow: "0 2px 4px rgba(229, 57, 53, 0.25)",
+            opacity: isSaving ? 0.7 : 1,
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.background = "#d32f2f";
-            e.currentTarget.style.transform = "translateY(-1px)";
+            if (!isSaving) {
+              e.currentTarget.style.background = "#d32f2f";
+              e.currentTarget.style.transform = "translateY(-1px)";
+            }
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.background = "#E53935";
-            e.currentTarget.style.transform = "translateY(0)";
+            if (!isSaving) {
+              e.currentTarget.style.background = "#E53935";
+              e.currentTarget.style.transform = "translateY(0)";
+            }
           }}
         >
-          Save Changes
+          {isSaving ? "Saving..." : "Save Changes"}
         </button>
       </div>
+
+      {/* Local Toast specifically for RightPanel in bottom left */}
+      {localToast && (
+        <div
+          style={{
+            position: "fixed",
+            bottom: 24,
+            left: 24,
+            zIndex: 999999,
+            display: "flex",
+            alignItems: "center",
+            gap: 12,
+            background: localToast.type === "success" ? "#10b981" : "#ef4444",
+            color: "#fff",
+            padding: "12px 20px",
+            borderRadius: 8,
+            boxShadow: "0 10px 25px -5px rgba(0,0,0,0.2), 0 8px 10px -6px rgba(0,0,0,0.1)",
+            animation: "slideInLeft 0.3s cubic-bezier(0.2, 0.8, 0.2, 1)",
+          }}
+        >
+          <style>{`
+            @keyframes slideInLeft {
+              from { transform: translateX(-30px) scale(0.95); opacity: 0; }
+              to { transform: translateX(0) scale(1); opacity: 1; }
+            }
+          `}</style>
+          {localToast.type === "success" ? (
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+          ) : (
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>
+          )}
+          <span style={{ fontSize: 14, fontWeight: 500, letterSpacing: "0.01em" }}>{localToast.message}</span>
+        </div>
+      )}
     </div>
   );
 }

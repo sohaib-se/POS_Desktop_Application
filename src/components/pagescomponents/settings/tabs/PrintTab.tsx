@@ -33,6 +33,7 @@ export interface SalePrintData {
   customerName: string;
   customerContact?: string;
   customerPhone?: string;
+  customerEmail?: string;
   received?: number;
   paymentMode?: string;
   previousBalance?: number;
@@ -76,7 +77,16 @@ function useCompanyInfo() {
           });
         }
       })
-      .catch(() => {});
+      .catch(() => { });
+  }, []);
+
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      setInfo(prev => ({ ...prev, ...detail }));
+    };
+    window.addEventListener("print-profile-draft", handler);
+    return () => window.removeEventListener("print-profile-draft", handler);
   }, []);
 
   return info;
@@ -96,8 +106,13 @@ export function PrintTab({ isPreviewMode = false, saleData = null, onClose }: Pr
   const [selectedColor, setSelectedColor] = useState<string>(
     () => localStorage.getItem("print_selectedColor") || "#a78bfa"
   );
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   const handleClose = () => {
+    if (hasUnsavedChanges) {
+      const confirm = window.confirm("You have unsaved changes. Are you sure you want to close?");
+      if (!confirm) return;
+    }
     if (onClose) {
       onClose();
     } else {
@@ -482,7 +497,7 @@ export function PrintTab({ isPreviewMode = false, saleData = null, onClose }: Pr
         @media print {
           @page {
             size: auto;
-            margin: 0mm;
+            margin: 10mm;
           }
           body * {
             visibility: hidden !important;
@@ -494,13 +509,23 @@ export function PrintTab({ isPreviewMode = false, saleData = null, onClose }: Pr
             position: fixed !important;
             left: 0 !important;
             top: 0 !important;
-            width: 100% !important;
-            height: 100% !important;
+            width: 100vw !important;
+            height: auto !important;
             margin: 0 !important;
             padding: 0 !important;
             background: #fff !important;
             overflow: visible !important;
             zoom: 1 !important;
+            display: block !important;
+          }
+          /* Reset the inner zoom/scale wrapper that is used for screen preview */
+          .print-area-wrapper > div {
+            zoom: 1 !important;
+            transform: none !important;
+            transform-origin: unset !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            flex-shrink: unset !important;
           }
           .print-tab-modal {
             position: static !important;
@@ -571,9 +596,15 @@ export function PrintTab({ isPreviewMode = false, saleData = null, onClose }: Pr
           {/* ── RIGHT PANEL ── */}
           <div className="print-tab-right">
             {isPreviewMode ? (
-              <PrintPreviewRightPanel onClose={handleClose} />
+              <PrintPreviewRightPanel
+                onClose={handleClose}
+                invoiceNo={saleData?.invoiceNo}
+              />
             ) : (
-              <RightPanel />
+              <RightPanel
+                hasUnsavedChanges={hasUnsavedChanges}
+                onDirtyChange={setHasUnsavedChanges}
+              />
             )}
           </div>
         </div>

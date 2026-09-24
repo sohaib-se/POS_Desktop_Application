@@ -42,6 +42,7 @@ import type { SaleInvoiceEditData, ViewType } from "@/types";
 function App() {
   const [isAppLocked, setIsAppLocked] = useState(true);
   const [isInitializing, setIsInitializing] = useState(true);
+  const [headerSearchQuery, setHeaderSearchQuery] = useState("");
 
   // Business profile state shared between Sidebar and EditProfile
   const [profileBusinessName, setProfileBusinessName] = useState("Laimsoft");
@@ -249,7 +250,7 @@ function App() {
   const renderContent = (view: ViewType) => {
     switch (view) {
       case "all-transactions":
-        return <AllTransactions />;
+        return <AllTransactions searchQuery={headerSearchQuery} />;
       case "home":
         return <Dashboard onViewChange={handleViewChange} onOpenReport={handleOpenReport} />;
       case "parties":
@@ -335,7 +336,11 @@ function App() {
         <div className="flex-1 flex flex-col overflow-hidden print:overflow-visible print:block">
           {/* Header */}
           <div className="print:hidden">
-            <Header onViewChange={handleViewChange} />
+            <Header 
+              onViewChange={handleViewChange} 
+              searchQuery={headerSearchQuery}
+              onSearchQueryChange={setHeaderSearchQuery}
+            />
           </div>
 
           {/* Content Area */}

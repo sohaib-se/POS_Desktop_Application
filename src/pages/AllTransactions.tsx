@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { ChevronDown } from "lucide-react";
 import { useSettings } from "@/hooks/useSettings";
 
-export function AllTransactions() {
+export function AllTransactions({ searchQuery = "" }: { searchQuery?: string }) {
   const [currency] = useSettings('settings.businessCurrency', { code: 'PKR', symbol: 'Rs' });
   const [currencyDisplay] = useSettings<'abbreviation' | 'icon'>('settings.currencyDisplay', 'abbreviation');
   const currencyStr = currencyDisplay === 'icon' ? currency.symbol : currency.code;
@@ -195,9 +195,20 @@ export function AllTransactions() {
         }
       }
 
+      if (searchQuery) {
+        const query = searchQuery.toLowerCase();
+        const typeMatch = t.type?.toLowerCase().includes(query);
+        const partyMatch = t.partyName?.toLowerCase().includes(query);
+        const invoiceMatch = t.invoiceNo?.toString().toLowerCase().includes(query);
+        const amountMatch = t.amount?.toString().toLowerCase().includes(query);
+        if (!typeMatch && !partyMatch && !invoiceMatch && !amountMatch) {
+          return false;
+        }
+      }
+
       return true;
     });
-  }, [transactions, filterType, appliedDateFrom, appliedDateTo]);
+  }, [transactions, filterType, appliedDateFrom, appliedDateTo, searchQuery]);
 
   const getTypeColor = (type: string) => {
     switch (type) {

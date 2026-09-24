@@ -3,9 +3,11 @@ import type { ViewType } from "@/types";
 
 interface HeaderProps {
   onViewChange: (view: ViewType) => void;
+  searchQuery?: string;
+  onSearchQueryChange?: (query: string) => void;
 }
 
-export function Header({ onViewChange }: HeaderProps) {
+export function Header({ onViewChange, searchQuery = "", onSearchQueryChange }: HeaderProps) {
 
   return (
     <>
@@ -17,10 +19,11 @@ export function Header({ onViewChange }: HeaderProps) {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <input
               type="text"
-              readOnly
+              value={searchQuery}
+              onChange={(e) => onSearchQueryChange?.(e.target.value)}
               onClick={() => onViewChange("all-transactions")}
               placeholder="Search Transactions"
-              className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#E53935] focus:border-transparent cursor-pointer"
+              className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#E53935] focus:border-transparent"
             />
           </div>
         </div>

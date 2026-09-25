@@ -562,16 +562,14 @@ export function PrintTab({ isPreviewMode = false, saleData = null, onClose }: Pr
           <span style={{ fontSize: 15, fontWeight: 600, color: "#111827" }}>
             {isPreviewMode ? "Print Preview" : "Print Settings"}
           </span>
-          {!isPreviewMode && (
-            <button
-              className="close-btn"
-              aria-label="Close print tab"
-              onClick={handleClose}
-              title="Close"
-            >
-              ✕
-            </button>
-          )}
+          <button
+            className="close-btn"
+            aria-label="Close print preview"
+            onClick={handleClose}
+            title="Close"
+          >
+            ✕
+          </button>
         </div>
 
         {/* ── Body ── */}

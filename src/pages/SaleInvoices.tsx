@@ -20,6 +20,7 @@ import { SaleInvoiceContextMenu } from "../components/pagescomponents/saleinvoic
 import { SaleInvoiceDialog } from "../components/pagescomponents/saleinvoices/SaleInvoiceDialog";
 import { EnterPasscodeScreen } from "@/components/common/EnterPasscodeScreen";
 import { ConfirmDeleteModal } from "@/components/common/ConfirmDeleteModal";
+import { PrintTab, type SalePrintData } from "@/components/pagescomponents/settings/tabs/PrintTab";
 
 interface SaleInvoicesProps {
   onViewChange: (view: ViewType) => void;
@@ -51,6 +52,7 @@ export function SaleInvoices({ onViewChange, onEditInvoice, onEditPosInvoice, on
   const [isDeleting, setIsDeleting] = useState(false);
   const [invoiceToReturn, setInvoiceToReturn] = useState<SaleInvoiceViewRow | null>(null);
   const [isReturning, setIsReturning] = useState(false);
+  const [printingInvoice, setPrintingInvoice] = useState<SalePrintData | null>(null);
 
   useEffect(() => {
     if (showSearchInput) {
@@ -305,6 +307,47 @@ export function SaleInvoices({ onViewChange, onEditInvoice, onEditPosInvoice, on
     }
   };
 
+  const handlePrintClick = (invoice: SaleInvoiceViewRow) => {
+    let parsedItems: SalePrintData['records'] = [];
+    if (invoice.lineItemsJson) {
+      try {
+        const rawItems = JSON.parse(invoice.lineItemsJson) as Array<any>;
+        parsedItems = rawItems.map((item: any) => ({
+          id: item.id,
+          itemName: item.name ?? item.itemName ?? item.item_name ?? '',
+          quantity: Number(item.quantity ?? item.qty ?? 0),
+          unit: item.unit && item.unit !== 'NONE' ? item.unit : '',
+          pricePerUnit: Number(item.price ?? item.pricePerUnit ?? item.price_per_unit ?? 0),
+          amount: Number(item.amount ?? 0),
+        }));
+      } catch {
+        parsedItems = [];
+      }
+    }
+
+    const received = invoice.paymentMode === 'cash' || invoice.paymentType?.toLowerCase() === 'cash'
+      ? invoice.amount
+      : invoice.amount - invoice.balance;
+
+    const saleData: SalePrintData = {
+      records: parsedItems,
+      invoiceNo: invoice.invoiceNo,
+      invoiceDate: invoice.date,
+      customerName: invoice.partyName,
+      customerContact: invoice.partyPhone,
+      customerPhone: invoice.partyPhone,
+      received,
+      paymentMode: invoice.paymentMode ?? invoice.paymentType ?? 'Credit',
+      previousBalance: 0,
+      discount: invoice.discountAmount ?? 0,
+      discountPercent: invoice.discountPercent ?? 0,
+      taxPercent: invoice.taxRate != null ? invoice.taxRate * 100 : 0,
+      description: invoice.description,
+    };
+
+    setPrintingInvoice(saleData);
+  };
+
   const handlePasscodeSuccess = () => {
     if (!passcodeAction) return;
 
@@ -368,6 +411,7 @@ export function SaleInvoices({ onViewChange, onEditInvoice, onEditPosInvoice, on
         onEditInvoice={handleEditClick}
         handleReturnInvoice={handleReturnClick}
         handleDeleteInvoice={handleDeleteClick}
+        onPrintInvoice={handlePrintClick}
       />
 
       {passcodeAction && (
@@ -396,6 +440,26 @@ export function SaleInvoices({ onViewChange, onEditInvoice, onEditPosInvoice, on
         confirmText="Return"
         confirmLoadingText="Returning..."
       />
+
+      {/* Print Preview Modal */}
+      {printingInvoice && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 1000,
+            background: '#f3f4f6',
+            display: 'flex',
+            flexDirection: 'column',
+          }}
+        >
+          <PrintTab
+            isPreviewMode={true}
+            saleData={printingInvoice}
+            onClose={() => setPrintingInvoice(null)}
+          />
+        </div>
+      )}
     </div>
   );
 }

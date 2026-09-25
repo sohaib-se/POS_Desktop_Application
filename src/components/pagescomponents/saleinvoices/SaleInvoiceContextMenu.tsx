@@ -1,4 +1,4 @@
-import { Search, Pencil, Trash2, Download } from "lucide-react";
+import { Search, Pencil, Trash2, Download, Printer } from "lucide-react";
 import type { SaleInvoiceViewRow } from "./types";
 import type { SaleInvoiceEditData } from "@/types";
 
@@ -12,6 +12,7 @@ interface SaleInvoiceContextMenuProps {
   onEditInvoice: (invoice: SaleInvoiceViewRow) => void;
   handleReturnInvoice: (invoice: SaleInvoiceViewRow) => void;
   handleDeleteInvoice: (invoice: SaleInvoiceViewRow) => void;
+  onPrintInvoice: (invoice: SaleInvoiceViewRow) => void;
 }
 
 export function SaleInvoiceContextMenu({
@@ -23,7 +24,8 @@ export function SaleInvoiceContextMenu({
   setOpenRowMenuPosition,
   onEditInvoice,
   handleReturnInvoice,
-  handleDeleteInvoice
+  handleDeleteInvoice,
+  onPrintInvoice,
 }: SaleInvoiceContextMenuProps) {
   if (!openRowMenuId || !openRowMenuPosition) return null;
 
@@ -98,6 +100,17 @@ export function SaleInvoiceContextMenu({
           Download Attachments
         </button>
       )}
+      <button
+        className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-gray-50"
+        onClick={() => {
+          onPrintInvoice(targetInvoice);
+          setOpenRowMenuId(null);
+          setOpenRowMenuPosition(null);
+        }}
+      >
+        <Printer className="w-4 h-4 text-gray-500" />
+        Print
+      </button>
       {!targetInvoice.transaction.includes('Returned') && (
         <button
           className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-amber-600 hover:bg-amber-50"

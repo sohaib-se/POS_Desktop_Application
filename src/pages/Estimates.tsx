@@ -10,6 +10,7 @@ import { EstimateRowMenu } from "../components/pagescomponents/estimates/Estimat
 import { ViewEstimateDialog } from "../components/pagescomponents/estimates/ViewEstimateDialog";
 import { EnterPasscodeScreen } from "@/components/common/EnterPasscodeScreen";
 import { useSettings } from "@/hooks/useSettings";
+import { PrintTab, type SalePrintData } from "@/components/pagescomponents/settings/tabs/PrintTab";
 
 export function Estimates({ onConvertEstimateToSale }: { onConvertEstimateToSale?: (data: any) => void }) {
   const [showAddEstimate, setShowAddEstimate] = useState(false);
@@ -32,6 +33,7 @@ export function Estimates({ onConvertEstimateToSale }: { onConvertEstimateToSale
   const [isPasscodeForTransactionEnabled] = useSettings('settings.isPasscodeForTransactionEnabled', false);
   const [passcodeAction, setPasscodeAction] = useState<{ type: 'edit' | 'delete', payload: any } | null>(null);
   const [deletePendingId, setDeletePendingId] = useState<string | null>(null);
+  const [printingEstimate, setPrintingEstimate] = useState<SalePrintData | null>(null);
 
   const handleEditEstimate = (estimate: EstimateRecord) => {
     setEditingEstimate(estimate);
@@ -124,6 +126,41 @@ export function Estimates({ onConvertEstimateToSale }: { onConvertEstimateToSale
     setPasscodeAction(null);
   };
 
+  const handlePrintEstimate = (record: EstimateRecord) => {
+    let parsedItems: SalePrintData['records'] = [];
+    if (record.lineItemsJson) {
+      try {
+        const rawItems = JSON.parse(record.lineItemsJson) as Array<any>;
+        parsedItems = rawItems.map((item: any) => ({
+          id: item.id,
+          itemName: item.name ?? item.itemName ?? item.item_name ?? '',
+          quantity: Number(item.quantity ?? item.qty ?? 0),
+          unit: item.unit && item.unit !== 'NONE' ? item.unit : '',
+          pricePerUnit: Number(item.price ?? item.pricePerUnit ?? item.price_per_unit ?? 0),
+          amount: Number(item.amount ?? 0),
+        }));
+      } catch {
+        parsedItems = [];
+      }
+    }
+
+    const saleData: SalePrintData = {
+      records: parsedItems,
+      invoiceNo: record.referenceNo,
+      invoiceDate: record.date,
+      customerName: record.partyName,
+      received: 0,
+      paymentMode: 'Credit',
+      previousBalance: 0,
+      discount: record.discountAmount ?? 0,
+      discountPercent: record.discountPercent ?? 0,
+      taxPercent: record.taxRate != null ? record.taxRate * 100 : 0,
+      description: record.description,
+    };
+
+    setPrintingEstimate(saleData);
+  };
+
   const filteredRecords = records.filter(record => {
     let monthMatch = true;
     if (selectedMonth) {
@@ -197,6 +234,7 @@ export function Estimates({ onConvertEstimateToSale }: { onConvertEstimateToSale
         handleDelete={handleDeleteClick}
         setOpenRowMenuId={setOpenRowMenuId}
         setOpenRowMenuPosition={setOpenRowMenuPosition}
+        onPrintEstimate={handlePrintEstimate}
       />
 
       <ViewEstimateDialog
@@ -222,6 +260,26 @@ export function Estimates({ onConvertEstimateToSale }: { onConvertEstimateToSale
         onConfirm={() => { if (deletePendingId) handleDelete(deletePendingId); setDeletePendingId(null); }}
         onCancel={() => setDeletePendingId(null)}
       />
+
+      {/* Print Preview Modal */}
+      {printingEstimate && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 1000,
+            background: '#f3f4f6',
+            display: 'flex',
+            flexDirection: 'column',
+          }}
+        >
+          <PrintTab
+            isPreviewMode={true}
+            saleData={printingEstimate}
+            onClose={() => setPrintingEstimate(null)}
+          />
+        </div>
+      )}
     </>
   );
 }

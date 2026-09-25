@@ -29,6 +29,7 @@ interface Theme3InvoicePrintReportProps {
   discountPercent?: number;
   taxPercent?: number;
   description?: string;
+  documentTitle?: string;
 }
 
 // Minimal number-to-words for whole rupee amounts (extend as needed for paisa/large numbers)
@@ -109,6 +110,7 @@ export function Theme3InvoicePrintReport({
   discountPercent = 0,
   taxPercent = 0,
   description,
+  documentTitle = "Invoice",
 }: Theme3InvoicePrintReportProps) {
   const [currency] = useSettings('settings.businessCurrency', { code: 'PKR', symbol: 'Rs' });
   const [currencyDisplay] = useSettings<'abbreviation' | 'icon'>('settings.currencyDisplay', 'abbreviation');
@@ -164,7 +166,7 @@ export function Theme3InvoicePrintReport({
       </div>
 
       {/* Invoice title */}
-      <h2 className="text-center text-lg font-bold mb-3" style={{ color: ACCENT }}>Invoice</h2>
+      <h2 className="text-center text-lg font-bold mb-3" style={{ color: ACCENT }}>{documentTitle}</h2>
 
       {/* Bill To / Invoice Details bar */}
       <div

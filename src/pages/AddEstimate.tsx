@@ -348,6 +348,7 @@ export function AddEstimate({ onSave, onShare, onClose, initialEstimate }: AddEs
           discountPercent,
           taxPercent: taxRate * 100,
           description: tab.description,
+          documentTitle: "Estimate",
         };
 
         setTabs(prev => {

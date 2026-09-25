@@ -41,6 +41,8 @@ export interface SalePrintData {
   discountPercent?: number;
   taxPercent?: number;
   description?: string;
+  /** Override the "Invoice" heading shown in all print themes */
+  documentTitle?: string;
 }
 
 export interface PrintTabProps {
@@ -162,6 +164,7 @@ export function PrintTab({ isPreviewMode = false, saleData = null, onClose }: Pr
               discountPercent={saleData.discountPercent}
               taxPercent={saleData.taxPercent}
               description={saleData.description}
+              documentTitle={saleData.documentTitle}
             />
           );
         } else if (selectedThemeId === "theme1") {
@@ -181,6 +184,7 @@ export function PrintTab({ isPreviewMode = false, saleData = null, onClose }: Pr
               discountPercent={saleData.discountPercent}
               taxPercent={saleData.taxPercent}
               description={saleData.description}
+              documentTitle={saleData.documentTitle}
             />
           );
         } else if (selectedThemeId === "theme2") {
@@ -200,6 +204,7 @@ export function PrintTab({ isPreviewMode = false, saleData = null, onClose }: Pr
               discountPercent={saleData.discountPercent}
               taxPercent={saleData.taxPercent}
               description={saleData.description}
+              documentTitle={saleData.documentTitle}
             />
           );
         } else if (selectedThemeId === "theme3") {
@@ -219,6 +224,7 @@ export function PrintTab({ isPreviewMode = false, saleData = null, onClose }: Pr
               discountPercent={saleData.discountPercent}
               taxPercent={saleData.taxPercent}
               description={saleData.description}
+              documentTitle={saleData.documentTitle}
             />
           );
         } else if (selectedThemeId === "theme4") {
@@ -238,6 +244,7 @@ export function PrintTab({ isPreviewMode = false, saleData = null, onClose }: Pr
               discountPercent={saleData.discountPercent}
               taxPercent={saleData.taxPercent}
               description={saleData.description}
+              documentTitle={saleData.documentTitle}
             />
           );
         } else if (selectedThemeId === "taxtheme") {
@@ -257,6 +264,7 @@ export function PrintTab({ isPreviewMode = false, saleData = null, onClose }: Pr
               discountPercent={saleData.discountPercent}
               taxPercent={saleData.taxPercent}
               description={saleData.description}
+              documentTitle={saleData.documentTitle}
             />
           );
         }
@@ -288,6 +296,7 @@ export function PrintTab({ isPreviewMode = false, saleData = null, onClose }: Pr
               discountPercent={saleData.discountPercent}
               paymentMode={saleData.paymentMode}
               previousBalance={saleData.previousBalance}
+              documentTitle={saleData.documentTitle}
             />
           );
         } else if (selectedThemeId === "thermal2") {
@@ -305,6 +314,7 @@ export function PrintTab({ isPreviewMode = false, saleData = null, onClose }: Pr
               taxPercent={saleData.taxPercent}
               paymentMode={saleData.paymentMode}
               previousBalance={saleData.previousBalance}
+              documentTitle={saleData.documentTitle}
             />
           );
         } else if (selectedThemeId === "thermal3") {
@@ -321,6 +331,7 @@ export function PrintTab({ isPreviewMode = false, saleData = null, onClose }: Pr
               discountPercent={saleData.discountPercent}
               paymentMode={saleData.paymentMode}
               previousBalance={saleData.previousBalance}
+              documentTitle={saleData.documentTitle}
             />
           );
         } else if (selectedThemeId === "thermal4") {
@@ -337,6 +348,7 @@ export function PrintTab({ isPreviewMode = false, saleData = null, onClose }: Pr
               discountPercent={saleData.discountPercent}
               paymentMode={saleData.paymentMode}
               previousBalance={saleData.previousBalance}
+              documentTitle={saleData.documentTitle}
             />
           );
         }

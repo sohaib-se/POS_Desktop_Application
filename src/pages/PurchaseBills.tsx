@@ -297,6 +297,7 @@ export function PurchaseBills({ onBack }: PurchaseBillsProps = {}) {
       discountPercent: invoice.discountPercent ?? 0,
       taxPercent: invoice.taxRate != null ? invoice.taxRate * 100 : 0,
       description: invoice.description,
+      documentTitle: "Purchase Invoice",
     };
 
     setPrintingInvoice(saleData);

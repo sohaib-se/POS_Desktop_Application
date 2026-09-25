@@ -156,6 +156,7 @@ export function Estimates({ onConvertEstimateToSale }: { onConvertEstimateToSale
       discountPercent: record.discountPercent ?? 0,
       taxPercent: record.taxRate != null ? record.taxRate * 100 : 0,
       description: record.description,
+      documentTitle: "Estimate",
     };
 
     setPrintingEstimate(saleData);

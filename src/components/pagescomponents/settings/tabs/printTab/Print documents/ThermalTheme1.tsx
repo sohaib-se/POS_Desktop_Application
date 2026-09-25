@@ -28,6 +28,7 @@ interface ThermalTheme1Props {
   discountPercent?: number;
   paymentMode?: string;
   previousBalance?: number;
+  documentTitle?: string;
 }
 
 /* ─────────────────────── Dummy preview data ────────────────────────── */
@@ -122,6 +123,7 @@ export function ThermalSaleInvoice({
   discountPercent,
   paymentMode,
   previousBalance,
+  documentTitle = "Invoice",
 }: ThermalTheme1Props) {
   const [currency] = useSettings("settings.businessCurrency", { code: "PKR", symbol: "Rs" });
   const [currencyDisplay] = useSettings<"abbreviation" | "icon">(
@@ -211,7 +213,7 @@ export function ThermalSaleInvoice({
           marginBottom: 4,
         }}
       >
-        Invoice
+        {documentTitle}
       </div>
 
       {/* ────────── CUSTOMER ROW ────────── */}

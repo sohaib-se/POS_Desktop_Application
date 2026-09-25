@@ -343,6 +343,7 @@ export function SaleInvoices({ onViewChange, onEditInvoice, onEditPosInvoice, on
       discountPercent: invoice.discountPercent ?? 0,
       taxPercent: invoice.taxRate != null ? invoice.taxRate * 100 : 0,
       description: invoice.description,
+      documentTitle: 'Invoice',
     };
 
     setPrintingInvoice(saleData);

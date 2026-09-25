@@ -29,6 +29,7 @@ interface Theme1InvoicePrintReportProps {
   discountPercent?: number;
   taxPercent?: number;
   description?: string;
+  documentTitle?: string;
 }
 
 // Minimal number-to-words for whole rupee amounts (extend as needed for paisa/large numbers)
@@ -109,6 +110,7 @@ export function Theme1InvoicePrintReport({
   discountPercent = 0,
   taxPercent = 0,
   description,
+  documentTitle = "Invoice",
 }: Theme1InvoicePrintReportProps) {
   const [currency] = useSettings('settings.businessCurrency', { code: 'PKR', symbol: 'Rs' });
   const [currencyDisplay] = useSettings<'abbreviation' | 'icon'>('settings.currencyDisplay', 'abbreviation');
@@ -161,7 +163,7 @@ export function Theme1InvoicePrintReport({
 
       {/* Invoice title band */}
       <div className="border-t-2 border-b-2 py-2 mb-4" style={{ borderColor: ACCENT }}>
-        <h2 className="text-center text-xl font-bold" style={{ color: ACCENT }}>Invoice</h2>
+        <h2 className="text-center text-xl font-bold" style={{ color: ACCENT }}>{documentTitle}</h2>
       </div>
 
       {/* Bill To / Invoice Details */}

@@ -1,4 +1,4 @@
-import { Eye, Pencil, Trash2 } from "lucide-react";
+import { Eye, Pencil, Trash2, Printer } from "lucide-react";
 import type { EstimateRecord } from "./types";
 
 interface EstimateRowMenuProps {
@@ -10,6 +10,7 @@ interface EstimateRowMenuProps {
   handleDelete: (id: string) => void;
   setOpenRowMenuId: (id: string | null) => void;
   setOpenRowMenuPosition: (pos: { left: number; top: number } | null) => void;
+  onPrintEstimate: (record: EstimateRecord) => void;
 }
 
 export function EstimateRowMenu({
@@ -21,6 +22,7 @@ export function EstimateRowMenu({
   handleDelete,
   setOpenRowMenuId,
   setOpenRowMenuPosition,
+  onPrintEstimate,
 }: EstimateRowMenuProps) {
   if (!openRowMenuId || !openRowMenuPosition) return null;
   
@@ -100,6 +102,17 @@ export function EstimateRowMenu({
           Download Attachments
         </button>
       )}
+      <button
+        className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-gray-50"
+        onClick={() => {
+          onPrintEstimate(targetItem);
+          setOpenRowMenuId(null);
+          setOpenRowMenuPosition(null);
+        }}
+      >
+        <Printer className="w-4 h-4 text-gray-500" />
+        Print
+      </button>
       <button
         className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50"
         onClick={() => {

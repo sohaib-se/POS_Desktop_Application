@@ -605,6 +605,7 @@ export function AddPurchase({ onSave, onShare, onClose, initialInvoice }: AddPur
         discountPercent: Number(activeTab.discountPercent || 0),
         taxPercent: parseTaxRate(activeTab.tax) * 100,
         description: activeTab.description,
+        documentTitle: "Purchase Invoice",
       };
 
       updateTab({

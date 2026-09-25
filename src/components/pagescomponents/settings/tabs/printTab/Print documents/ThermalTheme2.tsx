@@ -29,6 +29,7 @@ interface ThermalTheme2Props {
     taxPercent?: number;
     paymentMode?: string;
     previousBalance?: number;
+    documentTitle?: string;
 }
 
 /* ─────────────────────── Dummy preview data ────────────────────────── */
@@ -141,6 +142,7 @@ export function ThermalSaleInvoiceClassic({
     taxPercent = 0,
     paymentMode,
     previousBalance,
+    documentTitle = "Invoice",
 }: ThermalTheme2Props) {
     const [currency] = useSettings("settings.businessCurrency", { code: "PKR", symbol: "Rs" });
     const [currencyDisplay] = useSettings<"abbreviation" | "icon">(
@@ -204,7 +206,7 @@ export function ThermalSaleInvoiceClassic({
             {/* ────────── META ROW ────────── */}
             <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "#333" }}>
                 <div>
-                    <div>Receipt #{invoiceNo}</div>
+                    <div>{documentTitle && documentTitle !== "Invoice" ? `${documentTitle} #${invoiceNo}` : `Receipt #${invoiceNo}`}</div>
                     <div>{formatDate(invoiceDate)} {formatTime(invoiceDate)}</div>
                 </div>
                 <div style={{ textAlign: "right" }}>

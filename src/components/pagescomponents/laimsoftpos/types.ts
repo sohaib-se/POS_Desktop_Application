@@ -54,4 +54,6 @@ export interface PosTab {
   discountPercent: string;
   discountAmount: string;
   description: string;
+  editingInvoiceId?: string | null;
+  draftSnapshot?: Partial<PosTab> | null;
 }

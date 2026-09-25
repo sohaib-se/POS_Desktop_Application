@@ -1,4 +1,4 @@
-import { ChevronDown, FileText, AlertCircle, Plus, ArrowUpRight, ArrowDownRight } from "lucide-react";
+import { ChevronDown, FileText, AlertCircle, Plus, ArrowUpRight, ArrowDownRight, ArrowLeft, ArrowRight } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { useSettings } from "@/hooks/useSettings";
 import type { PosTab, PartyOption, BankOption } from "./types";
@@ -15,6 +15,13 @@ interface RightPanelProps {
   handleSaveSale: () => void;
   filteredCustomers: PartyOption[];
   onAddParty?: () => void;
+  canNavigatePrev?: boolean;
+  canNavigateNext?: boolean;
+  onNavigatePrev?: () => void;
+  onNavigateNext?: () => void;
+  prevInvoiceNo?: string | null;
+  nextInvoiceNo?: string | null;
+  isEditing?: boolean;
 }
 
 export function RightPanel({
@@ -29,6 +36,13 @@ export function RightPanel({
   handleSaveSale,
   filteredCustomers,
   onAddParty,
+  canNavigatePrev = false,
+  canNavigateNext = false,
+  onNavigatePrev,
+  onNavigateNext,
+  prevInvoiceNo,
+  nextInvoiceNo,
+  isEditing = false,
 }: RightPanelProps) {
   const [currency] = useSettings('settings.businessCurrency', { code: 'PKR', symbol: 'Rs' });
   const [currencyDisplay] = useSettings<'abbreviation' | 'icon'>('settings.currencyDisplay', 'abbreviation');
@@ -282,9 +296,31 @@ export function RightPanel({
           disabled={isSaving || receivedLessThanTotal}
           className="w-full rounded border border-green-400/60 bg-green-200/50 py-3.5 text-sm font-bold text-green-800 hover:bg-green-300/50 transition-colors shadow-sm disabled:opacity-50"
         >
-          {isSaving ? "Saving..." : "Complete Sale"}{" "}
+          {isSaving ? "Saving..." : (isEditing ? "Update Sale" : "Complete Sale")}{" "}
           <span className="font-normal text-green-700 ml-1">[Ctrl+P]</span>
         </button>
+
+        {/* Two big arrows below complete sale button */}
+        <div className="grid grid-cols-2 gap-2 mt-2.5">
+          <button
+            type="button"
+            onClick={onNavigatePrev}
+            disabled={!canNavigatePrev}
+            title={canNavigatePrev ? (prevInvoiceNo ? `Go to Sale #${prevInvoiceNo}` : "Previous Sale") : "No previous sales"}
+            className="flex items-center justify-center py-3 px-4 rounded-lg border border-gray-300 bg-gray-50 text-gray-700 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-400 active:scale-[0.98] transition-all shadow-sm disabled:opacity-30 disabled:pointer-events-none cursor-pointer"
+          >
+            <ArrowLeft className="w-6 h-6 stroke-[2.5]" />
+          </button>
+          <button
+            type="button"
+            onClick={onNavigateNext}
+            disabled={!canNavigateNext}
+            title={canNavigateNext ? (nextInvoiceNo ? `Go to Sale #${nextInvoiceNo}` : "Next Sale") : "At latest sale"}
+            className="flex items-center justify-center py-3 px-4 rounded-lg border border-gray-300 bg-gray-50 text-gray-700 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-400 active:scale-[0.98] transition-all shadow-sm disabled:opacity-30 disabled:pointer-events-none cursor-pointer"
+          >
+            <ArrowRight className="w-6 h-6 stroke-[2.5]" />
+          </button>
+        </div>
       </div>
     </div>
   );

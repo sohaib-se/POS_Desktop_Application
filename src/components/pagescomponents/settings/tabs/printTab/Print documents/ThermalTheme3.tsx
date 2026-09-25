@@ -28,6 +28,7 @@ interface ThermalTheme3Props {
     discountPercent?: number;
     paymentMode?: string;
     previousBalance?: number;
+    documentTitle?: string;
 }
 
 /* ─────────────────────── Dummy preview data ────────────────────────── */
@@ -66,6 +67,7 @@ export function ThermalSaleInvoiceImpact({
     discountPercent,
     paymentMode,
     previousBalance,
+    documentTitle = "Invoice",
 }: ThermalTheme3Props) {
     const [currency] = useSettings("settings.businessCurrency", { code: "PKR", symbol: "Rs" });
     const [currencyDisplay] = useSettings<"abbreviation" | "icon">(
@@ -137,7 +139,7 @@ export function ThermalSaleInvoiceImpact({
             {rule("=")}
 
             {/* ── META ── */}
-            <div style={row}><span>RECEIPT #</span><span>{invoiceNo}</span></div>
+            <div style={row}><span>{documentTitle && documentTitle !== "Invoice" ? `${documentTitle.toUpperCase()} #` : "RECEIPT #"}</span><span>{invoiceNo}</span></div>
             <div style={row}><span>DATE</span><span>{formatDate(invoiceDate)}</span></div>
             <div style={row}><span>CUSTOMER</span><span>{customerName}</span></div>
             {customerPhone && <div style={row}><span>PHONE</span><span>{customerPhone}</span></div>}

@@ -752,6 +752,7 @@ export function AddSale({ onSave, onClose, initialInvoice, isConversion }: AddSa
         discountPercent: Number(activeTab.discountPercent || 0),
         taxPercent: parseTaxRate(activeTab.tax) * 100,
         description: activeTab.description,
+        documentTitle: "Invoice",
       };
 
       updateTab({

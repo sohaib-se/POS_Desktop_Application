@@ -1,4 +1,4 @@
-import { Search, Pencil, Trash2, Download } from "lucide-react";
+import { Search, Pencil, Trash2, Download, Printer } from "lucide-react";
 import type { PurchaseBillViewRow } from "./types";
 
 interface PurchaseBillContextMenuProps {
@@ -10,6 +10,7 @@ interface PurchaseBillContextMenuProps {
   setOpenRowMenuPosition: (pos: { left: number; top: number } | null) => void;
   onEditInvoice: (invoice: PurchaseBillViewRow) => void;
   handleDeleteInvoice: (invoice: PurchaseBillViewRow) => void;
+  onPrintInvoice: (invoice: PurchaseBillViewRow) => void;
 }
 
 export function PurchaseBillContextMenu({
@@ -20,7 +21,8 @@ export function PurchaseBillContextMenu({
   setOpenRowMenuId,
   setOpenRowMenuPosition,
   onEditInvoice,
-  handleDeleteInvoice
+  handleDeleteInvoice,
+  onPrintInvoice,
 }: PurchaseBillContextMenuProps) {
   if (!openRowMenuId || !openRowMenuPosition) return null;
 
@@ -95,6 +97,17 @@ export function PurchaseBillContextMenu({
           Download Attachments
         </button>
       )}
+      <button
+        className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-gray-50"
+        onClick={() => {
+          onPrintInvoice(targetInvoice);
+          setOpenRowMenuId(null);
+          setOpenRowMenuPosition(null);
+        }}
+      >
+        <Printer className="w-4 h-4 text-gray-500" />
+        Print
+      </button>
       <button
         className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50"
         onClick={() => handleDeleteInvoice(targetInvoice)}

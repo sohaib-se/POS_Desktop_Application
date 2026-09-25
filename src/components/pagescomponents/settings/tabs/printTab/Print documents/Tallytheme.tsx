@@ -30,6 +30,7 @@ interface SaleInvoicePrintReportProps {
   discountPercent?: number;
   taxPercent?: number;
   description?: string;
+  documentTitle?: string;
 }
 
 /* ─────────────────────── Dummy preview data ────────────────────────── */
@@ -113,6 +114,7 @@ export function SaleInvoicePrintReport({
   discountPercent = 0,
   taxPercent = 0,
   description,
+  documentTitle = "Invoice",
 }: SaleInvoicePrintReportProps) {
   const [currency] = useSettings("settings.businessCurrency", { code: "PKR", symbol: "Rs" });
   const [currencyDisplay] = useSettings<"abbreviation" | "icon">("settings.currencyDisplay", "abbreviation");
@@ -150,7 +152,7 @@ export function SaleInvoicePrintReport({
     <div style={{ background: "#fff", color: "#000", fontFamily: "Inter, system-ui, sans-serif", width: "100%", maxWidth: 794, margin: "0 auto", padding: "24px 40px", boxSizing: "border-box" }}>
       {/* Title */}
       <div style={{ textAlign: "center", marginBottom: 16 }}>
-        <h1 style={{ fontSize: 28, fontWeight: 700, color: HEADER_COLOR, margin: 0 }}>Invoice</h1>
+        <h1 style={{ fontSize: 28, fontWeight: 700, color: HEADER_COLOR, margin: 0 }}>{documentTitle}</h1>
       </div>
 
       {/* Company / Bill To / Invoice Details */}

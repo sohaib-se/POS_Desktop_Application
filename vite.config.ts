@@ -1098,12 +1098,14 @@ function sqliteApiPlugin() {
 
           if (req.method === 'GET') {
             const records = repository.getPaymentInRecords();
-            const mapped = records.map((r: any) => ({
-              ...r,
-              receiptNo: r.receipt_no,
-              partyName: r.party_name,
-              paymentType: r.payment_type
-            }));
+            const mapped = records
+              .filter((r: any) => r.payment_type !== 'Receivable Opening Balance')
+              .map((r: any) => ({
+                ...r,
+                receiptNo: r.receipt_no,
+                partyName: r.party_name,
+                paymentType: r.payment_type
+              }));
             res.statusCode = 200;
             res.setHeader('Content-Type', 'application/json');
             res.end(JSON.stringify(mapped));
@@ -1365,12 +1367,14 @@ function sqliteApiPlugin() {
 
           if (req.method === 'GET') {
             const records = repository.getPaymentOutRecordsReal();
-            const mapped = records.map((r: any) => ({
-              ...r,
-              paymentNo: r.payment_no,
-              partyName: r.party_name,
-              paymentType: r.payment_type
-            }));
+            const mapped = records
+              .filter((r: any) => r.payment_type !== 'Payable Opening Balance')
+              .map((r: any) => ({
+                ...r,
+                paymentNo: r.payment_no,
+                partyName: r.party_name,
+                paymentType: r.payment_type
+              }));
             res.statusCode = 200;
             res.setHeader('Content-Type', 'application/json');
             res.end(JSON.stringify(mapped));
@@ -4213,17 +4217,40 @@ function sqliteApiPlugin() {
             const fromTransactions = repository.getCashTransactionsFromTransactions();
             const allMerged = [...cashInHand, ...fromTransactions];
             const uniqueMap = new Map();
-            allMerged.forEach(tx => uniqueMap.set(tx.id, tx));
-            const merged = Array.from(uniqueMap.values()).sort((a, b) => {
+            allMerged.forEach((tx: any) => uniqueMap.set(tx.id, tx));
+            const merged: any[] = Array.from(uniqueMap.values()).sort((a: any, b: any) => {
               const dateA = new Date(a.created_at).getTime();
               const dateB = new Date(b.created_at).getTime();
               return dateB - dateA; // Descending
             });
+
+            // Cash In types: Sales, transfers from bank to cash, add cash, received payments
+            const CASH_IN_TYPES = new Set([
+              'sale', 'pos sale', 'payment in', 'increase cash',
+            ]);
+            // Cash Out types: expenses, purchases, transfers from cash to bank, reduce cash, outgoing payments
+            const CASH_OUT_TYPES = new Set([
+              'expense', 'purchase bill', 'pos purchase',
+              'payment out', 'decrease cash',
+            ]);
+
+            let totalCash = 0;
+            for (const tx of merged) {
+              const t = String(tx.type ?? '').toLowerCase().trim();
+              const amt = Math.abs(Number(tx.amount) || 0);
+              if (CASH_IN_TYPES.has(t)) {
+                totalCash += amt;
+              } else if (CASH_OUT_TYPES.has(t)) {
+                totalCash -= amt;
+              }
+            }
+
             res.statusCode = 200;
             res.setHeader('Content-Type', 'application/json');
-            res.end(JSON.stringify(merged));
+            res.end(JSON.stringify({ transactions: merged, totalCash }));
             return;
           }
+
 
           if (req.method === 'POST') {
             const chunks: Buffer[] = [];
@@ -4296,6 +4323,88 @@ function sqliteApiPlugin() {
               res.setHeader('Content-Type', 'application/json');
               res.end(JSON.stringify({ message: 'Transaction id is required.' }));
               return;
+            }
+
+            // If this is a linked expense cash transaction (format: cash_expense_{expenseId}),
+            // also delete the associated expense record and its attachments to keep both tables in sync.
+            if (id.startsWith('cash_expense_')) {
+              const expenseId = id.slice('cash_expense_'.length);
+              const existingExpenseRecord = repository.getExpenseRecordById(expenseId);
+              if (existingExpenseRecord) {
+                repository.deleteExpenseRecord(expenseId);
+                try {
+                  if (existingExpenseRecord.attachment_image_path) {
+                    removeManagedExpenseAttachmentFile(existingExpenseRecord.attachment_image_path);
+                  }
+                  if (existingExpenseRecord.attachment_document_path) {
+                    removeManagedExpenseAttachmentFile(existingExpenseRecord.attachment_document_path);
+                  }
+                } catch (attachmentError) {
+                  console.error('Failed to remove expense attachments on cash transaction delete:', attachmentError);
+                }
+              }
+            }
+
+            // If this is a linked purchase bill cash transaction (format: cash_purchase_{purchaseBillId}),
+            // also delete the associated purchase bill (restore stock, party balance, attachments) to keep both tables in sync.
+            if (id.startsWith('cash_purchase_')) {
+              const purchaseBillId = id.slice('cash_purchase_'.length);
+              const existingPurchaseBill = repository.getPurchaseBillById(purchaseBillId);
+              if (existingPurchaseBill) {
+                // Restore stock (undo FIFO purchase additions)
+                try {
+                  const lineItems = JSON.parse(existingPurchaseBill.line_items_json || '[]');
+                  const allItems = repository.getItems();
+                  for (let i = 0; i < lineItems.length; i++) {
+                    const lineItem = lineItems[i];
+                    if (!lineItem.itemId || !lineItem.quantity) continue;
+                    const dbItem = allItems.find((itm: any) => String(itm.id) === String(lineItem.itemId));
+                    if (!dbItem) continue;
+                    const isSecondary = lineItem.unit === dbItem.secondary_unit;
+                    const lineItemId = lineItem.id || `line_${i}`;
+                    repository.removePurchaseStock(
+                      lineItem.itemId,
+                      Number(lineItem.quantity),
+                      isSecondary,
+                      dbItem.conversion_rate,
+                      lineItem.price ?? 0,
+                      purchaseBillId,
+                      lineItemId
+                    );
+                  }
+                } catch (stockError) {
+                  console.error('Failed to restore purchase stock on cash transaction delete:', stockError);
+                }
+
+                // Revert party balance
+                if (existingPurchaseBill.party_id) {
+                  try {
+                    const allParties = repository.getParties();
+                    const party = allParties.find((p: any) => String(p.id) === String(existingPurchaseBill.party_id));
+                    if (party) {
+                      party.balance = Number(party.balance || 0) + Number(existingPurchaseBill.balance || 0);
+                      repository.upsertParty(party);
+                    }
+                  } catch (balanceError) {
+                    console.error('Failed to restore party balance on cash transaction delete:', balanceError);
+                  }
+                }
+
+                // Remove purchase bill attachments
+                try {
+                  if (existingPurchaseBill.attachment_image_path) {
+                    removeManagedPurchaseAttachmentFile(existingPurchaseBill.attachment_image_path);
+                  }
+                  if (existingPurchaseBill.attachment_document_path) {
+                    removeManagedPurchaseAttachmentFile(existingPurchaseBill.attachment_document_path);
+                  }
+                } catch (attachmentError) {
+                  console.error('Failed to remove purchase attachments on cash transaction delete:', attachmentError);
+                }
+
+                // Delete the purchase bill record itself
+                repository.deletePurchaseBill(purchaseBillId);
+              }
             }
 
             // If this is a linked POS sale cash transaction (format: {invoiceId}_cash_pos),

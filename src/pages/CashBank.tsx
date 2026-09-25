@@ -19,6 +19,7 @@ export function CashBank({ subView }: CashBankProps) {
   const [, setShowAddBank] = useState(false);
   const [showAdjustCash, setShowAdjustCash] = useState(false);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [totalCash, setTotalCash] = useState(0);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; transaction: Transaction } | null>(null);
   const [detailsTransaction, setDetailsTransaction] = useState<Transaction | null>(null);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
@@ -29,7 +30,9 @@ export function CashBank({ subView }: CashBankProps) {
       const res = await fetch("/api/cash_transactions");
       if (res.ok) {
         const data = await res.json();
-        setTransactions(data);
+        // Backend returns { transactions, totalCash }
+        setTransactions(data.transactions ?? data);
+        setTotalCash(typeof data.totalCash === 'number' ? data.totalCash : 0);
       }
     } catch (e) {
       console.error("Failed to load cash transactions", e);
@@ -42,17 +45,35 @@ export function CashBank({ subView }: CashBankProps) {
     }
   }, [subView]);
 
+  // Re-fetch cash transactions whenever an expense record is added/deleted from the Expenses page,
+  // so Cash In Hand stays in sync without a manual page refresh.
+  useEffect(() => {
+    const handleExpensesRefresh = () => {
+      if (subView === "cash-in-hand") {
+        fetchTransactions();
+      }
+    };
+    window.addEventListener("expenses-refresh", handleExpensesRefresh);
+    return () => window.removeEventListener("expenses-refresh", handleExpensesRefresh);
+  }, [subView]);
+
+  // Re-fetch cash transactions whenever a purchase bill is added/deleted from the Purchase Bills page,
+  // so Cash In Hand stays in sync without a manual page refresh.
+  useEffect(() => {
+    const handlePurchaseRefresh = () => {
+      if (subView === "cash-in-hand") {
+        fetchTransactions();
+      }
+    };
+    window.addEventListener("purchase-bills-refresh", handlePurchaseRefresh);
+    return () => window.removeEventListener("purchase-bills-refresh", handlePurchaseRefresh);
+  }, [subView]);
+
   useEffect(() => {
     const closeMenu = () => setContextMenu(null);
     window.addEventListener("click", closeMenu);
     return () => window.removeEventListener("click", closeMenu);
   }, []);
-
-  const totalCash = transactions.reduce((acc, tx) => {
-    const type = String(tx.type).toLowerCase();
-    const isCashIn = type.includes("in") || type === "sale" || type.includes("add") || type.includes("increase") || type === "pos sale";
-    return isCashIn ? acc + Number(tx.amount) : acc - Number(tx.amount);
-  }, 0);
 
   const handleDelete = async (id: string) => {
     setIsDeleting(true);
@@ -60,6 +81,14 @@ export function CashBank({ subView }: CashBankProps) {
       const res = await fetch(`/api/cash_transactions?id=${id}`, { method: "DELETE" });
       if (res.ok) {
         fetchTransactions();
+        // If we deleted a linked cash expense, notify the Expenses page to re-fetch its records too.
+        if (id.startsWith('cash_expense_')) {
+          window.dispatchEvent(new CustomEvent('expenses-refresh'));
+        }
+        // If we deleted a linked cash purchase, notify the Purchase Bills page to re-fetch its records too.
+        if (id.startsWith('cash_purchase_')) {
+          window.dispatchEvent(new CustomEvent('purchase-bills-refresh'));
+        }
       } else {
         alert("Cannot delete a system transaction here. Delete the original invoice instead.");
       }

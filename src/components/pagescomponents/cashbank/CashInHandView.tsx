@@ -138,13 +138,13 @@ export function CashInHandView({
   return (
     <div className="h-full flex flex-col bg-[#D0DCE7] gap-1">
       {/* Header */}
-      <div className="bg-white shadow-sm px-6 py-3 flex items-center justify-between mx-1 mt-1 rounded-md">
-        <div className="flex items-center gap-3">
-          <h2 className="text-base font-semibold text-gray-900">
+      <div className="bg-white shadow-sm px-6 h-[72px] flex items-center justify-between mx-1 mt-1 rounded-md">
+        <div className="flex items-center gap-8">
+          <h2 className="text-xl font-bold text-gray-900 tracking-tight uppercase">
             Cash In Hand
           </h2>
-          <span className="text-base font-bold text-green-600">
-            {currencyStr} {totalCash.toLocaleString()}
+          <span className={`text-xl font-bold tracking-tight ${totalCash >= 0 ? 'text-green-600' : 'text-red-500'}`}>
+            {totalCash < 0 ? '−' : ''}{currencyStr} {Math.abs(totalCash).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </span>
         </div>
         <button
@@ -155,6 +155,7 @@ export function CashInHandView({
           Adjust Cash
         </button>
       </div>
+
 
       {/* Transactions */}
       <div className="flex-1 overflow-auto mx-1 mb-1">
@@ -267,7 +268,7 @@ export function CashInHandView({
                         : "text-red-500"
                         }`}
                     >
-                      {currencyStr} {tx.amount}
+                      {currencyStr} {Math.abs(Number(tx.amount)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </td>
                     <td className="px-4 py-3 relative">
                       <button

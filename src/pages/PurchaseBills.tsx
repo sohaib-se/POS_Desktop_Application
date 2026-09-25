@@ -221,6 +221,8 @@ export function PurchaseBills({ onBack }: PurchaseBillsProps = {}) {
       }
 
       setInvoiceRows((previousRows) => previousRows.filter((row) => row.id !== invoice.id));
+      // Notify Cash In Hand page to re-fetch — the linked cash_purchase_ transaction was also deleted server-side.
+      window.dispatchEvent(new CustomEvent('purchase-bills-refresh'));
       setStatusMessage("Purchase bill deleted successfully.");
       setDeleteModalState({isOpen: false, invoice: null});
     } catch (error) {

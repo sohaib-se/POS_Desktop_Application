@@ -10,6 +10,11 @@ import { Modals } from "../components/pagescomponents/laimsoftpos/Modals";
 import { ConfirmActionModal } from "@/components/common/ConfirmActionModal";
 import { useSettings } from "@/hooks/useSettings";
 import { AddPartyDialog } from "../components/pagescomponents/parties/AddPartyDialog";
+import {
+  type SalePrintData,
+  useCompanyInfo,
+  InvoiceThemeContent,
+} from "../components/pagescomponents/settings/tabs/PrintTab";
 
 interface LaimsoftPosProps {
   onClose?: () => void;
@@ -212,6 +217,9 @@ export function LaimsoftPos({ onClose, initialInvoice }: LaimsoftPosProps) {
   const suppressDropdownRef = useRef(false);
   const lastScanRef = useRef<{ code: string; time: number } | null>(null);
 
+  const companyInfo = useCompanyInfo();
+  const [directPrintSale, setDirectPrintSale] = useState<SalePrintData | null>(null);
+
   useEffect(() => {
     return () => {
       if (scanTimerRef.current) {
@@ -226,6 +234,77 @@ export function LaimsoftPos({ onClose, initialInvoice }: LaimsoftPosProps) {
       clearTimeout(scanTimerRef.current);
     }
   }, [activeTabId]);
+
+  useEffect(() => {
+    if (!directPrintSale) return;
+
+    const activePrinter = (localStorage.getItem("print_activePrinter") as "regular" | "thermal") || "regular";
+    const isThermal = activePrinter === "thermal";
+
+    const timer = setTimeout(() => {
+      const invoiceEl = document.querySelector("#pos-direct-print-container .pos-print-content") as HTMLElement | null;
+      if (!invoiceEl) {
+        window.print();
+        setDirectPrintSale(null);
+        return;
+      }
+
+      const printContainer = document.createElement("div");
+      printContainer.id = "__pos_invoice_print_only__";
+      const clone = invoiceEl.cloneNode(true) as HTMLElement;
+      clone.style.zoom = "1";
+      clone.style.transform = "none";
+      clone.style.transformOrigin = "unset";
+      clone.style.width = isThermal ? "380px" : "900px";
+      printContainer.appendChild(clone);
+      document.body.appendChild(printContainer);
+
+      const styleEl = document.createElement("style");
+      styleEl.id = "__pos_invoice_print_style__";
+      styleEl.textContent = `
+        @media print {
+          @page {
+            size: auto;
+            margin: ${isThermal ? "2mm" : "10mm"};
+          }
+          body > *:not(#__pos_invoice_print_only__) {
+            display: none !important;
+          }
+          #__pos_invoice_print_only__ {
+            display: block !important;
+            visibility: visible !important;
+            position: static !important;
+            margin: 0 auto !important;
+            padding: 0 !important;
+            background: #fff !important;
+            width: ${isThermal ? "380px" : "900px"} !important;
+            box-sizing: border-box !important;
+          }
+          #__pos_invoice_print_only__ * {
+            visibility: visible !important;
+          }
+        }
+      `;
+      document.head.appendChild(styleEl);
+
+      const cleanup = () => {
+        if (document.body.contains(printContainer)) {
+          document.body.removeChild(printContainer);
+        }
+        if (document.head.contains(styleEl)) {
+          document.head.removeChild(styleEl);
+        }
+        window.removeEventListener("afterprint", cleanup);
+        setDirectPrintSale(null);
+      };
+
+      window.addEventListener("afterprint", cleanup);
+      window.print();
+      setTimeout(cleanup, 3000);
+    }, 60);
+
+    return () => clearTimeout(timer);
+  }, [directPrintSale]);
 
   const activeTab = useMemo(
     () => tabs.find((t) => t.id === activeTabId) || tabs[0],
@@ -1095,8 +1174,30 @@ export function LaimsoftPos({ onClose, initialInvoice }: LaimsoftPosProps) {
 
       const savedInvoice = (await response.json()) as { invoiceNo?: string; id?: string };
 
+      const saleDataForPrint: SalePrintData = {
+        records: validRows.map((r) => ({
+          id: r.id,
+          itemName: r.itemName,
+          quantity: Number(r.qty) || 1,
+          unit: r.unit === "NONE" ? "" : r.unit,
+          pricePerUnit: Number(r.pricePerUnit) || 0,
+          amount: (Number(r.qty) || 1) * (Number(r.pricePerUnit) || 0),
+        })),
+        invoiceNo: String(savedInvoice.invoiceNo || activeTab.invoiceNo),
+        invoiceDate: activeTab.date,
+        customerName: selectedParty ? selectedParty.name : (activeTab.customerSearchText || "Cash Sale"),
+        customerContact: selectedParty?.phone || "",
+        customerPhone: selectedParty?.phone || "",
+        received: receivedAmt,
+        paymentMode: activeTab.paymentMode || "Cash",
+        previousBalance: selectedParty?.balance || 0,
+        discount: Number(activeTab.discountAmount) || 0,
+        discountPercent: Number(activeTab.discountPercent) || 0,
+        description: activeTab.description || "POS Sale",
+        documentTitle: "Invoice",
+      };
+
       if (isEditing && currentEditingId) {
-        showToast(`Sale #${activeTab.invoiceNo} updated successfully!`, "success");
         window.dispatchEvent(
           new CustomEvent("sale-invoices-refresh", {
             detail: { message: `Sale #${activeTab.invoiceNo} updated successfully.` },
@@ -1124,6 +1225,7 @@ export function LaimsoftPos({ onClose, initialInvoice }: LaimsoftPosProps) {
               : s
           )
         );
+        setDirectPrintSale(saleDataForPrint);
         return;
       }
 
@@ -1133,7 +1235,6 @@ export function LaimsoftPos({ onClose, initialInvoice }: LaimsoftPosProps) {
 
       setNextInvoiceNo(nextInvNo);
 
-      showToast(`Sale #${activeTab.invoiceNo} completed successfully!`, "success");
       window.dispatchEvent(
         new CustomEvent("sale-invoices-refresh", {
           detail: { message: `Sale #${activeTab.invoiceNo} completed successfully.` },
@@ -1201,6 +1302,8 @@ export function LaimsoftPos({ onClose, initialInvoice }: LaimsoftPosProps) {
         setActiveTabId(updated[updated.length - 1].id);
         return updated;
       });
+
+      setDirectPrintSale(saleDataForPrint);
     } catch (error) {
       console.error(error);
       showToast("Failed to save sale. Please try again.", "error");
@@ -1362,6 +1465,36 @@ export function LaimsoftPos({ onClose, initialInvoice }: LaimsoftPosProps) {
         showCreditLimitError={showCreditLimitError}
         setShowCreditLimitError={setShowCreditLimitError}
       />
+
+      {/* Hidden print container for direct POS printing without preview */}
+      {directPrintSale && (
+        <div
+          id="pos-direct-print-container"
+          aria-hidden="true"
+          style={{
+            position: "fixed",
+            left: "-9999px",
+            top: "-9999px",
+            width: ((localStorage.getItem("print_activePrinter") || "regular") === "thermal") ? "380px" : "900px",
+            opacity: 0,
+            pointerEvents: "none",
+            zIndex: -1,
+          }}
+        >
+          <div className="pos-print-content">
+            <InvoiceThemeContent
+              saleData={directPrintSale}
+              activePrinter={((localStorage.getItem("print_activePrinter") as any) || "regular")}
+              selectedThemeId={
+                localStorage.getItem("print_selectedThemeId") ||
+                (((localStorage.getItem("print_activePrinter") || "regular") === "thermal") ? "thermal1" : "tally")
+              }
+              selectedColor={localStorage.getItem("print_selectedColor") || "#a78bfa"}
+              companyInfo={companyInfo}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

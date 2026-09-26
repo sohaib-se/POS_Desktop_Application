@@ -296,7 +296,7 @@ export function RightPanel({
           disabled={isSaving || receivedLessThanTotal}
           className="w-full rounded border border-green-400/60 bg-green-200/50 py-3.5 text-sm font-bold text-green-800 hover:bg-green-300/50 transition-colors shadow-sm disabled:opacity-50"
         >
-          {isSaving ? "Saving..." : (isEditing ? "Update Sale" : "Complete Sale")}{" "}
+          {isSaving ? "Saving..." : (isEditing ? "Print & Update" : "Print & Save")}{" "}
           <span className="font-normal text-green-700 ml-1">[Ctrl+P]</span>
         </button>
 

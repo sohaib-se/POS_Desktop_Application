@@ -207,6 +207,25 @@ export function LaimsoftPos({ onClose, initialInvoice }: LaimsoftPosProps) {
   };
 
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const [isScanSuccess, setIsScanSuccess] = useState(false);
+  const scanTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const suppressDropdownRef = useRef(false);
+  const lastScanRef = useRef<{ code: string; time: number } | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (scanTimerRef.current) {
+        clearTimeout(scanTimerRef.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    setIsScanSuccess(false);
+    if (scanTimerRef.current) {
+      clearTimeout(scanTimerRef.current);
+    }
+  }, [activeTabId]);
 
   const activeTab = useMemo(
     () => tabs.find((t) => t.id === activeTabId) || tabs[0],
@@ -748,17 +767,44 @@ export function LaimsoftPos({ onClose, initialInvoice }: LaimsoftPosProps) {
       .slice(0, 50);
   }, [items, activeTab.searchQuery]);
 
+  const handleSearchFocus = () => {
+    if (suppressDropdownRef.current) {
+      suppressDropdownRef.current = false;
+      setSearchFocused(false);
+      return;
+    }
+    setSearchFocused(true);
+  };
+
   const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
-      const currentValue = (e.target as HTMLInputElement).value;
+      const currentValue = (e.target as HTMLInputElement).value.trim();
       if (currentValue) {
+        // If this exact code was scanned and added within the last 250ms (scanner burst), ignore the trailing Enter
+        if (
+          lastScanRef.current &&
+          lastScanRef.current.code === currentValue.toLowerCase() &&
+          Date.now() - lastScanRef.current.time < 250
+        ) {
+          e.preventDefault();
+          return;
+        }
+
         const exactMatch = items.find(
-          (item) => item.code && item.code.toLowerCase() === currentValue.toLowerCase()
+          (item) => item.code && item.code.trim().toLowerCase() === currentValue.toLowerCase()
         );
 
         if (exactMatch) {
           e.preventDefault();
+          lastScanRef.current = { code: exactMatch.code?.trim().toLowerCase() || "", time: Date.now() };
           handleSelectItem(exactMatch);
+          return;
+        } else if (filteredItems.length === 0) {
+          e.preventDefault();
+          showToast(`Item with barcode "${currentValue}" not found`, "error");
+          if (searchInputRef.current) {
+            searchInputRef.current.select();
+          }
           return;
         }
       }
@@ -784,13 +830,18 @@ export function LaimsoftPos({ onClose, initialInvoice }: LaimsoftPosProps) {
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
+    setIsScanSuccess(false);
+    if (scanTimerRef.current) {
+      clearTimeout(scanTimerRef.current);
+    }
 
     if (value) {
       const exactMatch = items.find(
-        (item) => item.code && item.code.toLowerCase() === value.toLowerCase()
+        (item) => item.code && item.code.trim().toLowerCase() === value.trim().toLowerCase()
       );
 
       if (exactMatch) {
+        lastScanRef.current = { code: exactMatch.code?.trim().toLowerCase() || "", time: Date.now() };
         handleSelectItem(exactMatch);
         return;
       }
@@ -832,6 +883,8 @@ export function LaimsoftPos({ onClose, initialInvoice }: LaimsoftPosProps) {
 
   const handleSelectItem = (item: ItemOption) => {
     const existingRowIndex = activeTab.rows.findIndex((r) => r.itemId === item.id);
+    const barcode = item.code || "";
+    const currentTabId = activeTabId;
 
     if (existingRowIndex >= 0) {
       const nextRows = [...activeTab.rows];
@@ -839,7 +892,7 @@ export function LaimsoftPos({ onClose, initialInvoice }: LaimsoftPosProps) {
         Number(nextRows[existingRowIndex].qty) + 1
       );
       nextRows[existingRowIndex] = getCalculatedRow(nextRows[existingRowIndex]);
-      updateTab({ rows: nextRows, searchQuery: "" });
+      updateTab({ rows: nextRows, searchQuery: barcode });
     } else {
       let newRow: PosRow = {
         id: globalRowId++,
@@ -851,11 +904,39 @@ export function LaimsoftPos({ onClose, initialInvoice }: LaimsoftPosProps) {
         pricePerUnit: String(item.sale_price || 0),
       };
       newRow = getCalculatedRow(newRow);
-      updateTab({ rows: [...activeTab.rows, newRow], searchQuery: "" });
+      updateTab({ rows: [...activeTab.rows, newRow], searchQuery: barcode });
     }
 
+    suppressDropdownRef.current = true;
     setSearchFocused(false);
-    if (searchInputRef.current) searchInputRef.current.focus();
+    setIsScanSuccess(true);
+
+    if (scanTimerRef.current) {
+      clearTimeout(scanTimerRef.current);
+    }
+
+    // Display barcode and green background for 300 milliseconds, then reset input box for new scan
+    scanTimerRef.current = setTimeout(() => {
+      setIsScanSuccess(false);
+      setTabs((prev) =>
+        prev.map((t) => (t.id === currentTabId ? { ...t, searchQuery: "" } : t))
+      );
+      if (searchInputRef.current) {
+        searchInputRef.current.focus();
+      }
+    }, 300);
+
+    if (searchInputRef.current) {
+      searchInputRef.current.value = barcode;
+      searchInputRef.current.focus();
+      searchInputRef.current.select();
+    }
+    setTimeout(() => {
+      if (searchInputRef.current) {
+        searchInputRef.current.focus();
+        searchInputRef.current.select();
+      }
+    }, 30);
   };
 
   const updateRow = (id: number, field: keyof PosRow, value: string) => {
@@ -1181,6 +1262,8 @@ export function LaimsoftPos({ onClose, initialInvoice }: LaimsoftPosProps) {
             setSearchFocused={setSearchFocused}
             setSearchSelectedIndex={setSearchSelectedIndex}
             handleSelectItem={handleSelectItem}
+            isScanSuccess={isScanSuccess}
+            onSearchFocus={handleSearchFocus}
           />
 
           <PosTable

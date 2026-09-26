@@ -52,6 +52,7 @@ export interface PrintTabProps {
   onSave?: () => void;
   onCancel?: () => void;
   hasUnsavedChanges?: boolean;
+  autoPrint?: boolean;
 }
 
 export function useCompanyInfo() {
@@ -310,7 +311,7 @@ export function InvoiceThemeContent({
 
 /* ─────────────────────────── Main component ─────────────────────────── */
 
-export function PrintTab({ isPreviewMode = false, saleData = null, onClose }: PrintTabProps) {
+export function PrintTab({ isPreviewMode = false, saleData = null, onClose, autoPrint = false }: PrintTabProps) {
   const companyInfo = useCompanyInfo();
   const [activePrinter, setActivePrinter] = useState<PrinterType>(() =>
     (localStorage.getItem("print_activePrinter") as PrinterType) || "regular"
@@ -588,7 +589,7 @@ export function PrintTab({ isPreviewMode = false, saleData = null, onClose }: Pr
         }
       `}</style>
 
-      <div className={`print-tab-modal ${isPreviewMode ? "embedded-preview" : ""}`}>
+      <div className={`print-tab-modal ${isPreviewMode ? "embedded-preview" : ""}`} style={autoPrint ? { opacity: 0, pointerEvents: "none" } : {}}>
         {/* ── Top bar ── */}
         <div className="print-tab-top-bar" style={{
           display: "flex",
@@ -638,6 +639,7 @@ export function PrintTab({ isPreviewMode = false, saleData = null, onClose }: Pr
               <PrintPreviewRightPanel
                 onClose={handleClose}
                 invoiceNo={saleData?.invoiceNo}
+                autoPrint={autoPrint}
               />
             ) : (
               <RightPanel

@@ -211,6 +211,7 @@ export function AddSale({ onSave, onClose, initialInvoice, isConversion }: AddSa
   });
   const [stopSaleOnNegativeStock] = useSettings('settings.stopSaleOnNegativeStock', false);
   const [isBarcodeScanEnabled] = useSettings('settings.isBarcodeScanEnabled', false);
+  const [isDoNotShowInvoicePreviewEnabled] = useSettings('settings.isDoNotShowInvoicePreviewEnabled', false);
   const imageInputRef = useRef<HTMLInputElement | null>(null);
   const documentInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -977,16 +978,27 @@ export function AddSale({ onSave, onClose, initialInvoice, isConversion }: AddSa
         } : undefined}
       />
 
-      {activeTab?.showPreview && activeTab.savedSaleForPreview ? (
+      {activeTab?.showPreview && activeTab.savedSaleForPreview && !isDoNotShowInvoicePreviewEnabled ? (
         <div style={{ flex: 1, position: "relative", minHeight: 0 }}>
           <PrintTab
             isPreviewMode={true}
             saleData={activeTab.savedSaleForPreview}
             onClose={() => handleCloseTabPreview(activeTab.id)}
+            autoPrint={false}
           />
         </div>
       ) : (
         <>
+          {activeTab?.showPreview && activeTab.savedSaleForPreview && isDoNotShowInvoicePreviewEnabled && (
+            <div style={{ position: "absolute", opacity: 0, pointerEvents: "none" }}>
+              <PrintTab
+                isPreviewMode={true}
+                saleData={activeTab.savedSaleForPreview}
+                onClose={() => handleCloseTabPreview(activeTab.id)}
+                autoPrint={true}
+              />
+            </div>
+          )}
           <AddSaleTopBar
             activeTab={activeTab}
             updateTab={updateTab}

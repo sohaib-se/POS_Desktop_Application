@@ -17,6 +17,7 @@ import { AddPartyDialog } from "@/components/pagescomponents/parties/AddPartyDia
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { toast } from "@/components/ui/Toast";
 import { PrintTab, type SalePrintData } from "@/components/pagescomponents/settings/tabs/PrintTab";
+import { useSettings } from "@/hooks/useSettings";
 
 interface AddPurchaseProps {
   onSave?: () => void;
@@ -133,6 +134,7 @@ export function AddPurchase({ onSave, onShare, onClose, initialInvoice }: AddPur
   const [nextInvoiceNo, setNextInvoiceNo] = useState("1");
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
+  const [isDoNotShowInvoicePreviewEnabled] = useSettings('settings.isDoNotShowInvoicePreviewEnabled', false);
   const imageInputRef = useRef<HTMLInputElement | null>(null);
   const documentInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -798,16 +800,27 @@ export function AddPurchase({ onSave, onShare, onClose, initialInvoice }: AddPur
           displayedInvoiceNo={displayedInvoiceNo}
         />
 
-        {activeTab?.showPreview && activeTab.savedPurchaseForPreview ? (
+        {activeTab?.showPreview && activeTab.savedPurchaseForPreview && !isDoNotShowInvoicePreviewEnabled ? (
           <div style={{ flex: 1, position: "relative", minHeight: 0 }}>
             <PrintTab
               isPreviewMode={true}
               saleData={activeTab.savedPurchaseForPreview}
               onClose={() => handleCloseTabPreview(activeTab.id)}
+              autoPrint={false}
             />
           </div>
         ) : (
           <>
+            {activeTab?.showPreview && activeTab.savedPurchaseForPreview && isDoNotShowInvoicePreviewEnabled && (
+              <div style={{ position: "absolute", opacity: 0, pointerEvents: "none" }}>
+                <PrintTab
+                  isPreviewMode={true}
+                  saleData={activeTab.savedPurchaseForPreview}
+                  onClose={() => handleCloseTabPreview(activeTab.id)}
+                  autoPrint={true}
+                />
+              </div>
+            )}
             <PurchaseTopBar />
 
             <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: 0 }}>

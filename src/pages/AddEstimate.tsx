@@ -10,6 +10,7 @@ import { AddPartyDialog } from "../components/pagescomponents/parties/AddPartyDi
 import { ConfirmDialog } from "../components/ui/ConfirmDialog";
 import { toast } from "../components/ui/Toast";
 import { PrintTab, type SalePrintData } from "@/components/pagescomponents/settings/tabs/PrintTab";
+import { useSettings } from "@/hooks/useSettings";
 
 interface AddEstimateProps {
   onSave?: () => void;
@@ -79,6 +80,7 @@ export function AddEstimate({ onSave, onShare, onClose, initialEstimate }: AddEs
     balanceType: "to-receive" as "to-pay" | "to-receive",
     creditLimit: "no-limit" as "no-limit" | "custom", creditLimitAmount: "",
   });
+  const [isDoNotShowInvoicePreviewEnabled] = useSettings('settings.isDoNotShowInvoicePreviewEnabled', false);
 
   const resetPartyForm = () => {
     setPartyForm({
@@ -568,16 +570,27 @@ export function AddEstimate({ onSave, onShare, onClose, initialEstimate }: AddEs
         onClose={handleCloseRequest}
       />
 
-      {activeTab?.showPreview && activeTab.savedEstimateForPreview ? (
+      {activeTab?.showPreview && activeTab.savedEstimateForPreview && !isDoNotShowInvoicePreviewEnabled ? (
         <div style={{ flex: 1, position: "relative", minHeight: 0 }}>
           <PrintTab
             isPreviewMode={true}
             saleData={activeTab.savedEstimateForPreview}
             onClose={() => handleCloseTabPreview(activeTab.id)}
+            autoPrint={false}
           />
         </div>
       ) : (
         <>
+          {activeTab?.showPreview && activeTab.savedEstimateForPreview && isDoNotShowInvoicePreviewEnabled && (
+            <div style={{ position: "absolute", opacity: 0, pointerEvents: "none" }}>
+              <PrintTab
+                isPreviewMode={true}
+                saleData={activeTab.savedEstimateForPreview}
+                onClose={() => handleCloseTabPreview(activeTab.id)}
+                autoPrint={true}
+              />
+            </div>
+          )}
           <TopBar />
 
           <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: 0 }}>

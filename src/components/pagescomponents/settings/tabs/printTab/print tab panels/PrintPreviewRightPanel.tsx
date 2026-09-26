@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Download, Check, Printer } from "lucide-react";
 import html2pdf from "html2pdf.js";
 
@@ -56,6 +56,7 @@ export interface PrintPreviewRightPanelProps {
   onPrint?: () => void;
   /** Invoice number shown in the filename */
   invoiceNo?: string | number;
+  autoPrint?: boolean;
 }
 
 /* ───────────────────────── Component ───────────────────────────────── */
@@ -64,6 +65,7 @@ export function PrintPreviewRightPanel({
   onClose,
   onPrint,
   invoiceNo,
+  autoPrint,
 }: PrintPreviewRightPanelProps) {
   const [isPdfBusy, setIsPdfBusy] = useState(false);
   const [pdfStatus, setPdfStatus] = useState<"idle" | "generating" | "ready">("idle");
@@ -167,6 +169,16 @@ export function PrintPreviewRightPanel({
     // Safety fallback — cleanup if afterprint never fires
     setTimeout(cleanup, 3000);
   };
+
+  useEffect(() => {
+    if (autoPrint) {
+      const timer = setTimeout(() => {
+        handlePrint();
+        if (onClose) onClose();
+      }, 500); // 500ms delay to ensure the DOM is fully rendered for html2pdf/print
+      return () => clearTimeout(timer);
+    }
+  }, [autoPrint]);
 
   /* ── Status label ─────────────────────────────────────────────────── */
   const statusLabel =

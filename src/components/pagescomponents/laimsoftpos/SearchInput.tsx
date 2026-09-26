@@ -1,6 +1,6 @@
 import type React from "react";
 import { useSettings } from "@/hooks/useSettings";
-import { Search } from "lucide-react";
+import { Search, Check } from "lucide-react";
 import type { PosTab, ItemOption } from "./types";
 
 interface SearchInputProps {
@@ -14,6 +14,8 @@ interface SearchInputProps {
   setSearchFocused: (focused: boolean) => void;
   setSearchSelectedIndex: (index: number) => void;
   handleSelectItem: (item: ItemOption) => void;
+  isScanSuccess?: boolean;
+  onSearchFocus?: () => void;
 }
 
 export function SearchInput({
@@ -27,6 +29,8 @@ export function SearchInput({
   setSearchFocused,
   setSearchSelectedIndex,
   handleSelectItem,
+  isScanSuccess = false,
+  onSearchFocus,
 }: SearchInputProps) {
   const [currency] = useSettings('settings.businessCurrency', { code: 'PKR', symbol: 'Rs' });
   const [currencyDisplay] = useSettings<'abbreviation' | 'icon'>('settings.currencyDisplay', 'abbreviation');
@@ -41,15 +45,35 @@ export function SearchInput({
           value={activeTab.searchQuery}
           onChange={handleSearchChange}
           onKeyDown={handleSearchKeyDown}
-          onFocus={() => setSearchFocused(true)}
-          onClick={(e) => e.stopPropagation()}
+          onFocus={() => {
+            if (onSearchFocus) {
+              onSearchFocus();
+            } else {
+              setSearchFocused(true);
+            }
+          }}
+          onClick={(e) => {
+            e.stopPropagation();
+            if (!isScanSuccess) {
+              setSearchFocused(true);
+            }
+          }}
           placeholder="Scan or search by item code, model no or item name"
-          className="w-full rounded border border-blue-400 pl-3 pr-10 py-2 text-sm text-gray-700 outline-none ring-1 ring-blue-400/20"
+          className={`w-full rounded border pl-3 pr-10 py-2 text-sm outline-none transition-all duration-200 ${
+            isScanSuccess
+              ? "bg-green-100 border-green-500 ring-2 ring-green-400/50 text-green-900 font-medium"
+              : "bg-white border-blue-400 ring-1 ring-blue-400/20 text-gray-700 focus:ring-2 focus:ring-blue-400/30"
+          }`}
           autoFocus
         />
-        <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-blue-500 pointer-events-none" />
+        {isScanSuccess ? (
+          <Check className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-green-600 pointer-events-none transition-all duration-200 animate-in fade-in" />
+        ) : (
+          <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-blue-500 pointer-events-none" />
+        )}
 
-        {searchFocused &&
+        {!isScanSuccess &&
+          searchFocused &&
           activeTab.searchQuery &&
           filteredItems.length > 0 && (
             <div className="absolute z-50 mt-1 w-full bg-white border border-gray-300 rounded shadow-lg max-h-60 overflow-y-auto">

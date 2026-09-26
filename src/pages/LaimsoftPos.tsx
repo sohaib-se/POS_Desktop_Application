@@ -10,10 +10,34 @@ import { Modals } from "../components/pagescomponents/laimsoftpos/Modals";
 import { ConfirmActionModal } from "@/components/common/ConfirmActionModal";
 import { useSettings } from "@/hooks/useSettings";
 import { AddPartyDialog } from "../components/pagescomponents/parties/AddPartyDialog";
+import {
+  type SalePrintData,
+  useCompanyInfo,
+  InvoiceThemeContent,
+} from "../components/pagescomponents/settings/tabs/PrintTab";
 
 interface LaimsoftPosProps {
   onClose?: () => void;
   initialInvoice?: SaleInvoiceEditData | null;
+}
+
+export interface SavedSaleRecord {
+  id: string;
+  invoiceNo: string;
+  date: string;
+  partyName: string;
+  partyId?: string | null;
+  partyPhone?: string | null;
+  paymentMode?: string | null;
+  paymentType?: string | null;
+  subtotal: number;
+  discountPercent: number;
+  discountAmount: number;
+  amount: number;
+  balance: number;
+  description?: string | null;
+  lineItemsJson?: string | null;
+  createdAt?: string;
 }
 
 let globalRowId = 1;
@@ -36,6 +60,8 @@ function createEmptyTab(invoiceNo: string): PosTab {
     discountPercent: "",
     discountAmount: "",
     description: "",
+    editingInvoiceId: null,
+    draftSnapshot: null,
   };
 }
 
@@ -43,13 +69,12 @@ export function LaimsoftPos({ onClose, initialInvoice }: LaimsoftPosProps) {
   const [parties, setParties] = useState<PartyOption[]>([]);
   const [items, setItems] = useState<ItemOption[]>([]);
   const [banks, setBanks] = useState<BankOption[]>([]);
+  const [savedSales, setSavedSales] = useState<SavedSaleRecord[]>([]);
   const [nextInvoiceNo, setNextInvoiceNo] = useState("1");
   const [isSaving, setIsSaving] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
   const [alertState, setAlertState] = useState<{ isOpen: boolean; title: string; message: string }>({ isOpen: false, title: "", message: "" });
   const [confirmCloseState, setConfirmCloseState] = useState<{ isOpen: boolean; type: 'tab' | 'all'; tabId?: number }>({ isOpen: false, type: 'tab' });
-  // When editing an existing POS invoice, store its ID so we can PUT instead of POST
-  const editingInvoiceId = initialInvoice?.id ?? null;
   const initialInvoiceLoadedRef = useRef(false);
 
   const showToast = useCallback((message: string, type: "success" | "error" = "success") => {
@@ -187,6 +212,99 @@ export function LaimsoftPos({ onClose, initialInvoice }: LaimsoftPosProps) {
   };
 
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const [isScanSuccess, setIsScanSuccess] = useState(false);
+  const scanTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const suppressDropdownRef = useRef(false);
+  const lastScanRef = useRef<{ code: string; time: number } | null>(null);
+
+  const companyInfo = useCompanyInfo();
+  const [directPrintSale, setDirectPrintSale] = useState<SalePrintData | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (scanTimerRef.current) {
+        clearTimeout(scanTimerRef.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    setIsScanSuccess(false);
+    if (scanTimerRef.current) {
+      clearTimeout(scanTimerRef.current);
+    }
+  }, [activeTabId]);
+
+  useEffect(() => {
+    if (!directPrintSale) return;
+
+    const activePrinter = (localStorage.getItem("print_activePrinter") as "regular" | "thermal") || "regular";
+    const isThermal = activePrinter === "thermal";
+
+    const timer = setTimeout(() => {
+      const invoiceEl = document.querySelector("#pos-direct-print-container .pos-print-content") as HTMLElement | null;
+      if (!invoiceEl) {
+        window.print();
+        setDirectPrintSale(null);
+        return;
+      }
+
+      const printContainer = document.createElement("div");
+      printContainer.id = "__pos_invoice_print_only__";
+      const clone = invoiceEl.cloneNode(true) as HTMLElement;
+      clone.style.zoom = "1";
+      clone.style.transform = "none";
+      clone.style.transformOrigin = "unset";
+      clone.style.width = isThermal ? "380px" : "900px";
+      printContainer.appendChild(clone);
+      document.body.appendChild(printContainer);
+
+      const styleEl = document.createElement("style");
+      styleEl.id = "__pos_invoice_print_style__";
+      styleEl.textContent = `
+        @media print {
+          @page {
+            size: auto;
+            margin: ${isThermal ? "2mm" : "10mm"};
+          }
+          body > *:not(#__pos_invoice_print_only__) {
+            display: none !important;
+          }
+          #__pos_invoice_print_only__ {
+            display: block !important;
+            visibility: visible !important;
+            position: static !important;
+            margin: 0 auto !important;
+            padding: 0 !important;
+            background: #fff !important;
+            width: ${isThermal ? "380px" : "900px"} !important;
+            box-sizing: border-box !important;
+          }
+          #__pos_invoice_print_only__ * {
+            visibility: visible !important;
+          }
+        }
+      `;
+      document.head.appendChild(styleEl);
+
+      const cleanup = () => {
+        if (document.body.contains(printContainer)) {
+          document.body.removeChild(printContainer);
+        }
+        if (document.head.contains(styleEl)) {
+          document.head.removeChild(styleEl);
+        }
+        window.removeEventListener("afterprint", cleanup);
+        setDirectPrintSale(null);
+      };
+
+      window.addEventListener("afterprint", cleanup);
+      window.print();
+      setTimeout(cleanup, 3000);
+    }, 60);
+
+    return () => clearTimeout(timer);
+  }, [directPrintSale]);
 
   const activeTab = useMemo(
     () => tabs.find((t) => t.id === activeTabId) || tabs[0],
@@ -220,9 +338,7 @@ export function LaimsoftPos({ onClose, initialInvoice }: LaimsoftPosProps) {
 
         const loadedParties = (await partiesResponse.json()) as PartyOption[];
         const loadedItems = (await itemsResponse.json()) as ItemOption[];
-        const saleInvoices = (await saleInvoicesResponse.json()) as Array<{
-          invoice_no?: string | null;
-        }>;
+        const saleInvoices = (await saleInvoicesResponse.json()) as any[];
         const loadedBanks = (await banksResponse.json()) as BankOption[];
 
         if (cancelled) return;
@@ -231,9 +347,38 @@ export function LaimsoftPos({ onClose, initialInvoice }: LaimsoftPosProps) {
         setItems(loadedItems);
         setBanks(loadedBanks);
 
+        const loadedSales: SavedSaleRecord[] = saleInvoices.map((inv: any) => ({
+          id: String(inv.id),
+          invoiceNo: String(inv.invoice_no ?? inv.invoiceNo ?? ""),
+          date: inv.date || new Date().toISOString().split("T")[0],
+          partyName: inv.party_name ?? inv.partyName ?? "Cash Sale",
+          partyId: inv.party_id ?? inv.partyId ?? null,
+          partyPhone: inv.party_phone ?? inv.partyPhone ?? null,
+          paymentMode: inv.payment_mode ?? inv.paymentMode ?? "Cash",
+          paymentType: inv.payment_type ?? inv.paymentType ?? "Cash",
+          subtotal: Number(inv.subtotal ?? 0),
+          discountPercent: Number(inv.discount_percent ?? inv.discountPercent ?? 0),
+          discountAmount: Number(inv.discount_amount ?? inv.discountAmount ?? 0),
+          amount: Number(inv.amount ?? 0),
+          balance: Number(inv.balance ?? 0),
+          description: inv.description ?? "",
+          lineItemsJson: inv.line_items_json ?? inv.lineItemsJson ?? null,
+          createdAt: inv.created_at ?? inv.createdAt ?? "",
+        }));
+
+        loadedSales.sort((a, b) => {
+          const numA = Number(a.invoiceNo);
+          const numB = Number(b.invoiceNo);
+          if (Number.isFinite(numA) && Number.isFinite(numB)) return numA - numB;
+          if (a.createdAt && b.createdAt) return a.createdAt.localeCompare(b.createdAt);
+          return a.invoiceNo.localeCompare(b.invoiceNo, undefined, { numeric: true });
+        });
+
+        setSavedSales(loadedSales);
+
         const nextNo = String(
           saleInvoices.reduce((highest, invoice) => {
-            const invNo = Number(invoice.invoice_no ?? 0);
+            const invNo = Number(invoice.invoice_no ?? invoice.invoiceNo ?? 0);
             return Number.isFinite(invNo) && invNo > highest ? invNo : highest;
           }, 0) + 1
         );
@@ -321,6 +466,8 @@ export function LaimsoftPos({ onClose, initialInvoice }: LaimsoftPosProps) {
         discountPercent: discountPercent > 0 ? String(discountPercent) : "",
         discountAmount: discountAmount > 0 ? String(discountAmount) : "",
         description: initialInvoice.description ?? "",
+        editingInvoiceId: initialInvoice.id,
+        draftSnapshot: null,
       },
       ...prev.slice(1),
     ]);
@@ -368,6 +515,12 @@ export function LaimsoftPos({ onClose, initialInvoice }: LaimsoftPosProps) {
       } else if (e.ctrlKey && e.key.toLowerCase() === "p") {
         e.preventDefault();
         handleSaveSale();
+      } else if (e.ctrlKey && e.key === "ArrowLeft") {
+        e.preventDefault();
+        handleNavigatePrevSale();
+      } else if (e.ctrlKey && e.key === "ArrowRight") {
+        e.preventDefault();
+        handleNavigateNextSale();
       } else if (e.key === "F11") {
         e.preventDefault();
         const customerInput = document.getElementById("customer-search-input");
@@ -436,6 +589,203 @@ export function LaimsoftPos({ onClose, initialInvoice }: LaimsoftPosProps) {
   const receivedLessThanTotal =
     isCashSale && (Number(effectiveAmountReceived) || 0) < totalAmount;
 
+  const populateTabFromSale = useCallback(
+    (sale: SavedSaleRecord, currentTab: PosTab): PosTab => {
+      let parsedRows: PosRow[] = [];
+      if (sale.lineItemsJson) {
+        try {
+          const lineItems = JSON.parse(sale.lineItemsJson) as Array<any>;
+          parsedRows = lineItems.map((li: any) => {
+            const matchedItem = items.find(
+              (it) => String(it.id) === String(li.itemId ?? li.item_id) || it.name === (li.name ?? li.itemName)
+            );
+            return {
+              id: globalRowId++,
+              itemId: matchedItem ? String(matchedItem.id) : String(li.itemId ?? li.item_id ?? ""),
+              itemCode: matchedItem?.code ?? li.itemCode ?? li.code ?? "",
+              itemName: li.name ?? li.itemName ?? matchedItem?.name ?? "",
+              qty: String(li.quantity ?? li.qty ?? 1),
+              unit: li.unit ?? matchedItem?.primary_unit ?? matchedItem?.unit ?? "NONE",
+              pricePerUnit: String(li.price ?? li.pricePerUnit ?? 0),
+            };
+          });
+        } catch {
+          parsedRows = [];
+        }
+      }
+
+      const matchedParty = parties.find(
+        (p) => (sale.partyId && String(p.id) === String(sale.partyId)) || p.name === sale.partyName
+      ) ?? null;
+
+      const totalAmount = parsedRows.reduce(
+        (sum, r) => sum + (Number(r.qty) || 0) * (Number(r.pricePerUnit) || 0),
+        0
+      );
+      const discountAmount = Number(sale.discountAmount ?? 0);
+      const discountPercent = Number(sale.discountPercent ?? 0);
+      const computedTotal = totalAmount - discountAmount;
+
+      let amountReceived = "0.00";
+      if (sale.partyName === "Cash Sale" || !matchedParty || Number(sale.balance || 0) === 0) {
+        amountReceived = (Number(sale.amount) || computedTotal).toFixed(2);
+      } else {
+        amountReceived = Math.max(0, (Number(sale.amount) || computedTotal) - Number(sale.balance || 0)).toFixed(2);
+      }
+
+      let paymentMode = sale.paymentMode || sale.paymentType || "Cash";
+      if (paymentMode.toLowerCase() === "cash" || paymentMode.toLowerCase() === "credit") {
+        paymentMode = "Cash";
+      } else {
+        const bankMatch = banks.find((b) => b.name.toLowerCase() === paymentMode.toLowerCase());
+        if (bankMatch) paymentMode = bankMatch.name;
+      }
+
+      return {
+        ...currentTab,
+        invoiceNo: sale.invoiceNo,
+        date: sale.date,
+        rows: parsedRows,
+        paymentMode,
+        amountReceived,
+        isAmountReceivedDirty: true,
+        customerSelectedId: matchedParty ? matchedParty.id : null,
+        customerSearchText: matchedParty ? matchedParty.name : (sale.partyName || "Cash Sale"),
+        searchQuery: "",
+        selectedRowId: null,
+        discountPercent: discountPercent > 0 ? String(discountPercent) : "",
+        discountAmount: discountAmount > 0 ? String(discountAmount) : "",
+        description: sale.description ?? "",
+        editingInvoiceId: sale.id,
+      };
+    },
+    [banks, items, parties]
+  );
+
+  const currentIndex = useMemo(() => {
+    if (!activeTab.editingInvoiceId) {
+      return savedSales.length;
+    }
+    const idx = savedSales.findIndex((s) => String(s.id) === String(activeTab.editingInvoiceId));
+    if (idx !== -1) return idx;
+    const noIdx = savedSales.findIndex((s) => String(s.invoiceNo) === String(activeTab.invoiceNo));
+    return noIdx !== -1 ? noIdx : savedSales.length;
+  }, [activeTab.editingInvoiceId, activeTab.invoiceNo, savedSales]);
+
+  const canNavigatePrev = currentIndex > 0 && savedSales.length > 0;
+  const canNavigateNext = currentIndex < savedSales.length;
+
+  const prevInvoiceNo = canNavigatePrev ? savedSales[currentIndex - 1]?.invoiceNo : null;
+  const nextInvoiceNoDisplay = canNavigateNext
+    ? (currentIndex + 1 >= savedSales.length
+        ? (activeTab.draftSnapshot?.invoiceNo || nextInvoiceNo)
+        : savedSales[currentIndex + 1]?.invoiceNo)
+    : null;
+
+  const handleNavigatePrevSale = () => {
+    if (currentIndex <= 0 || savedSales.length === 0) return;
+
+    const targetIndex = currentIndex - 1;
+    const targetSale = savedSales[targetIndex];
+    if (!targetSale) return;
+
+    setTabs((prevTabs) =>
+      prevTabs.map((t) => {
+        if (t.id !== activeTabId) return t;
+
+        const draftSnapshot = !t.editingInvoiceId
+          ? {
+              invoiceNo: t.invoiceNo,
+              date: t.date,
+              rows: t.rows,
+              paymentMode: t.paymentMode,
+              amountReceived: t.amountReceived,
+              isAmountReceivedDirty: t.isAmountReceivedDirty,
+              customerSelectedId: t.customerSelectedId,
+              customerSearchText: t.customerSearchText,
+              discountPercent: t.discountPercent,
+              discountAmount: t.discountAmount,
+              description: t.description,
+            }
+          : t.draftSnapshot;
+
+        const updatedTab = populateTabFromSale(targetSale, t);
+        return {
+          ...updatedTab,
+          draftSnapshot,
+        };
+      })
+    );
+  };
+
+  const handleNavigateNextSale = () => {
+    if (currentIndex >= savedSales.length) return;
+
+    const targetIndex = currentIndex + 1;
+
+    setTabs((prevTabs) =>
+      prevTabs.map((t) => {
+        if (t.id !== activeTabId) return t;
+
+        if (targetIndex >= savedSales.length) {
+          const isCashSaleByDefault = JSON.parse(
+            localStorage.getItem("settings.isCashSaleByDefault") || "false"
+          );
+          if (t.draftSnapshot) {
+            const snapshot = t.draftSnapshot;
+            return {
+              ...t,
+              invoiceNo: snapshot.invoiceNo || nextInvoiceNo,
+              date: snapshot.date || new Date().toISOString().split("T")[0],
+              rows: snapshot.rows || [],
+              paymentMode: snapshot.paymentMode || "Cash",
+              amountReceived: snapshot.amountReceived || "0.00",
+              isAmountReceivedDirty: Boolean(snapshot.isAmountReceivedDirty),
+              customerSelectedId: snapshot.customerSelectedId ?? null,
+              customerSearchText:
+                snapshot.customerSearchText ?? (isCashSaleByDefault ? "Cash Sale" : ""),
+              searchQuery: "",
+              selectedRowId: null,
+              discountPercent: snapshot.discountPercent || "",
+              discountAmount: snapshot.discountAmount || "",
+              description: snapshot.description || "",
+              editingInvoiceId: null,
+              draftSnapshot: snapshot,
+            };
+          } else {
+            return {
+              ...t,
+              invoiceNo: nextInvoiceNo,
+              date: new Date().toISOString().split("T")[0],
+              rows: [],
+              paymentMode: "Cash",
+              amountReceived: "0.00",
+              isAmountReceivedDirty: false,
+              customerSelectedId: null,
+              customerSearchText: isCashSaleByDefault ? "Cash Sale" : "",
+              searchQuery: "",
+              selectedRowId: null,
+              discountPercent: "",
+              discountAmount: "",
+              description: "",
+              editingInvoiceId: null,
+              draftSnapshot: null,
+            };
+          }
+        }
+
+        const targetSale = savedSales[targetIndex];
+        if (!targetSale) return t;
+
+        const updatedTab = populateTabFromSale(targetSale, t);
+        return {
+          ...updatedTab,
+          draftSnapshot: t.draftSnapshot,
+        };
+      })
+    );
+  };
+
   const handleNewBill = () => {
     const newTab = createEmptyTab(nextInvoiceNo);
     setTabs((prev) => [...prev, newTab]);
@@ -496,17 +846,44 @@ export function LaimsoftPos({ onClose, initialInvoice }: LaimsoftPosProps) {
       .slice(0, 50);
   }, [items, activeTab.searchQuery]);
 
+  const handleSearchFocus = () => {
+    if (suppressDropdownRef.current) {
+      suppressDropdownRef.current = false;
+      setSearchFocused(false);
+      return;
+    }
+    setSearchFocused(true);
+  };
+
   const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
-      const currentValue = (e.target as HTMLInputElement).value;
+      const currentValue = (e.target as HTMLInputElement).value.trim();
       if (currentValue) {
+        // If this exact code was scanned and added within the last 250ms (scanner burst), ignore the trailing Enter
+        if (
+          lastScanRef.current &&
+          lastScanRef.current.code === currentValue.toLowerCase() &&
+          Date.now() - lastScanRef.current.time < 250
+        ) {
+          e.preventDefault();
+          return;
+        }
+
         const exactMatch = items.find(
-          (item) => item.code && item.code.toLowerCase() === currentValue.toLowerCase()
+          (item) => item.code && item.code.trim().toLowerCase() === currentValue.toLowerCase()
         );
 
         if (exactMatch) {
           e.preventDefault();
+          lastScanRef.current = { code: exactMatch.code?.trim().toLowerCase() || "", time: Date.now() };
           handleSelectItem(exactMatch);
+          return;
+        } else if (filteredItems.length === 0) {
+          e.preventDefault();
+          showToast(`Item with barcode "${currentValue}" not found`, "error");
+          if (searchInputRef.current) {
+            searchInputRef.current.select();
+          }
           return;
         }
       }
@@ -532,13 +909,18 @@ export function LaimsoftPos({ onClose, initialInvoice }: LaimsoftPosProps) {
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
+    setIsScanSuccess(false);
+    if (scanTimerRef.current) {
+      clearTimeout(scanTimerRef.current);
+    }
 
     if (value) {
       const exactMatch = items.find(
-        (item) => item.code && item.code.toLowerCase() === value.toLowerCase()
+        (item) => item.code && item.code.trim().toLowerCase() === value.trim().toLowerCase()
       );
 
       if (exactMatch) {
+        lastScanRef.current = { code: exactMatch.code?.trim().toLowerCase() || "", time: Date.now() };
         handleSelectItem(exactMatch);
         return;
       }
@@ -580,6 +962,8 @@ export function LaimsoftPos({ onClose, initialInvoice }: LaimsoftPosProps) {
 
   const handleSelectItem = (item: ItemOption) => {
     const existingRowIndex = activeTab.rows.findIndex((r) => r.itemId === item.id);
+    const barcode = item.code || "";
+    const currentTabId = activeTabId;
 
     if (existingRowIndex >= 0) {
       const nextRows = [...activeTab.rows];
@@ -587,7 +971,7 @@ export function LaimsoftPos({ onClose, initialInvoice }: LaimsoftPosProps) {
         Number(nextRows[existingRowIndex].qty) + 1
       );
       nextRows[existingRowIndex] = getCalculatedRow(nextRows[existingRowIndex]);
-      updateTab({ rows: nextRows, searchQuery: "" });
+      updateTab({ rows: nextRows, searchQuery: barcode });
     } else {
       let newRow: PosRow = {
         id: globalRowId++,
@@ -599,11 +983,39 @@ export function LaimsoftPos({ onClose, initialInvoice }: LaimsoftPosProps) {
         pricePerUnit: String(item.sale_price || 0),
       };
       newRow = getCalculatedRow(newRow);
-      updateTab({ rows: [...activeTab.rows, newRow], searchQuery: "" });
+      updateTab({ rows: [...activeTab.rows, newRow], searchQuery: barcode });
     }
 
+    suppressDropdownRef.current = true;
     setSearchFocused(false);
-    if (searchInputRef.current) searchInputRef.current.focus();
+    setIsScanSuccess(true);
+
+    if (scanTimerRef.current) {
+      clearTimeout(scanTimerRef.current);
+    }
+
+    // Display barcode and green background for 300 milliseconds, then reset input box for new scan
+    scanTimerRef.current = setTimeout(() => {
+      setIsScanSuccess(false);
+      setTabs((prev) =>
+        prev.map((t) => (t.id === currentTabId ? { ...t, searchQuery: "" } : t))
+      );
+      if (searchInputRef.current) {
+        searchInputRef.current.focus();
+      }
+    }, 300);
+
+    if (searchInputRef.current) {
+      searchInputRef.current.value = barcode;
+      searchInputRef.current.focus();
+      searchInputRef.current.select();
+    }
+    setTimeout(() => {
+      if (searchInputRef.current) {
+        searchInputRef.current.focus();
+        searchInputRef.current.select();
+      }
+    }, 30);
   };
 
   const updateRow = (id: number, field: keyof PosRow, value: string) => {
@@ -747,9 +1159,10 @@ export function LaimsoftPos({ onClose, initialInvoice }: LaimsoftPosProps) {
     };
 
     try {
-      const isEditing = !!editingInvoiceId;
-      const url = isEditing ? `/api/sale_invoices/${editingInvoiceId}` : "/api/sale_invoices";
-      const method = isEditing ? "PUT" : "POST";
+      const isEditing = Boolean(activeTab.editingInvoiceId);
+      const currentEditingId = activeTab.editingInvoiceId;
+      const url = isEditing && currentEditingId ? `/api/sale_invoices/${currentEditingId}` : "/api/sale_invoices";
+      const method = isEditing && currentEditingId ? "PUT" : "POST";
 
       const response = await fetch(url, {
         method,
@@ -761,14 +1174,58 @@ export function LaimsoftPos({ onClose, initialInvoice }: LaimsoftPosProps) {
 
       const savedInvoice = (await response.json()) as { invoiceNo?: string; id?: string };
 
-      if (isEditing) {
-        // After successful update, close the POS (go back to sale invoices)
-        showToast(`Sale #${activeTab.invoiceNo} updated successfully!`, "success");
-        // Refresh the sale invoices list if visible
-        window.dispatchEvent(new CustomEvent("sale-invoices-refresh", { detail: { message: `Sale #${activeTab.invoiceNo} updated successfully.` } }));
-        setTimeout(() => {
-          if (onClose) onClose();
-        }, 1000);
+      const saleDataForPrint: SalePrintData = {
+        records: validRows.map((r) => ({
+          id: r.id,
+          itemName: r.itemName,
+          quantity: Number(r.qty) || 1,
+          unit: r.unit === "NONE" ? "" : r.unit,
+          pricePerUnit: Number(r.pricePerUnit) || 0,
+          amount: (Number(r.qty) || 1) * (Number(r.pricePerUnit) || 0),
+        })),
+        invoiceNo: String(savedInvoice.invoiceNo || activeTab.invoiceNo),
+        invoiceDate: activeTab.date,
+        customerName: selectedParty ? selectedParty.name : (activeTab.customerSearchText || "Cash Sale"),
+        customerContact: selectedParty?.phone || "",
+        customerPhone: selectedParty?.phone || "",
+        received: receivedAmt,
+        paymentMode: activeTab.paymentMode || "Cash",
+        previousBalance: selectedParty?.balance || 0,
+        discount: Number(activeTab.discountAmount) || 0,
+        discountPercent: Number(activeTab.discountPercent) || 0,
+        description: activeTab.description || "POS Sale",
+        documentTitle: "Invoice",
+      };
+
+      if (isEditing && currentEditingId) {
+        window.dispatchEvent(
+          new CustomEvent("sale-invoices-refresh", {
+            detail: { message: `Sale #${activeTab.invoiceNo} updated successfully.` },
+          })
+        );
+
+        setSavedSales((prev) =>
+          prev.map((s) =>
+            s.id === currentEditingId
+              ? {
+                  ...s,
+                  partyName: payload.partyName,
+                  partyId: payload.partyId,
+                  partyPhone: payload.partyPhone,
+                  paymentMode: payload.paymentMode,
+                  paymentType: payload.paymentType,
+                  subtotal: payload.subtotal,
+                  discountPercent: payload.discountPercent,
+                  discountAmount: payload.discountAmount,
+                  amount: payload.amount,
+                  balance: payload.balance,
+                  description: payload.description,
+                  lineItemsJson: JSON.stringify(payload.lineItems),
+                }
+              : s
+          )
+        );
+        setDirectPrintSale(saleDataForPrint);
         return;
       }
 
@@ -778,9 +1235,44 @@ export function LaimsoftPos({ onClose, initialInvoice }: LaimsoftPosProps) {
 
       setNextInvoiceNo(nextInvNo);
 
-      showToast(`Sale #${activeTab.invoiceNo} completed successfully!`, "success");
+      window.dispatchEvent(
+        new CustomEvent("sale-invoices-refresh", {
+          detail: { message: `Sale #${activeTab.invoiceNo} completed successfully.` },
+        })
+      );
 
-      // Close the saved tab and update remaining tabs, or reset if it is the last tab
+      const newlySavedSale: SavedSaleRecord = {
+        id: String(savedInvoice.id || Date.now()),
+        invoiceNo: String(savedInvoice.invoiceNo || activeTab.invoiceNo),
+        date: activeTab.date,
+        partyName: payload.partyName,
+        partyId: payload.partyId,
+        partyPhone: payload.partyPhone,
+        paymentMode: payload.paymentMode,
+        paymentType: payload.paymentType,
+        subtotal: payload.subtotal,
+        discountPercent: payload.discountPercent,
+        discountAmount: payload.discountAmount,
+        amount: payload.amount,
+        balance: payload.balance,
+        description: payload.description,
+        lineItemsJson: JSON.stringify(payload.lineItems),
+        createdAt: new Date().toISOString(),
+      };
+
+      setSavedSales((prev) => {
+        const nextList = [...prev, newlySavedSale];
+        nextList.sort((a, b) => {
+          const numA = Number(a.invoiceNo);
+          const numB = Number(b.invoiceNo);
+          if (Number.isFinite(numA) && Number.isFinite(numB)) return numA - numB;
+          if (a.createdAt && b.createdAt) return a.createdAt.localeCompare(b.createdAt);
+          return a.invoiceNo.localeCompare(b.invoiceNo, undefined, { numeric: true });
+        });
+        return nextList;
+      });
+
+      // Reset active tab for next sale
       const isCashSaleByDefault = JSON.parse(localStorage.getItem('settings.isCashSaleByDefault') || 'false');
       
       setTabs(prev => {
@@ -793,13 +1285,16 @@ export function LaimsoftPos({ onClose, initialInvoice }: LaimsoftPosProps) {
             customerSelectedId: null,
             customerSearchText: isCashSaleByDefault ? "Cash Sale" : "",
             rows: [],
-            amountReceived: "",
+            amountReceived: "0.00",
             isAmountReceivedDirty: false,
             paymentMode: "Cash",
             discountPercent: "",
             discountAmount: "",
+            description: "",
             searchQuery: "",
             selectedRowId: null,
+            editingInvoiceId: null,
+            draftSnapshot: null,
           }];
         }
 
@@ -807,6 +1302,8 @@ export function LaimsoftPos({ onClose, initialInvoice }: LaimsoftPosProps) {
         setActiveTabId(updated[updated.length - 1].id);
         return updated;
       });
+
+      setDirectPrintSale(saleDataForPrint);
     } catch (error) {
       console.error(error);
       showToast("Failed to save sale. Please try again.", "error");
@@ -868,6 +1365,8 @@ export function LaimsoftPos({ onClose, initialInvoice }: LaimsoftPosProps) {
             setSearchFocused={setSearchFocused}
             setSearchSelectedIndex={setSearchSelectedIndex}
             handleSelectItem={handleSelectItem}
+            isScanSuccess={isScanSuccess}
+            onSearchFocus={handleSearchFocus}
           />
 
           <PosTable
@@ -895,6 +1394,13 @@ export function LaimsoftPos({ onClose, initialInvoice }: LaimsoftPosProps) {
           handleSaveSale={handleSaveSale}
           filteredCustomers={filteredCustomers}
           onAddParty={() => setShowAddParty(true)}
+          canNavigatePrev={canNavigatePrev}
+          canNavigateNext={canNavigateNext}
+          onNavigatePrev={handleNavigatePrevSale}
+          onNavigateNext={handleNavigateNextSale}
+          prevInvoiceNo={prevInvoiceNo}
+          nextInvoiceNo={nextInvoiceNoDisplay}
+          isEditing={Boolean(activeTab.editingInvoiceId)}
         />
       </div>
 
@@ -959,6 +1465,36 @@ export function LaimsoftPos({ onClose, initialInvoice }: LaimsoftPosProps) {
         showCreditLimitError={showCreditLimitError}
         setShowCreditLimitError={setShowCreditLimitError}
       />
+
+      {/* Hidden print container for direct POS printing without preview */}
+      {directPrintSale && (
+        <div
+          id="pos-direct-print-container"
+          aria-hidden="true"
+          style={{
+            position: "fixed",
+            left: "-9999px",
+            top: "-9999px",
+            width: ((localStorage.getItem("print_activePrinter") || "regular") === "thermal") ? "380px" : "900px",
+            opacity: 0,
+            pointerEvents: "none",
+            zIndex: -1,
+          }}
+        >
+          <div className="pos-print-content">
+            <InvoiceThemeContent
+              saleData={directPrintSale}
+              activePrinter={((localStorage.getItem("print_activePrinter") as any) || "regular")}
+              selectedThemeId={
+                localStorage.getItem("print_selectedThemeId") ||
+                (((localStorage.getItem("print_activePrinter") || "regular") === "thermal") ? "thermal1" : "tally")
+              }
+              selectedColor={localStorage.getItem("print_selectedColor") || "#a78bfa"}
+              companyInfo={companyInfo}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -81,7 +81,8 @@ export function CashFlow({ onBack }: CashFlowProps) {
       try {
         const res = await fetch("/api/cash_transactions");
         if (res.ok) {
-          const data: Transaction[] = await res.json();
+          const responseData = await res.json();
+          const data: Transaction[] = responseData.transactions ?? responseData;
           
           // Sort chronologically (ascending) to calculate running cash
           const sortedAsc = [...data].sort((a, b) => {

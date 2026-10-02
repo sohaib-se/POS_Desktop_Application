@@ -28,7 +28,9 @@ function ItemSearchCell({ row, items, updateRow, handleItemSelect }: ItemSearchC
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const filteredItems = items.filter((i: any) => i.name.toLowerCase().includes(searchTerm.toLowerCase()));
+  const filteredItems = items
+    .filter((i: any) => i.status !== 'inactive' || i.name === row.item)
+    .filter((i: any) => i.name.toLowerCase().includes(searchTerm.toLowerCase()));
 
   return (
     <div ref={containerRef} style={{ position: "relative", width: "100%", height: "100%" }}>

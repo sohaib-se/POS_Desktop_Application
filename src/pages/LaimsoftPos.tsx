@@ -838,6 +838,7 @@ export function LaimsoftPos({ onClose, initialInvoice }: LaimsoftPosProps) {
     if (!activeTab.searchQuery) return [];
     const query = activeTab.searchQuery.toLowerCase();
     return items
+      .filter((item) => item.status !== 'inactive')
       .filter(
         (item) =>
           item.name.toLowerCase().startsWith(query) ||
@@ -870,7 +871,7 @@ export function LaimsoftPos({ onClose, initialInvoice }: LaimsoftPosProps) {
         }
 
         const exactMatch = items.find(
-          (item) => item.code && item.code.trim().toLowerCase() === currentValue.toLowerCase()
+          (item) => item.status !== "inactive" && item.code && item.code.trim().toLowerCase() === currentValue.toLowerCase()
         );
 
         if (exactMatch) {
@@ -916,7 +917,7 @@ export function LaimsoftPos({ onClose, initialInvoice }: LaimsoftPosProps) {
 
     if (value) {
       const exactMatch = items.find(
-        (item) => item.code && item.code.trim().toLowerCase() === value.trim().toLowerCase()
+        (item) => item.status !== "inactive" && item.code && item.code.trim().toLowerCase() === value.trim().toLowerCase()
       );
 
       if (exactMatch) {

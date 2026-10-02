@@ -263,13 +263,19 @@ export function ProductsTab({
   const secondaryUnit = units.find((u) => u.id === secondaryUnitId);
 
   const normalizedProductSearchTerm = productSearchTerm.trim().toLowerCase();
-  const filteredProductList = itemList.filter((item) => {
-    if (!normalizedProductSearchTerm) return true;
-    return [item.name, item.code ?? "", item.category ?? ""]
-      .join(" ")
-      .toLowerCase()
-      .includes(normalizedProductSearchTerm);
-  });
+  const filteredProductList = itemList
+    .filter((item) => {
+      if (!normalizedProductSearchTerm) return true;
+      return [item.name, item.code ?? "", item.category ?? ""]
+        .join(" ")
+        .toLowerCase()
+        .includes(normalizedProductSearchTerm);
+    })
+    .sort((a, b) => {
+      if (a.status === "inactive" && b.status !== "inactive") return 1;
+      if (a.status !== "inactive" && b.status === "inactive") return -1;
+      return 0;
+    });
 
   const selectedItemTransactions = useMemo(() => {
     if (!selectedItem) return [] as ItemTransactionRow[];
@@ -1170,6 +1176,7 @@ export function ProductsTab({
           createdItemPayload.secondaryStock ??
           Number(createdItemPayload.stockQuantity ?? openingStock) *
             (Number(conversionRate) || 0),
+        status: addItemForm.status,
       };
 
       setItemList((prev) => {

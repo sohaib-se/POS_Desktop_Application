@@ -21,6 +21,7 @@ export interface ItemOption {
   wholesale_price?: number;
   min_stock?: number | null;
   stock_quantity?: number;
+  status?: 'active' | 'inactive';
 }
 
 export interface BankOption {

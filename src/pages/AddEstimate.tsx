@@ -308,6 +308,19 @@ export function AddEstimate({ onSave, onShare, onClose, initialEstimate }: AddEs
 
       setSaveError("");
 
+      let imageDataUrl: string | null = tab.imageDataUrl || null;
+      if (tab.image) {
+        imageDataUrl = await fileToDataUrl(tab.image);
+      }
+
+      let documentDataUrl: string | null = tab.documentDataUrl || null;
+      if (tab.document) {
+        documentDataUrl = await fileToDataUrl(tab.document);
+      }
+
+      const discountPercent = Number(tab.discountPercent) || 0;
+      const taxRate = calculatedTaxRate;
+
       const lineItems = validRows.map((r) => ({ ...r }));
       
       const payload = {
@@ -332,7 +345,7 @@ export function AddEstimate({ onSave, onShare, onClose, initialEstimate }: AddEs
       };
 
       const isEditing = Boolean(initialEstimate);
-      const url = isEditing ? `/api/estimates/${initialEstimate.id}` : "/api/estimates";
+      const url = isEditing && initialEstimate ? `/api/estimates/${initialEstimate.id}` : "/api/estimates";
       const response = await fetch(url, {
         method: isEditing ? "PUT" : "POST",
         headers: { "Content-Type": "application/json" },
@@ -347,7 +360,7 @@ export function AddEstimate({ onSave, onShare, onClose, initialEstimate }: AddEs
         setGlobalNextEstimateNo(newGlobalNext);
 
         const estimateDataForPreview: SalePrintData = {
-          records: lineItems.map((r: any) => ({
+          records: lineItems.map((r) => ({
             id: r.id,
             itemName: r.item,
             quantity: Number(r.qty) || 0,
@@ -355,7 +368,7 @@ export function AddEstimate({ onSave, onShare, onClose, initialEstimate }: AddEs
             pricePerUnit: Number(r.pricePerUnit) || 0,
             amount: (Number(r.qty) || 0) * (Number(r.pricePerUnit) || 0),
           })),
-          invoiceNo: isEditing ? (initialEstimate.referenceNo ?? tab.estimateNo) : tab.estimateNo,
+          invoiceNo: isEditing && initialEstimate ? (initialEstimate.referenceNo ?? tab.estimateNo) : tab.estimateNo,
           invoiceDate: tab.estimateDate,
           customerName: partyNameStr,
           customerContact: activeTabPartyDetails?.phone || "",

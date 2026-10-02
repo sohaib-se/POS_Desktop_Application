@@ -10,6 +10,7 @@ import { AddPartyDialog } from "@/components/pagescomponents/parties/AddPartyDia
 import { useSettings } from "@/hooks/useSettings";
 import { ConfirmDeleteModal } from "@/components/common/ConfirmDeleteModal";
 import { PrintTab, type SalePrintData } from "@/components/pagescomponents/settings/tabs/PrintTab";
+import { toast } from "@/components/ui/Toast";
 
 export interface SaleRow {
   id: number;
@@ -613,9 +614,9 @@ export function AddSale({ onSave, onClose, initialInvoice, isConversion }: AddSa
         )
       : null;
 
-    if (!selectedParty) {
-      setSaveError("Please select a party before saving the sale.");
-      toast.error("Please select a party before saving the sale.");
+    if (isCredit && !selectedParty) {
+      setSaveError("Please select a party for credit sale.");
+      toast.error("Please select a party for credit sale.");
       return;
     }
 

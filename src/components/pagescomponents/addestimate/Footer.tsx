@@ -6,7 +6,7 @@ interface FooterProps {
   saveError?: string;
 }
 
-export function Footer({ onShare, onSave, saveError }: FooterProps) {
+export function Footer({ onSave, saveError }: FooterProps) {
   return (
     <div style={{ background: "#fff", flexShrink: 0, padding: "10px 20px", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, borderTop: "1px solid #e5e7eb" }}>
       <div style={{ fontSize: 12, color: "#b91c1c", minHeight: 16 }}>

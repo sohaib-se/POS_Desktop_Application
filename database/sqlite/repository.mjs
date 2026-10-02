@@ -588,6 +588,29 @@ export function removePurchaseStock(itemId, quantity, isSecondary, conversionRat
   }
 }
 
+/**
+ * Returns true if any FIFO layer created by this purchase bill has been partially
+ * or fully consumed (i.e. remaining_quantity < quantity). If true, the purchase
+ * bill should NOT be deleted until the dependent sales/reduce-stock are removed.
+ */
+export function isPurchaseFifoConsumed(purchaseBillId) {
+  const db = openDatabase();
+  try {
+    const row = db.prepare(`
+      SELECT COUNT(*) AS cnt
+      FROM adjust_stock_transactions
+      WHERE id LIKE ?
+        AND adjustment_type = 'Purchase Bill'
+        AND COALESCE(remaining_quantity, quantity) < quantity
+    `).get(`pb_${purchaseBillId}_%`);
+    return Number(row?.cnt ?? 0) > 0;
+  } finally {
+    db.close();
+  }
+}
+
+
+
 export function getSaleInvoices() {
   const db = openDatabase();
   const rows = db.prepare('SELECT * FROM sale_invoices ORDER BY created_at DESC, invoice_no DESC').all();

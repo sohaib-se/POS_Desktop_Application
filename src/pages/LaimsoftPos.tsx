@@ -154,7 +154,7 @@ export function LaimsoftPos({ onClose, initialInvoice }: LaimsoftPosProps) {
     const shouldCloseDialog = options?.closeDialog ?? true;
     const shouldResetForm = options?.resetForm ?? true;
     setIsSavingParty(true);
-    
+
     try {
       const openingBalance = Number(partyForm.openingBalance || 0);
       const balance = Number.isFinite(openingBalance)
@@ -192,10 +192,10 @@ export function LaimsoftPos({ onClose, initialInvoice }: LaimsoftPosProps) {
       };
 
       setParties((prev) => [...prev, normalizedParty].sort((a, b) => a.name.localeCompare(b.name)));
-      
+
       updateTab({
-          customerSelectedId: normalizedParty.id,
-          customerSearchText: normalizedParty.name,
+        customerSelectedId: normalizedParty.id,
+        customerSearchText: normalizedParty.name,
       });
 
       showToast(`Party ${normalizedParty.name} added successfully!`, "success");
@@ -678,8 +678,8 @@ export function LaimsoftPos({ onClose, initialInvoice }: LaimsoftPosProps) {
   const prevInvoiceNo = canNavigatePrev ? savedSales[currentIndex - 1]?.invoiceNo : null;
   const nextInvoiceNoDisplay = canNavigateNext
     ? (currentIndex + 1 >= savedSales.length
-        ? (activeTab.draftSnapshot?.invoiceNo || nextInvoiceNo)
-        : savedSales[currentIndex + 1]?.invoiceNo)
+      ? (activeTab.draftSnapshot?.invoiceNo || nextInvoiceNo)
+      : savedSales[currentIndex + 1]?.invoiceNo)
     : null;
 
   const handleNavigatePrevSale = () => {
@@ -695,18 +695,18 @@ export function LaimsoftPos({ onClose, initialInvoice }: LaimsoftPosProps) {
 
         const draftSnapshot = !t.editingInvoiceId
           ? {
-              invoiceNo: t.invoiceNo,
-              date: t.date,
-              rows: t.rows,
-              paymentMode: t.paymentMode,
-              amountReceived: t.amountReceived,
-              isAmountReceivedDirty: t.isAmountReceivedDirty,
-              customerSelectedId: t.customerSelectedId,
-              customerSearchText: t.customerSearchText,
-              discountPercent: t.discountPercent,
-              discountAmount: t.discountAmount,
-              description: t.description,
-            }
+            invoiceNo: t.invoiceNo,
+            date: t.date,
+            rows: t.rows,
+            paymentMode: t.paymentMode,
+            amountReceived: t.amountReceived,
+            isAmountReceivedDirty: t.isAmountReceivedDirty,
+            customerSelectedId: t.customerSelectedId,
+            customerSearchText: t.customerSearchText,
+            discountPercent: t.discountPercent,
+            discountAmount: t.discountAmount,
+            description: t.description,
+          }
           : t.draftSnapshot;
 
         const updatedTab = populateTabFromSale(targetSale, t);
@@ -838,6 +838,7 @@ export function LaimsoftPos({ onClose, initialInvoice }: LaimsoftPosProps) {
     if (!activeTab.searchQuery) return [];
     const query = activeTab.searchQuery.toLowerCase();
     return items
+      .filter((item) => item.status !== 'inactive')
       .filter(
         (item) =>
           item.name.toLowerCase().startsWith(query) ||
@@ -870,7 +871,7 @@ export function LaimsoftPos({ onClose, initialInvoice }: LaimsoftPosProps) {
         }
 
         const exactMatch = items.find(
-          (item) => item.code && item.code.trim().toLowerCase() === currentValue.toLowerCase()
+          (item) => item.status !== "inactive" && item.code && item.code.trim().toLowerCase() === currentValue.toLowerCase()
         );
 
         if (exactMatch) {
@@ -916,7 +917,7 @@ export function LaimsoftPos({ onClose, initialInvoice }: LaimsoftPosProps) {
 
     if (value) {
       const exactMatch = items.find(
-        (item) => item.code && item.code.trim().toLowerCase() === value.trim().toLowerCase()
+        (item) => item.status !== "inactive" && item.code && item.code.trim().toLowerCase() === value.trim().toLowerCase()
       );
 
       if (exactMatch) {
@@ -1087,7 +1088,7 @@ export function LaimsoftPos({ onClose, initialInvoice }: LaimsoftPosProps) {
         const isSecondary = row.unit === item.secondary_unit;
         const convRate = Number(item.conversion_rate) || 1;
         const primaryQtyEquiv = isSecondary && convRate > 0 ? qty / convRate : qty;
-        
+
         itemQtyMap.set(row.itemId, (itemQtyMap.get(row.itemId) || 0) + primaryQtyEquiv);
       }
 
@@ -1208,20 +1209,20 @@ export function LaimsoftPos({ onClose, initialInvoice }: LaimsoftPosProps) {
           prev.map((s) =>
             s.id === currentEditingId
               ? {
-                  ...s,
-                  partyName: payload.partyName,
-                  partyId: payload.partyId,
-                  partyPhone: payload.partyPhone,
-                  paymentMode: payload.paymentMode,
-                  paymentType: payload.paymentType,
-                  subtotal: payload.subtotal,
-                  discountPercent: payload.discountPercent,
-                  discountAmount: payload.discountAmount,
-                  amount: payload.amount,
-                  balance: payload.balance,
-                  description: payload.description,
-                  lineItemsJson: JSON.stringify(payload.lineItems),
-                }
+                ...s,
+                partyName: payload.partyName,
+                partyId: payload.partyId,
+                partyPhone: payload.partyPhone,
+                paymentMode: payload.paymentMode,
+                paymentType: payload.paymentType,
+                subtotal: payload.subtotal,
+                discountPercent: payload.discountPercent,
+                discountAmount: payload.discountAmount,
+                amount: payload.amount,
+                balance: payload.balance,
+                description: payload.description,
+                lineItemsJson: JSON.stringify(payload.lineItems),
+              }
               : s
           )
         );
@@ -1229,7 +1230,7 @@ export function LaimsoftPos({ onClose, initialInvoice }: LaimsoftPosProps) {
         return;
       }
 
-      const nextInvNo = savedInvoice.invoiceNo 
+      const nextInvNo = savedInvoice.invoiceNo
         ? String(Number(savedInvoice.invoiceNo) + 1)
         : String(Number(activeTab.invoiceNo) + 1);
 
@@ -1274,10 +1275,10 @@ export function LaimsoftPos({ onClose, initialInvoice }: LaimsoftPosProps) {
 
       // Reset active tab for next sale
       const isCashSaleByDefault = JSON.parse(localStorage.getItem('settings.isCashSaleByDefault') || 'false');
-      
+
       setTabs(prev => {
         const remaining = prev.filter(t => t.id !== activeTabId);
-        
+
         if (remaining.length === 0) {
           return [{
             ...prev[0],
@@ -1332,11 +1333,10 @@ export function LaimsoftPos({ onClose, initialInvoice }: LaimsoftPosProps) {
       {/* Toast Notification */}
       {toast && (
         <div
-          className={`fixed bottom-4 left-4 z-50 flex items-center gap-3 px-5 py-4 rounded-xl shadow-2xl text-white text-sm font-semibold transition-all duration-300 animate-slide-in-right ${
-            toast.type === "success"
-              ? "bg-gradient-to-r from-green-500 to-emerald-600"
-              : "bg-gradient-to-r from-red-500 to-rose-600"
-          }`}
+          className={`fixed bottom-4 left-4 z-50 flex items-center gap-3 px-5 py-4 rounded-xl shadow-2xl text-white text-sm font-semibold transition-all duration-300 animate-slide-in-right ${toast.type === "success"
+            ? "bg-gradient-to-r from-green-500 to-emerald-600"
+            : "bg-gradient-to-r from-red-500 to-rose-600"
+            }`}
           style={{ minWidth: 280 }}
         >
           <span className="text-lg">{toast.type === "success" ? "✅" : "❌"}</span>
@@ -1448,7 +1448,7 @@ export function LaimsoftPos({ onClose, initialInvoice }: LaimsoftPosProps) {
         showAddParty={showAddParty}
         setShowAddParty={setShowAddParty}
         partyBeingEdited={null}
-        setPartyBeingEdited={() => {}}
+        setPartyBeingEdited={() => { }}
         resetPartyForm={resetPartyForm}
         partyForm={partyForm}
         setPartyForm={setPartyForm}
@@ -1459,9 +1459,9 @@ export function LaimsoftPos({ onClose, initialInvoice }: LaimsoftPosProps) {
         handleSaveParty={handleSaveParty}
         isSavingParty={isSavingParty}
         partyPendingDelete={null}
-        setPartyPendingDelete={() => {}}
+        setPartyPendingDelete={() => { }}
         isDeletingParty={false}
-        handleDeleteParty={async () => {}}
+        handleDeleteParty={async () => { }}
         showCreditLimitError={showCreditLimitError}
         setShowCreditLimitError={setShowCreditLimitError}
       />

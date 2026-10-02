@@ -1824,7 +1824,7 @@ export function deleteBankAccountTransaction(id) {
   }
 
   db.prepare(`
-    UPDATE bank_accounts SET balance = balance - @amount WHERE name = @paymentType
+    UPDATE bank_accounts SET balance = balance - @amount WHERE LOWER(TRIM(name)) = LOWER(TRIM(@paymentType))
   `).run({
     amount: tx.amount,
     paymentType: tx.bank_account_name
@@ -1858,6 +1858,11 @@ export function deleteBankAccountTransaction(id) {
   return result.changes > 0;
 }
 
+export function deleteBankAccountTransactionsForSale(invoiceId) {
+  // Bank transactions created by POS sales use the deterministic pattern: bank_pos_{invoiceId}
+  deleteBankAccountTransaction('bank_pos_' + invoiceId);
+}
+
 export function addBankAccountTransaction(entry) {
   const db = openDatabase();
   const txId = entry.id || Date.now().toString();
@@ -1888,7 +1893,7 @@ export function addBankAccountTransaction(entry) {
   });
 
   db.prepare(`
-    UPDATE bank_accounts SET balance = balance + @amount WHERE name = @paymentType
+    UPDATE bank_accounts SET balance = balance + @amount WHERE LOWER(TRIM(name)) = LOWER(TRIM(@paymentType))
   `).run({
     amount: Number(entry.amount),
     paymentType: entry.paymentType
@@ -1934,7 +1939,7 @@ export function updateBankAccountTransaction(id, entry) {
 
   // Revert the old transaction's effect on balance using stored bank name
   db.prepare(`
-    UPDATE bank_accounts SET balance = balance - @amount WHERE name = @name
+    UPDATE bank_accounts SET balance = balance - @amount WHERE LOWER(TRIM(name)) = LOWER(TRIM(@name))
   `).run({
     amount: tx.amount,
     name: tx.bank_account_name
@@ -1942,7 +1947,7 @@ export function updateBankAccountTransaction(id, entry) {
   
   // Apply the new transaction's effect on balance using new bank name
   db.prepare(`
-    UPDATE bank_accounts SET balance = balance + @amount WHERE name = @name
+    UPDATE bank_accounts SET balance = balance + @amount WHERE LOWER(TRIM(name)) = LOWER(TRIM(@name))
   `).run({
     amount: Number(entry.amount),
     name: entry.paymentType
@@ -2049,7 +2054,7 @@ export function getBankAccountTransactions(bankName) {
   const rows = db.prepare(`
     SELECT id, date, name, type, amount, bank_account_name AS paymentType, attachment_image_path, created_at 
     FROM bank_account_transactions 
-    WHERE bank_account_name = ?
+    WHERE LOWER(TRIM(bank_account_name)) = LOWER(TRIM(?))
     ORDER BY date DESC, created_at DESC
   `).all(bankName);
   db.close();
@@ -2159,9 +2164,7 @@ export function deleteStockAdjustment(id) {
   const db = openDatabase();
   const info = db.prepare('DELETE FROM adjust_stock_transactions WHERE id = ?').run(String(id));
   db.close();
-  if (info.changes === 0) {
-    throw new Error('Transaction not found');
-  }
+  return info.changes > 0;
 }
 
 export function getExpenseCategories() {

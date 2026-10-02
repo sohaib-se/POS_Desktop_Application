@@ -86,6 +86,13 @@ export function BankAccounts() {
         const res = await fetch(`/api/bank_account_transactions/${id}`, { method: "DELETE" });
         if (res.ok) {
           fetchAccounts();
+          // If this was a POS-sale transaction, the server also deleted the linked sale invoice.
+          // Fire the refresh event so the Sale Invoices page (if open) reflects the removal.
+          if (String(id).startsWith('bank_pos_')) {
+            window.dispatchEvent(new CustomEvent('sale-invoices-refresh', {
+              detail: { message: 'Sale invoice removed via bank transaction deletion.' }
+            }));
+          }
         }
       }
     } catch (err) {
@@ -95,6 +102,7 @@ export function BankAccounts() {
       setDeleteModalState({ isOpen: false, type: 'account', id: null });
     }
   };
+
 
   const selectedAccount = accounts.find((a: BankAccount) => a.id === selectedId);
 

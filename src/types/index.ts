@@ -32,7 +32,7 @@ export interface Transaction {
   partyId: string;
   quantity: ReactNode;
   id: string;
-  type: 'Sale' | 'Purchase' | 'Payment-In' | 'Payment-Out' | 'Estimate' | 'Credit Note' | 'Debit Note' | 'PoS Sale' | 'Payable Opening Balance' | 'Receivable Opening Balance';
+  type: 'Sale' | 'Purchase' | 'Payment-In' | 'Payment-Out' | 'Estimate' | 'Credit Note' | 'Debit Note' | 'PoS Sale' | 'Payable Opening Balance' | 'Receivable Opening Balance' | 'Sale (Returned)';
   invoiceNo?: string;
   referenceNo?: string;
   date: string;

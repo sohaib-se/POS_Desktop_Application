@@ -252,20 +252,34 @@ export function AccountDetail({ account, onDeposit, onEditTransaction, onDeleteT
 
       {txContextMenu && (
         <div
-          className="fixed bg-white border border-gray-200 shadow-xl rounded-md z-50 overflow-hidden w-32"
-          style={{ top: txContextMenu.y, left: txContextMenu.x - 100 }}
+          className="fixed bg-white border border-gray-200 shadow-xl rounded-md z-50 overflow-hidden w-44"
+          style={{ top: txContextMenu.y, left: txContextMenu.x - 144 }}
           onClick={(e) => e.stopPropagation()}
         >
-          <button
-            className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-            onClick={() => {
-              const tx = account.transactions.find((t: any) => t.id === txContextMenu.txId);
-              if (tx) onEditTransaction?.(tx);
-              setTxContextMenu(null);
-            }}
-          >
-            Edit
-          </button>
+          {String(txContextMenu.txId).startsWith('bank_pos_') ? (
+            <div className="px-4 py-2 text-xs text-gray-400 italic border-b border-gray-100 leading-snug">
+              Edit from Sale Invoices
+            </div>
+          ) : String(txContextMenu.txId).startsWith('bank_purchase_') ? (
+            <div className="px-4 py-2 text-xs text-gray-400 italic border-b border-gray-100 leading-snug">
+              Edit from Purchase Bills
+            </div>
+          ) : String(txContextMenu.txId).startsWith('bank_expense_') ? (
+            <div className="px-4 py-2 text-xs text-gray-400 italic border-b border-gray-100 leading-snug">
+              Edit from Expenses
+            </div>
+          ) : (
+            <button
+              className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+              onClick={() => {
+                const tx = account.transactions.find((t: any) => t.id === txContextMenu.txId);
+                if (tx) onEditTransaction?.(tx);
+                setTxContextMenu(null);
+              }}
+            >
+              Edit
+            </button>
+          )}
           <button
             className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50"
             onClick={() => {

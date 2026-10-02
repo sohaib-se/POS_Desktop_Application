@@ -228,7 +228,7 @@ export function AddPurchase({ onSave, onShare, onClose, initialInvoice }: AddPur
     }
 
     const parsedRows = parseLineItems(initialInvoice.lineItemsJson);
-    const paymentMode = String(initialInvoice.paymentMode ?? initialInvoice.paymentType ?? "Credit").toLowerCase() === "cash"
+    const paymentMode: "credit" | "cash" = String(initialInvoice.paymentMode ?? initialInvoice.paymentType ?? "Credit").toLowerCase() === "cash"
       ? "cash"
       : "credit";
 
@@ -353,6 +353,20 @@ export function AddPurchase({ onSave, onShare, onClose, initialInvoice }: AddPur
             const percentValue = nextTotalAmount > 0 ? (r / nextTotalAmount) * 100 : 0;
             nextTab.discountPercent = nextTotalAmount > 0 ? percentValue.toFixed(2) : "";
           }
+        }
+
+        if (nextTab.paidAll) {
+          const validRows = nextTab.rows.filter((row) => row.item || row.qty || row.pricePerUnit);
+          const subtotalVal = validRows.reduce(
+            (sum, row) => sum + (Number(row.qty) || 0) * (Number(row.pricePerUnit) || 0),
+            0,
+          );
+          const discountVal = Number(nextTab.discountRs || 0);
+          const taxRateVal = parseTaxRate(nextTab.tax);
+          const taxVal = subtotalVal * taxRateVal;
+          const grandVal = subtotalVal + taxVal - discountVal;
+          const roundedVal = nextTab.roundOff ? Math.round(grandVal) : grandVal;
+          nextTab.paid = roundedVal > 0 ? String(roundedVal) : "";
         }
 
         return nextTab;
@@ -483,13 +497,37 @@ export function AddPurchase({ onSave, onShare, onClose, initialInvoice }: AddPur
       return;
     }
 
-    const selectedParty = parties.find((party) => String(party.id) === activeTab.customerSearch) ?? parties[0];
+    const selectedParty = activeTab.customerSearch
+      ? parties.find(
+          (party) =>
+            String(party.id) === activeTab.customerSearch ||
+            party.name.trim().toLowerCase() === activeTab.customerSearch.trim().toLowerCase() ||
+            (!isNaN(Number(party.id)) && !isNaN(Number(activeTab.customerSearch)) && Number(party.id) === Number(activeTab.customerSearch))
+        )
+      : null;
+
     if (!selectedParty) {
-      setSaveError("Add at least one party before saving the purchase.");
+      setSaveError("Please select a party before saving the purchase.");
+      toast.error("Please select a party before saving the purchase.");
       return;
     }
 
-    const validRows = activeTab.rows.filter((row) => row.item || row.qty || row.pricePerUnit);
+    const validRows = activeTab.rows.filter(
+      (row) => (row.item && row.item.trim() !== "") || (row.itemId && row.itemId.trim() !== "")
+    );
+
+    if (validRows.length === 0) {
+      setSaveError("Please add at least 1 item before saving the purchase.");
+      toast.error("Please add at least 1 item before saving the purchase.");
+      return;
+    }
+
+    const hasInvalidQty = validRows.some((row) => !row.qty || Number(row.qty) <= 0);
+    if (hasInvalidQty) {
+      setSaveError("Please enter a valid quantity greater than 0 for all selected items.");
+      toast.error("Please enter a valid quantity greater than 0 for all selected items.");
+      return;
+    }
     const subtotal = validRows.reduce(
       (sum, row) => sum + (Number(row.qty) || 0) * (Number(row.pricePerUnit) || 0),
       0,
@@ -535,7 +573,7 @@ export function AddPurchase({ onSave, onShare, onClose, initialInvoice }: AddPur
           partyName: selectedParty.name,
           partyPhone: activeTab.phoneNo,
           paymentType: activeTab.paymentType,
-          paymentMode: paidAmountValue === 0 ? "credit" : (activeTab.paymentType === "Cash" ? "cash" : activeTab.paymentType),
+          paymentMode: activeTab.paymentType === "Cash" ? (paidAmountValue === 0 ? "credit" : "cash") : activeTab.paymentType,
           subtotal,
           discountPercent: Number(activeTab.discountPercent || 0),
           discountAmount: discountAmountValue,
@@ -564,7 +602,8 @@ export function AddPurchase({ onSave, onShare, onClose, initialInvoice }: AddPur
       });
 
       if (!response.ok) {
-        throw new Error("Failed to save purchase");
+        const errorData = await response.json().catch(() => null);
+        throw new Error(errorData?.message || "Failed to save purchase");
       }
 
       const savedInvoice = (await response.json()) as { invoiceNo?: string };
@@ -615,9 +654,9 @@ export function AddPurchase({ onSave, onShare, onClose, initialInvoice }: AddPur
         savedPurchaseForPreview: purchaseDataForPreview,
       });
 
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
-      toast.error("Failed to save the purchase. Please try again.");
+      toast.error(error.message || "Failed to save the purchase. Please try again.");
     } finally {
       setIsSaving(false);
     }

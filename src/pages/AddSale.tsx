@@ -10,6 +10,7 @@ import { AddPartyDialog } from "@/components/pagescomponents/parties/AddPartyDia
 import { useSettings } from "@/hooks/useSettings";
 import { ConfirmDeleteModal } from "@/components/common/ConfirmDeleteModal";
 import { PrintTab, type SalePrintData } from "@/components/pagescomponents/settings/tabs/PrintTab";
+import { toast } from "@/components/ui/Toast";
 
 export interface SaleRow {
   id: number;
@@ -299,6 +300,11 @@ export function AddSale({ onSave, onClose, initialInvoice, isConversion }: AddSa
       ? "cash"
       : "credit";
 
+    const invAmount = Number(initialInvoice.amount ?? 0);
+    const invBalance = Number(initialInvoice.balance ?? 0);
+    const alreadyReceived = Math.max(0, invAmount - invBalance);
+    const isAlreadyReceivedAll = !isConversion && invAmount > 0 && invBalance === 0;
+
     setTabs([
       {
         id: 1,
@@ -331,8 +337,8 @@ export function AddSale({ onSave, onClose, initialInvoice, isConversion }: AddSa
         imageFileName: initialInvoice.attachmentImageName ?? "",
         documentDataUrl: initialInvoice.attachmentDocumentPath ?? "",
         documentFileName: initialInvoice.attachmentDocumentName ?? "",
-        received: "",
-        receivedAll: false,
+        received: alreadyReceived > 0 ? String(alreadyReceived) : "",
+        receivedAll: isAlreadyReceivedAll,
       },
     ]);
     setActiveTabId(1);
@@ -597,13 +603,20 @@ export function AddSale({ onSave, onClose, initialInvoice, isConversion }: AddSa
       return;
     }
 
+    setSaveError("");
     const isCredit = activeTab.paymentMode === "credit";
     const selectedParty = activeTab.customerSearch
-      ? parties.find((party) => String(party.id) === activeTab.customerSearch)
+      ? parties.find(
+          (party) =>
+            String(party.id) === activeTab.customerSearch ||
+            party.name.trim().toLowerCase() === activeTab.customerSearch.trim().toLowerCase() ||
+            (!isNaN(Number(party.id)) && !isNaN(Number(activeTab.customerSearch)) && Number(party.id) === Number(activeTab.customerSearch))
+        )
       : null;
 
     if (isCredit && !selectedParty) {
       setSaveError("Please select a party for credit sale.");
+      toast.error("Please select a party for credit sale.");
       return;
     }
 
@@ -619,7 +632,22 @@ export function AddSale({ onSave, onClose, initialInvoice, isConversion }: AddSa
       }
     }
 
-    const validRows = activeTab.rows.filter((row) => row.item || row.qty || row.pricePerUnit);
+    const validRows = activeTab.rows.filter(
+      (row) => (row.item && row.item.trim() !== "") || (row.itemId && row.itemId.trim() !== "")
+    );
+
+    if (validRows.length === 0) {
+      setSaveError("Please add at least 1 item before saving the sale.");
+      toast.error("Please add at least 1 item before saving the sale.");
+      return;
+    }
+
+    const hasInvalidQty = validRows.some((row) => !row.qty || Number(row.qty) <= 0);
+    if (hasInvalidQty) {
+      setSaveError("Please enter a valid quantity greater than 0 for all selected items.");
+      toast.error("Please enter a valid quantity greater than 0 for all selected items.");
+      return;
+    }
 
     if (stopSaleOnNegativeStock) {
       const itemQtyMap = new Map<string, number>();

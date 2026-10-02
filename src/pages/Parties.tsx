@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { exportPartyTransactionsToExcel } from "@/utils/exportPartyTransactionsExcel";
 import { useSettings } from "@/hooks/useSettings";
-import type { Party, Transaction, SaleInvoiceEditData } from "@/types";
+import type { Party, SaleInvoiceEditData } from "@/types";
 import { PartiesHeader } from "@/components/pagescomponents/parties/PartiesHeader";
 import { PartiesEmptyState } from "@/components/pagescomponents/parties/PartiesEmptyState";
 import { PartyList } from "@/components/pagescomponents/parties/PartyList";
@@ -21,7 +21,7 @@ type TransactionApiRow = {
   status?: string | null;
 };
 
-function normalizeTransactionType(value: string | null | undefined): Transaction["type"] {
+function normalizeTransactionType(value: string | null | undefined): PartyTransactionRow["type"] {
   const normalizedValue = String(value ?? "").toLowerCase();
 
   if (normalizedValue.includes("payable opening balance")) {
@@ -40,6 +40,10 @@ function normalizeTransactionType(value: string | null | undefined): Transaction
     return "Payment-Out";
   }
 
+  if (normalizedValue.includes("returned") || normalizedValue.includes("return")) {
+    return "Sale (Returned)";
+  }
+
   if (normalizedValue.includes("purchase")) {
     return "Purchase";
   }
@@ -52,7 +56,7 @@ function normalizeTransactionType(value: string | null | undefined): Transaction
     return "Estimate";
   }
 
-  return "Sale";
+  return (value as PartyTransactionRow["type"]) ?? "Sale";
 }
 
 function normalizePartyTransaction(row: TransactionApiRow): PartyTransactionRow {
@@ -419,74 +423,6 @@ export function Parties({ isReportView, onBack, onEditSaleInvoice }: PartiesProp
     return parseDate(b.date) - parseDate(a.date);
   });
 
-  const handlePrintTransactions = () => {
-    if (!selectedParty) return;
-
-    const iframe = document.createElement('iframe');
-    iframe.style.position = 'fixed';
-    iframe.style.right = '0';
-    iframe.style.bottom = '0';
-    iframe.style.width = '0';
-    iframe.style.height = '0';
-    iframe.style.border = '0';
-    document.body.appendChild(iframe);
-
-    const html = `
-      <html>
-        <head>
-          <title>Transactions - ${selectedParty.name}</title>
-          <style>
-            body { font-family: sans-serif; padding: 20px; }
-            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-            th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-            th { background-color: #f2f2f2; }
-          </style>
-        </head>
-        <body>
-          <h2>Transactions - ${selectedParty.name}</h2>
-          <table>
-            <thead>
-              <tr>
-                <th>Type</th>
-                <th>Number</th>
-                <th>Date</th>
-                <th>Total</th>
-                <th>Balance</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${filteredPartyTransactions.map(t => `
-                <tr>
-                  <td>${t.type}</td>
-                  <td>${t.invoiceNo || ''}</td>
-                  <td>${t.date}</td>
-                  <td>${currencyStr} ${t.amount.toFixed(2)}</td>
-                  <td>${currencyStr} ${t.balance.toFixed(2)}</td>
-                </tr>
-              `).join('')}
-            </tbody>
-          </table>
-        </body>
-      </html>
-    `;
-    const iframeDoc = iframe.contentWindow?.document;
-    if (iframeDoc) {
-      iframeDoc.open();
-      iframeDoc.write(html);
-      iframeDoc.close();
-
-      setTimeout(() => {
-        iframe.contentWindow?.focus();
-        iframe.contentWindow?.print();
-        setTimeout(() => {
-          document.body.removeChild(iframe);
-        }, 1000);
-      }, 250);
-    } else {
-      document.body.removeChild(iframe);
-    }
-  };
-
   const handleExportExcel = () => {
     if (!selectedParty) return;
     exportPartyTransactionsToExcel(
@@ -751,7 +687,6 @@ export function Parties({ isReportView, onBack, onEditSaleInvoice }: PartiesProp
             setShowTransactionSearch={setShowTransactionSearch}
             transactionSearchTerm={transactionSearchTerm}
             setTransactionSearchTerm={setTransactionSearchTerm}
-            handlePrintTransactions={handlePrintTransactions}
             handleExportExcel={handleExportExcel}
             selectedMonth={selectedMonth}
             onSetSelectedMonth={setSelectedMonth}

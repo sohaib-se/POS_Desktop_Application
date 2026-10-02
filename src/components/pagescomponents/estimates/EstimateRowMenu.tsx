@@ -1,4 +1,4 @@
-import { Eye, Pencil, Trash2, Printer } from "lucide-react";
+import { Eye, Pencil, Trash2, Printer, ArrowRightCircle } from "lucide-react";
 import type { EstimateRecord } from "./types";
 
 interface EstimateRowMenuProps {
@@ -11,6 +11,7 @@ interface EstimateRowMenuProps {
   setOpenRowMenuId: (id: string | null) => void;
   setOpenRowMenuPosition: (pos: { left: number; top: number } | null) => void;
   onPrintEstimate: (record: EstimateRecord) => void;
+  onConvertEstimateToSale?: (record: EstimateRecord) => void;
 }
 
 export function EstimateRowMenu({
@@ -23,6 +24,7 @@ export function EstimateRowMenu({
   setOpenRowMenuId,
   setOpenRowMenuPosition,
   onPrintEstimate,
+  onConvertEstimateToSale,
 }: EstimateRowMenuProps) {
   if (!openRowMenuId || !openRowMenuPosition) return null;
   
@@ -66,6 +68,24 @@ export function EstimateRowMenu({
       >
         <Pencil className={`w-4 h-4 ${targetItem.status === "Converted" ? "text-gray-400" : "text-gray-500"}`} />
         Edit
+      </button>
+      <button
+        className={`flex w-full items-center gap-2 px-3 py-2 text-left text-sm ${
+          targetItem.status === "Converted" 
+            ? "opacity-50 cursor-not-allowed text-gray-400" 
+            : "hover:bg-blue-50 text-blue-600 font-medium"
+        }`}
+        disabled={targetItem.status === "Converted"}
+        onClick={() => {
+          if (targetItem.status === "Converted") return;
+          onConvertEstimateToSale?.(targetItem);
+          setOpenRowMenuId(null);
+          setOpenRowMenuPosition(null);
+        }}
+        title={targetItem.status === "Converted" ? "Already Converted" : "Convert to Sale"}
+      >
+        <ArrowRightCircle className={`w-4 h-4 ${targetItem.status === "Converted" ? "text-gray-400" : "text-blue-600"}`} />
+        Convert to Sale
       </button>
       {(targetItem.attachmentImagePath || targetItem.attachmentDocumentPath) && (
         <button

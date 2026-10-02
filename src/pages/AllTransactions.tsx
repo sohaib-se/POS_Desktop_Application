@@ -86,7 +86,7 @@ export function AllTransactions({ searchQuery = "" }: { searchQuery?: string }) 
         purchases.forEach((p: any) => {
           allData.push({
             id: p.id,
-            type: 'Purchase',
+            type: p.transaction_type || 'Purchase',
             invoiceNo: p.invoice_no,
             partyName: p.party_name,
             date: p.date,
@@ -172,8 +172,10 @@ export function AllTransactions({ searchQuery = "" }: { searchQuery?: string }) 
     return transactions.filter((t) => {
       if (filterType !== "All Transaction") {
         if (t.type !== filterType) {
-          if (filterType === "Sale" && t.type === "PoS Sale") {
-            // Include PoS Sale in Sale
+          if (filterType === "Sale" && (t.type === "PoS Sale" || t.type.includes("Sale"))) {
+            // Include PoS Sale and returned sales in Sale
+          } else if (filterType === "Purchase" && t.type.includes("Purchase")) {
+            // Include returned purchases in Purchase
           } else {
             return false;
           }
@@ -211,20 +213,16 @@ export function AllTransactions({ searchQuery = "" }: { searchQuery?: string }) 
   }, [transactions, filterType, appliedDateFrom, appliedDateTo, searchQuery]);
 
   const getTypeColor = (type: string) => {
-    switch (type) {
-      case 'Sale':
-      case 'PoS Sale':
-      case 'Payment-In':
-      case 'Receivable Opening Balance':
-        return 'bg-green-400';
-      case 'Purchase':
-      case 'Expense':
-      case 'Payment-Out':
-      case 'Payable Opening Balance':
-        return 'bg-red-400';
-      default:
-        return 'bg-gray-400';
+    if (type.includes('Returned')) {
+      return 'bg-amber-500';
     }
+    if (type.includes('Sale') || type === 'Payment-In' || type === 'Receivable Opening Balance') {
+      return 'bg-green-400';
+    }
+    if (type.includes('Purchase') || type === 'Expense' || type === 'Payment-Out' || type === 'Payable Opening Balance') {
+      return 'bg-red-400';
+    }
+    return 'bg-gray-400';
   };
 
   return (
@@ -328,7 +326,7 @@ export function AllTransactions({ searchQuery = "" }: { searchQuery?: string }) 
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2">
                           <div className={`w-2 h-2 rounded-full ${getTypeColor(tx.type)}`}></div>
-                          <span className="text-sm text-gray-700">{tx.type}</span>
+                          <span className={`text-sm ${tx.type.includes('Returned') ? 'text-amber-600 font-medium' : 'text-gray-700'}`}>{tx.type}</span>
                         </div>
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-700 border-l border-gray-100">{tx.invoiceNo || tx.id}</td>

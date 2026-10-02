@@ -150,16 +150,13 @@ export const reports = [
   { id: '4', name: 'All Transactions', description: 'Complete transaction history' },
   { id: '5', name: 'Profit And Loss', description: 'Financial summary' },
   { id: '6', name: 'Bill Wise Profit', description: 'Profit per bill' },
-  { id: '7', name: 'Cash flow', description: 'Cash movement' },
-  { id: '8', name: 'Trial Balance Report', description: 'Account balances' },
-  { id: '9', name: 'Balance Sheet', description: 'Financial position' },
-  { id: '10', name: 'Party report', description: 'Party-wise summary' },
-  { id: '11', name: 'Party Statement', description: 'Detailed party transactions' },
-  { id: '12', name: 'Party wise Profit & Loss', description: 'Profit by party' },
-  { id: '13', name: 'All parties', description: 'Complete party list' },
-  { id: '14', name: 'Party Report By Item', description: 'Items by party' },
-  { id: '15', name: 'Sale Purchase By Party', description: 'Sales & purchases' },
-  { id: '16', name: 'Sale Purchase By Party Group', description: 'Grouped by party' },
+  { id: '7', name: 'Trial Balance Report', description: 'Account balances' },
+  { id: '8', name: 'Balance Sheet', description: 'Financial position' },
+  { id: '9', name: 'Party report', description: 'Party-wise summary' },
+  { id: '10', name: 'Party Statement', description: 'Detailed party transactions' },
+  { id: '11', name: 'All parties', description: 'Complete party list' },
+  { id: '12', name: 'Sale Purchase By Party', description: 'Sales & purchases' },
+  { id: '13', name: 'Sale Purchase By Party Group', description: 'Grouped by party' },
 ];
 
 export const chartData = [

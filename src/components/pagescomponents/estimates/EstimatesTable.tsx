@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type RefObject, type Dispatch, type SetStateAction } from "react";
 import { useSettings } from "@/hooks/useSettings";
-import { Search, Printer, Share2, MoreVertical, ArrowRightCircle } from "lucide-react";
+import { Search, MoreVertical } from "lucide-react";
 import type { EstimateRecord } from "./types";
 
 interface EstimatesTableProps {
@@ -13,7 +13,6 @@ interface EstimatesTableProps {
   openRowMenuId: string | null;
   setOpenRowMenuId: Dispatch<SetStateAction<string | null>>;
   setOpenRowMenuPosition: Dispatch<SetStateAction<{ left: number; top: number } | null>>;
-  onConvertEstimateToSale: (estimate: EstimateRecord) => void;
 }
 
 export function EstimatesTable({
@@ -26,7 +25,6 @@ export function EstimatesTable({
   openRowMenuId,
   setOpenRowMenuId,
   setOpenRowMenuPosition,
-  onConvertEstimateToSale,
 }: EstimatesTableProps) {
   const [currency] = useSettings('settings.businessCurrency', { code: 'PKR', symbol: 'Rs' });
   const [currencyDisplay] = useSettings<'abbreviation' | 'icon'>('settings.currencyDisplay', 'abbreviation');
@@ -182,51 +180,32 @@ export function EstimatesTable({
                       <span className="text-gray-500">{estimate.status}</span>
                     )}
                   </td>
-                  <td className="px-4 py-3 relative">
-                    <div className="flex items-center justify-end gap-2">
-                      <button 
-                        className={`p-1.5 rounded flex items-center gap-1 transition-colors ${
-                          estimate.status === "Converted" 
-                            ? "invisible pointer-events-none" 
-                            : "hover:bg-blue-50 text-blue-600 cursor-pointer"
-                        }`}
-                        title={estimate.status === "Converted" ? "Already Converted" : "Convert to Sale"}
-                        onClick={() => {
-                          if (estimate.status !== "Converted") {
-                            onConvertEstimateToSale(estimate);
-                          }
-                        }}
-                        disabled={estimate.status === "Converted"}
-                      >
-                        <ArrowRightCircle className="w-4 h-4" />
-                        <span className="text-xs font-medium">Convert</span>
-                      </button>
-                      <button
-                        className="p-1.5 hover:bg-gray-100 rounded"
-                        title="More actions"
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          const targetRect = event.currentTarget.getBoundingClientRect();
-                          const menuWidth = 144;
-                          const menuHeight = 116; // rough height for 3 items
-                          const nextLeft = Math.max(8, Math.min(targetRect.right - menuWidth, window.innerWidth - menuWidth - 8));
-                          const nextTop = targetRect.bottom + menuHeight > window.innerHeight
-                            ? Math.max(8, targetRect.top - menuHeight - 8)
-                            : targetRect.bottom + 8;
-  
-                          setOpenRowMenuPosition((previousPosition) =>
-                            openRowMenuId === estimate.id && previousPosition
-                              ? null
-                              : { left: nextLeft, top: nextTop },
-                          );
-                          setOpenRowMenuId((previous) =>
-                            previous === estimate.id ? null : estimate.id,
-                          );
-                        }}
-                      >
-                        <MoreVertical className="w-4 h-4 text-gray-500" />
-                      </button>
-                    </div>
+                  <td className="px-4 py-3 relative text-center">
+                    <button
+                      className="p-1.5 hover:bg-gray-100 rounded"
+                      title="More actions"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        const targetRect = event.currentTarget.getBoundingClientRect();
+                        const menuWidth = 160;
+                        const menuHeight = 160;
+                        const nextLeft = Math.max(8, Math.min(targetRect.right - menuWidth, window.innerWidth - menuWidth - 8));
+                        const nextTop = targetRect.bottom + menuHeight > window.innerHeight
+                          ? Math.max(8, targetRect.top - menuHeight - 8)
+                          : targetRect.bottom + 8;
+
+                        setOpenRowMenuPosition((previousPosition) =>
+                          openRowMenuId === estimate.id && previousPosition
+                            ? null
+                            : { left: nextLeft, top: nextTop },
+                        );
+                        setOpenRowMenuId((previous) =>
+                          previous === estimate.id ? null : estimate.id,
+                        );
+                      }}
+                    >
+                      <MoreVertical className="w-4 h-4 text-gray-500" />
+                    </button>
                   </td>
                 </tr>
               ))

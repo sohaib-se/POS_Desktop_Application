@@ -38,11 +38,10 @@ interface PartyDetailsProps {
   setShowTransactionSearch: (show: boolean) => void;
   transactionSearchTerm: string;
   setTransactionSearchTerm: (term: string) => void;
-  handlePrintTransactions: () => void;
   handleExportExcel: () => void;
   selectedMonth: string;
   onSetSelectedMonth: (month: string) => void;
-  businessProfile?: any;
+  businessProfile?: Record<string, unknown>;
   openEditPartyDialog: (party: Party) => void;
   isReportView?: boolean;
   loadPartiesAndTransactions?: () => Promise<void>;
@@ -57,7 +56,6 @@ export function PartyDetails({
   setShowTransactionSearch,
   transactionSearchTerm,
   setTransactionSearchTerm,
-  handlePrintTransactions,
   handleExportExcel,
   selectedMonth,
   onSetSelectedMonth,
@@ -89,7 +87,7 @@ export function PartyDetails({
       setPlaceholderIndex((prev) => (prev + 1) % placeholders.length);
     }, 3000);
     return () => clearInterval(interval);
-  }, []);
+  }, [placeholders.length]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -119,7 +117,7 @@ export function PartyDetails({
   const [viewingPaymentOut, setViewingPaymentOut] = useState<any | null>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [viewingEstimate, setViewingEstimate] = useState<any | null>(null);
-  const [passcodeAction, setPasscodeAction] = useState<{ type: 'edit' | 'delete', payload: any } | null>(null);
+  const [passcodeAction, setPasscodeAction] = useState<{ type: 'edit' | 'delete', payload: PartyTransactionRow } | null>(null);
   const [deletePendingTransaction, setDeletePendingTransaction] = useState<PartyTransactionRow | null>(null);
 
   const performDeleteTransaction = async (transaction: PartyTransactionRow) => {
@@ -421,9 +419,11 @@ export function PartyDetails({
                         <td className="px-4 py-3">
                           <span
                             className={`${
-                              t.type === "Sale"
+                              t.type.includes("Returned")
+                                ? "text-amber-600 font-medium"
+                                : t.type.includes("Sale")
                                 ? "text-green-600"
-                                : t.type === "Purchase"
+                                : t.type.includes("Purchase")
                                 ? "text-red-600"
                                 : "text-blue-600"
                             }`}
@@ -501,7 +501,7 @@ export function PartyDetails({
             {(() => {
               const invoice = filteredPartyTransactions.find(t => t.id === openRowMenuId);
               const isConvertedEstimate = invoice?.type === 'Estimate' && invoice?.status === 'Converted';
-              const isReturnedSale = invoice?.type === 'Sale' && invoice?.rawRow && String(invoice.rawRow.transaction_type).includes('Returned');
+              const isReturnedSale = (invoice?.type?.includes('Sale') || invoice?.type?.includes('Returned')) && invoice?.rawRow && String(invoice.rawRow.transaction_type).includes('Returned');
               const canEdit = !isConvertedEstimate && !isReturnedSale;
               
               return (
@@ -511,7 +511,7 @@ export function PartyDetails({
                     onClick={() => {
                       if (invoice?.rawRow) {
                         const raw = invoice.rawRow;
-                        if (invoice.type === 'Sale') {
+                        if (invoice.type.includes('Sale')) {
                           setViewingSaleInvoice({
                             id: raw.id, invoiceNo: raw.invoice_no, date: raw.date, partyName: raw.party_name,
                             partyId: raw.party_id, partyPhone: raw.party_phone, transaction: raw.transaction_type,

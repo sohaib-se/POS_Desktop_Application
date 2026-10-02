@@ -70,6 +70,7 @@ export function AddEstimate({ onSave, onShare, onClose, initialEstimate }: AddEs
   const [tabClosePendingId, setTabClosePendingId] = useState<number | null>(null);
   const [partyBeingEdited, setPartyBeingEdited] = useState<any>(null);
   const [globalNextEstimateNo, setGlobalNextEstimateNo] = useState("1");
+  const [saveError, setSaveError] = useState("");
   const [activeTabParty, setActiveTabParty] = useState<"address" | "credit">("address");
   const [showShippingAddress, setShowShippingAddress] = useState(false);
   const [isSavingParty, setIsSavingParty] = useState(false);
@@ -274,24 +275,53 @@ export function AddEstimate({ onSave, onShare, onClose, initialEstimate }: AddEs
   const handleSaveEstimate = async () => {
     try {
       const tab = activeTab;
-      
-      const lineItems = tab.rows.filter(r => r.item && r.qty && r.pricePerUnit).map(r => ({ ...r }));
-      
-      let imageDataUrl = tab.imageDataUrl || null;
+
+      const activeTabPartyDetails = tab.customerSearch
+        ? parties.find(
+            (p) =>
+              String(p.id) === tab.customerSearch ||
+              p.name.trim().toLowerCase() === tab.customerSearch.trim().toLowerCase() ||
+              (!isNaN(Number(p.id)) && !isNaN(Number(tab.customerSearch)) && Number(p.id) === Number(tab.customerSearch))
+          )
+        : null;
+
+      if (!activeTabPartyDetails && !tab.customerSearch.trim()) {
+        setSaveError("Please select a party before saving the estimate.");
+        toast.error("Please select a party before saving the estimate.");
+        return;
+      }
+      const partyNameStr = activeTabPartyDetails ? activeTabPartyDetails.name : tab.customerSearch.trim();
+
+      const validRows = tab.rows.filter((r) => r.item && r.item.trim() !== "");
+      if (validRows.length === 0) {
+        setSaveError("Please add at least 1 item before saving the estimate.");
+        toast.error("Please add at least 1 item before saving the estimate.");
+        return;
+      }
+
+      const hasInvalidQty = validRows.some((r) => !r.qty || Number(r.qty) <= 0);
+      if (hasInvalidQty) {
+        setSaveError("Please enter a valid quantity greater than 0 for all selected items.");
+        toast.error("Please enter a valid quantity greater than 0 for all selected items.");
+        return;
+      }
+
+      setSaveError("");
+
+      let imageDataUrl: string | null = tab.imageDataUrl || null;
       if (tab.image) {
         imageDataUrl = await fileToDataUrl(tab.image);
       }
-      let documentDataUrl = tab.documentDataUrl || null;
+
+      let documentDataUrl: string | null = tab.documentDataUrl || null;
       if (tab.document) {
         documentDataUrl = await fileToDataUrl(tab.document);
       }
 
-      const taxRate = tab.tax === "NONE" ? 0 : parseFloat(tab.tax.replace(/[^0-9.]/g, ""));
-      const discountPercent = parseFloat(tab.discountPercent) || 0;
-      const discountAmount = parseFloat(tab.discountRs) || 0;
-      
-      const activeTabPartyDetails = parties.find(p => String(p.id) === tab.customerSearch);
-      const partyNameStr = activeTabPartyDetails ? activeTabPartyDetails.name : tab.customerSearch;
+      const discountPercent = Number(tab.discountPercent) || 0;
+      const taxRate = calculatedTaxRate;
+
+      const lineItems = validRows.map((r) => ({ ...r }));
       
       const payload = {
         referenceNo: tab.estimateNo,
@@ -315,7 +345,7 @@ export function AddEstimate({ onSave, onShare, onClose, initialEstimate }: AddEs
       };
 
       const isEditing = Boolean(initialEstimate);
-      const url = isEditing ? `/api/estimates/${initialEstimate.id}` : "/api/estimates";
+      const url = isEditing && initialEstimate ? `/api/estimates/${initialEstimate.id}` : "/api/estimates";
       const response = await fetch(url, {
         method: isEditing ? "PUT" : "POST",
         headers: { "Content-Type": "application/json" },
@@ -330,7 +360,7 @@ export function AddEstimate({ onSave, onShare, onClose, initialEstimate }: AddEs
         setGlobalNextEstimateNo(newGlobalNext);
 
         const estimateDataForPreview: SalePrintData = {
-          records: lineItems.map((r: any) => ({
+          records: lineItems.map((r) => ({
             id: r.id,
             itemName: r.item,
             quantity: Number(r.qty) || 0,
@@ -338,7 +368,7 @@ export function AddEstimate({ onSave, onShare, onClose, initialEstimate }: AddEs
             pricePerUnit: Number(r.pricePerUnit) || 0,
             amount: (Number(r.qty) || 0) * (Number(r.pricePerUnit) || 0),
           })),
-          invoiceNo: isEditing ? (initialEstimate.referenceNo ?? tab.estimateNo) : tab.estimateNo,
+          invoiceNo: isEditing && initialEstimate ? (initialEstimate.referenceNo ?? tab.estimateNo) : tab.estimateNo,
           invoiceDate: tab.estimateDate,
           customerName: partyNameStr,
           customerContact: activeTabPartyDetails?.phone || "",
@@ -627,6 +657,7 @@ export function AddEstimate({ onSave, onShare, onClose, initialEstimate }: AddEs
       <Footer
         onShare={onShare}
         onSave={handleSaveEstimate}
+        saveError={saveError}
       />
       </>
       )}

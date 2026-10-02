@@ -9,15 +9,11 @@ import { DaybookReport } from '../components/pagescomponents/reports/transaction
 import { AllTransactionsReport } from '../components/pagescomponents/reports/transactionsreports/AllTransactionsReport';
 import { AllPartiesReport } from '../components/pagescomponents/reports/parties reports/AllPartiesReport';
 import { PartyReport } from '../components/pagescomponents/reports/parties reports/PartyReport';
-import { PartyWiseProfitLossReport } from '../components/pagescomponents/reports/parties reports/PartyWiseProfitLossReport';
-import { PartyReportByItem } from '../components/pagescomponents/reports/parties reports/PartyReportByItem';
 import { SalePurchaseByParty } from '../components/pagescomponents/reports/stockreport/SalePurchaseByParty';
 import { LowStockDetails } from '../components/pagescomponents/reports/stockreport/LowStockDetails';
 import { StockDetails } from '../components/pagescomponents/reports/stockreport/StockDetails';
-import { StockInOutDetails } from '../components/pagescomponents/reports/stockreport/StockInOutDetails';
 import { ProfitAndLoss } from '../components/pagescomponents/reports/financialreports/ProfitAndLoss';
 import { BillWiseProfit } from '../components/pagescomponents/reports/financialreports/BillWiseProfit';
-import { CashFlow } from '../components/pagescomponents/reports/financialreports/CashFlow';
 
 interface ReportsProps {
   onViewChange?: (view: ViewType) => void;
@@ -62,12 +58,6 @@ export function Reports({ onViewChange, onEditInvoice, initialReport }: ReportsP
     if (activeReport.name === 'Party report') {
       return <PartyReport onBack={() => setActiveReport(null)} />;
     }
-    if (activeReport.name === 'Party wise Profit & Loss') {
-      return <PartyWiseProfitLossReport onBack={() => setActiveReport(null)} />;
-    }
-    if (activeReport.name === 'Party Report By Item') {
-      return <PartyReportByItem onBack={() => setActiveReport(null)} />;
-    }
   }
 
   if (activeReport?.category === 'Financial Reports') {
@@ -76,9 +66,6 @@ export function Reports({ onViewChange, onEditInvoice, initialReport }: ReportsP
     }
     if (activeReport.name === 'Bill Wise Profit') {
       return <BillWiseProfit onBack={() => setActiveReport(null)} />;
-    }
-    if (activeReport.name === 'Cash flow') {
-      return <CashFlow onBack={() => setActiveReport(null)} />;
     }
   }
 
@@ -91,9 +78,6 @@ export function Reports({ onViewChange, onEditInvoice, initialReport }: ReportsP
     }
     if (activeReport.name === 'Stock details') {
       return <StockDetails onBack={() => setActiveReport(null)} />;
-    }
-    if (activeReport.name === 'Stock In/Stock out Details') {
-      return <StockInOutDetails onBack={() => setActiveReport(null)} />;
     }
   }
 

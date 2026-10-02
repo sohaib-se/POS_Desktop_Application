@@ -222,7 +222,18 @@ export function PurchaseBottomSection({
             <select
               style={{ border: "1px solid #d1d5db", borderRadius: 4, padding: "5px 8px", width: 210, fontSize: 13, color: "#374151", background: "#fff", outline: "none", cursor: "pointer" }}
               value={activeTab.paymentType}
-              onChange={(e) => updateTab({ paymentType: e.target.value })}
+              onChange={(e) => {
+                const selectedType = e.target.value;
+                if (selectedType !== "Cash" && (!activeTab.paid || Number(activeTab.paid) === 0)) {
+                  updateTab({
+                    paymentType: selectedType,
+                    paidAll: true,
+                    paid: roundedTotal > 0 ? String(roundedTotal) : "",
+                  });
+                } else {
+                  updateTab({ paymentType: selectedType });
+                }
+              }}
             >
               <option value="Cash">Cash</option>
               {banks.map((b) => (

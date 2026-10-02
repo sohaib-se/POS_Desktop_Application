@@ -246,6 +246,11 @@ export function ProductsTab({
   });
   const [isSavingAdjustment, setIsSavingAdjustment] = useState(false);
 
+  const [blockedDeleteModal, setBlockedDeleteModal] = useState<{
+    type: "Add Stock" | "Purchase";
+    itemName: string;
+  } | null>(null);
+
   const [showStockDetailsPopup, setShowStockDetailsPopup] = useState(false);
 
   const [isProductSearchActive, setIsProductSearchActive] = useState(false);
@@ -303,26 +308,29 @@ export function ProductsTab({
     : !hasItemsCache;
 
   // ---- Effects ----
-  useEffect(() => {
-    const loadItems = async () => {
-      setIsItemsLoading(true);
-      try {
-        const response = await fetch("/api/items");
-        if (!response.ok) throw new Error("Failed to load items");
-        const itemRows = (await response.json()) as ItemApiRecord[];
-        const mappedItems = itemRows.map(mapItemApiRecord);
-        setItemList(mappedItems);
-        const hasItems = mappedItems.length > 0;
-        setHasItemsCache(hasItems);
-        localStorage.setItem("items_hasItems", hasItems ? "true" : "false");
-      } catch (error) {
-        console.error(error);
-      } finally {
-        setIsItemsLoading(false);
-      }
-    };
-    void loadItems();
+  // Extracted so it can be called imperatively after any mutation that changes
+  // item stock (deletion, adjustment, etc.) to keep the UI in sync.
+  const loadItems = useCallback(async () => {
+    setIsItemsLoading(true);
+    try {
+      const response = await fetch("/api/items");
+      if (!response.ok) throw new Error("Failed to load items");
+      const itemRows = (await response.json()) as ItemApiRecord[];
+      const mappedItems = itemRows.map(mapItemApiRecord);
+      setItemList(mappedItems);
+      const hasItems = mappedItems.length > 0;
+      setHasItemsCache(hasItems);
+      localStorage.setItem("items_hasItems", hasItems ? "true" : "false");
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setIsItemsLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    void loadItems();
+  }, [loadItems]);
 
   const loadItemTransactions = useCallback(async () => {
     try {
@@ -580,6 +588,7 @@ export function ProductsTab({
           salePrice: selectedItem.salePrice,
           wholesalePrice: selectedItem.wholesalePrice,
           purchasePrice: selectedItem.purchasePrice,
+          atPrice: selectedItem.atPrice,
           stockQuantity: newStockQuantity,
           unit: selectedItem.unit,
           primaryUnit: selectedItem.primaryUnit,
@@ -676,6 +685,49 @@ export function ProductsTab({
   const handleDeleteTransaction = async (transaction: ItemTransactionRow) => {
     const apiId = transaction.rawTransaction?.id;
     if (!apiId) return;
+
+    // ── Guard: block deletion of Add Stock / Opening Stock if stock has been consumed ──
+    if (transaction.type === "Add Stock" || transaction.type === "Opening Stock") {
+      const raw = transaction.rawTransaction as Record<string, unknown>;
+      const totalQty = Number(raw.quantity ?? 0);
+      const remainingQty = Number(raw.remaining_quantity ?? raw.remainingQuantity ?? totalQty);
+      if (remainingQty < totalQty) {
+        setBlockedDeleteModal({
+          type: "Add Stock",
+          itemName: transaction.itemName || selectedItem?.name || "this item",
+        });
+        return;
+      }
+    }
+
+    // ── Guard: block deletion of Purchase if any FIFO layer has been consumed ──
+    if (transaction.type === "Purchase") {
+      // Ask for confirmation first, then let the backend guard decide.
+      if (!window.confirm(`Are you sure you want to delete this ${transaction.type}?`)) return;
+      try {
+        const checkRes = await fetch(`/api/purchase_bills/${apiId}`, { method: "DELETE" });
+        if (checkRes.status === 409) {
+          setBlockedDeleteModal({
+            type: "Purchase",
+            itemName: transaction.itemName || selectedItem?.name || "this item",
+          });
+          return;
+        }
+        // Deletion succeeded — refresh transactions and item list, then return.
+        if (checkRes.ok || checkRes.status === 204) {
+          void loadItemTransactions();
+          void loadItems();
+          return;
+        }
+        throw new Error(`Failed to delete purchase (status ${checkRes.status})`);
+      } catch (err) {
+        console.error(err);
+        alert("Failed to delete the selected transaction.");
+        return;
+      }
+    }
+
+
     const confirmMessage = `Are you sure you want to delete this ${transaction.type}?`;
     if (!window.confirm(confirmMessage)) return;
 
@@ -683,9 +735,6 @@ export function ProductsTab({
       if (transaction.type === "Sale") {
         const res = await fetch(`/api/sale_invoices/${apiId}`, { method: "DELETE" });
         if (!res.ok && res.status !== 204) throw new Error("Failed to delete sale");
-      } else if (transaction.type === "Purchase") {
-        const res = await fetch(`/api/purchase_bills/${apiId}`, { method: "DELETE" });
-        if (!res.ok && res.status !== 204) throw new Error("Failed to delete purchase");
       } else {
         if (selectedItem) {
           const isReduceStock = transaction.type === "Reduce Stock";
@@ -721,42 +770,56 @@ export function ProductsTab({
             setSelectedItem(updatedItem);
           } else {
             // ── Add Stock / Opening Stock: reverse using atPrice (flat, not FIFO) ──
+            //
+            // IMPORTANT: We must NOT use `selectedItem` from React state here because
+            // it may be stale — previous Sale / Purchase / Reduce Stock deletions update
+            // the database but do NOT push the new stockQuantity back into React state.
+            // Using a stale value would cause us to write an incorrect quantity to the DB.
+            // Instead, fetch the latest item data directly from the server right now.
+            const freshItemsRes = await fetch("/api/items");
+            const freshItemsList = freshItemsRes.ok
+              ? ((await freshItemsRes.json()) as ItemApiRecord[])
+              : ([] as ItemApiRecord[]);
+            const freshItemRecord = freshItemsList.find((r) => String(r.id) === selectedItem.id);
+            const freshItem: Item = freshItemRecord ? mapItemApiRecord(freshItemRecord) : selectedItem;
+
             let baseQtyChange = qty;
-            const isSecondary = transaction.unit === selectedItem.secondaryUnit;
-            if (isSecondary && selectedItem.conversionRate) {
-              baseQtyChange = qty / selectedItem.conversionRate;
+            const isSecondary = transaction.unit === freshItem.secondaryUnit;
+            if (isSecondary && freshItem.conversionRate) {
+              baseQtyChange = qty / freshItem.conversionRate;
             }
             const stockChange = isAdd ? -baseQtyChange : baseQtyChange; // Reverse
-            const newStockQuantity = selectedItem.stockQuantity + stockChange;
+            const newStockQuantity = freshItem.stockQuantity + stockChange;
 
-            let newSecondaryStock = selectedItem.secondaryStock ?? 0;
-            if (selectedItem.conversionRate) {
-              newSecondaryStock = newStockQuantity * selectedItem.conversionRate;
+            let newSecondaryStock = freshItem.secondaryStock ?? 0;
+            if (freshItem.conversionRate) {
+              newSecondaryStock = newStockQuantity * freshItem.conversionRate;
             }
 
             const valueChange = qty * atPrice;
             const newValueChange = isAdd ? -valueChange : valueChange; // Reverse
-            const newStockValue = selectedItem.stockValue + newValueChange;
+            const newStockValue = freshItem.stockValue + newValueChange;
             const finalStockValue = Math.max(0, newStockValue);
 
             const payload = {
-              id: selectedItem.id,
-              name: selectedItem.name,
-              code: selectedItem.code,
-              category: selectedItem.category,
-              salePrice: selectedItem.salePrice,
-              wholesalePrice: selectedItem.wholesalePrice,
-              purchasePrice: selectedItem.purchasePrice,
+              id: freshItem.id,
+              name: freshItem.name,
+              code: freshItem.code,
+              category: freshItem.category,
+              salePrice: freshItem.salePrice,
+              wholesalePrice: freshItem.wholesalePrice,
+              purchasePrice: freshItem.purchasePrice,
+              atPrice: freshItem.atPrice,
               stockQuantity: newStockQuantity,
-              unit: selectedItem.unit,
-              primaryUnit: selectedItem.primaryUnit,
-              secondaryUnit: selectedItem.secondaryUnit,
+              unit: freshItem.unit,
+              primaryUnit: freshItem.primaryUnit,
+              secondaryUnit: freshItem.secondaryUnit,
               stockValue: finalStockValue,
-              minStock: selectedItem.minStock,
-              lowStock: selectedItem.lowStock,
+              minStock: freshItem.minStock,
+              lowStock: freshItem.lowStock,
               secondaryStock: newSecondaryStock,
-              conversionRate: selectedItem.conversionRate,
-              status: selectedItem.status,
+              conversionRate: freshItem.conversionRate,
+              status: freshItem.status,
               skipOpeningStockUpdate: true,
             };
 
@@ -769,14 +832,14 @@ export function ProductsTab({
 
             const updatedItemPayload = (await response.json()) as Record<string, unknown>;
             const updatedItem: Item = {
-              ...selectedItem,
+              ...freshItem,
               stockQuantity: Number(updatedItemPayload.stockQuantity ?? newStockQuantity),
               stockValue: Number(updatedItemPayload.stockValue ?? finalStockValue),
               secondaryStock:
                 updatedItemPayload.secondaryStock != null
                   ? Number(updatedItemPayload.secondaryStock)
                   : newSecondaryStock,
-              conversionRate: selectedItem.conversionRate,
+              conversionRate: freshItem.conversionRate,
             };
             setItemList((prev) =>
               prev.map((item) => (item.id === updatedItem.id ? updatedItem : item))
@@ -794,6 +857,9 @@ export function ProductsTab({
       }
       
       void loadItemTransactions();
+      // Also refresh the item list so the displayed stock quantity is always
+      // consistent with the database after any transaction deletion.
+      void loadItems();
     } catch (error) {
       console.error(error);
       alert("Failed to delete the selected transaction.");
@@ -1427,6 +1493,61 @@ export function ProductsTab({
         onClose={() => setShowStockDetailsPopup(false)}
         selectedItem={selectedItem}
       />
+
+      {/* Blocked Delete Warning Modal */}
+      {blockedDeleteModal && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center">
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-black/40"
+            onClick={() => setBlockedDeleteModal(null)}
+          />
+          <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
+            {/* Coloured top bar */}
+            <div className="h-1.5 w-full bg-gradient-to-r from-amber-400 to-orange-500" />
+            <div className="p-6">
+              {/* Icon + title */}
+              <div className="flex items-start gap-4 mb-4">
+                <div className="flex-shrink-0 w-11 h-11 rounded-full bg-amber-50 flex items-center justify-center">
+                  <svg className="w-6 h-6 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="text-[17px] font-semibold text-gray-900 leading-tight">
+                    Cannot Delete This Transaction
+                  </h3>
+                  <p className="mt-1 text-sm text-gray-500">
+                    {blockedDeleteModal.type === "Purchase" ? "Purchase" : "Add Stock"} transaction for{" "}
+                    <span className="font-medium text-gray-700">{blockedDeleteModal.itemName}</span>
+                  </p>
+                </div>
+              </div>
+
+              {/* Body */}
+              <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 text-sm text-amber-800 leading-relaxed">
+                This stock has already been partially or fully consumed by Sales or Reduce Stock
+                transactions. To delete this{" "}
+                <span className="font-semibold">
+                  {blockedDeleteModal.type === "Purchase" ? "Purchase" : "Add Stock"}
+                </span>{" "}
+                transaction, you must first delete all Sale and Reduce Stock transactions that
+                used stock from this batch.
+              </div>
+
+              {/* Action */}
+              <div className="flex justify-end mt-5">
+                <button
+                  onClick={() => setBlockedDeleteModal(null)}
+                  className="px-6 py-2 bg-[#1A73E8] hover:bg-[#1557B0] text-white text-sm font-semibold rounded-lg transition-colors"
+                >
+                  Got it
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

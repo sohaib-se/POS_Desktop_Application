@@ -40,6 +40,49 @@ export interface SavedSaleRecord {
   createdAt?: string;
 }
 
+interface SaleInvoiceApiRecord {
+  id?: string | number;
+  invoice_no?: string | number;
+  invoiceNo?: string | number;
+  date?: string;
+  party_name?: string;
+  partyName?: string;
+  party_id?: string | number | null;
+  partyId?: string | number | null;
+  party_phone?: string | null;
+  partyPhone?: string | null;
+  payment_mode?: string;
+  paymentMode?: string;
+  payment_type?: string;
+  paymentType?: string;
+  subtotal?: string | number;
+  discount_percent?: string | number;
+  discountPercent?: string | number;
+  discount_amount?: string | number;
+  discountAmount?: string | number;
+  amount?: string | number;
+  balance?: string | number;
+  description?: string;
+  line_items_json?: string | null;
+  lineItemsJson?: string | null;
+  created_at?: string;
+  createdAt?: string;
+}
+
+interface LineItemRecord {
+  itemId?: string | number;
+  item_id?: string | number;
+  name?: string;
+  itemName?: string;
+  itemCode?: string;
+  code?: string;
+  quantity?: string | number;
+  qty?: string | number;
+  unit?: string;
+  price?: string | number;
+  pricePerUnit?: string | number;
+}
+
 let globalRowId = 1;
 let globalTabId = 1;
 
@@ -338,7 +381,7 @@ export function LaimsoftPos({ onClose, initialInvoice }: LaimsoftPosProps) {
 
         const loadedParties = (await partiesResponse.json()) as PartyOption[];
         const loadedItems = (await itemsResponse.json()) as ItemOption[];
-        const saleInvoices = (await saleInvoicesResponse.json()) as any[];
+        const saleInvoices = (await saleInvoicesResponse.json()) as SaleInvoiceApiRecord[];
         const loadedBanks = (await banksResponse.json()) as BankOption[];
 
         if (cancelled) return;
@@ -347,12 +390,12 @@ export function LaimsoftPos({ onClose, initialInvoice }: LaimsoftPosProps) {
         setItems(loadedItems);
         setBanks(loadedBanks);
 
-        const loadedSales: SavedSaleRecord[] = saleInvoices.map((inv: any) => ({
+        const loadedSales: SavedSaleRecord[] = saleInvoices.map((inv: SaleInvoiceApiRecord) => ({
           id: String(inv.id),
           invoiceNo: String(inv.invoice_no ?? inv.invoiceNo ?? ""),
           date: inv.date || new Date().toISOString().split("T")[0],
           partyName: inv.party_name ?? inv.partyName ?? "Cash Sale",
-          partyId: inv.party_id ?? inv.partyId ?? null,
+          partyId: (inv.party_id ?? inv.partyId) != null ? String(inv.party_id ?? inv.partyId) : null,
           partyPhone: inv.party_phone ?? inv.partyPhone ?? null,
           paymentMode: inv.payment_mode ?? inv.paymentMode ?? "Cash",
           paymentType: inv.payment_type ?? inv.paymentType ?? "Cash",
@@ -399,7 +442,6 @@ export function LaimsoftPos({ onClose, initialInvoice }: LaimsoftPosProps) {
     return () => {
       cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Once lookup data (items, parties) is loaded, populate the tab if we have an initialInvoice to edit
@@ -595,8 +637,8 @@ export function LaimsoftPos({ onClose, initialInvoice }: LaimsoftPosProps) {
       let parsedRows: PosRow[] = [];
       if (sale.lineItemsJson) {
         try {
-          const lineItems = JSON.parse(sale.lineItemsJson) as Array<any>;
-          parsedRows = lineItems.map((li: any) => {
+          const lineItems = JSON.parse(sale.lineItemsJson) as Array<LineItemRecord>;
+          parsedRows = lineItems.map((li: LineItemRecord) => {
             const matchedItem = items.find(
               (it) => String(it.id) === String(li.itemId ?? li.item_id) || it.name === (li.name ?? li.itemName)
             );
@@ -1278,8 +1320,6 @@ export function LaimsoftPos({ onClose, initialInvoice }: LaimsoftPosProps) {
           });
           return nextList;
         });
-      }
-
       // Reset active tab for next sale
       const isCashSaleByDefault = JSON.parse(localStorage.getItem('settings.isCashSaleByDefault') || 'false');
 
@@ -1491,7 +1531,7 @@ export function LaimsoftPos({ onClose, initialInvoice }: LaimsoftPosProps) {
           <div className="pos-print-content">
             <InvoiceThemeContent
               saleData={directPrintSale}
-              activePrinter={((localStorage.getItem("print_activePrinter") as any) || "regular")}
+              activePrinter={((localStorage.getItem("print_activePrinter") as "regular" | "thermal") || "regular")}
               selectedThemeId={
                 localStorage.getItem("print_selectedThemeId") ||
                 (((localStorage.getItem("print_activePrinter") || "regular") === "thermal") ? "thermal1" : "tally")

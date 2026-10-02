@@ -299,6 +299,11 @@ export function AddSale({ onSave, onClose, initialInvoice, isConversion }: AddSa
       ? "cash"
       : "credit";
 
+    const invAmount = Number(initialInvoice.amount ?? 0);
+    const invBalance = Number(initialInvoice.balance ?? 0);
+    const alreadyReceived = Math.max(0, invAmount - invBalance);
+    const isAlreadyReceivedAll = !isConversion && invAmount > 0 && invBalance === 0;
+
     setTabs([
       {
         id: 1,
@@ -331,8 +336,8 @@ export function AddSale({ onSave, onClose, initialInvoice, isConversion }: AddSa
         imageFileName: initialInvoice.attachmentImageName ?? "",
         documentDataUrl: initialInvoice.attachmentDocumentPath ?? "",
         documentFileName: initialInvoice.attachmentDocumentName ?? "",
-        received: "",
-        receivedAll: false,
+        received: alreadyReceived > 0 ? String(alreadyReceived) : "",
+        receivedAll: isAlreadyReceivedAll,
       },
     ]);
     setActiveTabId(1);

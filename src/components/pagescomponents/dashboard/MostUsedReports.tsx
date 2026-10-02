@@ -9,15 +9,11 @@ const AVAILABLE_REPORTS = [
   "All Transactions",
   "Profit And Loss",
   "Bill Wise Profit",
-  "Cash flow",
   "Party Reports",
   "All parties",
-  "Party wise Profit & Loss",
-  "Party Report By Item",
   "Sale Purchase By Party",
   "Low stock details",
-  "Stock details",
-  "Stock In/Stock out Details"
+  "Stock details"
 ];
 
 const REPORT_MAPPING: Record<string, { category: string; name: string }> = {
@@ -27,15 +23,11 @@ const REPORT_MAPPING: Record<string, { category: string; name: string }> = {
   "All Transactions": { category: "Transaction report", name: "All Transactions" },
   "Profit And Loss": { category: "Financial Reports", name: "Profit And Loss" },
   "Bill Wise Profit": { category: "Financial Reports", name: "Bill Wise Profit" },
-  "Cash flow": { category: "Financial Reports", name: "Cash flow" },
   "Party Reports": { category: "Party Reports", name: "Party report" },
   "All parties": { category: "Party Reports", name: "All parties" },
-  "Party wise Profit & Loss": { category: "Party Reports", name: "Party wise Profit & Loss" },
-  "Party Report By Item": { category: "Party Reports", name: "Party Report By Item" },
   "Sale Purchase By Party": { category: "Item/Stock Reports", name: "Sale Purchase By Party" },
   "Low stock details": { category: "Item/Stock Reports", name: "Low stock details" },
   "Stock details": { category: "Item/Stock Reports", name: "Stock details" },
-  "Stock In/Stock out Details": { category: "Item/Stock Reports", name: "Stock In/Stock out Details" },
 };
 
 export function MostUsedReports({ 

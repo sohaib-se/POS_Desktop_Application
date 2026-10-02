@@ -1835,6 +1835,11 @@ export function deleteBankAccountTransaction(id) {
   return result.changes > 0;
 }
 
+export function deleteBankAccountTransactionsForSale(invoiceId) {
+  // Bank transactions created by POS sales use the deterministic pattern: bank_pos_{invoiceId}
+  deleteBankAccountTransaction('bank_pos_' + invoiceId);
+}
+
 export function addBankAccountTransaction(entry) {
   const db = openDatabase();
   const txId = entry.id || Date.now().toString();

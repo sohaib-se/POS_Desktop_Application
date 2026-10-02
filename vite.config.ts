@@ -897,6 +897,96 @@ function sqliteApiPlugin() {
               }
             }
 
+            // ── Cascade: if this is a POS-sale bank transaction, also clean up the linked sale invoice ──
+            // Convention: bank transaction ID = 'bank_pos_' + sale_invoice_id
+            if (String(id).startsWith('bank_pos_')) {
+              const saleInvoiceId = String(id).replace('bank_pos_', '');
+              try {
+                const saleInvoice = repository.getSaleInvoiceById(saleInvoiceId);
+                if (saleInvoice && !String(saleInvoice.transaction_type || '').includes('Returned')) {
+                  // 1. Restore stock for each line item
+                  try {
+                    const lineItems = JSON.parse(saleInvoice.line_items_json || '[]');
+                    const allItems = repository.getItems();
+                    for (const lineItem of lineItems) {
+                      if (!lineItem.itemId || !lineItem.quantity) continue;
+                      const dbItem = allItems.find((i: any) => String(i.id) === String(lineItem.itemId));
+                      if (!dbItem) continue;
+                      const isSecondary = lineItem.unit === dbItem.secondary_unit;
+                      repository.restoreItemStockFifo(lineItem.itemId, Number(lineItem.quantity), isSecondary, dbItem.conversion_rate);
+                    }
+                  } catch (stockErr) { console.error('[BankTx Delete] Failed to restore stock:', stockErr); }
+
+                  // 2. Reverse party balance (credit sales only)
+                  if (String(saleInvoice.payment_mode || '').toLowerCase() === 'credit' && saleInvoice.party_id) {
+                    try {
+                      const allParties = repository.getParties();
+                      const party = allParties.find((p: any) => String(p.id) === String(saleInvoice.party_id));
+                      if (party) {
+                        party.balance = Number(party.balance || 0) - Number(saleInvoice.balance || 0);
+                        repository.upsertParty(party);
+                      }
+                    } catch (balanceErr) { console.error('[BankTx Delete] Failed to restore party balance:', balanceErr); }
+                  }
+
+                  // 3. Delete linked cash-in-hand transaction (if any)
+                  try { repository.deleteCashInHandTransactionsForSale(saleInvoiceId); } catch (e) { /* ignore */ }
+
+                  // 4. Delete the sale invoice itself
+                  try { repository.deleteSaleInvoice(saleInvoiceId); } catch (e) { console.error('[BankTx Delete] Failed to delete sale invoice:', e); }
+                }
+              } catch (cascadeErr) {
+                console.error('[BankTx Delete] Cascade sale invoice cleanup failed:', cascadeErr);
+              }
+            }
+
+            if (String(id).startsWith('bank_purchase_')) {
+              const purchaseId = String(id).replace('bank_purchase_', '');
+              try {
+                const existingInvoice = repository.getPurchaseBillById(purchaseId);
+                if (existingInvoice) {
+                  try {
+                    const lineItems = JSON.parse(existingInvoice.line_items_json || '[]');
+                    const allItems = repository.getItems();
+                    for (let i = 0; i < lineItems.length; i++) {
+                      const lineItem = lineItems[i];
+                      if (!lineItem.itemId || !lineItem.quantity) continue;
+                      const dbItem = allItems.find((item: any) => String(item.id) === String(lineItem.itemId));
+                      if (!dbItem) continue;
+
+                      const isSecondary = lineItem.unit === dbItem.secondary_unit;
+                      const lineItemId = lineItem.id || `line_${i}`;
+                      repository.removePurchaseStock(
+                        lineItem.itemId,
+                        Number(lineItem.quantity),
+                        isSecondary,
+                        dbItem.conversion_rate,
+                        lineItem.price ?? 0,
+                        purchaseId,
+                        lineItemId
+                      );
+                    }
+                  } catch (stockErr) { console.error('[BankTx Delete] Failed to restore purchase stock:', stockErr); }
+
+                  if (existingInvoice.party_id) {
+                    try {
+                      const allParties = repository.getParties();
+                      const party = allParties.find((p: any) => String(p.id) === String(existingInvoice.party_id));
+                      if (party) {
+                        party.balance = Number(party.balance || 0) + Number(existingInvoice.balance || 0);
+                        repository.upsertParty(party);
+                      }
+                    } catch (balanceErr) { console.error('[BankTx Delete] Failed to restore party balance:', balanceErr); }
+                  }
+
+                  try { repository.deleteCashInHandTransaction('cash_purchase_' + purchaseId); } catch (e) { /* ignore */ }
+                  try { repository.deletePurchaseBill(purchaseId); } catch (e) { console.error('[BankTx Delete] Failed to delete purchase bill:', e); }
+                }
+              } catch (cascadeErr) {
+                console.error('[BankTx Delete] Cascade purchase bill cleanup failed:', cascadeErr);
+              }
+            }
+
             repository.deleteBankAccountTransaction(id);
             
             res.statusCode = 200;
@@ -904,6 +994,7 @@ function sqliteApiPlugin() {
             res.end(JSON.stringify({ success: true }));
             return;
           }
+
 
           res.statusCode = 405;
           res.end('Method Not Allowed');
@@ -3116,9 +3207,10 @@ function sqliteApiPlugin() {
                   }
                 } else {
                   // Bank payment -> Bank Account transaction
+                  // Use deterministic ID (bank_pos_{invoiceId}) so we can delete/update it later by invoice ID
                   if (receivedAmount > 0) {
                     repository.addBankAccountTransaction({
-                      id: 'bank_pos_' + invoice.id + '_' + Date.now(),
+                      id: 'bank_pos_' + invoice.id,
                       date: invoice.date,
                       name: invoice.partyName || 'POS Sale',
                       type: 'POS Sale',
@@ -3316,9 +3408,10 @@ function sqliteApiPlugin() {
                 console.error('[Edit Sale] Failed to update party balance:', balanceError);
               }
 
-              // ── 3. Cash-in-hand: delete old transaction, recreate with new amount ─
+              // ── 3. Cash-in-hand / Bank: delete old transaction, recreate with new amount ─
               try {
                 repository.deleteCashInHandTransactionsForSale(id);
+                repository.deleteBankAccountTransactionsForSale(id);
 
                 const newPaymentModeLower = String(invoice.paymentMode).toLowerCase();
                 const newTotalAmount = Number(invoice.amount || 0);
@@ -3332,9 +3425,18 @@ function sqliteApiPlugin() {
                     type: 'POS Sale',
                     amount: newReceivedAmount,
                   });
+                } else if (newPaymentModeLower !== 'cash' && newPaymentModeLower !== 'credit' && newReceivedAmount > 0) {
+                  repository.addBankAccountTransaction({
+                    id: 'bank_pos_' + id,
+                    date: invoice.date,
+                    name: invoice.partyName || 'POS Sale',
+                    type: 'POS Sale',
+                    amount: newReceivedAmount,
+                    paymentType: invoice.paymentMode
+                  });
                 }
               } catch (txError) {
-                console.error('[Edit Sale] Failed to update cash transaction:', txError);
+                console.error('[Edit Sale] Failed to update cash/bank transaction:', txError);
               }
 
               if (existingInvoice.attachment_image_path && payload.imageDataUrl !== undefined && existingInvoice.attachment_image_path !== createdImagePath) {
@@ -3414,8 +3516,9 @@ function sqliteApiPlugin() {
 
                 try {
                   repository.deleteCashInHandTransactionsForSale(id);
+                  repository.deleteBankAccountTransactionsForSale(id);
                 } catch (txError) {
-                  console.error('Failed to delete cash transaction:', txError);
+                  console.error('Failed to delete cash/bank transaction:', txError);
                 }
               }
             }
@@ -3511,8 +3614,9 @@ function sqliteApiPlugin() {
 
             try {
               repository.deleteCashInHandTransactionsForSale(id);
+              repository.deleteBankAccountTransactionsForSale(id);
             } catch (txError) {
-              console.error('Failed to delete cash transaction:', txError);
+              console.error('Failed to delete cash/bank transaction on return:', txError);
             }
 
             const updatedInvoice = {

@@ -264,6 +264,10 @@ export function AccountDetail({ account, onDeposit, onEditTransaction, onDeleteT
             <div className="px-4 py-2 text-xs text-gray-400 italic border-b border-gray-100 leading-snug">
               Edit from Purchase Bills
             </div>
+          ) : String(txContextMenu.txId).startsWith('bank_expense_') ? (
+            <div className="px-4 py-2 text-xs text-gray-400 italic border-b border-gray-100 leading-snug">
+              Edit from Expenses
+            </div>
           ) : (
             <button
               className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"

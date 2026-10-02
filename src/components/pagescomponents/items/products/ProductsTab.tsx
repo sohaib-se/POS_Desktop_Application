@@ -147,6 +147,9 @@ const normalizeTransactionType = (
   transactionType?: string | null
 ): ItemTransactionRow["type"] => {
   const normalizedType = String(transactionType ?? "").toLowerCase();
+  if (normalizedType.includes("returned") || normalizedType.includes("return")) {
+    return "Sale (Returned)";
+  }
   return normalizedType.includes("purchase") ? "Purchase" : "Sale";
 };
 

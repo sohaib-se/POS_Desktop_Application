@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { exportPartyTransactionsToExcel } from "@/utils/exportPartyTransactionsExcel";
 import { useSettings } from "@/hooks/useSettings";
-import type { Party, Transaction, SaleInvoiceEditData } from "@/types";
+import type { Party, SaleInvoiceEditData } from "@/types";
 import { PartiesHeader } from "@/components/pagescomponents/parties/PartiesHeader";
 import { PartiesEmptyState } from "@/components/pagescomponents/parties/PartiesEmptyState";
 import { PartyList } from "@/components/pagescomponents/parties/PartyList";
@@ -21,7 +21,7 @@ type TransactionApiRow = {
   status?: string | null;
 };
 
-function normalizeTransactionType(value: string | null | undefined): Transaction["type"] {
+function normalizeTransactionType(value: string | null | undefined): PartyTransactionRow["type"] {
   const normalizedValue = String(value ?? "").toLowerCase();
 
   if (normalizedValue.includes("payable opening balance")) {
@@ -40,6 +40,10 @@ function normalizeTransactionType(value: string | null | undefined): Transaction
     return "Payment-Out";
   }
 
+  if (normalizedValue.includes("returned") || normalizedValue.includes("return")) {
+    return "Sale (Returned)";
+  }
+
   if (normalizedValue.includes("purchase")) {
     return "Purchase";
   }
@@ -52,7 +56,7 @@ function normalizeTransactionType(value: string | null | undefined): Transaction
     return "Estimate";
   }
 
-  return "Sale";
+  return (value as PartyTransactionRow["type"]) ?? "Sale";
 }
 
 function normalizePartyTransaction(row: TransactionApiRow): PartyTransactionRow {
@@ -751,7 +755,6 @@ export function Parties({ isReportView, onBack, onEditSaleInvoice }: PartiesProp
             setShowTransactionSearch={setShowTransactionSearch}
             transactionSearchTerm={transactionSearchTerm}
             setTransactionSearchTerm={setTransactionSearchTerm}
-            handlePrintTransactions={handlePrintTransactions}
             handleExportExcel={handleExportExcel}
             selectedMonth={selectedMonth}
             onSetSelectedMonth={setSelectedMonth}

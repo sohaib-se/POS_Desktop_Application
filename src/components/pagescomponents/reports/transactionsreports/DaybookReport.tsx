@@ -19,7 +19,7 @@ interface TransactionRow {
   id: string; // use string id for uniqueness across both
   originalId: number;
   date: string;
-  type: "Sale" | "Purchase";
+  type: string;
   invoiceNo: string;
   partyName: string;
   paymentType: string;
@@ -160,7 +160,7 @@ export function DaybookReport({ onBack, onEditInvoice }: DaybookReportProps) {
             id: `sale-${s.id}`,
             originalId: s.id,
             date: s.date,
-            type: "Sale" as const,
+            type: s.transaction_type || "Sale",
             invoiceNo: s.invoice_no,
             partyName: s.party_name,
             paymentType: s.payment_type ?? s.payment_mode ?? "",
@@ -201,7 +201,7 @@ export function DaybookReport({ onBack, onEditInvoice }: DaybookReportProps) {
             id: `purchase-${p.id}`,
             originalId: p.id,
             date: p.date,
-            type: "Purchase" as const,
+            type: p.transaction_type || "Purchase",
             invoiceNo: p.invoice_no,
             partyName: p.party_name,
             paymentType: p.payment_type ?? p.payment_mode ?? "",
@@ -369,7 +369,7 @@ export function DaybookReport({ onBack, onEditInvoice }: DaybookReportProps) {
 
     try {
       setIsDeleting(true);
-      const isSale = tx.type === "Sale";
+      const isSale = tx.type.includes("Sale");
       const endpoint = isSale ? `/api/sale_invoices/${tx.originalId}` : `/api/purchase_bills/${tx.originalId}`;
 
       const response = await fetch(endpoint, {
@@ -392,7 +392,7 @@ export function DaybookReport({ onBack, onEditInvoice }: DaybookReportProps) {
   };
 
   const handleViewTransaction = (tx: TransactionRow) => {
-    if (tx.type === "Sale") {
+    if (tx.type.includes("Sale")) {
       setViewingSale(tx.rawInvoice);
     } else {
       setViewingPurchase(tx.rawInvoice);
@@ -400,7 +400,7 @@ export function DaybookReport({ onBack, onEditInvoice }: DaybookReportProps) {
   };
 
   const handleEditTransaction = (tx: TransactionRow) => {
-    if (tx.type === "Sale") {
+    if (tx.type.includes("Sale")) {
       if (onEditInvoice) onEditInvoice(tx.rawInvoice);
     } else {
       setEditingPurchase(tx.rawInvoice);
@@ -566,8 +566,8 @@ export function DaybookReport({ onBack, onEditInvoice }: DaybookReportProps) {
                   >
                     <td className="px-4 py-3">{invoice.date}</td>
                     <td className="px-4 py-3">
-                      <span className={`inline-flex items-center gap-1.5 ${invoice.type === 'Sale' ? 'text-green-600' : 'text-blue-600'}`}>
-                        <span className={`w-2 h-2 rounded-full ${invoice.type === 'Sale' ? 'bg-green-500' : 'bg-blue-500'}`}></span>
+                      <span className={`inline-flex items-center gap-1.5 ${invoice.type.includes('Returned') ? 'text-amber-600 font-medium' : invoice.type.includes('Sale') ? 'text-green-600' : 'text-blue-600'}`}>
+                        <span className={`w-2 h-2 rounded-full ${invoice.type.includes('Returned') ? 'bg-amber-500' : invoice.type.includes('Sale') ? 'bg-green-500' : 'bg-blue-500'}`}></span>
                         {invoice.type}
                       </span>
                     </td>

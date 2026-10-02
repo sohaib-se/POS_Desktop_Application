@@ -237,14 +237,18 @@ export function TransactionsCard({
                     <td className="px-4 py-2">
                       <span
                         className={`inline-flex items-center gap-1.5 ${
-                          transaction.type === "Sale"
+                          transaction.type.includes("Returned")
+                            ? "text-amber-600 font-medium"
+                            : transaction.type.includes("Sale")
                             ? "text-[#43A047]"
                             : "text-[#E53935]"
                         }`}
                       >
                         <span
                           className={`w-2 h-2 rounded-full ${
-                            transaction.type === "Sale"
+                            transaction.type.includes("Returned")
+                              ? "bg-amber-500"
+                              : transaction.type.includes("Sale")
                               ? "bg-[#43A047]"
                               : "bg-[#E53935]"
                           }`}

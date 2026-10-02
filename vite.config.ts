@@ -987,6 +987,16 @@ function sqliteApiPlugin() {
               }
             }
 
+            if (String(id).startsWith('bank_expense_')) {
+              const expenseId = String(id).replace('bank_expense_', '');
+              try {
+                repository.deleteExpenseRecord(expenseId);
+                try { repository.deleteCashInHandTransaction('cash_expense_' + expenseId); } catch (e) { /* ignore */ }
+              } catch (cascadeErr) {
+                console.error('[BankTx Delete] Cascade expense record cleanup failed:', cascadeErr);
+              }
+            }
+
             repository.deleteBankAccountTransaction(id);
             
             res.statusCode = 200;
@@ -2395,6 +2405,29 @@ function sqliteApiPlugin() {
                 round_off_amount: Number(payload.roundOffAmount) || 0
               };
 
+              // Validate Bank Account Balance
+              if (String(record.payment_type).toLowerCase() !== 'cash') {
+                const bankAccounts = repository.getBankAccounts();
+                const bankAccount = bankAccounts.find((acc: any) => acc.name === record.payment_type);
+                if (bankAccount) {
+                  let oldAmount = 0;
+                  if (payload.isUpdate) {
+                    const existingRecord = repository.getExpenseRecordById(record.id);
+                    if (existingRecord && existingRecord.payment_type === record.payment_type) {
+                      oldAmount = Number(existingRecord.amount) || 0;
+                    }
+                  }
+                  const currentBalance = Number(bankAccount.balance) || 0;
+                  const requiredAmount = Number(record.amount) || 0;
+                  if (currentBalance + oldAmount < requiredAmount) {
+                    res.statusCode = 400;
+                    res.setHeader('Content-Type', 'application/json');
+                    res.end(JSON.stringify({ message: `Insufficient balance in bank account: ${bankAccount.name}` }));
+                    return;
+                  }
+                }
+              }
+
               if (payload.isUpdate) {
                 const existingRecord = repository.getExpenseRecordById(record.id);
                 repository.updateExpenseRecord(record.id, record);
@@ -2407,14 +2440,32 @@ function sqliteApiPlugin() {
                   removeManagedExpenseAttachmentFile(existingRecord.attachment_document_path);
                 }
 
-                if (String(record.payment_type).toLowerCase() === 'cash') {
+                // Revert old cash/bank transaction
+                try {
                   repository.deleteCashInHandTransaction('cash_expense_' + record.id);
+                } catch (e) { /* ignore */ }
+                try {
+                  repository.deleteBankAccountTransaction('bank_expense_' + record.id);
+                } catch (e) { /* ignore */ }
+
+                // Create new cash/bank transaction with updated values
+                if (String(record.payment_type).toLowerCase() === 'cash') {
                   repository.addCashInHandTransaction({
                     id: 'cash_expense_' + record.id,
                     date: new Date().toLocaleDateString('en-GB'),
                     name: record.category_name || 'Expense',
                     type: 'Expense',
                     amount: record.amount
+                  });
+                } else {
+                  // Bank payment
+                  repository.addBankAccountTransaction({
+                    id: 'bank_expense_' + record.id,
+                    date: new Date().toLocaleDateString('en-GB'),
+                    name: record.category_name || 'Expense',
+                    type: 'Expense',
+                    amount: -record.amount,
+                    paymentType: record.payment_type
                   });
                 }
               } else {
@@ -2426,6 +2477,16 @@ function sqliteApiPlugin() {
                     name: record.category_name || 'Expense',
                     type: 'Expense',
                     amount: record.amount
+                  });
+                } else {
+                  // Bank payment
+                  repository.addBankAccountTransaction({
+                    id: 'bank_expense_' + record.id,
+                    date: new Date().toLocaleDateString('en-GB'),
+                    name: record.category_name || 'Expense',
+                    type: 'Expense',
+                    amount: -record.amount,
+                    paymentType: record.payment_type
                   });
                 }
               }
@@ -2464,7 +2525,8 @@ function sqliteApiPlugin() {
             const existingRecord = repository.getExpenseRecordById(id);
             const success = repository.deleteExpenseRecord(id);
             if (success) {
-              repository.deleteCashInHandTransaction('cash_expense_' + id);
+              try { repository.deleteCashInHandTransaction('cash_expense_' + id); } catch (e) { /* ignore */ }
+              try { repository.deleteBankAccountTransaction('bank_expense_' + id); } catch (e) { /* ignore */ }
               try {
                 if (existingRecord?.attachment_image_path) {
                   removeManagedExpenseAttachmentFile(existingRecord.attachment_image_path);
@@ -3762,6 +3824,21 @@ function sqliteApiPlugin() {
                 attachmentDocumentName: documentFile?.fileName ?? null,
               };
 
+              const validationPaidAmount = Number(invoice.amount || 0) - Number(invoice.balance || 0);
+              if (validationPaidAmount > 0 && String(invoice.paymentMode).toLowerCase() !== 'cash' && String(invoice.paymentMode).toLowerCase() !== 'credit') {
+                const bankAccounts = repository.getBankAccounts();
+                const bankAccount = bankAccounts.find((acc: any) => String(acc.name).trim().toLowerCase() === String(invoice.paymentMode).trim().toLowerCase());
+                if (bankAccount) {
+                  const currentBalance = Number(bankAccount.balance) || 0;
+                  if (currentBalance < validationPaidAmount) {
+                    res.statusCode = 400;
+                    res.setHeader('Content-Type', 'application/json');
+                    res.end(JSON.stringify({ message: `Insufficient balance in bank account: ${bankAccount.name}` }));
+                    return;
+                  }
+                }
+              }
+
               repository.addPurchaseBill(invoice);
 
               try {
@@ -3780,7 +3857,7 @@ function sqliteApiPlugin() {
                       id: 'bank_purchase_' + invoice.id,
                       date: invoice.date,
                       name: invoice.partyName || 'Bank Purchase',
-                      type: 'POS Purchase',
+                      type: 'Purchase Bill',
                       amount: -paidAmount,
                       paymentType: invoice.paymentMode
                     });
@@ -3937,6 +4014,26 @@ function sqliteApiPlugin() {
                 attachmentDocumentName: documentFile?.fileName ?? null,
               };
 
+              const validationPaidAmount = Number(invoice.amount || 0) - Number(invoice.balance || 0);
+              if (validationPaidAmount > 0 && String(invoice.paymentMode).toLowerCase() !== 'cash' && String(invoice.paymentMode).toLowerCase() !== 'credit') {
+                const bankAccounts = repository.getBankAccounts();
+                const bankAccount = bankAccounts.find((acc: any) => String(acc.name).trim().toLowerCase() === String(invoice.paymentMode).trim().toLowerCase());
+                if (bankAccount) {
+                  let oldAmount = 0;
+                  const oldPaidAmount = Number(existingInvoice.amount || 0) - Number(existingInvoice.balance || 0);
+                  if (String(existingInvoice.payment_mode).trim().toLowerCase() === String(invoice.paymentMode).trim().toLowerCase()) {
+                    oldAmount = oldPaidAmount;
+                  }
+                  const currentBalance = Number(bankAccount.balance) || 0;
+                  if (currentBalance + oldAmount < validationPaidAmount) {
+                    res.statusCode = 400;
+                    res.setHeader('Content-Type', 'application/json');
+                    res.end(JSON.stringify({ message: `Insufficient balance in bank account: ${bankAccount.name}` }));
+                    return;
+                  }
+                }
+              }
+
               repository.updatePurchaseBill(id, invoice);
 
               // 1. REVERT OLD STATE — always revert the OLD party regardless of whether the party changed
@@ -4008,7 +4105,7 @@ function sqliteApiPlugin() {
                       id: 'bank_purchase_' + id,
                       date: invoice.date,
                       name: invoice.partyName || 'Bank Purchase',
-                      type: 'POS Purchase',
+                      type: 'Purchase Bill',
                       amount: -paidAmount,
                       paymentType: invoice.paymentMode
                     });

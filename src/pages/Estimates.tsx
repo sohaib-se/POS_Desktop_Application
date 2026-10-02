@@ -212,7 +212,6 @@ export function Estimates({ onConvertEstimateToSale }: { onConvertEstimateToSale
           openRowMenuId={openRowMenuId}
           setOpenRowMenuId={setOpenRowMenuId}
           setOpenRowMenuPosition={setOpenRowMenuPosition}
-          onConvertEstimateToSale={handleConvert}
         />
       </div>
 
@@ -236,6 +235,7 @@ export function Estimates({ onConvertEstimateToSale }: { onConvertEstimateToSale
         setOpenRowMenuId={setOpenRowMenuId}
         setOpenRowMenuPosition={setOpenRowMenuPosition}
         onPrintEstimate={handlePrintEstimate}
+        onConvertEstimateToSale={handleConvert}
       />
 
       <ViewEstimateDialog

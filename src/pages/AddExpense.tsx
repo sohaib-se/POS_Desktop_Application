@@ -336,7 +336,18 @@ export function AddExpense({ onSave, onShare, onClose, initialExpense }: AddExpe
     }
 
     if (!activeTab.expenseCategoryId) {
-      setSaveError("Select an expense category before saving.");
+      setSaveError("Please select an expense category before saving.");
+      toast.error("Please select an expense category before saving.");
+      return;
+    }
+
+    const validRows = activeTab.rows.filter(
+      (row) => (row.category && row.category.trim() !== "") || (Number(row.amount) > 0)
+    );
+
+    if (validRows.length === 0) {
+      setSaveError("Please add at least 1 item before saving the expense.");
+      toast.error("Please add at least 1 item before saving the expense.");
       return;
     }
 
@@ -420,7 +431,8 @@ export function AddExpense({ onSave, onShare, onClose, initialExpense }: AddExpe
       });
 
       if (!response.ok) {
-        throw new Error("Failed to save expense");
+        const errorData = await response.json().catch(() => null);
+        throw new Error(errorData?.message || "Failed to save expense");
       }
 
       window.dispatchEvent(
@@ -441,9 +453,9 @@ export function AddExpense({ onSave, onShare, onClose, initialExpense }: AddExpe
 
       onSave?.();
       closeTab(activeTabId, undefined, true);
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
-      setSaveError("Failed to save the expense. Please try again.");
+      setSaveError(error.message || "Failed to save the expense. Please try again.");
     } finally {
       setIsSaving(false);
     }

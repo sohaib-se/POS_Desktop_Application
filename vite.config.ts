@@ -4194,6 +4194,18 @@ function sqliteApiPlugin() {
             }
 
             const existingInvoice = repository.getPurchaseBillById(id);
+
+            // ── Guard: block deletion if any FIFO layer has been consumed by sales ──
+            if (repository.isPurchaseFifoConsumed(id)) {
+              res.statusCode = 409;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify({
+                message: 'FIFO_CONSUMED',
+                detail: 'This purchase has stock that has already been sold or reduced. Delete the related Sale and Reduce Stock transactions first.'
+              }));
+              return;
+            }
+
             if (existingInvoice) {
               try {
                 const lineItems = JSON.parse(existingInvoice.line_items_json || '[]');

@@ -32,12 +32,13 @@ export function BarcodeScanModal({ items, onSave, onClose }: BarcodeScanModalPro
     const query = inputVal.trim();
     if (!query) return;
 
-    // Match by item code (code field) or item name
+    // Match by item code (code field) or item name, excluding inactive items
     const matched = items.find(
       (item) =>
-        (item.code && item.code.toLowerCase() === query.toLowerCase()) ||
-        item.name.toLowerCase() === query.toLowerCase() ||
-        String(item.id) === query
+        item.status !== "inactive" &&
+        ((item.code && item.code.toLowerCase() === query.toLowerCase()) ||
+          item.name.toLowerCase() === query.toLowerCase() ||
+          String(item.id) === query)
     );
 
     if (!matched) {

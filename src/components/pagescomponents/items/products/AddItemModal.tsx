@@ -24,6 +24,7 @@ type AddItemModalProps = {
   addItemImageDataUrl: string | null;
   addItemExistingImagePath: string | null;
   onImageSelection: (event: React.ChangeEvent<HTMLInputElement>) => void;
+  onRemoveImage: () => void;
   onOpenUnitSelector: () => void;
   onOpenAddCategory: () => void;
   onSaveItem: (closeAfterSave: boolean) => void;
@@ -44,6 +45,7 @@ export function AddItemModal({
   addItemImageDataUrl,
   addItemExistingImagePath,
   onImageSelection,
+  onRemoveImage,
   onOpenUnitSelector,
   onOpenAddCategory,
   onSaveItem,
@@ -147,7 +149,7 @@ export function AddItemModal({
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Unit
+                Unit *
               </label>
               <button
                 onClick={onOpenUnitSelector}
@@ -163,29 +165,42 @@ export function AddItemModal({
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Item Image
             </label>
-            <input
-              type="file"
-              accept="image/*"
-              onChange={onImageSelection}
-              className="w-full cursor-pointer border border-gray-300 rounded-lg px-3 py-2 text-sm transition-colors hover:border-blue-400 file:mr-3 file:cursor-pointer file:rounded file:border-0 file:bg-blue-50 file:px-3 file:py-1.5 file:text-blue-700 file:transition-colors file:hover:bg-blue-100"
-            />
-            {addItemImageFileName ? (
-              <p className="mt-1 text-xs text-gray-600">
-                Selected: {addItemImageFileName}
-              </p>
-            ) : null}
-            {!addItemImageFileName && addItemExistingImagePath ? (
-              <p className="mt-1 text-xs text-gray-600">
-                Current: {addItemExistingImagePath}
-              </p>
-            ) : null}
-            {addItemImageDataUrl ? (
-              <img
-                src={addItemImageDataUrl}
-                alt="Item preview"
-                className="mt-2 h-20 w-20 rounded border border-gray-200 object-cover"
+            {!addItemImageDataUrl && !addItemExistingImagePath ? (
+              <input
+                type="file"
+                accept="image/*"
+                onChange={onImageSelection}
+                className="w-full cursor-pointer border border-gray-300 rounded-lg px-3 py-2 text-sm transition-colors hover:border-blue-400 file:mr-3 file:cursor-pointer file:rounded file:border-0 file:bg-blue-50 file:px-3 file:py-1.5 file:text-blue-700 file:transition-colors file:hover:bg-blue-100"
               />
-            ) : null}
+            ) : (
+              <div className="flex items-start gap-4 p-3 border border-gray-200 rounded-lg bg-gray-50">
+                <img
+                  src={addItemImageDataUrl || addItemExistingImagePath || ""}
+                  alt="Item preview"
+                  className="h-20 w-20 rounded border border-gray-300 object-cover"
+                />
+                <div className="flex-1 space-y-2">
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={onRemoveImage}
+                      className="px-3 py-1 text-sm font-medium text-red-600 bg-red-50 border border-red-200 rounded hover:bg-red-100"
+                    >
+                      Remove
+                    </button>
+                    <label className="px-3 py-1 text-sm font-medium text-blue-600 bg-blue-50 border border-blue-200 rounded hover:bg-blue-100 cursor-pointer">
+                      Change
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={onImageSelection}
+                        className="hidden"
+                      />
+                    </label>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
           {/* Tabs */}
           <div className="flex gap-4 border-b border-gray-200">

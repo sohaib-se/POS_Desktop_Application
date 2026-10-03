@@ -10,6 +10,7 @@ import { DeleteUnitModal } from "./DeleteUnitModal";
 import { AddConversionModal } from "./AddConversionModal";
 import { DeleteConversionModal } from "./DeleteConversionModal";
 import { UnitSelectorModal } from "./UnitSelectorModal";
+import { toast } from "@/components/ui/Toast";
 
 type UnitSelectorOnSaveResult = {
   selectedUnitId: string;
@@ -216,7 +217,10 @@ export function UnitsTab({
         unit.id !== unitBeingEdited?.id &&
         unit.fullName.trim().toLowerCase() === normalizedFullName.toLowerCase()
     );
-    if (duplicateUnit) return;
+    if (duplicateUnit) {
+      toast.error("Unit already exists");
+      return;
+    }
 
     setIsSavingUnit(true);
     try {

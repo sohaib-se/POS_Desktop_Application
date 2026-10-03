@@ -1,7 +1,11 @@
 import { useEffect, useState } from "react";
 import { AlertTriangle } from "lucide-react";
 
-export function LowStockItemsCard() {
+export function LowStockItemsCard({ 
+  onOpenReport 
+}: { 
+  onOpenReport?: (category: string, name: string) => void;
+}) {
   const [lowStockItems, setLowStockItems] = useState<any[]>([]);
 
   useEffect(() => {
@@ -32,6 +36,12 @@ export function LowStockItemsCard() {
           <AlertTriangle className="w-5 h-5 text-amber-500" />
           <p className="text-sm font-medium text-gray-900">Low Stock Items</p>
         </div>
+        <button 
+          className="text-sm text-blue-600 hover:text-blue-700"
+          onClick={() => onOpenReport?.("Item/Stock Reports", "Low stock details")}
+        >
+          View All
+        </button>
       </div>
       
       {lowStockItems.length === 0 ? (

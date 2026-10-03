@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Landmark } from "lucide-react";
 import { BankAccountsView } from "../components/pagescomponents/cashbank/BankAccountsView";
 import { CashInHandView } from "../components/pagescomponents/cashbank/CashInHandView";
+import { toast } from "../components/ui/Toast";
 
 interface CashBankProps {
   subView: string;
@@ -90,7 +91,7 @@ export function CashBank({ subView }: CashBankProps) {
           window.dispatchEvent(new CustomEvent('purchase-bills-refresh'));
         }
       } else {
-        alert("Cannot delete a system transaction here. Delete the original invoice instead.");
+        toast.error("Cannot delete a system transaction here. Delete the original invoice instead.");
       }
     } catch (e) {
       console.error(e);
@@ -116,7 +117,7 @@ export function CashBank({ subView }: CashBankProps) {
         fetchTransactions();
         setEditingTransaction(null);
       } else {
-        alert("Could not edit this transaction.");
+        toast.error("Could not edit this transaction.");
       }
     } catch (e) {
       console.error(e);

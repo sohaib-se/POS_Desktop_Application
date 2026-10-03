@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { Modal, Input, ModalFooter, ImageUpload } from "./SharedComponents";
+import { toast } from "../../ui/Toast";
 import type { BankAccount } from "./types";
 import { useSettings } from "@/hooks/useSettings";
 
@@ -69,6 +70,10 @@ export function DepositWithdrawModal({ open, onClose, account, onSuccess, initia
 
   const handleSave = async () => {
     if (!amount || Number(amount) <= 0) return;
+    if (type === "withdraw" && Number(amount) > baseBalance) {
+      toast.error("Not enough amount in bank account.");
+      return;
+    }
     setIsSaving(true);
     try {
       const url = initialData ? `/api/bank_account_transactions/${initialData.id}` : `/api/bank_account_transactions`;

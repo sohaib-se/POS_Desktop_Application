@@ -23,7 +23,7 @@ export function Dashboard({
       <div className="grid grid-cols-3 gap-6">
         {showSalesChart && <SalesChart />}
         {showMostUsed && <MostUsedReports onViewChange={onViewChange} onOpenReport={onOpenReport} />}
-        {showLowStock && <LowStockItemsCard />}
+        {showLowStock && <LowStockItemsCard onOpenReport={onOpenReport} />}
       </div>
     </div>
   );

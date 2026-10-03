@@ -9,6 +9,7 @@ interface CustomerSearchAndInvoiceProps {
   displayedInvoiceNo: string;
   displayedInvoiceDate: string;
   setShowAddParty: (show: boolean) => void;
+  updateTab: (partial: Partial<PurchaseTab>) => void;
 }
 
 export function CustomerSearchAndInvoice({
@@ -18,6 +19,7 @@ export function CustomerSearchAndInvoice({
   displayedInvoiceNo,
   displayedInvoiceDate,
   setShowAddParty,
+  updateTab,
 }: CustomerSearchAndInvoiceProps) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -166,8 +168,14 @@ export function CustomerSearchAndInvoice({
             <input
               type="date"
               value={dateInputValue}
-              readOnly
-              style={{ border: "1px solid #d1d5db", borderRadius: 4, fontSize: 13, color: "#1f2937", padding: "3px 8px", width: 140, fontWeight: 600, cursor: "default" }}
+              onChange={(e) => {
+                const val = e.target.value;
+                if (val) {
+                  const [year, month, day] = val.split("-");
+                  updateTab({ invoiceDate: `${day}/${month}/${year}` });
+                }
+              }}
+              style={{ border: "1px solid #d1d5db", borderRadius: 4, fontSize: 13, color: "#1f2937", padding: "3px 8px", width: 140, fontWeight: 600 }}
             />
           </div>
         </div>

@@ -1219,7 +1219,7 @@ export function emptyRecycleBin() {
 
 export function getRecycleBinItems() {
   const db = openDatabase();
-  const rows = db.prepare('SELECT * FROM recycle_bin ORDER BY deleted_on DESC').all();
+  const rows = db.prepare('SELECT * FROM recycle_bin ORDER BY deleted_on DESC, id DESC').all();
   db.close();
   return rows;
 }

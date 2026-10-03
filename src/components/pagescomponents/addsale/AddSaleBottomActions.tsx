@@ -19,6 +19,7 @@ interface AddSaleBottomActionsProps {
   isSaving: boolean;
   handleSaveSale: () => void;
   isEditing: boolean;
+  selectedParty?: any;
 }
 
 export function AddSaleBottomActions({
@@ -38,6 +39,7 @@ export function AddSaleBottomActions({
   isSaving,
   handleSaveSale,
   isEditing,
+  selectedParty,
 }: AddSaleBottomActionsProps) {
   const fmt = (n: number) => n.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const [isTransactionTaxEnabled] = useSettings('settings.isTransactionTaxEnabled', true);
@@ -46,7 +48,7 @@ export function AddSaleBottomActions({
 
   return (
     <>
-      <div style={{ background: "#fff", padding: "20px 20px 24px 20px" }}>
+      <div style={{ background: "#fff", padding: "20px 20px 24px 20px", flex: 1 }}>
         <div style={{ display: "flex", gap: 24 }}>
 
           {/* Left: attachments — same as BottomSection in estimate */}
@@ -270,6 +272,34 @@ export function AddSaleBottomActions({
           onChange={(event) => handleAttachmentSelection(event, "document")}
         />
       </div>
+
+      {/* Credit Info Box */}
+      {selectedParty && (
+        <div style={{ padding: "0 20px 16px 20px", background: "#fff", display: "flex", justifyContent: "flex-end" }}>
+          <div style={{
+            display: "flex", alignItems: "center", gap: 16, padding: "10px 16px",
+            background: "linear-gradient(to right, #f0fdf4, #ecfdf5)",
+            border: "1px solid #34d399", borderRadius: 8,
+            boxShadow: "0 2px 4px rgba(16, 185, 129, 0.05)",
+            color: "#065f46", fontSize: 13, fontWeight: 600
+          }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+                <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+              </svg>
+              <span>Balance: Rs {fmt(Math.abs(selectedParty.balance || 0))} {selectedParty.balance < 0 ? "(Advance)" : selectedParty.balance > 0 ? "(Owes)" : ""}</span>
+            </div>
+            <div style={{ width: 1, height: 16, background: "#10b981", opacity: 0.3 }} />
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                <polyline points="22 4 12 14.01 9 11.01" />
+              </svg>
+              <span>Available Credit: {(selectedParty.creditLimit || selectedParty.credit_limit) ? `Rs ${fmt((selectedParty.creditLimit || selectedParty.credit_limit || 0) - (selectedParty.balance || 0))}` : "No Limit"}</span>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── FOOTER ── */}
       <div style={{ background: "#fff", flexShrink: 0, padding: "10px 20px", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, borderTop: "1px solid #e5e7eb" }}>

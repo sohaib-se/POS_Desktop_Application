@@ -119,6 +119,7 @@ export function PartyDetails({
   const [viewingEstimate, setViewingEstimate] = useState<any | null>(null);
   const [passcodeAction, setPasscodeAction] = useState<{ type: 'edit' | 'delete', payload: PartyTransactionRow } | null>(null);
   const [deletePendingTransaction, setDeletePendingTransaction] = useState<PartyTransactionRow | null>(null);
+  const [transactionError, setTransactionError] = useState<string | null>(null);
 
   const performDeleteTransaction = async (transaction: PartyTransactionRow) => {
     try {
@@ -129,7 +130,7 @@ export function PartyDetails({
       else if (transaction.type === 'Payment-Out') endpoint = `/api/payment_out_records/${transaction.id}`;
       else if (transaction.type === 'Estimate') endpoint = `/api/estimates/${transaction.id}`;
       else {
-        alert('Cannot delete this type of transaction directly.');
+        setTransactionError('Cannot delete this type of transaction directly.');
         return;
       }
 
@@ -145,7 +146,7 @@ export function PartyDetails({
       }
     } catch (error) {
       console.error(error);
-      alert('Failed to delete transaction.');
+      setTransactionError('Failed to delete transaction.');
     } finally {
       setOpenRowMenuId(null);
       setOpenRowMenuPosition(null);
@@ -182,7 +183,7 @@ export function PartyDetails({
       } else if (invoice.type === 'Estimate') {
         setEditingEstimate(raw);
       } else {
-        alert(`Edit for ${invoice.type} is not directly supported from the party view yet.`);
+        setTransactionError(`Edit for ${invoice.type} is not directly supported from the party view yet.`);
       }
     }
   };
@@ -669,6 +670,28 @@ export function PartyDetails({
         selectedMonth={selectedMonth}
         businessProfile={businessProfile}
       />
+
+      {/* Transaction Error Modal */}
+      {transactionError && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-sm p-6 flex flex-col">
+            <h3 className="text-lg font-semibold text-red-600 mb-2">
+              Action Not Allowed
+            </h3>
+            <p className="text-sm text-gray-700 mb-6">
+              {transactionError}
+            </p>
+            <div className="flex justify-end">
+              <button
+                onClick={() => setTransactionError(null)}
+                className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700"
+              >
+                OK
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

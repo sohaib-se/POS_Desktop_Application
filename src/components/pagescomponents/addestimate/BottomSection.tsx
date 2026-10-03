@@ -162,8 +162,12 @@ export function BottomSection({
                   if (val !== "") {
                     if (rs < 0) val = "0";
                     else if (rs > totalAmount) val = totalAmount.toString();
+                    rs = parseFloat(val) || 0;
+                  } else {
+                    rs = 0;
                   }
-                  updateTab({ discountRs: val });
+                  const pct = totalAmount > 0 ? (rs / totalAmount) * 100 : 0;
+                  updateTab({ discountRs: val, discountPercent: totalAmount > 0 && val !== "" ? pct.toFixed(2) : "" });
                 }}
               />
               <span style={{ color: "#9ca3af", fontSize: 12 }}>(Rs)</span>

@@ -76,6 +76,7 @@ export function BarcodeGeneratorItemList({
                   />
                 </TableHead>
                 <TableHead className="font-semibold text-gray-600">Item Name</TableHead>
+                <TableHead className="font-semibold text-gray-600">Barcode</TableHead>
                 <TableHead className="font-semibold text-gray-600">No of Labels</TableHead>
                 <TableHead className="font-semibold text-gray-600">Header</TableHead>
                 <TableHead className="font-semibold text-gray-600">Line 1</TableHead>
@@ -88,7 +89,7 @@ export function BarcodeGeneratorItemList({
             <TableBody>
               {items.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={9} className="h-[200px] text-center">
+                  <TableCell colSpan={10} className="h-[200px] text-center">
                     <div className="flex flex-col items-center justify-center text-gray-400">
                       <ScanBarcode className="w-16 h-16 mb-2 opacity-50" />
                       <p className="text-sm">No items added yet</p>
@@ -109,6 +110,7 @@ export function BarcodeGeneratorItemList({
                       />
                     </TableCell>
                     <TableCell className="font-medium text-gray-800">{item.itemName}</TableCell>
+                    <TableCell className="text-gray-600">{item.itemCode || "—"}</TableCell>
                     <TableCell className="text-gray-600">{item.noOfLabels}</TableCell>
                     <TableCell className="text-gray-600 max-w-[100px] truncate">{item.header || "—"}</TableCell>
                     <TableCell className="text-gray-600 max-w-[100px] truncate">{item.line1 || "—"}</TableCell>
@@ -167,7 +169,11 @@ export function BarcodeGeneratorItemList({
             </Button>
             <Button
               disabled={selectedItemsToProcess.length === 0}
-              className="px-8 rounded-full bg-[#B1B8D1] hover:bg-indigo-400 text-white font-semibold disabled:opacity-50"
+              className={`px-8 rounded-full font-semibold text-white transition-colors ${
+                selectedItemsToProcess.length > 0
+                  ? "bg-blue-600 hover:bg-blue-700"
+                  : "bg-[#B1B8D1]"
+              }`}
               onClick={() => {
                 setSinglePrintItem(null);
                 setIsGenerateOpen(true);

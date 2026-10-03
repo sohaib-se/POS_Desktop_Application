@@ -206,7 +206,8 @@ export function AddEstimate({ onSave, onShare, onClose, initialEstimate }: AddEs
       const res = await fetch("/api/parties");
       if (res.ok) {
         const data = await res.json();
-        setParties(data);
+        const activeParties = data.filter((p: any) => p.status !== 'inactive');
+        setParties(activeParties);
       }
     } catch (err) {
       console.error(err);

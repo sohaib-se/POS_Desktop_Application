@@ -350,7 +350,8 @@ export function AddSale({ onSave, onClose, initialInvoice, isConversion }: AddSa
       const res = await fetch("/api/parties");
       if (res.ok) {
         const data = (await res.json()) as PartyOption[];
-        setParties(data.sort((a, b) => a.name.localeCompare(b.name)));
+        const activeParties = data.filter((p: any) => p.status !== 'inactive');
+        setParties(activeParties.sort((a, b) => a.name.localeCompare(b.name)));
       }
     } catch (err) {
       console.error(err);
@@ -378,6 +379,7 @@ export function AddSale({ onSave, onClose, initialInvoice, isConversion }: AddSa
         }
 
         const loadedParties = (await partiesResponse.json()) as PartyOption[];
+        const activeParties = loadedParties.filter((p: any) => p.status !== 'inactive');
         const loadedItems = (await itemsResponse.json()) as ItemOption[];
         const saleInvoices = (await saleInvoicesResponse.json()) as Array<{ invoice_no?: string | null }>;
 
@@ -385,7 +387,7 @@ export function AddSale({ onSave, onClose, initialInvoice, isConversion }: AddSa
           return;
         }
 
-        const sortedParties = [...loadedParties].sort((left, right) => left.name.localeCompare(right.name));
+        const sortedParties = [...activeParties].sort((left, right) => left.name.localeCompare(right.name));
         setParties(sortedParties);
         setItems(loadedItems);
         const nextNo = String(
@@ -979,6 +981,18 @@ export function AddSale({ onSave, onClose, initialInvoice, isConversion }: AddSa
     computedBalance = roundedTotal - receivedValue;
   }
 
+  const isPartyMatch = (p: PartyOption, key?: string) => {
+    if (!key) return false;
+    if (String(p.id) === String(key)) return true;
+    if (p.name && p.name.trim().toLowerCase() === key.trim().toLowerCase()) return true;
+    const pNum = Number(p.id);
+    const keyNum = Number(key);
+    if (!isNaN(pNum) && !isNaN(keyNum) && pNum === keyNum) return true;
+    return false;
+  };
+
+  const activeParty = parties.find((p) => isPartyMatch(p, activeTab.customerSearch)) || null;
+
   return (
     <div
       style={{
@@ -1073,6 +1087,7 @@ export function AddSale({ onSave, onClose, initialInvoice, isConversion }: AddSa
               isSaving={isSaving}
               handleSaveSale={handleSaveSale}
               isEditing={Boolean(initialInvoice)}
+              selectedParty={activeParty}
             />
           </div>{/* end scroll */}
         </>

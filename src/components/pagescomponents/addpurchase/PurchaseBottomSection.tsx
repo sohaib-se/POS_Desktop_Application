@@ -18,6 +18,7 @@ interface PurchaseBottomSectionProps {
   fmt: (n: number) => string;
   computedBalance: number;
   handleAttachmentSelection: (event: React.ChangeEvent<HTMLInputElement>, type: "image" | "document") => void;
+  selectedParty?: any;
 }
 
 export function PurchaseBottomSection({
@@ -34,13 +35,15 @@ export function PurchaseBottomSection({
   fmt,
   computedBalance,
   handleAttachmentSelection,
+  selectedParty,
 }: PurchaseBottomSectionProps) {
   const [isTransactionTaxEnabled] = useSettings('settings.isTransactionTaxEnabled', true);
   const [isTransactionDiscountEnabled] = useSettings('settings.isTransactionDiscountEnabled', true);
   const [isRoundOffTotalEnabled] = useSettings('settings.isRoundOffTotalEnabled', true);
 
   return (
-    <div style={{ background: "#fff", padding: "20px 20px 24px 20px" }}>
+    <>
+    <div style={{ background: "#fff", padding: "20px 20px 24px 20px", flex: 1 }}>
       <div style={{ display: "flex", gap: 24 }}>
         
         {/* Left: attachments */}
@@ -297,5 +300,34 @@ export function PurchaseBottomSection({
         </div>
       </div>
     </div>
+
+    {/* Credit Info Box */}
+    {selectedParty && (
+      <div style={{ padding: "0 20px 16px 20px", background: "#fff", display: "flex", justifyContent: "flex-end", flexShrink: 0 }}>
+        <div style={{
+          display: "flex", alignItems: "center", gap: 16, padding: "10px 16px",
+          background: "linear-gradient(to right, #f0fdf4, #ecfdf5)",
+          border: "1px solid #34d399", borderRadius: 8,
+          boxShadow: "0 2px 4px rgba(16, 185, 129, 0.05)",
+          color: "#065f46", fontSize: 13, fontWeight: 600
+        }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+              <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+            </svg>
+            <span>Balance: Rs {fmt(Math.abs(selectedParty.balance || 0))} {selectedParty.balance < 0 ? "(Advance)" : selectedParty.balance > 0 ? "(Owes)" : ""}</span>
+          </div>
+          <div style={{ width: 1, height: 16, background: "#10b981", opacity: 0.3 }} />
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+              <polyline points="22 4 12 14.01 9 11.01" />
+            </svg>
+            <span>Available Credit: {(selectedParty.creditLimit || selectedParty.credit_limit) ? `Rs ${fmt((selectedParty.creditLimit || selectedParty.credit_limit || 0) - (selectedParty.balance || 0))}` : "No Limit"}</span>
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   );
 }

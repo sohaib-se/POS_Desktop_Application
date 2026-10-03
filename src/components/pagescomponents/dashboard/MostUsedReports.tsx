@@ -45,24 +45,29 @@ export function MostUsedReports({
   ]);
   const [isPopupOpen, setIsPopupOpen] = useState(false);
   const [tempSelected, setTempSelected] = useState<string[]>([]);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const openPopup = () => {
     setTempSelected([...selectedReports]);
+    setErrorMsg(null);
     setIsPopupOpen(true);
   };
 
   const closePopup = () => {
     setIsPopupOpen(false);
+    setErrorMsg(null);
   };
 
   const handleToggleReport = (report: string) => {
     if (tempSelected.includes(report)) {
       setTempSelected(tempSelected.filter((r) => r !== report));
+      setErrorMsg(null);
     } else {
       if (tempSelected.length < 5) {
         setTempSelected([...tempSelected, report]);
+        setErrorMsg(null);
       } else {
-        alert("You can only select up to 5 reports.");
+        setErrorMsg("You can only select up to 5 reports.");
       }
     }
   };
@@ -153,6 +158,15 @@ export function MostUsedReports({
                 <X className="w-5 h-5" />
               </button>
             </div>
+            
+            {errorMsg && (
+              <div className="mb-4 p-3 bg-red-50 text-red-600 text-sm rounded-lg border border-red-100 flex items-center justify-between">
+                <span>{errorMsg}</span>
+                <button onClick={() => setErrorMsg(null)} className="text-red-400 hover:text-red-600">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            )}
             
             <div className="flex-1 overflow-y-auto space-y-2 mb-6 pr-2">
               {AVAILABLE_REPORTS.map((report) => (

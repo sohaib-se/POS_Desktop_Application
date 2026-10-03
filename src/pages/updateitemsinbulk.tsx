@@ -3,7 +3,11 @@ import { BulkUpdateTable } from "@/components/pagescomponents/utilities/updateit
 import { BulkUpdateFooter } from "@/components/pagescomponents/utilities/updateitemsinbulk/BulkUpdateFooter";
 import { toast } from "@/components/ui/Toast";
 
-export function UpdateItemsInBulk() {
+interface UpdateItemsInBulkProps {
+  setUnsavedChanges?: (val: boolean) => void;
+}
+
+export function UpdateItemsInBulk({ setUnsavedChanges }: UpdateItemsInBulkProps) {
   const [items, setItems] = useState<any[]>([]);
   const [selectedItemIds, setSelectedItemIds] = useState<Set<string>>(new Set());
   const [pendingUpdates, setPendingUpdates] = useState<Record<string, any>>({});
@@ -38,6 +42,20 @@ export function UpdateItemsInBulk() {
     fetchItems();
     fetchCategories();
   }, []);
+
+  useEffect(() => {
+    if (setUnsavedChanges) {
+      setUnsavedChanges(Object.keys(pendingUpdates).length > 0);
+    }
+  }, [pendingUpdates, setUnsavedChanges]);
+
+  useEffect(() => {
+    return () => {
+      if (setUnsavedChanges) {
+        setUnsavedChanges(false);
+      }
+    };
+  }, [setUnsavedChanges]);
 
   const handleSelectionChange = (id: string) => {
     setSelectedItemIds(prev => {

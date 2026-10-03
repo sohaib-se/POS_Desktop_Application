@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { Modal, Input, Select, ModalFooter, ImageUpload } from "./SharedComponents";
+import { toast } from "../../ui/Toast";
 import type { TransferModalProps } from "./types";
 
 export function BankToBankModal({ open, onClose, accounts, onSuccess, initialData }: TransferModalProps) {
@@ -61,11 +62,17 @@ export function BankToBankModal({ open, onClose, accounts, onSuccess, initialDat
 
   const handleSave = async () => {
     if (!amount || Number(amount) <= 0) {
-      alert("Please enter a valid amount.");
+      toast.error("Please enter a valid amount.");
       return;
     }
     if (from === to) {
-      alert("Please select different banks for transfer.");
+      toast.error("Please select different banks for transfer.");
+      return;
+    }
+
+    const selectedBank = accounts.find(a => a.name === from);
+    if (!initialData && selectedBank && Number(amount) > selectedBank.balance) {
+      toast.error("Not enough amount in bank account.");
       return;
     }
 
@@ -116,7 +123,7 @@ export function BankToBankModal({ open, onClose, accounts, onSuccess, initialDat
       onClose();
     } catch (err) {
       console.error(err);
-      alert("Failed to save transaction.");
+      toast.error("Failed to save transaction.");
     } finally {
       setIsLoading(false);
     }

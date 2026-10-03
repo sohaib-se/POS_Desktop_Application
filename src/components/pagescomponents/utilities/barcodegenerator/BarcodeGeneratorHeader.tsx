@@ -1,4 +1,4 @@
-import { Info, Settings } from "lucide-react";
+import { Settings } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
@@ -169,15 +169,7 @@ export function BarcodeGeneratorHeader({
                     ))}
                   </RadioGroup>
 
-                  {/* Custom size — label printers only */}
-                  {printerSettings.category === "label" && (
-                    <div className="mt-4 flex items-center gap-2 pl-2 cursor-pointer group">
-                      <span className="text-blue-500 font-medium hover:underline text-sm">
-                        Create Custom Size
-                      </span>
-                      <Info className="w-4 h-4 text-gray-400 group-hover:text-gray-600" />
-                    </div>
-                  )}
+                  {/* Custom size removed as requested */}
                 </div>
 
                 {/* ── Additional Fields ─────────────────────────── */}

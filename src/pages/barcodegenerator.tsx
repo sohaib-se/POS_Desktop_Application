@@ -78,6 +78,30 @@ export function BarcodeGenerator() {
     };
 
     try {
+      const targetItem = items.find((i) => i.name === formData.itemName);
+      if (targetItem && targetItem.code !== formData.itemCode) {
+        // Sync barcode to item
+        const camelize = (obj: any) => {
+          const newObj: any = {};
+          for (const key in obj) {
+            const camelKey = key.replace(/_([a-z])/g, (g) => g[1].toUpperCase());
+            newObj[camelKey] = obj[key];
+          }
+          return newObj;
+        };
+        const camelCaseOriginal = camelize(targetItem);
+        const updatedPayload = { ...camelCaseOriginal, code: formData.itemCode };
+        
+        await fetch("/api/items", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(updatedPayload)
+        });
+        
+        // Refresh items list to reflect changes
+        fetchInitialData();
+      }
+
       const res = await fetch("/api/barcode_generator", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -99,7 +123,7 @@ export function BarcodeGenerator() {
         });
       }
     } catch (e) {
-      console.error("Failed to add barcode", e);
+      console.error("Failed to add barcode or sync item", e);
     } finally {
       setIsLoading(false);
     }

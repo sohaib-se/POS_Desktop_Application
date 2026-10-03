@@ -84,6 +84,14 @@ export function PaymentOut() {
 
   useEffect(() => {
     fetchData();
+
+    const handleRefresh = () => {
+      fetchData();
+    };
+    window.addEventListener('payment-out-refresh', handleRefresh);
+    return () => {
+      window.removeEventListener('payment-out-refresh', handleRefresh);
+    };
   }, []);
 
   useEffect(() => {
@@ -117,6 +125,7 @@ export function PaymentOut() {
         throw new Error("Failed to delete transaction");
       }
       setRecords((prev) => prev.filter((r) => r.id !== id));
+      window.dispatchEvent(new CustomEvent('bank-accounts-refresh'));
     } catch (error) {
       console.error("Delete error:", error);
       alert("Failed to delete the selected transaction.");
@@ -328,6 +337,7 @@ export function PaymentOut() {
         setShowAddPayment(false);
         resetForm();
         fetchData();
+        window.dispatchEvent(new CustomEvent('bank-accounts-refresh'));
       } else {
         alert("Failed to save payment out record.");
       }

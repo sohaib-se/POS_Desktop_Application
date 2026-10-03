@@ -56,6 +56,14 @@ export function BankAccounts() {
 
   useEffect(() => {
     fetchAccounts();
+
+    const handleRefresh = () => {
+      fetchAccounts();
+    };
+    window.addEventListener('bank-accounts-refresh', handleRefresh);
+    return () => {
+      window.removeEventListener('bank-accounts-refresh', handleRefresh);
+    };
   }, []);
 
   const handleDelete = (id: string) => {
@@ -91,6 +99,16 @@ export function BankAccounts() {
           if (String(id).startsWith('bank_pos_')) {
             window.dispatchEvent(new CustomEvent('sale-invoices-refresh', {
               detail: { message: 'Sale invoice removed via bank transaction deletion.' }
+            }));
+          }
+          if (String(id).startsWith('bank_payment_in_')) {
+            window.dispatchEvent(new CustomEvent('payment-in-refresh', {
+              detail: { message: 'Payment In removed via bank transaction deletion.' }
+            }));
+          }
+          if (String(id).startsWith('bank_payment_out_')) {
+            window.dispatchEvent(new CustomEvent('payment-out-refresh', {
+              detail: { message: 'Payment Out removed via bank transaction deletion.' }
             }));
           }
         }
@@ -154,6 +172,7 @@ export function BankAccounts() {
                   setActiveModal(action);
                 }}
                 onEditTransaction={(tx) => {
+                  if (String(tx.id).startsWith('bank_payment_in_') || String(tx.id).startsWith('bank_payment_out_')) return;
                   setEditingTx(tx);
                   if (String(tx.id).endsWith('-bank')) {
                     if (tx.name.includes("Transfer to Cash") || tx.type === "Payment Out") {

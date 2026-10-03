@@ -997,6 +997,66 @@ function sqliteApiPlugin() {
               }
             }
 
+            if (String(id).startsWith('bank_payment_in_')) {
+              const paymentInId = String(id).replace('bank_payment_in_', '');
+              try {
+                const existingRecord = repository.getPaymentInRecordById(paymentInId);
+                if (existingRecord) {
+                  if (existingRecord.party_id) {
+                    try {
+                      const allParties = repository.getParties();
+                      const party = allParties.find((p: any) => String(p.id) === String(existingRecord.party_id));
+                      if (party) {
+                        party.balance = Number(party.balance || 0) + Number(existingRecord.amount || 0);
+                        repository.upsertParty(party);
+                      }
+                    } catch (balanceError) {
+                      console.error('[BankTx Delete] Failed to restore party balance:', balanceError);
+                    }
+                  }
+
+                  if (existingRecord.attachment_image_path || existingRecord.attachmentImagePath) {
+                    removeManagedPaymentInAttachmentFile(existingRecord.attachment_image_path || existingRecord.attachmentImagePath);
+                  }
+
+                  try { repository.deleteCashInHandTransaction('cash_payment_in_' + paymentInId); } catch (e) { /* ignore */ }
+                  repository.deletePaymentInRecord(paymentInId);
+                }
+              } catch (cascadeErr) {
+                console.error('[BankTx Delete] Cascade payment in record cleanup failed:', cascadeErr);
+              }
+            }
+
+            if (String(id).startsWith('bank_payment_out_')) {
+              const paymentOutId = String(id).replace('bank_payment_out_', '');
+              try {
+                const existingRecord = repository.getPaymentOutRecordById(paymentOutId);
+                if (existingRecord) {
+                  if (existingRecord.party_id) {
+                    try {
+                      const allParties = repository.getParties();
+                      const party = allParties.find((p: any) => String(p.id) === String(existingRecord.party_id));
+                      if (party) {
+                        party.balance = Number(party.balance || 0) - Number(existingRecord.amount || 0);
+                        repository.upsertParty(party);
+                      }
+                    } catch (balanceError) {
+                      console.error('[BankTx Delete] Failed to restore party balance:', balanceError);
+                    }
+                  }
+
+                  if (existingRecord.attachment_image_path || existingRecord.attachmentImagePath) {
+                    removeManagedPaymentOutAttachmentFile(existingRecord.attachment_image_path || existingRecord.attachmentImagePath);
+                  }
+
+                  try { repository.deleteCashInHandTransaction('cash_payment_out_' + paymentOutId); } catch (e) { /* ignore */ }
+                  repository.deletePaymentOutRecord(paymentOutId);
+                }
+              } catch (cascadeErr) {
+                console.error('[BankTx Delete] Cascade payment out record cleanup failed:', cascadeErr);
+              }
+            }
+
             repository.deleteBankAccountTransaction(id);
             
             res.statusCode = 200;
@@ -1285,9 +1345,11 @@ function sqliteApiPlugin() {
           }
 
           if (req.method === 'PUT') {
-            const pathId = requestUrl.pathname.split('/').filter(Boolean)[0];
+            const segments = requestUrl.pathname.split('/').filter(Boolean);
+            const lastSegment = segments.length > 0 ? segments[segments.length - 1] : null;
+            const pathId = (lastSegment && lastSegment !== 'payment_in_records' && lastSegment !== 'api') ? lastSegment : null;
             const queryId = requestUrl.searchParams.get('id');
-            const id = (pathId || queryId || '').trim();
+            const id = (queryId || pathId || '').trim();
 
             if (!id) {
               res.statusCode = 400;
@@ -1338,12 +1400,8 @@ function sqliteApiPlugin() {
               }
 
               try {
-                const pMode = String(existingRecord.payment_type).toLowerCase();
-                if (pMode === 'cash') {
-                  repository.deleteCashInHandTransaction('cash_payment_in_' + id);
-                } else if (pMode) {
-                  repository.deleteBankAccountTransaction('bank_payment_in_' + id);
-                }
+                try { repository.deleteCashInHandTransaction('cash_payment_in_' + id); } catch (e) { /* ignore */ }
+                try { repository.deleteBankAccountTransaction('bank_payment_in_' + id); } catch (e) { /* ignore */ }
               } catch (txError) {
                 console.error('Failed to delete cash/bank transaction:', txError);
               }
@@ -1406,9 +1464,11 @@ function sqliteApiPlugin() {
           }
 
           if (req.method === 'DELETE') {
-            const pathId = requestUrl.pathname.split('/').filter(Boolean)[0];
+            const segments = requestUrl.pathname.split('/').filter(Boolean);
+            const lastSegment = segments.length > 0 ? segments[segments.length - 1] : null;
+            const pathId = (lastSegment && lastSegment !== 'payment_in_records' && lastSegment !== 'api') ? lastSegment : null;
             const queryId = requestUrl.searchParams.get('id');
-            const id = (pathId || queryId || '').trim();
+            const id = (queryId || pathId || '').trim();
 
             if (id) {
               const existingRecord = repository.getPaymentInRecordById(id);
@@ -1427,12 +1487,8 @@ function sqliteApiPlugin() {
                 }
 
                 try {
-                  const pMode = String(existingRecord.payment_type).toLowerCase();
-                  if (pMode === 'cash') {
-                    repository.deleteCashInHandTransaction('cash_payment_in_' + id);
-                  } else if (pMode) {
-                    repository.deleteBankAccountTransaction('bank_payment_in_' + id);
-                  }
+                  try { repository.deleteCashInHandTransaction('cash_payment_in_' + id); } catch (e) { /* ignore */ }
+                  try { repository.deleteBankAccountTransaction('bank_payment_in_' + id); } catch (e) { /* ignore */ }
                 } catch (txError) {
                   console.error('Failed to delete cash/bank transaction:', txError);
                 }
@@ -1551,9 +1607,11 @@ function sqliteApiPlugin() {
           }
 
           if (req.method === 'PUT') {
-            const pathId = requestUrl.pathname.split('/').filter(Boolean)[0];
+            const segments = requestUrl.pathname.split('/').filter(Boolean);
+            const lastSegment = segments.length > 0 ? segments[segments.length - 1] : null;
+            const pathId = (lastSegment && lastSegment !== 'payment_out_records' && lastSegment !== 'api') ? lastSegment : null;
             const queryId = requestUrl.searchParams.get('id');
-            const id = (pathId || queryId || '').trim();
+            const id = (queryId || pathId || '').trim();
 
             if (!id) {
               res.statusCode = 400;
@@ -1604,12 +1662,8 @@ function sqliteApiPlugin() {
               }
 
               try {
-                const pMode = String(existingRecord.payment_type).toLowerCase();
-                if (pMode === 'cash') {
-                  repository.deleteCashInHandTransaction('cash_payment_out_' + id);
-                } else if (pMode) {
-                  repository.deleteBankAccountTransaction('bank_payment_out_' + id);
-                }
+                try { repository.deleteCashInHandTransaction('cash_payment_out_' + id); } catch (e) { /* ignore */ }
+                try { repository.deleteBankAccountTransaction('bank_payment_out_' + id); } catch (e) { /* ignore */ }
               } catch (txError) {
                 console.error('Failed to delete cash/bank transaction:', txError);
               }
@@ -1672,9 +1726,11 @@ function sqliteApiPlugin() {
           }
 
           if (req.method === 'DELETE') {
-            const pathId = requestUrl.pathname.split('/').filter(Boolean)[0];
+            const segments = requestUrl.pathname.split('/').filter(Boolean);
+            const lastSegment = segments.length > 0 ? segments[segments.length - 1] : null;
+            const pathId = (lastSegment && lastSegment !== 'payment_out_records' && lastSegment !== 'api') ? lastSegment : null;
             const queryId = requestUrl.searchParams.get('id');
-            const id = (pathId || queryId || '').trim();
+            const id = (queryId || pathId || '').trim();
 
             if (id) {
               const existingRecord = repository.getPaymentOutRecordById(id);
@@ -1693,12 +1749,8 @@ function sqliteApiPlugin() {
                 }
 
                 try {
-                  const pMode = String(existingRecord.payment_type).toLowerCase();
-                  if (pMode === 'cash') {
-                    repository.deleteCashInHandTransaction('cash_payment_out_' + id);
-                  } else if (pMode) {
-                    repository.deleteBankAccountTransaction('bank_payment_out_' + id);
-                  }
+                  try { repository.deleteCashInHandTransaction('cash_payment_out_' + id); } catch (e) { /* ignore */ }
+                  try { repository.deleteBankAccountTransaction('bank_payment_out_' + id); } catch (e) { /* ignore */ }
                 } catch (txError) {
                   console.error('Failed to delete cash/bank transaction:', txError);
                 }

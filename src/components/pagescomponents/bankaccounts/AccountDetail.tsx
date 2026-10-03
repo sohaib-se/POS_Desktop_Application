@@ -268,6 +268,14 @@ export function AccountDetail({ account, onDeposit, onEditTransaction, onDeleteT
             <div className="px-4 py-2 text-xs text-gray-400 italic border-b border-gray-100 leading-snug">
               Edit from Expenses
             </div>
+          ) : String(txContextMenu.txId).startsWith('bank_payment_in_') ? (
+            <div className="px-4 py-2 text-xs text-gray-400 italic border-b border-gray-100 leading-snug">
+              Edit from Payment In
+            </div>
+          ) : String(txContextMenu.txId).startsWith('bank_payment_out_') ? (
+            <div className="px-4 py-2 text-xs text-gray-400 italic border-b border-gray-100 leading-snug">
+              Edit from Payment Out
+            </div>
           ) : (
             <button
               className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"

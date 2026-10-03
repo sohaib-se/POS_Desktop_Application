@@ -6,7 +6,6 @@ import { PaymentInSummary } from "@/components/pagescomponents/paymentin/Payment
 import { PaymentInTable } from "@/components/pagescomponents/paymentin/PaymentInTable";
 import { AddPaymentInModal } from "@/components/pagescomponents/paymentin/AddPaymentInModal";
 import { PaymentInRowMenu } from "@/components/pagescomponents/paymentin/PaymentInRowMenu";
-import { ViewPaymentInModal } from "@/components/pagescomponents/paymentin/ViewPaymentInModal";
 import { EnterPasscodeScreen } from "@/components/common/EnterPasscodeScreen";
 import { PaymentInPrintPreviewModal } from "@/components/pagescomponents/paymentin/PaymentInPrintPreviewModal";
 import { PaymentInReceiptPreviewModal } from "@/components/pagescomponents/paymentin/PaymentInReceiptPreviewModal";
@@ -24,7 +23,6 @@ export function PaymentIn() {
   const [bankAccounts, setBankAccounts] = useState<any[]>([]);
   const [records, setRecords] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [viewingRecord, setViewingRecord] = useState<any>(null);
   const [previewingRecord, setPreviewingRecord] = useState<any>(null);
   const [businessProfile, setBusinessProfile] = useState<any>(null);
 
@@ -86,6 +84,14 @@ export function PaymentIn() {
 
   useEffect(() => {
     fetchData();
+
+    const handleRefresh = () => {
+      fetchData();
+    };
+    window.addEventListener('payment-in-refresh', handleRefresh);
+    return () => {
+      window.removeEventListener('payment-in-refresh', handleRefresh);
+    };
   }, []);
 
   useEffect(() => {
@@ -119,6 +125,7 @@ export function PaymentIn() {
         throw new Error("Failed to delete transaction");
       }
       setRecords((prev) => prev.filter((r) => r.id !== id));
+      window.dispatchEvent(new CustomEvent('bank-accounts-refresh'));
     } catch (error) {
       console.error("Delete error:", error);
       alert("Failed to delete the selected transaction.");
@@ -322,6 +329,7 @@ export function PaymentIn() {
         setShowAddPayment(false);
         resetAddPaymentForm();
         fetchData();
+        window.dispatchEvent(new CustomEvent('bank-accounts-refresh'));
       } else {
         alert("Failed to save payment in record.");
       }

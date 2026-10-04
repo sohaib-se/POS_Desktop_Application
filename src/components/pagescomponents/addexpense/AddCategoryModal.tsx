@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { ExpenseCategory } from "@/types";
+import { toast } from "@/components/ui/Toast";
 
 interface AddCategoryModalProps {
   onClose: () => void;
@@ -12,7 +13,10 @@ export function AddCategoryModal({ onClose, onSuccess }: AddCategoryModalProps) 
 
   const handleSave = async () => {
     const normalizedName = newCategoryName.trim();
-    if (!normalizedName) return;
+    if (!normalizedName) {
+      toast.error("Category name is required");
+      return;
+    }
     try {
       const response = await fetch("/api/expense_categories", {
         method: "POST",

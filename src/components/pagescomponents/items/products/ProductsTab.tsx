@@ -18,6 +18,7 @@ import type {
 
 import { ProductList } from "./ProductList";
 import { ItemContextMenu } from "./ItemContextMenu";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { ItemDetailCard } from "./ItemDetailCard";
 import { TransactionsCard } from "./TransactionsCard";
 import { AddItemModal } from "./AddItemModal";
@@ -255,6 +256,8 @@ export function ProductsTab({
   } | null>(null);
 
   const [showStockDetailsPopup, setShowStockDetailsPopup] = useState(false);
+  const [transactionToDelete, setTransactionToDelete] = useState<ItemTransactionRow | null>(null);
+  const [errorModalMessage, setErrorModalMessage] = useState<string | null>(null);
 
   const [isProductSearchActive, setIsProductSearchActive] = useState(false);
   const [productSearchTerm, setProductSearchTerm] = useState("");
@@ -304,11 +307,10 @@ export function ProductsTab({
     if (!transactionSearchTerm) return true;
     const term = transactionSearchTerm.toLowerCase();
     return (
-      (t.invoiceNo && t.invoiceNo.toLowerCase().includes(term)) ||
-      (t.date && t.date.toLowerCase().includes(term)) ||
-      (t.type && t.type.toLowerCase().includes(term)) ||
-      t.amount.toString().includes(term) ||
-      t.balance.toString().includes(term)
+      (t.invoiceNo && t.invoiceNo.toString().toLowerCase().includes(term)) ||
+      (t.partyName && t.partyName.toString().toLowerCase().includes(term)) ||
+      (t.itemName && t.itemName.toString().toLowerCase().includes(term)) ||
+      (t.type && t.type.toString().toLowerCase().includes(term))
     );
   });
 
@@ -691,7 +693,7 @@ export function ProductsTab({
     }
   };
 
-  const handleDeleteTransaction = async (transaction: ItemTransactionRow) => {
+  const handleDeleteTransaction = (transaction: ItemTransactionRow) => {
     const apiId = transaction.rawTransaction?.id;
     if (!apiId) return;
 
@@ -708,11 +710,18 @@ export function ProductsTab({
         return;
       }
     }
+    setTransactionToDelete(transaction);
+  };
+
+  const executeDeleteTransaction = async () => {
+    if (!transactionToDelete) return;
+    const transaction = transactionToDelete;
+    const apiId = transaction.rawTransaction?.id;
+    setTransactionToDelete(null);
+    if (!apiId) return;
 
     // ── Guard: block deletion of Purchase if any FIFO layer has been consumed ──
     if (transaction.type === "Purchase") {
-      // Ask for confirmation first, then let the backend guard decide.
-      if (!window.confirm(`Are you sure you want to delete this ${transaction.type}?`)) return;
       try {
         const checkRes = await fetch(`/api/purchase_bills/${apiId}`, { method: "DELETE" });
         if (checkRes.status === 409) {
@@ -731,17 +740,13 @@ export function ProductsTab({
         throw new Error(`Failed to delete purchase (status ${checkRes.status})`);
       } catch (err) {
         console.error(err);
-        alert("Failed to delete the selected transaction.");
+        setErrorModalMessage("Failed to delete the selected transaction.");
         return;
       }
     }
 
-
-    const confirmMessage = `Are you sure you want to delete this ${transaction.type}?`;
-    if (!window.confirm(confirmMessage)) return;
-
     try {
-      if (transaction.type === "Sale") {
+      if (transaction.type === "Sale" || transaction.type === "Sale (Returned)") {
         const res = await fetch(`/api/sale_invoices/${apiId}`, { method: "DELETE" });
         if (!res.ok && res.status !== 204) throw new Error("Failed to delete sale");
       } else {
@@ -871,7 +876,7 @@ export function ProductsTab({
       void loadItems();
     } catch (error) {
       console.error(error);
-      alert("Failed to delete the selected transaction.");
+      setErrorModalMessage("Failed to delete the selected transaction.");
     }
   };
 
@@ -986,7 +991,7 @@ export function ProductsTab({
       });
       if (response.status === 409) {
         const errorData = await response.json();
-        alert(errorData.message || "Item is in use and cannot be deleted.");
+        setErrorModalMessage(errorData.message || "Item is in use and cannot be deleted.");
         return;
       }
       if (!response.ok) throw new Error("Failed to delete item");
@@ -1002,7 +1007,7 @@ export function ProductsTab({
       }
     } catch (error) {
       console.error(error);
-      alert("Failed to delete item.");
+      setErrorModalMessage("Failed to delete item.");
     } finally {
       setIsDeletingItem(false);
       setItemPendingDelete(null);
@@ -1046,7 +1051,7 @@ export function ProductsTab({
       );
     } catch (error) {
       console.error(error);
-      alert("Failed to update item status.");
+      setErrorModalMessage("Failed to update item status.");
     }
   };
 
@@ -1298,6 +1303,11 @@ export function ProductsTab({
           addItemImageDataUrl={addItemImageDataUrl}
           addItemExistingImagePath={addItemExistingImagePath}
           onImageSelection={handleAddItemImageSelection}
+          onRemoveImage={() => {
+            setAddItemImageFileName("");
+            setAddItemImageDataUrl(null);
+            setAddItemExistingImagePath(null);
+          }}
           onOpenUnitSelector={() =>
             onOpenUnitSelector({
               selectedUnitId,
@@ -1352,7 +1362,14 @@ export function ProductsTab({
             openEditItemDialog(menu.item);
           }}
           onDelete={(menu) => {
-            setItemPendingDelete(menu.item);
+            const hasTransactions = itemTransactions.some(
+              (t) => (t.itemId === menu.item.id || t.itemName.trim().toLowerCase() === menu.item.name.trim().toLowerCase()) && t.type !== "Opening Stock"
+            );
+            if (hasTransactions) {
+              setErrorModalMessage("Item is in use and cannot be deleted.");
+            } else {
+              setItemPendingDelete(menu.item);
+            }
           }}
           onToggleStatus={handleToggleStatus}
           onClose={() => setItemContextMenu(null)}
@@ -1418,6 +1435,11 @@ export function ProductsTab({
         addItemImageDataUrl={addItemImageDataUrl}
         addItemExistingImagePath={addItemExistingImagePath}
         onImageSelection={handleAddItemImageSelection}
+        onRemoveImage={() => {
+          setAddItemImageFileName("");
+          setAddItemImageDataUrl(null);
+          setAddItemExistingImagePath(null);
+        }}
         onOpenUnitSelector={() =>
           onOpenUnitSelector({
             selectedUnitId,
@@ -1448,6 +1470,30 @@ export function ProductsTab({
         onCancel={() => setItemPendingDelete(null)}
         onConfirm={(item) => { void handleDeleteItem(item); }}
       />
+
+      {errorModalMessage && (
+        <ConfirmDialog
+          open={true}
+          title="Cannot Complete Action"
+          message={errorModalMessage}
+          confirmLabel="OK"
+          confirmColor="#1976d2"
+          icon="warning"
+          onConfirm={() => setErrorModalMessage(null)}
+          onCancel={() => setErrorModalMessage(null)}
+        />
+      )}
+      
+      {transactionToDelete && (
+        <ConfirmDialog
+          open={true}
+          title={`Delete ${transactionToDelete.type}`}
+          message={`Are you sure you want to delete this ${transactionToDelete.type}?`}
+          confirmLabel="Delete"
+          onConfirm={executeDeleteTransaction}
+          onCancel={() => setTransactionToDelete(null)}
+        />
+      )}
 
       {/* Transaction View Modals */}
       <SaleInvoiceDialog

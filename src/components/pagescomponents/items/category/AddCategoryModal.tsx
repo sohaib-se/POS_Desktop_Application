@@ -51,13 +51,18 @@ export function AddCategoryModal({
               type="text"
               value={newCategoryName}
               onChange={(event) => onSetNewCategoryName(event.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  onSave();
+                }
+              }}
               className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
               placeholder="e.g. Grocery"
             />
           </div>
           <button
             onClick={onSave}
-            disabled={!newCategoryName.trim()}
             className="w-full bg-[#E53935] text-white py-2 rounded-lg text-sm font-medium"
           >
             {categoryBeingEdited ? "Update" : "Create"}

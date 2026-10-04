@@ -87,36 +87,44 @@ export function UnitList({
             </tr>
           </thead>
           <tbody>
-            {filteredUnitList.map((unit) => {
-              const isSelected = unit.id === selectedUnitInTabId;
-              return (
-                <tr
-                  key={unit.id}
-                  onClick={() => onSetSelectedUnitInTabId(unit.id)}
-                  onContextMenu={(event) => {
-                    event.preventDefault();
-                    onSetSelectedUnitInTabId(unit.id);
-                    onSetUnitContextMenu({
-                      unit,
-                      x: event.clientX,
-                      y: event.clientY,
-                    });
-                  }}
-                  className={`cursor-pointer border-b border-[#E3EAF2] ${
-                    isSelected ? "bg-[#DDEBFA]" : "hover:bg-[#F5F8FA]"
-                  }`}
-                >
-                  <td className="px-4 py-3 text-[#222B45] font-medium uppercase">
-                    {unit.fullName}
-                  </td>
-                  <td className="px-4 py-3 text-right text-[#4B5563]">
-                    <div className="flex items-center justify-end gap-3">
-                      <span className="capitalize">{unit.shortName}</span>
-                    </div>
-                  </td>
-                </tr>
-              );
-            })}
+            {filteredUnitList.length === 0 ? (
+              <tr>
+                <td colSpan={2} className="px-4 py-8 text-center text-[#7B8A9A]">
+                  No units found
+                </td>
+              </tr>
+            ) : (
+              filteredUnitList.map((unit) => {
+                const isSelected = unit.id === selectedUnitInTabId;
+                return (
+                  <tr
+                    key={unit.id}
+                    onClick={() => onSetSelectedUnitInTabId(unit.id)}
+                    onContextMenu={(event) => {
+                      event.preventDefault();
+                      onSetSelectedUnitInTabId(unit.id);
+                      onSetUnitContextMenu({
+                        unit,
+                        x: event.clientX,
+                        y: event.clientY,
+                      });
+                    }}
+                    className={`cursor-pointer border-b border-[#E3EAF2] ${
+                      isSelected ? "bg-[#DDEBFA]" : "hover:bg-[#F5F8FA]"
+                    }`}
+                  >
+                    <td className="px-4 py-3 text-[#222B45] font-medium uppercase">
+                      {unit.fullName}
+                    </td>
+                    <td className="px-4 py-3 text-right text-[#4B5563]">
+                      <div className="flex items-center justify-end gap-3">
+                        <span className="capitalize">{unit.shortName}</span>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })
+            )}
           </tbody>
         </table>
       </div>

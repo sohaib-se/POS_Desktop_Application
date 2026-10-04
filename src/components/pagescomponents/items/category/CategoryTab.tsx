@@ -7,6 +7,7 @@ import { CategoryDetailsPanel } from "./CategoryDetailsPanel";
 import { AddCategoryModal } from "./AddCategoryModal";
 import { DeleteCategoryModal } from "./DeleteCategoryModal";
 import { MoveItemsDialog } from "./MoveItemsDialog";
+import { toast } from "@/components/ui/Toast";
 
 type Props = {
   categoryList: CategoryRecord[];
@@ -300,13 +301,19 @@ export function CategoryTab({
 
   const handleCreateCategoryWithCallback = async () => {
     const normalizedName = newCategoryName.trim();
-    if (!normalizedName) return;
+    if (!normalizedName) {
+      toast.error("Category name is required");
+      return;
+    }
     const alreadyExists = categoryList.some(
       (c) =>
         c.name.toLowerCase() === normalizedName.toLowerCase() &&
         c.id !== categoryBeingEdited?.id
     );
-    if (alreadyExists) return;
+    if (alreadyExists) {
+      toast.error("Category already exists");
+      return;
+    }
 
     try {
       const response = await fetch("/api/categories", {

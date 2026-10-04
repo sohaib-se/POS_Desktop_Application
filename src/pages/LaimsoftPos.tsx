@@ -1288,49 +1288,45 @@ export function LaimsoftPos({ onClose, initialInvoice }: LaimsoftPosProps) {
           ? String(Number(savedInvoice.invoiceNo) + 1)
           : String(Number(activeTab.invoiceNo) + 1);
 
-        targetNextNo = nextInvNo;
-        setNextInvoiceNo(nextInvNo);
+      targetNextNo = nextInvNo;
+      setNextInvoiceNo(nextInvNo);
 
-        window.dispatchEvent(
-          new CustomEvent("sale-invoices-refresh", {
-            detail: { message: `Sale #${activeTab.invoiceNo} completed successfully.` },
-          })
-        );
+      window.dispatchEvent(
+        new CustomEvent("sale-invoices-refresh", {
+          detail: { message: `Sale #${activeTab.invoiceNo} completed successfully.` },
+        })
+      );
 
-        const newlySavedSale: SavedSaleRecord = {
-          id: String(savedInvoice.id || Date.now()),
-          invoiceNo: String(savedInvoice.invoiceNo || activeTab.invoiceNo),
-          date: activeTab.date,
-          partyName: payload.partyName,
-          partyId: payload.partyId,
-          partyPhone: payload.partyPhone,
-          paymentMode: payload.paymentMode,
-          paymentType: payload.paymentType,
-          subtotal: payload.subtotal,
-          discountPercent: payload.discountPercent,
-          discountAmount: payload.discountAmount,
-          amount: payload.amount,
-          balance: payload.balance,
-          description: payload.description,
-          lineItemsJson: JSON.stringify(payload.lineItems),
-          createdAt: new Date().toISOString(),
-        };
+      const newlySavedSale: SavedSaleRecord = {
+        id: String(savedInvoice.id || Date.now()),
+        invoiceNo: String(savedInvoice.invoiceNo || activeTab.invoiceNo),
+        date: activeTab.date,
+        partyName: payload.partyName,
+        partyId: payload.partyId,
+        partyPhone: payload.partyPhone,
+        paymentMode: payload.paymentMode,
+        paymentType: payload.paymentType,
+        subtotal: payload.subtotal,
+        discountPercent: payload.discountPercent,
+        discountAmount: payload.discountAmount,
+        amount: payload.amount,
+        balance: payload.balance,
+        description: payload.description,
+        lineItemsJson: JSON.stringify(payload.lineItems),
+        createdAt: new Date().toISOString(),
+      };
 
-        setSavedSales((prev) => {
-          const nextList = [...prev, newlySavedSale];
-          nextList.sort((a, b) => {
-            const numA = Number(a.invoiceNo);
-            const numB = Number(b.invoiceNo);
-            if (Number.isFinite(numA) && Number.isFinite(numB)) return numA - numB;
-            if (a.createdAt && b.createdAt) return a.createdAt.localeCompare(b.createdAt);
-            return a.invoiceNo.localeCompare(b.invoiceNo, undefined, { numeric: true });
-          });
-          return nextList;
+      setSavedSales((prev) => {
+        const nextList = [...prev, newlySavedSale];
+        nextList.sort((a, b) => {
+          const numA = Number(a.invoiceNo);
+          const numB = Number(b.invoiceNo);
+          if (Number.isFinite(numA) && Number.isFinite(numB)) return numA - numB;
+          if (a.createdAt && b.createdAt) return a.createdAt.localeCompare(b.createdAt);
+          return a.invoiceNo.localeCompare(b.invoiceNo, undefined, { numeric: true });
         });
-
-        showToast(`Sale #${activeTab.invoiceNo} saved successfully!`, "success");
-      }
-
+        return nextList;
+      });
       // Reset active tab for next sale
       const isCashSaleByDefault = JSON.parse(localStorage.getItem('settings.isCashSaleByDefault') || 'false');
 

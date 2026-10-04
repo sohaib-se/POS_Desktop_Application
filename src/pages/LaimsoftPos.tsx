@@ -380,13 +380,14 @@ export function LaimsoftPos({ onClose, initialInvoice }: LaimsoftPosProps) {
           return;
 
         const loadedParties = (await partiesResponse.json()) as PartyOption[];
+        const activeParties = loadedParties.filter((p: any) => p.status !== 'inactive');
         const loadedItems = (await itemsResponse.json()) as ItemOption[];
         const saleInvoices = (await saleInvoicesResponse.json()) as SaleInvoiceApiRecord[];
         const loadedBanks = (await banksResponse.json()) as BankOption[];
 
         if (cancelled) return;
 
-        setParties([...loadedParties].sort((a, b) => a.name.localeCompare(b.name)));
+        setParties([...activeParties].sort((a, b) => a.name.localeCompare(b.name)));
         setItems(loadedItems);
         setBanks(loadedBanks);
 

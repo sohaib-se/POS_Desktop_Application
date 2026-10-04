@@ -306,7 +306,7 @@ function App() {
       case "utilities-barcode":
         return <BarcodeGenerator />;
       case "utilities-bulk-update":
-        return <UpdateItemsInBulk />;
+        return <UpdateItemsInBulk setUnsavedChanges={setGlobalUnsavedChanges} />;
       case "utilities-import-parties":
         return <ImportParties />;
       case "utilities-export-items":

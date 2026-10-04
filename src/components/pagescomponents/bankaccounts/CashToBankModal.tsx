@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { Modal, Input, Select, ImageUpload, ModalFooter } from "./SharedComponents";
+import { toast } from "../../ui/Toast";
 import type { TransferModalProps } from "./types";
 
 export function CashToBankModal({ open, onClose, accounts, onSuccess, initialData }: TransferModalProps) {
@@ -64,8 +65,8 @@ export function CashToBankModal({ open, onClose, accounts, onSuccess, initialDat
     
     // Only block if creating a new one and it exceeds balance
     if (!initialData && Number(amount) > totalCash) {
-      alert("Not enough cash in hand.");
-      return;
+        toast.error("Not enough cash in hand.");
+        return;
     }
 
     setIsSaving(true);

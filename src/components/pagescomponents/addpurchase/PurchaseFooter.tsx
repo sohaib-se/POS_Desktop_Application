@@ -2,7 +2,6 @@ import type { PurchaseBillEditData } from "@/types";
 
 interface PurchaseFooterProps {
   saveError: string;
-  onShare?: () => void;
   handleSavePurchase: () => void;
   isSaving: boolean;
   initialInvoice?: PurchaseBillEditData | null;
@@ -10,7 +9,6 @@ interface PurchaseFooterProps {
 
 export function PurchaseFooter({
   saveError,
-  onShare,
   handleSavePurchase,
   isSaving,
   initialInvoice,

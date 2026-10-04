@@ -13,6 +13,7 @@ interface Item {
   category?: string;
   purchase_price?: number | string;
   min_stock?: number | string;
+  low_stock?: number | string;
   stock_quantity?: number | string;
 }
 
@@ -46,8 +47,8 @@ export function LowStockDetails({ onBack }: LowStockDetailsProps) {
   const displayData = useMemo(() => {
       let results = rawItems.filter(item => {
           const qty = Number(item.stock_quantity || 0);
-          const minStock = Number(item.min_stock || 0);
-          return minStock > 0 && qty <= minStock;
+          const lowStock = Number(item.low_stock || 0);
+          return lowStock > 0 && qty <= lowStock;
       });
 
       return results.sort((a, b) => a.name.localeCompare(b.name));
@@ -102,7 +103,7 @@ export function LowStockDetails({ onBack }: LowStockDetailsProps) {
         { v: row.name, t: "s" as const },
         { v: row.category || "---", t: "s" as const },
         { v: `${currencyStr} ${Number(row.purchase_price || 0).toFixed(2)}`, t: "s" as const },
-        { v: Number(row.min_stock || 0).toString(), t: "s" as const },
+        { v: Number(row.low_stock || 0).toString(), t: "s" as const },
         { v: Number(row.stock_quantity || 0).toString(), t: "s" as const },
       ];
 
@@ -153,7 +154,7 @@ export function LowStockDetails({ onBack }: LowStockDetailsProps) {
           <td>${row.name}</td>
           <td>${row.category || '---'}</td>
           <td class="right">${currencyStr} ${Number(row.purchase_price || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
-          <td class="right">${Number(row.min_stock || 0)}</td>
+          <td class="right">${Number(row.low_stock || 0)}</td>
           <td class="right loss">${Number(row.stock_quantity || 0)}</td>
         </tr>
       `;
@@ -295,7 +296,7 @@ export function LowStockDetails({ onBack }: LowStockDetailsProps) {
                                {currencyStr} {Number(row.purchase_price || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}
                             </td>
                             <td className="px-4 py-3 border-r border-white/50 text-right text-gray-900">
-                               {Number(row.min_stock || 0)}
+                               {Number(row.low_stock || 0)}
                             </td>
                             <td className="px-4 py-3 border-r border-white/50 text-right text-red-500 font-medium">
                                {Number(row.stock_quantity || 0)}

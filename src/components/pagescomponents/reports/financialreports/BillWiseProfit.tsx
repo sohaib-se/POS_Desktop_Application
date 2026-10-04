@@ -424,15 +424,17 @@ export function BillWiseProfit({ onBack }: BillWiseProfitProps) {
         </div>
       </div>
       
-      <div className="p-6 flex-1 overflow-auto">
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+      <div className="p-6 flex-1 overflow-hidden flex flex-col">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex-1 flex flex-col">
           {loading ? (
             <div className="p-8 text-center text-gray-500">Loading data...</div>
           ) : displayData.length === 0 ? (
             <div className="p-8 text-center text-gray-500">No sale invoices found.</div>
           ) : (
+            <>
+            <div className="flex-1 overflow-auto">
             <table className="w-full text-left text-sm text-gray-600">
-              <thead className="text-xs text-gray-500 uppercase bg-gray-50 border-b border-gray-200">
+              <thead className="text-xs text-gray-500 uppercase bg-gray-50 border-b border-gray-200 sticky top-0 z-10">
                 <tr>
                   <th className="px-6 py-4 font-medium">Date</th>
                   <th className="px-6 py-4 font-medium">Invoice No.</th>
@@ -466,19 +468,24 @@ export function BillWiseProfit({ onBack }: BillWiseProfitProps) {
                   </tr>
                 ))}
               </tbody>
-              <tfoot className="bg-gray-50 font-semibold text-gray-900 border-t border-gray-200">
-                <tr>
-                  <td colSpan={3} className="px-6 py-4 text-right uppercase text-xs text-gray-500">Totals</td>
-                  <td className="px-6 py-4 text-right">
-                    {currencyStr} {totalSales.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </td>
-                  <td className={`px-6 py-4 text-right ${totalProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                    {currencyStr} {totalProfit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </td>
-                  <td className="px-6 py-4"></td>
-                </tr>
-              </tfoot>
             </table>
+            </div>
+            
+            {/* Sticky Footer */}
+            <div className="bg-gray-50 border-t border-gray-200 p-4 px-6 flex justify-end items-center gap-12 font-semibold text-gray-900 sticky bottom-0 z-10 shadow-[0_-2px_4px_rgba(0,0,0,0.05)]">
+              <div className="uppercase text-xs text-gray-500 flex items-center h-full">Totals</div>
+              <div className="flex flex-col items-end">
+                <span className="text-xs text-gray-500 uppercase">Sale Amount</span>
+                <span>{currencyStr} {totalSales.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+              </div>
+              <div className="flex flex-col items-end">
+                <span className="text-xs text-gray-500 uppercase">Profit / Loss</span>
+                <span className={totalProfit >= 0 ? 'text-green-600' : 'text-red-600'}>
+                  {currencyStr} {totalProfit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </span>
+              </div>
+            </div>
+            </>
           )}
         </div>
       </div>

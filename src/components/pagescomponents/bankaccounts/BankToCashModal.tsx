@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { Modal, Input, Select, ImageUpload, ModalFooter } from "./SharedComponents";
+import { toast } from "../../ui/Toast";
 import type { TransferModalProps } from "./types";
 
 export function BankToCashModal({ open, onClose, accounts, onSuccess, initialData }: TransferModalProps) {
@@ -50,7 +51,7 @@ export function BankToCashModal({ open, onClose, accounts, onSuccess, initialDat
     
     const selectedBank = accounts.find(a => a.name === from);
     if (!initialData && selectedBank && Number(amount) > selectedBank.balance) {
-      alert("Not enough amount in bank account.");
+      toast.error("Not enough amount in bank account.");
       return;
     }
 

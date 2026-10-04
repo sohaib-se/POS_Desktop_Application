@@ -519,23 +519,13 @@ export function SalePurchaseByParty({ onBack }: SalePurchaseByPartyProps) {
                     #
                   </th>
                   <th className="px-4 py-3 font-semibold text-gray-500 border-r border-gray-100 text-left">
-                    <div className="flex items-center justify-between">
-                       <span>PARTY NAME</span>
-                       {/* Filter icon placeholder */}
-                       <svg className="w-3 h-3 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg>
-                    </div>
+                    PARTY NAME
                   </th>
                   <th className="px-4 py-3 font-semibold text-gray-500 border-r border-gray-100 text-right">
-                    <div className="flex items-center justify-between">
-                       <span>SALE AMOUNT</span>
-                       <svg className="w-3 h-3 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg>
-                    </div>
+                    SALE AMOUNT
                   </th>
                   <th className="px-4 py-3 font-semibold text-gray-500 border-r border-gray-100 text-right">
-                    <div className="flex items-center justify-between">
-                       <span>PURCHASE AMOUNT</span>
-                       <svg className="w-3 h-3 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg>
-                    </div>
+                    PURCHASE AMOUNT
                   </th>
                 </tr>
               </thead>

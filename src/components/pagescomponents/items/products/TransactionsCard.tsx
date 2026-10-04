@@ -4,7 +4,7 @@ import { Search, MoreVertical, Calendar } from "lucide-react";
 import { Card, CardContent } from "./ui";
 import type { ItemTransactionRow } from "./types";
 import { ItemTransactionContextMenu } from "./ItemTransactionContextMenu";
-import { EnterPasscodeScreen } from "@/components/common/EnterPasscodeScreen";
+
 
 /**
  * Parse a date string that may be in dd/MM/yyyy (en-GB) or ISO (yyyy-MM-dd) format.
@@ -84,33 +84,12 @@ export function TransactionsCard({
   const [currencyDisplay] = useSettings<'abbreviation' | 'icon'>('settings.currencyDisplay', 'abbreviation');
   const currencyStr = currencyDisplay === 'icon' ? currency.symbol : currency.code;
 
-  const [isPasscodeEnabled] = useSettings('settings.isPasscodeEnabled', false);
-  const [isPasscodeForTransactionEnabled] = useSettings('settings.isPasscodeForTransactionEnabled', false);
-  const [passcodeAction, setPasscodeAction] = useState<{ type: 'edit' | 'delete', payload: ItemTransactionRow } | null>(null);
-
   const handleEditClick = (transaction: ItemTransactionRow) => {
-    if (isPasscodeEnabled && isPasscodeForTransactionEnabled) {
-      setPasscodeAction({ type: 'edit', payload: transaction });
-    } else {
-      onEditTransaction?.(transaction);
-    }
+    onEditTransaction?.(transaction);
   };
 
   const handleDeleteClick = (transaction: ItemTransactionRow) => {
-    if (isPasscodeEnabled && isPasscodeForTransactionEnabled) {
-      setPasscodeAction({ type: 'delete', payload: transaction });
-    } else {
-      onDeleteTransaction?.(transaction);
-    }
-  };
-
-  const handlePasscodeSuccess = () => {
-    if (passcodeAction?.type === 'edit' && onEditTransaction) {
-      onEditTransaction(passcodeAction.payload);
-    } else if (passcodeAction?.type === 'delete' && onDeleteTransaction) {
-      onDeleteTransaction(passcodeAction.payload);
-    }
-    setPasscodeAction(null);
+    onDeleteTransaction?.(transaction);
   };
 
   return (
@@ -349,12 +328,6 @@ export function TransactionsCard({
         handleDeleteTransaction={handleDeleteClick}
       />
 
-      {passcodeAction && (
-        <EnterPasscodeScreen
-          onSuccess={handlePasscodeSuccess}
-          onCancel={() => setPasscodeAction(null)}
-        />
-      )}
     </Card>
   );
 }

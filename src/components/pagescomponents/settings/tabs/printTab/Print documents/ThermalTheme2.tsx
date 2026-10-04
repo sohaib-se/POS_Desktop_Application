@@ -22,7 +22,7 @@ interface ThermalTheme2Props {
     invoiceDate: string;
     customerName: string;
     customerPhone?: string;
-    businessProfile?: { business_name?: string; phone?: string; address?: string; email?: string; logo_url?: string };
+    businessProfile?: { business_name?: string; phone?: string; address?: string; email?: string; logo_url?: string; terms_conditions?: string };
     received?: number;
     discount?: number;
     discountPercent?: number;
@@ -348,9 +348,14 @@ export function ThermalSaleInvoiceClassic({
             {/* ────────── FOOTER ────────── */}
             <div style={{ textAlign: "center", marginTop: 8 }}>
                 <div style={{ fontSize: 13, fontWeight: 700 }}>Thank you for your purchase!</div>
-                <div style={{ fontSize: 10, color: "#666", marginTop: 2 }}>
-                    Please keep this receipt for returns &amp; exchanges
-                </div>
+                {ps.printTermsAndConditions && (
+                    <>
+                        <div style={{ fontSize: 11, fontWeight: 700, marginTop: 6 }}>Terms &amp; Conditions</div>
+                        <div style={{ fontSize: 10, color: "#666", marginTop: 2, whiteSpace: "pre-wrap" }}>
+                            {businessProfile?.terms_conditions}
+                        </div>
+                    </>
+                )}
             </div>
         </div>
     );
@@ -365,6 +370,7 @@ function useCompanyInfo() {
         address: (userProfile as any).address as string | undefined,
         email: (userProfile as any).email as string | undefined,
         logo_url: userProfile.logo as string | undefined,
+        terms_conditions: (userProfile as any).terms_conditions as string | undefined,
     });
 
     useEffect(() => {
@@ -378,6 +384,7 @@ function useCompanyInfo() {
                         address: d.address || (userProfile as any).address,
                         email: d.email || (userProfile as any).email,
                         logo_url: d.logo_url || d.logo || userProfile.logo,
+                        terms_conditions: d.terms_conditions || (userProfile as any).terms_conditions,
                     });
                 }
             })

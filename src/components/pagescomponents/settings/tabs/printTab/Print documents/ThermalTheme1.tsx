@@ -22,7 +22,7 @@ interface ThermalTheme1Props {
   invoiceDate: string;
   customerName: string;
   customerPhone?: string;
-  businessProfile?: { business_name?: string; phone?: string; logo_url?: string; address?: string; email?: string };
+  businessProfile?: { business_name?: string; phone?: string; logo_url?: string; address?: string; email?: string; terms_conditions?: string };
   received?: number;
   discount?: number;
   discountPercent?: number;
@@ -470,6 +470,15 @@ export function ThermalSaleInvoice({
           </div>
         </>
       )}
+
+      {ps.printTermsAndConditions && (
+        <div style={{ marginTop: 8, textAlign: "center" }}>
+          <div style={{ fontSize: 11, fontWeight: 700 }}>Terms &amp; Conditions</div>
+          <div style={{ fontSize: 10, marginTop: 2, whiteSpace: "pre-wrap", color: "#666" }}>
+            {businessProfile?.terms_conditions}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -483,6 +492,7 @@ function useCompanyInfo() {
     logo_url: userProfile.logo as string | undefined,
     address: (userProfile as any).address as string | undefined,
     email: (userProfile as any).email as string | undefined,
+    terms_conditions: (userProfile as any).terms_conditions as string | undefined,
   });
 
   useEffect(() => {
@@ -496,6 +506,7 @@ function useCompanyInfo() {
             logo_url: d.logo_url || d.logo || userProfile.logo,
             address: d.address || (userProfile as any).address,
             email: d.email || (userProfile as any).email,
+            terms_conditions: d.terms_conditions || (userProfile as any).terms_conditions,
           });
         }
       })

@@ -63,6 +63,7 @@ export function useCompanyInfo() {
     address: (userProfile as any).address as string | undefined,
     email: (userProfile as any).email as string | undefined,
     signature: (userProfile as any).signature as string | undefined,
+    terms_conditions: (userProfile as any).terms_conditions as string | undefined,
   });
 
   useEffect(() => {
@@ -77,6 +78,7 @@ export function useCompanyInfo() {
             address: d.address || (userProfile as any).address,
             email: d.email || (userProfile as any).email,
             signature: d.signature_url || d.signature || undefined,
+            terms_conditions: d.terms_conditions || (userProfile as any).terms_conditions,
           });
         }
       })

@@ -8,7 +8,7 @@ export function TransactionTab() {
   const [isRoundOffTotalEnabled, setIsRoundOffTotalEnabled] = useSettings('settings.isRoundOffTotalEnabled', true);
   const [isCashSaleByDefault, setIsCashSaleByDefault] = useSettings('settings.isCashSaleByDefault', false);
   const [isBarcodeScanEnabled, setIsBarcodeScanEnabled] = useSettings('settings.isBarcodeScanEnabled', false);
-  const [isPasscodeForTransactionEnabled, setIsPasscodeForTransactionEnabled] = useSettings('settings.isPasscodeForTransactionEnabled', false);
+
   const [isDoNotShowInvoicePreviewEnabled, setIsDoNotShowInvoicePreviewEnabled] = useSettings('settings.isDoNotShowInvoicePreviewEnabled', false);
   const [roundOffLimit, setRoundOffLimit] = useSettings('settings.roundOffLimit', 1);
 
@@ -138,15 +138,7 @@ export function TransactionTab() {
             checked={isDoNotShowInvoicePreviewEnabled} 
             onChange={setIsDoNotShowInvoicePreviewEnabled} 
           />
-          <SettingToggleRow 
-            label={
-              <span>
-                Enable <span style={{ color: "#2563eb", fontWeight: 600 }}>Passcode</span> for <span style={{ color: "#2563eb", fontWeight: 600 }}>transaction</span> edit/delete
-              </span>
-            } 
-            checked={isPasscodeForTransactionEnabled}
-            onChange={setIsPasscodeForTransactionEnabled}
-          />
+
         </Card>
 
       </div>

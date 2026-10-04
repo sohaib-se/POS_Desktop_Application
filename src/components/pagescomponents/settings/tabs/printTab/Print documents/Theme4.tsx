@@ -253,7 +253,7 @@ export function Theme4InvoicePrintReport({
 
           {ps.printTermsAndConditions && (
             <p className="text-xs mt-2">
-              <span className="font-bold">Terms &amp; Conditions:</span> Goods once sold will not be taken back. Payment due within 15 days of invoice date.
+              <span className="font-bold">Terms &amp; Conditions:</span> <span className="whitespace-pre-wrap">{businessProfile?.terms_conditions}</span>
             </p>
           )}
         </div>
@@ -341,6 +341,7 @@ function useCompanyInfo() {
     address: (userProfile as any).address,
     email: (userProfile as any).email,
     signature: (userProfile as any).signature as string | undefined,
+    terms_conditions: (userProfile as any).terms_conditions as string | undefined,
   });
   useEffect(() => {
     fetch("/api/user_profile")
@@ -354,6 +355,7 @@ function useCompanyInfo() {
             address: d.address || (userProfile as any).address,
             email: d.email || (userProfile as any).email,
             signature: d.signature_url || d.signature || undefined,
+            terms_conditions: d.terms_conditions || (userProfile as any).terms_conditions,
           });
         }
       })

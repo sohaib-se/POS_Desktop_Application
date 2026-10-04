@@ -552,9 +552,16 @@ function sqliteApiPlugin() {
             }
 
             const updatedPayload = {
-              ...payload,
-              logo: logoPath,
-              signature: signaturePath
+              businessName: payload.businessName !== undefined ? payload.businessName : currentProfile.business_name,
+              phone: payload.phone !== undefined ? payload.phone : currentProfile.phone,
+              email: payload.email !== undefined ? payload.email : currentProfile.email,
+              address: payload.address !== undefined ? payload.address : currentProfile.address,
+              businessType: payload.businessType !== undefined ? payload.businessType : currentProfile.business_type,
+              category: payload.category !== undefined ? payload.category : currentProfile.category,
+              pincode: payload.pincode !== undefined ? payload.pincode : currentProfile.pincode,
+              logo: logoPath !== undefined ? logoPath : currentProfile.logo,
+              signature: signaturePath !== undefined ? signaturePath : currentProfile.signature,
+              termsConditions: payload.termsConditions !== undefined ? payload.termsConditions : currentProfile.terms_conditions,
             };
 
             repository.updateUserProfile(updatedPayload);

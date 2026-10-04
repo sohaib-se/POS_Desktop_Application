@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { AlignJustify, MoreVertical, Trash2, Pencil, Search, Calendar } from "lucide-react";
 import { useSettings } from "@/hooks/useSettings";
-import { EnterPasscodeScreen } from "@/components/common/EnterPasscodeScreen";
+
 import { ConfirmDeleteModal } from "@/components/common/ConfirmDeleteModal";
 import { AdjustCashModal } from "./AdjustCashModal";
 import { DetailsModal } from "./DetailsModal";
@@ -44,9 +44,6 @@ export function CashInHandView({
   const [currencyDisplay] = useSettings<'abbreviation' | 'icon'>('settings.currencyDisplay', 'abbreviation');
   const currencyStr = currencyDisplay === 'icon' ? currency.symbol : currency.code;
 
-  const [isPasscodeEnabled] = useSettings('settings.isPasscodeEnabled', false);
-  const [isPasscodeForTransactionEnabled] = useSettings('settings.isPasscodeForTransactionEnabled', false);
-  const [passcodeAction, setPasscodeAction] = useState<{ type: 'delete', payload: string } | null>(null);
   const [editAmount, setEditAmount] = useState("");
   const [editingAdjustTx, setEditingAdjustTx] = useState<any>(null);
   const [deleteConfirmationId, setDeleteConfirmationId] = useState<string | null>(null);
@@ -112,21 +109,11 @@ export function CashInHandView({
 
   const confirmDelete = () => {
     if (deleteConfirmationId) {
-      if (isPasscodeEnabled && isPasscodeForTransactionEnabled) {
-        setPasscodeAction({ type: 'delete', payload: deleteConfirmationId });
-      } else {
-        handleDelete(deleteConfirmationId);
-      }
+      handleDelete(deleteConfirmationId);
       setDeleteConfirmationId(null);
     }
   };
 
-  const handlePasscodeSuccess = () => {
-    if (passcodeAction?.type === 'delete') {
-      handleDelete(passcodeAction.payload);
-    }
-    setPasscodeAction(null);
-  };
 
   const isTransfer = (tx: any) =>
     String(tx.id).endsWith('-cash') ||
@@ -379,12 +366,6 @@ export function CashInHandView({
         </div>
       )}
 
-      {passcodeAction && (
-        <EnterPasscodeScreen
-          onSuccess={handlePasscodeSuccess}
-          onCancel={() => setPasscodeAction(null)}
-        />
-      )}
 
       <ConfirmDeleteModal
         isOpen={!!deleteConfirmationId}

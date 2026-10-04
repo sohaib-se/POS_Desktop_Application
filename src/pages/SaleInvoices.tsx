@@ -18,7 +18,7 @@ import { SaleInvoiceSummary } from "../components/pagescomponents/saleinvoices/S
 import { SaleInvoiceTable } from "../components/pagescomponents/saleinvoices/SaleInvoiceTable";
 import { SaleInvoiceContextMenu } from "../components/pagescomponents/saleinvoices/SaleInvoiceContextMenu";
 import { SaleInvoiceDialog } from "../components/pagescomponents/saleinvoices/SaleInvoiceDialog";
-import { EnterPasscodeScreen } from "@/components/common/EnterPasscodeScreen";
+
 import { ConfirmDeleteModal } from "@/components/common/ConfirmDeleteModal";
 import { PrintTab, type SalePrintData } from "@/components/pagescomponents/settings/tabs/PrintTab";
 
@@ -42,12 +42,9 @@ export function SaleInvoices({ onViewChange, onEditInvoice, onEditPosInvoice, on
   const [statusMessage, setStatusMessage] = useState("");
   const searchInputRef = useRef<HTMLInputElement | null>(null);
 
-  const [isPasscodeEnabled] = useSettings('settings.isPasscodeEnabled', false);
-  const [isPasscodeForTransactionEnabled] = useSettings('settings.isPasscodeForTransactionEnabled', false);
   const [currency] = useSettings('settings.businessCurrency', { code: 'PKR', symbol: 'Rs' });
   const [currencyDisplay] = useSettings<'abbreviation' | 'icon'>('settings.currencyDisplay', 'abbreviation');
   const currencyStr = currencyDisplay === 'icon' ? currency.symbol : currency.code;
-  const [passcodeAction, setPasscodeAction] = useState<{ type: 'edit' | 'delete' | 'return', payload: SaleInvoiceViewRow } | null>(null);
   const [invoiceToDelete, setInvoiceToDelete] = useState<SaleInvoiceViewRow | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [invoiceToReturn, setInvoiceToReturn] = useState<SaleInvoiceViewRow | null>(null);
@@ -276,9 +273,7 @@ export function SaleInvoices({ onViewChange, onEditInvoice, onEditPosInvoice, on
 
   const handleEditClick = (invoice: SaleInvoiceViewRow) => {
     const isPosInvoice = invoice.description === "POS Sale" || invoice.transaction === "POS Sale";
-    if (isPasscodeEnabled && isPasscodeForTransactionEnabled) {
-      setPasscodeAction({ type: 'edit', payload: invoice });
-    } else if (isPosInvoice && onEditPosInvoice) {
+    if (isPosInvoice && onEditPosInvoice) {
       onEditPosInvoice(invoice);
     } else {
       onEditInvoice(invoice);
@@ -287,11 +282,7 @@ export function SaleInvoices({ onViewChange, onEditInvoice, onEditPosInvoice, on
 
   const handleDeleteClick = (invoice: SaleInvoiceViewRow) => {
     setOpenRowMenuId(null);
-    if (isPasscodeEnabled && isPasscodeForTransactionEnabled) {
-      setPasscodeAction({ type: 'delete', payload: invoice });
-    } else {
-      setInvoiceToDelete(invoice);
-    }
+    setInvoiceToDelete(invoice);
   };
 
   const handleReturnClick = (invoice: SaleInvoiceViewRow) => {
@@ -300,11 +291,7 @@ export function SaleInvoices({ onViewChange, onEditInvoice, onEditPosInvoice, on
       setStatusMessage("This sale is already returned.");
       return;
     }
-    if (isPasscodeEnabled && isPasscodeForTransactionEnabled) {
-      setPasscodeAction({ type: 'return', payload: invoice });
-    } else {
-      setInvoiceToReturn(invoice);
-    }
+    setInvoiceToReturn(invoice);
   };
 
   const handlePrintClick = (invoice: SaleInvoiceViewRow) => {
@@ -349,24 +336,7 @@ export function SaleInvoices({ onViewChange, onEditInvoice, onEditPosInvoice, on
     setPrintingInvoice(saleData);
   };
 
-  const handlePasscodeSuccess = () => {
-    if (!passcodeAction) return;
 
-    if (passcodeAction.type === 'edit') {
-      const invoice = passcodeAction.payload;
-      const isPosInvoice = invoice.description === "POS Sale" || invoice.transaction === "POS Sale";
-      if (isPosInvoice && onEditPosInvoice) {
-        onEditPosInvoice(invoice);
-      } else {
-        onEditInvoice(invoice);
-      }
-    } else if (passcodeAction.type === 'delete') {
-      setInvoiceToDelete(passcodeAction.payload);
-    } else if (passcodeAction.type === 'return') {
-      setInvoiceToReturn(passcodeAction.payload);
-    }
-    setPasscodeAction(null);
-  };
 
   return (
     <div className="h-full flex flex-col bg-[#D0DCE7] gap-1 overflow-y-auto">
@@ -415,12 +385,6 @@ export function SaleInvoices({ onViewChange, onEditInvoice, onEditPosInvoice, on
         onPrintInvoice={handlePrintClick}
       />
 
-      {passcodeAction && (
-        <EnterPasscodeScreen
-          onSuccess={handlePasscodeSuccess}
-          onCancel={() => setPasscodeAction(null)}
-        />
-      )}
 
       <ConfirmDeleteModal
         isOpen={!!invoiceToDelete}

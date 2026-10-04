@@ -1282,7 +1282,32 @@ export function LaimsoftPos({ onClose, initialInvoice }: LaimsoftPosProps) {
         targetNextNo = String(highestNo + 1);
         setNextInvoiceNo(targetNextNo);
 
-        showToast(`Sale #${activeTab.invoiceNo} updated successfully!`, "success");
+        // Reset active tab to a fresh empty sale after editing
+        const isCashSaleByDefaultEdit = JSON.parse(localStorage.getItem('settings.isCashSaleByDefault') || 'false');
+        setTabs((prev) =>
+          prev.map((t) =>
+            t.id === activeTabId
+              ? {
+                  ...t,
+                  invoiceNo: targetNextNo,
+                  date: new Date().toISOString().split("T")[0],
+                  rows: [],
+                  paymentMode: "Cash",
+                  amountReceived: "0.00",
+                  isAmountReceivedDirty: false,
+                  customerSelectedId: null,
+                  customerSearchText: isCashSaleByDefaultEdit ? "Cash Sale" : "",
+                  searchQuery: "",
+                  selectedRowId: null,
+                  discountPercent: "",
+                  discountAmount: "",
+                  description: "",
+                  editingInvoiceId: null,
+                  draftSnapshot: null,
+                }
+              : t
+          )
+        );
       } else {
         const nextInvNo = savedInvoice.invoiceNo
           ? String(Number(savedInvoice.invoiceNo) + 1)
@@ -1354,6 +1379,7 @@ export function LaimsoftPos({ onClose, initialInvoice }: LaimsoftPosProps) {
             : t
         )
       );
+      }
 
       setDirectPrintSale(saleDataForPrint);
     } catch (error) {

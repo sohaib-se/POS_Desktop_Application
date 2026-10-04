@@ -22,7 +22,7 @@ interface ThermalTheme4Props {
     invoiceDate: string;
     customerName: string;
     customerPhone?: string;
-    businessProfile?: { business_name?: string; phone?: string; address?: string; email?: string; logo_url?: string };
+    businessProfile?: { business_name?: string; phone?: string; address?: string; email?: string; logo_url?: string; terms_conditions?: string };
     received?: number;
     discount?: number;
     discountPercent?: number;
@@ -252,7 +252,12 @@ export function ThermalSaleInvoiceRetail({
             {/* ── FOOTER ── */}
             <div style={{ textAlign: "center" }}>
                 <div style={{ fontSize: 13, fontWeight: 700 }}>THANK YOU</div>
-                <div style={{ fontSize: 10, marginTop: 1 }}>PLEASE RETAIN FOR RETURNS</div>
+                {ps.printTermsAndConditions && (
+                    <>
+                        <div style={{ fontSize: 11, fontWeight: 700, marginTop: 4 }}>Terms &amp; Conditions</div>
+                        <div style={{ fontSize: 10, marginTop: 1, whiteSpace: "pre-wrap" }}>{businessProfile?.terms_conditions}</div>
+                    </>
+                )}
             </div>
 
             {starRule()}
@@ -269,6 +274,7 @@ function useCompanyInfo() {
         address: (userProfile as any).address as string | undefined,
         email: (userProfile as any).email as string | undefined,
         logo_url: userProfile.logo as string | undefined,
+        terms_conditions: (userProfile as any).terms_conditions as string | undefined,
     });
 
     useEffect(() => {
@@ -282,6 +288,7 @@ function useCompanyInfo() {
                         address: d.address || (userProfile as any).address,
                         email: d.email || (userProfile as any).email,
                         logo_url: d.logo_url || d.logo || userProfile.logo,
+                        terms_conditions: d.terms_conditions || (userProfile as any).terms_conditions,
                     });
                 }
             })

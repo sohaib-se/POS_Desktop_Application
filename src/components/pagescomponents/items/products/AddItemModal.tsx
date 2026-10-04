@@ -20,7 +20,6 @@ type AddItemModalProps = {
   units: UnitRecord[];
   selectedUnit: UnitRecord | undefined;
   isSavingItem: boolean;
-  addItemImageFileName: string;
   addItemImageDataUrl: string | null;
   addItemExistingImagePath: string | null;
   onImageSelection: (event: React.ChangeEvent<HTMLInputElement>) => void;
@@ -41,7 +40,6 @@ export function AddItemModal({
   categoryList,
   selectedUnit,
   isSavingItem,
-  addItemImageFileName,
   addItemImageDataUrl,
   addItemExistingImagePath,
   onImageSelection,

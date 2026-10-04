@@ -8,7 +8,7 @@ import { EstimatesSummary } from "../components/pagescomponents/estimates/Estima
 import { EstimatesTable } from "../components/pagescomponents/estimates/EstimatesTable";
 import { EstimateRowMenu } from "../components/pagescomponents/estimates/EstimateRowMenu";
 import { ViewEstimateDialog } from "../components/pagescomponents/estimates/ViewEstimateDialog";
-import { EnterPasscodeScreen } from "@/components/common/EnterPasscodeScreen";
+
 import { useSettings } from "@/hooks/useSettings";
 import { PrintTab, type SalePrintData } from "@/components/pagescomponents/settings/tabs/PrintTab";
 
@@ -29,9 +29,6 @@ export function Estimates({ onConvertEstimateToSale }: { onConvertEstimateToSale
   };
   const [selectedMonth, setSelectedMonth] = useState(getCurrentMonth());
 
-  const [isPasscodeEnabled] = useSettings('settings.isPasscodeEnabled', false);
-  const [isPasscodeForTransactionEnabled] = useSettings('settings.isPasscodeForTransactionEnabled', false);
-  const [passcodeAction, setPasscodeAction] = useState<{ type: 'edit' | 'delete', payload: any } | null>(null);
   const [deletePendingId, setDeletePendingId] = useState<string | null>(null);
   const [printingEstimate, setPrintingEstimate] = useState<SalePrintData | null>(null);
 
@@ -101,30 +98,14 @@ export function Estimates({ onConvertEstimateToSale }: { onConvertEstimateToSale
   };
 
   const handleEditClick = (record: EstimateRecord) => {
-    if (isPasscodeEnabled && isPasscodeForTransactionEnabled) {
-      setPasscodeAction({ type: 'edit', payload: record });
-    } else {
-      handleEditEstimate(record);
-    }
+    handleEditEstimate(record);
   };
 
   const handleDeleteClick = (id: string) => {
-    if (isPasscodeEnabled && isPasscodeForTransactionEnabled) {
-      setPasscodeAction({ type: 'delete', payload: id });
-    } else {
-      setDeletePendingId(id);
-    }
+    setDeletePendingId(id);
   };
 
 
-  const handlePasscodeSuccess = () => {
-    if (passcodeAction?.type === 'edit') {
-      handleEditEstimate(passcodeAction.payload);
-    } else if (passcodeAction?.type === 'delete') {
-      handleDelete(passcodeAction.payload);
-    }
-    setPasscodeAction(null);
-  };
 
   const handlePrintEstimate = (record: EstimateRecord) => {
     let parsedItems: SalePrintData['records'] = [];
@@ -243,12 +224,6 @@ export function Estimates({ onConvertEstimateToSale }: { onConvertEstimateToSale
         setViewingRecord={setViewingRecord}
       />
 
-      {passcodeAction && (
-        <EnterPasscodeScreen
-          onSuccess={handlePasscodeSuccess}
-          onCancel={() => setPasscodeAction(null)}
-        />
-      )}
 
       <ConfirmDialog
         open={!!deletePendingId}

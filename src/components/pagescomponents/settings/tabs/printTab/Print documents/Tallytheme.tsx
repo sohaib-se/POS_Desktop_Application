@@ -22,7 +22,7 @@ interface SaleInvoicePrintReportProps {
   invoiceDate: string;
   customerName: string;
   customerContact?: string;
-  businessProfile?: { business_name?: string; phone?: string; logo_url?: string; address?: string; email?: string; signature?: string; };
+  businessProfile?: { business_name?: string; phone?: string; logo_url?: string; address?: string; email?: string; signature?: string; terms_conditions?: string; };
   received?: number;
   paymentMode?: string;
   previousBalance?: number;
@@ -250,8 +250,8 @@ export function SaleInvoicePrintReport({
                 <div style={{ padding: "4px 12px", fontSize: 11, fontWeight: 700, borderBottom: "1px solid #1a1a1a", backgroundColor: "#F2F2F2", color: HEADER_COLOR }}>
                   Terms &amp; Conditions:
                 </div>
-                <div style={{ padding: "6px 12px", fontSize: 11 }}>
-                  Goods once sold will not be taken back. Payment due within 15 days of invoice date.
+                <div style={{ padding: "6px 12px", fontSize: 11, whiteSpace: "pre-wrap" }}>
+                  {businessProfile?.terms_conditions}
                 </div>
               </>
             )}
@@ -344,6 +344,7 @@ function useCompanyInfo() {
     address: (userProfile as any).address,
     email: (userProfile as any).email,
     signature: (userProfile as any).signature as string | undefined,
+    terms_conditions: (userProfile as any).terms_conditions as string | undefined,
   });
   useEffect(() => {
     fetch("/api/user_profile")
@@ -357,6 +358,7 @@ function useCompanyInfo() {
             address: d.address || (userProfile as any).address,
             email: d.email || (userProfile as any).email,
             signature: d.signature_url || d.signature || undefined,
+            terms_conditions: d.terms_conditions || (userProfile as any).terms_conditions,
           });
         }
       })

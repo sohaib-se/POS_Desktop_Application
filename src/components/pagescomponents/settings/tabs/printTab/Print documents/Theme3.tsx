@@ -293,8 +293,8 @@ export function Theme3InvoicePrintReport({
               >
                 Terms &amp; Conditions
               </div>
-              <p className="text-xs mt-1.5">
-                Goods once sold will not be taken back. Payment due within 15 days of invoice date.
+              <p className="text-xs mt-1.5 whitespace-pre-wrap">
+                {businessProfile?.terms_conditions}
               </p>
             </>
           )}
@@ -389,6 +389,7 @@ function useCompanyInfo() {
     address: (userProfile as any).address,
     email: (userProfile as any).email,
     signature: (userProfile as any).signature as string | undefined,
+    terms_conditions: (userProfile as any).terms_conditions as string | undefined,
   });
   useEffect(() => {
     fetch("/api/user_profile")
@@ -402,6 +403,7 @@ function useCompanyInfo() {
             address: d.address || (userProfile as any).address,
             email: d.email || (userProfile as any).email,
             signature: d.signature_url || d.signature || undefined,
+            terms_conditions: d.terms_conditions || (userProfile as any).terms_conditions,
           });
         }
       })

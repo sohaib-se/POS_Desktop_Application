@@ -8,7 +8,7 @@ import { AddPaymentOutModal } from "@/components/pagescomponents/payementout/Add
 import { PaymentOutRowMenu } from "@/components/pagescomponents/payementout/PaymentOutRowMenu";
 import { PaymentOutReceiptPreviewModal } from "@/components/pagescomponents/payementout/PaymentOutReceiptPreviewModal";
 import { PaymentOutPrintPreviewModal } from "@/components/pagescomponents/payementout/PaymentOutPrintPreviewModal";
-import { EnterPasscodeScreen } from "@/components/common/EnterPasscodeScreen";
+
 import { useSettings } from "@/hooks/useSettings";
 import { exportPaymentOutToExcel } from "@/utils/exportPaymentOutExcel";
 
@@ -49,9 +49,6 @@ export function PaymentOut() {
     return `${year}-${month}`;
   });
 
-  const [isPasscodeEnabled] = useSettings('settings.isPasscodeEnabled', false);
-  const [isPasscodeForTransactionEnabled] = useSettings('settings.isPasscodeForTransactionEnabled', false);
-  const [passcodeAction, setPasscodeAction] = useState<{ type: 'edit' | 'delete', payload: string } | null>(null);
 
   const fetchData = async () => {
     setIsLoading(true);
@@ -138,11 +135,7 @@ export function PaymentOut() {
 
   const confirmDelete = () => {
     if (!deleteConfirmId) return;
-    if (isPasscodeEnabled && isPasscodeForTransactionEnabled) {
-      setPasscodeAction({ type: 'delete', payload: deleteConfirmId });
-    } else {
-      executeDelete(deleteConfirmId);
-    }
+    executeDelete(deleteConfirmId);
     setDeleteConfirmId(null);
   };
 
@@ -197,50 +190,32 @@ export function PaymentOut() {
   };
 
   const handleEditClick = (show: boolean, record?: any) => {
-    if (show && isPasscodeEnabled && isPasscodeForTransactionEnabled) {
-      setPasscodeAction({ type: 'edit', payload: record ? record.id : '' });
-    } else {
-      if (show && record) {
-        setEditingRecordId(record.id);
-        setPaymentType(record.paymentType || record.payment_type || "Cash");
-        setAmount(String(record.amount || ""));
-        setPaymentNo(record.paymentNo || record.payment_no || "");
+    if (show && record) {
+      setEditingRecordId(record.id);
+      setPaymentType(record.paymentType || record.payment_type || "Cash");
+      setAmount(String(record.amount || ""));
+      setPaymentNo(record.paymentNo || record.payment_no || "");
 
-        let formattedDate = new Date().toISOString().split('T')[0];
-        if (record.date) {
-          if (record.date.includes('/')) {
-            const parts = record.date.split('/');
-            if (parts.length === 3) {
-              formattedDate = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
-            }
-          } else if (record.date.includes('-')) {
-            formattedDate = record.date.split('T')[0];
+      let formattedDate = new Date().toISOString().split('T')[0];
+      if (record.date) {
+        if (record.date.includes('/')) {
+          const parts = record.date.split('/');
+          if (parts.length === 3) {
+            formattedDate = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
           }
+        } else if (record.date.includes('-')) {
+          formattedDate = record.date.split('T')[0];
         }
-        setPaymentDate(formattedDate);
-        setDescription(record.description || "");
-        setShowDescription(!!record.description);
-        setImageDataUrl(record.attachment_image_path || record.attachmentImagePath || "");
-        setSelectedParty(String(record.partyId || record.party_id || ""));
-        setShowAddPayment(true);
-      } else {
-        handleCloseAddPayment(show);
       }
+      setPaymentDate(formattedDate);
+      setDescription(record.description || "");
+      setShowDescription(!!record.description);
+      setImageDataUrl(record.attachment_image_path || record.attachmentImagePath || "");
+      setSelectedParty(String(record.partyId || record.party_id || ""));
+      setShowAddPayment(true);
+    } else {
+      handleCloseAddPayment(show);
     }
-  };
-
-  const handlePasscodeSuccess = () => {
-    if (passcodeAction?.type === 'delete') {
-      executeDelete(passcodeAction.payload);
-    } else if (passcodeAction?.type === 'edit') {
-      if (passcodeAction.payload) {
-        const record = records.find(r => r.id === passcodeAction.payload);
-        handleEditClick(true, record);
-      } else {
-        handleOpenAddPayment();
-      }
-    }
-    setPasscodeAction(null);
   };
 
   const filteredRecords = records.filter(record => {
@@ -475,12 +450,6 @@ export function PaymentOut() {
           onClose={() => setPreviewingRecord(null)}
         />
 
-        {passcodeAction && (
-          <EnterPasscodeScreen
-            onSuccess={handlePasscodeSuccess}
-            onCancel={() => setPasscodeAction(null)}
-          />
-        )}
 
         {/* Discard Changes Confirmation */}
         <Dialog open={showDiscardConfirm} onOpenChange={setShowDiscardConfirm}>

@@ -380,13 +380,14 @@ export function LaimsoftPos({ onClose, initialInvoice }: LaimsoftPosProps) {
           return;
 
         const loadedParties = (await partiesResponse.json()) as PartyOption[];
+        const activeParties = loadedParties.filter((p: any) => p.status !== 'inactive');
         const loadedItems = (await itemsResponse.json()) as ItemOption[];
         const saleInvoices = (await saleInvoicesResponse.json()) as SaleInvoiceApiRecord[];
         const loadedBanks = (await banksResponse.json()) as BankOption[];
 
         if (cancelled) return;
 
-        setParties([...loadedParties].sort((a, b) => a.name.localeCompare(b.name)));
+        setParties([...activeParties].sort((a, b) => a.name.localeCompare(b.name)));
         setItems(loadedItems);
         setBanks(loadedBanks);
 
@@ -1273,13 +1274,19 @@ export function LaimsoftPos({ onClose, initialInvoice }: LaimsoftPosProps) {
               : s
           )
         );
-        setDirectPrintSale(saleDataForPrint);
-        return;
-      }
 
-      const nextInvNo = savedInvoice.invoiceNo
-        ? String(Number(savedInvoice.invoiceNo) + 1)
-        : String(Number(activeTab.invoiceNo) + 1);
+        const highestNo = savedSales.reduce((highest, inv) => {
+          const invNo = Number(inv.invoiceNo || 0);
+          return Number.isFinite(invNo) && invNo > highest ? invNo : highest;
+        }, 0);
+        targetNextNo = String(highestNo + 1);
+        setNextInvoiceNo(targetNextNo);
+
+        showToast(`Sale #${activeTab.invoiceNo} updated successfully!`, "success");
+      } else {
+        const nextInvNo = savedInvoice.invoiceNo
+          ? String(Number(savedInvoice.invoiceNo) + 1)
+          : String(Number(activeTab.invoiceNo) + 1);
 
       targetNextNo = nextInvNo;
       setNextInvoiceNo(nextInvNo);
@@ -1323,33 +1330,30 @@ export function LaimsoftPos({ onClose, initialInvoice }: LaimsoftPosProps) {
       // Reset active tab for next sale
       const isCashSaleByDefault = JSON.parse(localStorage.getItem('settings.isCashSaleByDefault') || 'false');
 
-      setTabs(prev => {
-        const remaining = prev.filter(t => t.id !== activeTabId);
-
-        if (remaining.length === 0) {
-          return [{
-            ...prev[0],
-            invoiceNo: targetNextNo,
-            customerSelectedId: null,
-            customerSearchText: isCashSaleByDefault ? "Cash Sale" : "",
-            rows: [],
-            amountReceived: "0.00",
-            isAmountReceivedDirty: false,
-            paymentMode: "Cash",
-            discountPercent: "",
-            discountAmount: "",
-            description: "",
-            searchQuery: "",
-            selectedRowId: null,
-            editingInvoiceId: null,
-            draftSnapshot: null,
-          }];
-        }
-
-        const updated = remaining.map(t => ({ ...t, invoiceNo: targetNextNo }));
-        setActiveTabId(updated[updated.length - 1].id);
-        return updated;
-      });
+      setTabs((prev) =>
+        prev.map((t) =>
+          t.id === activeTabId
+            ? {
+                ...t,
+                invoiceNo: targetNextNo,
+                date: new Date().toISOString().split("T")[0],
+                rows: [],
+                paymentMode: "Cash",
+                amountReceived: "0.00",
+                isAmountReceivedDirty: false,
+                customerSelectedId: null,
+                customerSearchText: isCashSaleByDefault ? "Cash Sale" : "",
+                searchQuery: "",
+                selectedRowId: null,
+                discountPercent: "",
+                discountAmount: "",
+                description: "",
+                editingInvoiceId: null,
+                draftSnapshot: null,
+              }
+            : t
+        )
+      );
 
       setDirectPrintSale(saleDataForPrint);
     } catch (error) {

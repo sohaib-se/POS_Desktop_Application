@@ -41,6 +41,19 @@ export function BulkUpdateTable({
     return value !== null && value !== undefined ? value : "";
   };
 
+  const handleNumberInput = (itemId: string, field: string, val: string) => {
+    if (val === '') {
+       onItemEdit(itemId, field, '');
+       return;
+    }
+    const digitsOnly = val.replace(/\D/g, '');
+    if (digitsOnly !== '') {
+       onItemEdit(itemId, field, parseInt(digitsOnly, 10));
+    } else {
+       onItemEdit(itemId, field, '');
+    }
+  };
+
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
@@ -207,17 +220,19 @@ export function BulkUpdateTable({
                       </td>
                       <td className={tdClasses}>
                         <input 
-                          type="number" 
+                          type="text" 
+                          inputMode="numeric"
                           value={getValue(item, 'purchasePrice')} 
-                          onChange={(e) => onItemEdit(item.id, 'purchasePrice', Number(e.target.value))}
+                          onChange={(e) => handleNumberInput(item.id, 'purchasePrice', e.target.value)}
                           className={inputClasses} 
                         />
                       </td>
                       <td className={tdClasses}>
                         <input 
-                          type="number" 
+                          type="text"
+                          inputMode="numeric"
                           value={getValue(item, 'salePrice')} 
-                          onChange={(e) => onItemEdit(item.id, 'salePrice', Number(e.target.value))}
+                          onChange={(e) => handleNumberInput(item.id, 'salePrice', e.target.value)}
                           className={inputClasses} 
                         />
                       </td>
@@ -227,17 +242,19 @@ export function BulkUpdateTable({
                     <>
                       <td className={tdClasses}>
                         <input 
-                          type="number" 
+                          type="text" 
+                          inputMode="numeric"
                           value={getValue(item, 'stockQuantity')} 
-                          onChange={(e) => onItemEdit(item.id, 'stockQuantity', Number(e.target.value))}
+                          onChange={(e) => handleNumberInput(item.id, 'stockQuantity', e.target.value)}
                           className={inputClasses} 
                         />
                       </td>
                       <td className={tdClasses}>
                         <input 
-                          type="number" 
+                          type="text" 
+                          inputMode="numeric"
                           value={getValue(item, 'atPrice')} 
-                          onChange={(e) => onItemEdit(item.id, 'atPrice', Number(e.target.value))}
+                          onChange={(e) => handleNumberInput(item.id, 'atPrice', e.target.value)}
                           className={inputClasses} 
                         />
                       </td>
@@ -251,9 +268,10 @@ export function BulkUpdateTable({
                       </td>
                       <td className={tdClasses}>
                         <input 
-                          type="number" 
+                          type="text"
+                          inputMode="numeric" 
                           value={getValue(item, 'lowStock')} 
-                          onChange={(e) => onItemEdit(item.id, 'lowStock', Number(e.target.value))}
+                          onChange={(e) => handleNumberInput(item.id, 'lowStock', e.target.value)}
                           className={inputClasses} 
                         />
                       </td>

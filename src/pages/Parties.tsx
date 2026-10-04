@@ -103,6 +103,7 @@ export function Parties({ isReportView, onBack, onEditSaleInvoice }: PartiesProp
   const [isSavingParty, setIsSavingParty] = useState(false);
   const [isDeletingParty, setIsDeletingParty] = useState(false);
   const [partyPendingDelete, setPartyPendingDelete] = useState<Party | null>(null);
+  const [partyDeleteError, setPartyDeleteError] = useState<string | null>(null);
 
   const [searchTerm, setSearchTerm] = useState("");
   const [transactionSearchTerm, setTransactionSearchTerm] = useState("");
@@ -574,7 +575,7 @@ export function Parties({ isReportView, onBack, onEditSaleInvoice }: PartiesProp
     });
 
     if (hasOtherTransactions) {
-      alert("Please delete all transactions associated with this party before deleting the party.");
+      setPartyDeleteError("Please delete all transactions associated with this party before deleting the party.");
       setPartyPendingDelete(null);
       return;
     }
@@ -720,6 +721,28 @@ export function Parties({ isReportView, onBack, onEditSaleInvoice }: PartiesProp
         showCreditLimitError={showCreditLimitError}
         setShowCreditLimitError={setShowCreditLimitError}
       />
+
+      {/* Delete Party Error Modal */}
+      {partyDeleteError && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-sm p-6 flex flex-col">
+            <h3 className="text-lg font-semibold text-red-600 mb-2">
+              Cannot Delete Party
+            </h3>
+            <p className="text-sm text-gray-700 mb-6">
+              {partyDeleteError}
+            </p>
+            <div className="flex justify-end">
+              <button
+                onClick={() => setPartyDeleteError(null)}
+                className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700"
+              >
+                OK
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

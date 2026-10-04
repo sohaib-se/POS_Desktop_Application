@@ -301,11 +301,27 @@ export function BarcodeGeneratorForm({
             No of Labels<span className="text-red-500">*</span>
           </label>
           <Input
-            type="text"
+            type="number"
+            min="1"
             placeholder="Enter No of Labels"
             className="text-sm placeholder:text-gray-400 border-gray-300"
             value={formData.noOfLabels}
-            onChange={(e) => handleChange("noOfLabels", e.target.value)}
+            onChange={(e) => {
+              let val = e.target.value;
+              if (val === '') {
+                 handleChange("noOfLabels", "");
+                 return;
+              }
+              const num = parseInt(val, 10);
+              if (!isNaN(num) && num > 0) {
+                 handleChange("noOfLabels", num.toString());
+              }
+            }}
+            onBlur={(e) => {
+              if (e.target.value === '' || parseInt(e.target.value, 10) < 1) {
+                handleChange("noOfLabels", "1");
+              }
+            }}
           />
         </div>
       </div>

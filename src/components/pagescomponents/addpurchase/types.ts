@@ -13,6 +13,7 @@ export interface PurchaseTab {
   paymentMode: "credit" | "cash";
   customerSearch: string;
   phoneNo: string;
+  invoiceDate?: string;
   rows: PurchaseRow[];
   discountPercent: string;
   discountRs: string;

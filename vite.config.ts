@@ -997,6 +997,66 @@ function sqliteApiPlugin() {
               }
             }
 
+            if (String(id).startsWith('bank_payment_in_')) {
+              const paymentInId = String(id).replace('bank_payment_in_', '');
+              try {
+                const existingRecord = repository.getPaymentInRecordById(paymentInId);
+                if (existingRecord) {
+                  if (existingRecord.party_id) {
+                    try {
+                      const allParties = repository.getParties();
+                      const party = allParties.find((p: any) => String(p.id) === String(existingRecord.party_id));
+                      if (party) {
+                        party.balance = Number(party.balance || 0) + Number(existingRecord.amount || 0);
+                        repository.upsertParty(party);
+                      }
+                    } catch (balanceError) {
+                      console.error('[BankTx Delete] Failed to restore party balance:', balanceError);
+                    }
+                  }
+
+                  if (existingRecord.attachment_image_path || existingRecord.attachmentImagePath) {
+                    removeManagedPaymentInAttachmentFile(existingRecord.attachment_image_path || existingRecord.attachmentImagePath);
+                  }
+
+                  try { repository.deleteCashInHandTransaction('cash_payment_in_' + paymentInId); } catch (e) { /* ignore */ }
+                  repository.deletePaymentInRecord(paymentInId);
+                }
+              } catch (cascadeErr) {
+                console.error('[BankTx Delete] Cascade payment in record cleanup failed:', cascadeErr);
+              }
+            }
+
+            if (String(id).startsWith('bank_payment_out_')) {
+              const paymentOutId = String(id).replace('bank_payment_out_', '');
+              try {
+                const existingRecord = repository.getPaymentOutRecordById(paymentOutId);
+                if (existingRecord) {
+                  if (existingRecord.party_id) {
+                    try {
+                      const allParties = repository.getParties();
+                      const party = allParties.find((p: any) => String(p.id) === String(existingRecord.party_id));
+                      if (party) {
+                        party.balance = Number(party.balance || 0) - Number(existingRecord.amount || 0);
+                        repository.upsertParty(party);
+                      }
+                    } catch (balanceError) {
+                      console.error('[BankTx Delete] Failed to restore party balance:', balanceError);
+                    }
+                  }
+
+                  if (existingRecord.attachment_image_path || existingRecord.attachmentImagePath) {
+                    removeManagedPaymentOutAttachmentFile(existingRecord.attachment_image_path || existingRecord.attachmentImagePath);
+                  }
+
+                  try { repository.deleteCashInHandTransaction('cash_payment_out_' + paymentOutId); } catch (e) { /* ignore */ }
+                  repository.deletePaymentOutRecord(paymentOutId);
+                }
+              } catch (cascadeErr) {
+                console.error('[BankTx Delete] Cascade payment out record cleanup failed:', cascadeErr);
+              }
+            }
+
             repository.deleteBankAccountTransaction(id);
             
             res.statusCode = 200;
@@ -1285,9 +1345,11 @@ function sqliteApiPlugin() {
           }
 
           if (req.method === 'PUT') {
-            const pathId = requestUrl.pathname.split('/').filter(Boolean)[0];
+            const segments = requestUrl.pathname.split('/').filter(Boolean);
+            const lastSegment = segments.length > 0 ? segments[segments.length - 1] : null;
+            const pathId = (lastSegment && lastSegment !== 'payment_in_records' && lastSegment !== 'api') ? lastSegment : null;
             const queryId = requestUrl.searchParams.get('id');
-            const id = (pathId || queryId || '').trim();
+            const id = (queryId || pathId || '').trim();
 
             if (!id) {
               res.statusCode = 400;
@@ -1338,12 +1400,8 @@ function sqliteApiPlugin() {
               }
 
               try {
-                const pMode = String(existingRecord.payment_type).toLowerCase();
-                if (pMode === 'cash') {
-                  repository.deleteCashInHandTransaction('cash_payment_in_' + id);
-                } else if (pMode) {
-                  repository.deleteBankAccountTransaction('bank_payment_in_' + id);
-                }
+                try { repository.deleteCashInHandTransaction('cash_payment_in_' + id); } catch (e) { /* ignore */ }
+                try { repository.deleteBankAccountTransaction('bank_payment_in_' + id); } catch (e) { /* ignore */ }
               } catch (txError) {
                 console.error('Failed to delete cash/bank transaction:', txError);
               }
@@ -1406,9 +1464,11 @@ function sqliteApiPlugin() {
           }
 
           if (req.method === 'DELETE') {
-            const pathId = requestUrl.pathname.split('/').filter(Boolean)[0];
+            const segments = requestUrl.pathname.split('/').filter(Boolean);
+            const lastSegment = segments.length > 0 ? segments[segments.length - 1] : null;
+            const pathId = (lastSegment && lastSegment !== 'payment_in_records' && lastSegment !== 'api') ? lastSegment : null;
             const queryId = requestUrl.searchParams.get('id');
-            const id = (pathId || queryId || '').trim();
+            const id = (queryId || pathId || '').trim();
 
             if (id) {
               const existingRecord = repository.getPaymentInRecordById(id);
@@ -1427,12 +1487,8 @@ function sqliteApiPlugin() {
                 }
 
                 try {
-                  const pMode = String(existingRecord.payment_type).toLowerCase();
-                  if (pMode === 'cash') {
-                    repository.deleteCashInHandTransaction('cash_payment_in_' + id);
-                  } else if (pMode) {
-                    repository.deleteBankAccountTransaction('bank_payment_in_' + id);
-                  }
+                  try { repository.deleteCashInHandTransaction('cash_payment_in_' + id); } catch (e) { /* ignore */ }
+                  try { repository.deleteBankAccountTransaction('bank_payment_in_' + id); } catch (e) { /* ignore */ }
                 } catch (txError) {
                   console.error('Failed to delete cash/bank transaction:', txError);
                 }
@@ -1551,9 +1607,11 @@ function sqliteApiPlugin() {
           }
 
           if (req.method === 'PUT') {
-            const pathId = requestUrl.pathname.split('/').filter(Boolean)[0];
+            const segments = requestUrl.pathname.split('/').filter(Boolean);
+            const lastSegment = segments.length > 0 ? segments[segments.length - 1] : null;
+            const pathId = (lastSegment && lastSegment !== 'payment_out_records' && lastSegment !== 'api') ? lastSegment : null;
             const queryId = requestUrl.searchParams.get('id');
-            const id = (pathId || queryId || '').trim();
+            const id = (queryId || pathId || '').trim();
 
             if (!id) {
               res.statusCode = 400;
@@ -1604,12 +1662,8 @@ function sqliteApiPlugin() {
               }
 
               try {
-                const pMode = String(existingRecord.payment_type).toLowerCase();
-                if (pMode === 'cash') {
-                  repository.deleteCashInHandTransaction('cash_payment_out_' + id);
-                } else if (pMode) {
-                  repository.deleteBankAccountTransaction('bank_payment_out_' + id);
-                }
+                try { repository.deleteCashInHandTransaction('cash_payment_out_' + id); } catch (e) { /* ignore */ }
+                try { repository.deleteBankAccountTransaction('bank_payment_out_' + id); } catch (e) { /* ignore */ }
               } catch (txError) {
                 console.error('Failed to delete cash/bank transaction:', txError);
               }
@@ -1672,9 +1726,11 @@ function sqliteApiPlugin() {
           }
 
           if (req.method === 'DELETE') {
-            const pathId = requestUrl.pathname.split('/').filter(Boolean)[0];
+            const segments = requestUrl.pathname.split('/').filter(Boolean);
+            const lastSegment = segments.length > 0 ? segments[segments.length - 1] : null;
+            const pathId = (lastSegment && lastSegment !== 'payment_out_records' && lastSegment !== 'api') ? lastSegment : null;
             const queryId = requestUrl.searchParams.get('id');
-            const id = (pathId || queryId || '').trim();
+            const id = (queryId || pathId || '').trim();
 
             if (id) {
               const existingRecord = repository.getPaymentOutRecordById(id);
@@ -1693,12 +1749,8 @@ function sqliteApiPlugin() {
                 }
 
                 try {
-                  const pMode = String(existingRecord.payment_type).toLowerCase();
-                  if (pMode === 'cash') {
-                    repository.deleteCashInHandTransaction('cash_payment_out_' + id);
-                  } else if (pMode) {
-                    repository.deleteBankAccountTransaction('bank_payment_out_' + id);
-                  }
+                  try { repository.deleteCashInHandTransaction('cash_payment_out_' + id); } catch (e) { /* ignore */ }
+                  try { repository.deleteBankAccountTransaction('bank_payment_out_' + id); } catch (e) { /* ignore */ }
                 } catch (txError) {
                   console.error('Failed to delete cash/bank transaction:', txError);
                 }
@@ -4310,7 +4362,7 @@ function sqliteApiPlugin() {
           if (req.method === 'POST') {
             const chunks: Buffer[] = [];
             req.on('data', (chunk: Buffer | string) => chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk)));
-            req.on('end', () => {
+            req.on('end', async () => {
               try {
                 const raw = Buffer.concat(chunks).toString('utf8');
                 const payload = raw ? JSON.parse(raw) : {};
@@ -4322,16 +4374,325 @@ function sqliteApiPlugin() {
                   return;
                 }
 
-                const success = repository.restoreRecycleBinItem(payload.id);
-                if (success) {
-                  res.statusCode = 200;
+                // Fetch all recycle bin items before restoring (ordered newest deleted first)
+                const allRecycleBinItems = repository.getRecycleBinItems();
+                const targetIndex = allRecycleBinItems.findIndex((i: any) => String(i.id) === String(payload.id));
+                if (targetIndex < 0) {
+                  res.statusCode = 404;
                   res.setHeader('Content-Type', 'application/json');
-                  res.end(JSON.stringify({ message: 'Restored successfully.' }));
-                } else {
+                  res.end(JSON.stringify({ message: 'Item not found in recycle bin.' }));
+                  return;
+                }
+
+                // Enforce LIFO restore constraint: items must be restored in reverse deletion order
+                if (targetIndex > 0) {
+                  const newerItem = allRecycleBinItems[0];
+                  const newerLabel = newerItem.party_name || newerItem.ref_no || newerItem.txn_type || 'record';
+                  res.statusCode = 400;
+                  res.setHeader('Content-Type', 'application/json');
+                  res.end(JSON.stringify({
+                    message: `Restoration order constraint: Items must be restored in reverse order of deletion. Please restore '${newerLabel}' first.`
+                  }));
+                  return;
+                }
+
+                const recycleBinItem = allRecycleBinItems[targetIndex];
+
+                const rowData = JSON.parse(recycleBinItem.data_payload || '{}');
+                const originalTable = recycleBinItem.original_table;
+                const originalId = recycleBinItem.original_id;
+
+                // Step 1: Restore the row into its original table
+                const success = repository.restoreRecycleBinItem(payload.id);
+                if (!success) {
                   res.statusCode = 404;
                   res.setHeader('Content-Type', 'application/json');
                   res.end(JSON.stringify({ message: 'Failed to restore item.' }));
+                  return;
                 }
+
+                // Step 2: Re-apply side effects based on which table was restored
+                try {
+                  if (originalTable === 'sale_invoices') {
+                    // Re-deduct stock for each line item
+                    if (!rowData.transaction_type?.includes('Returned')) {
+                      try {
+                        const lineItems = JSON.parse(rowData.line_items_json || '[]');
+                        const allItems = repository.getItems();
+                        for (const lineItem of lineItems) {
+                          if (!lineItem.itemId || !lineItem.quantity) continue;
+                          const dbItem = allItems.find((i: any) => String(i.id) === String(lineItem.itemId));
+                          if (!dbItem) continue;
+                          const isSecondary = lineItem.unit === dbItem.secondary_unit;
+                          repository.deductItemStockFifo(
+                            lineItem.itemId,
+                            Number(lineItem.quantity),
+                            isSecondary,
+                            dbItem.conversion_rate
+                          );
+                        }
+                      } catch (stockErr) {
+                        console.error('[Restore Sale] Stock deduction failed:', stockErr);
+                      }
+
+                      // Re-apply party balance (credit portion becomes receivable again)
+                      const balanceAmount = Number(rowData.balance || 0);
+                      if (rowData.party_id && balanceAmount > 0) {
+                        try {
+                          const allParties = repository.getParties();
+                          const party = allParties.find((p: any) => String(p.id) === String(rowData.party_id));
+                          if (party) {
+                            party.balance = Number(party.balance || 0) + balanceAmount;
+                            repository.upsertParty(party);
+                          }
+                        } catch (balErr) {
+                          console.error('[Restore Sale] Party balance update failed:', balErr);
+                        }
+                      }
+
+                      // Re-create cash / bank transaction for received amount
+                      try {
+                        const paymentModeLower = String(rowData.payment_mode || '').toLowerCase();
+                        const totalAmount = Number(rowData.amount || 0);
+                        const receivedAmount = Math.max(0, totalAmount - Number(rowData.balance || 0));
+
+                        if (receivedAmount > 0) {
+                          if (paymentModeLower === 'cash' || paymentModeLower === 'credit') {
+                            repository.addCashInHandTransaction({
+                              id: originalId + '_cash_pos',
+                              date: rowData.date,
+                              name: rowData.party_name || 'Cash Sale',
+                              type: rowData.transaction_type || 'Sale',
+                              amount: receivedAmount,
+                            });
+                          } else {
+                            repository.addBankAccountTransaction({
+                              id: 'bank_pos_' + originalId,
+                              date: rowData.date,
+                              name: rowData.party_name || 'Sale',
+                              type: rowData.transaction_type || 'Sale',
+                              amount: receivedAmount,
+                              paymentType: rowData.payment_mode,
+                            });
+                          }
+                        }
+                      } catch (txErr) {
+                        console.error('[Restore Sale] Cash/bank tx creation failed:', txErr);
+                      }
+                    }
+
+                  } else if (originalTable === 'purchase_bills') {
+                    // Re-add stock for each line item (FIFO)
+                    try {
+                      const lineItems = JSON.parse(rowData.line_items_json || '[]');
+                      const allItems = repository.getItems();
+                      for (let i = 0; i < lineItems.length; i++) {
+                        const lineItem = lineItems[i];
+                        if (!lineItem.itemId || !lineItem.quantity) continue;
+                        const dbItem = allItems.find((it: any) => String(it.id) === String(lineItem.itemId));
+                        if (!dbItem) continue;
+                        const isSecondary = lineItem.unit === dbItem.secondary_unit;
+                        const lineItemId = lineItem.id || `line_${i}`;
+                        repository.addPurchaseStock(
+                          lineItem.itemId,
+                          Number(lineItem.quantity),
+                          isSecondary,
+                          dbItem.conversion_rate,
+                          lineItem.price ?? 0,
+                          originalId,
+                          lineItemId,
+                          rowData.date,
+                          dbItem.name
+                        );
+                      }
+                    } catch (stockErr) {
+                      console.error('[Restore Purchase] Stock re-add failed:', stockErr);
+                    }
+
+                    // Re-apply party balance (purchase increases what we owe)
+                    if (rowData.party_id) {
+                      try {
+                        const allParties = repository.getParties();
+                        const party = allParties.find((p: any) => String(p.id) === String(rowData.party_id));
+                        if (party) {
+                          party.balance = Number(party.balance || 0) - Number(rowData.balance || 0);
+                          repository.upsertParty(party);
+                        }
+                      } catch (balErr) {
+                        console.error('[Restore Purchase] Party balance update failed:', balErr);
+                      }
+                    }
+
+                    // Re-create cash / bank transaction for paid portion
+                    try {
+                      const paidAmount = Number(rowData.amount || 0) - Number(rowData.balance || 0);
+                      if (paidAmount > 0) {
+                        const paymentModeLower = String(rowData.payment_mode || '').toLowerCase();
+                        if (paymentModeLower === 'cash') {
+                          repository.addCashInHandTransaction({
+                            id: 'cash_purchase_' + originalId,
+                            date: rowData.date,
+                            name: rowData.party_name || 'Cash Purchase',
+                            type: 'Purchase Bill',
+                            amount: -paidAmount,
+                          });
+                        } else if (paymentModeLower !== 'credit') {
+                          repository.addBankAccountTransaction({
+                            id: 'bank_purchase_' + originalId,
+                            date: rowData.date,
+                            name: rowData.party_name || 'Bank Purchase',
+                            type: 'Purchase Bill',
+                            amount: -paidAmount,
+                            paymentType: rowData.payment_mode,
+                          });
+                        }
+                      }
+                    } catch (txErr) {
+                      console.error('[Restore Purchase] Cash/bank tx creation failed:', txErr);
+                    }
+
+                  } else if (originalTable === 'payment_in_records') {
+                    // Re-apply party balance (payment in reduces receivable)
+                    const partyId = rowData.party_id;
+                    if (partyId) {
+                      try {
+                        const allParties = repository.getParties();
+                        const party = allParties.find((p: any) => String(p.id) === String(partyId));
+                        if (party) {
+                          party.balance = Number(party.balance || 0) - Number(rowData.amount || 0);
+                          repository.upsertParty(party);
+                        }
+                      } catch (balErr) {
+                        console.error('[Restore PayIn] Party balance update failed:', balErr);
+                      }
+                    }
+
+                    // Re-create cash / bank transaction
+                    try {
+                      const paymentType = rowData.payment_type || rowData.paymentType || 'Cash';
+                      if (String(paymentType).toLowerCase() === 'cash') {
+                        repository.addCashInHandTransaction({
+                          id: 'cash_payment_in_' + originalId,
+                          date: rowData.date,
+                          name: rowData.party_name,
+                          type: 'Payment In',
+                          amount: Number(rowData.amount || 0),
+                        });
+                      } else if (paymentType) {
+                        repository.addBankAccountTransaction({
+                          id: 'bank_payment_in_' + originalId,
+                          date: rowData.date,
+                          name: rowData.party_name,
+                          type: 'Payment In',
+                          amount: Number(rowData.amount || 0),
+                          paymentType: paymentType,
+                        });
+                      }
+                    } catch (txErr) {
+                      console.error('[Restore PayIn] Cash/bank tx creation failed:', txErr);
+                    }
+
+                  } else if (originalTable === 'payment_out_records') {
+                    // Re-apply party balance (payment out increases payable)
+                    const partyId = rowData.party_id;
+                    if (partyId) {
+                      try {
+                        const allParties = repository.getParties();
+                        const party = allParties.find((p: any) => String(p.id) === String(partyId));
+                        if (party) {
+                          party.balance = Number(party.balance || 0) + Number(rowData.amount || 0);
+                          repository.upsertParty(party);
+                        }
+                      } catch (balErr) {
+                        console.error('[Restore PayOut] Party balance update failed:', balErr);
+                      }
+                    }
+
+                    // Re-create cash / bank transaction
+                    try {
+                      const paymentType = rowData.payment_type || rowData.paymentType || 'Cash';
+                      if (String(paymentType).toLowerCase() === 'cash') {
+                        repository.addCashInHandTransaction({
+                          id: 'cash_payment_out_' + originalId,
+                          date: rowData.date,
+                          name: rowData.party_name,
+                          type: 'Payment Out',
+                          amount: -Number(rowData.amount || 0),
+                        });
+                      } else if (paymentType) {
+                        repository.addBankAccountTransaction({
+                          id: 'bank_payment_out_' + originalId,
+                          date: rowData.date,
+                          name: rowData.party_name,
+                          type: 'Payment Out',
+                          amount: -Number(rowData.amount || 0),
+                          paymentType: paymentType,
+                        });
+                      }
+                    } catch (txErr) {
+                      console.error('[Restore PayOut] Cash/bank tx creation failed:', txErr);
+                    }
+
+                  } else if (originalTable === 'expense_records') {
+                    // Re-create cash / bank transaction for expense
+                    try {
+                      const paymentType = rowData.payment_type || 'Cash';
+                      if (String(paymentType).toLowerCase() === 'cash') {
+                        repository.addCashInHandTransaction({
+                          id: 'cash_expense_' + originalId,
+                          date: rowData.date,
+                          name: rowData.category_name || 'Expense',
+                          type: 'Expense',
+                          amount: Number(rowData.amount || 0),
+                        });
+                      } else {
+                        repository.addBankAccountTransaction({
+                          id: 'bank_expense_' + originalId,
+                          date: rowData.date,
+                          name: rowData.category_name || 'Expense',
+                          type: 'Expense',
+                          amount: -Number(rowData.amount || 0),
+                          paymentType: paymentType,
+                        });
+                      }
+                    } catch (txErr) {
+                      console.error('[Restore Expense] Cash/bank tx creation failed:', txErr);
+                    }
+                  } else if (originalTable === 'items') {
+                    // Re-create Opening Stock adjustment if stock_quantity > 0
+                    const stockQty = Number(rowData.stock_quantity ?? rowData.stockQuantity ?? 0);
+                    if (stockQty > 0) {
+                      try {
+                        const allAdjustments = repository.getStockAdjustments();
+                        const existingOb = allAdjustments.find(
+                          (a) => String(a.item_id) === String(originalId) && a.adjustment_type === 'Opening Stock'
+                        );
+                        if (!existingOb) {
+                          repository.addStockAdjustment({
+                            itemId: String(originalId),
+                            itemName: rowData.name || '',
+                            adjustmentType: 'Opening Stock',
+                            date: rowData.created_at || new Date().toISOString(),
+                            quantity: stockQty,
+                            unit: rowData.unit || '',
+                            atPrice: rowData.at_price ?? rowData.atPrice ?? null,
+                            details: 'Opening stock transaction'
+                          });
+                        }
+                      } catch (obErr) {
+                        console.error('[Restore Item] Opening stock restoration failed:', obErr);
+                      }
+                    }
+                  }
+                  // Parties and estimates have no cash/stock side effects — plain restore is correct.
+                } catch (sideEffectErr) {
+                  console.error('[Restore] Side-effect application failed:', sideEffectErr);
+                  // Don't fail the whole restore — the row is already back in place.
+                }
+
+                res.statusCode = 200;
+                res.setHeader('Content-Type', 'application/json');
+                res.end(JSON.stringify({ message: 'Restored successfully.' }));
               } catch (e) {
                 res.statusCode = 400;
                 res.setHeader('Content-Type', 'application/json');

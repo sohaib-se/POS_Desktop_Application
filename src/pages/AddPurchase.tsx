@@ -21,7 +21,6 @@ import { useSettings } from "@/hooks/useSettings";
 
 interface AddPurchaseProps {
   onSave?: () => void;
-  onShare?: () => void;
   onClose?: () => void;
   initialInvoice?: PurchaseBillEditData | null;
 }
@@ -36,6 +35,7 @@ function createDefaultTab(id: number): PurchaseTab {
     paymentMode: "credit",
     customerSearch: "",
     phoneNo: "",
+    invoiceDate: formatDateForDisplay(new Date()),
     rows: [
       { id: 1, itemId: "", item: "", qty: "", unit: "NONE", pricePerUnit: "" },
       { id: 2, itemId: "", item: "", qty: "", unit: "NONE", pricePerUnit: "" },
@@ -124,7 +124,7 @@ function formatDateForDisplay(date: Date) {
 
 
 
-export function AddPurchase({ onSave, onShare, onClose, initialInvoice }: AddPurchaseProps) {
+export function AddPurchase({ onSave, onClose, initialInvoice }: AddPurchaseProps) {
   const [tabs, setTabs] = useState<PurchaseTab[]>([createDefaultTab(1)]);
   const [activeTabId, setActiveTabId] = useState(1);
   const [isOpenAnimated, setIsOpenAnimated] = useState(false);
@@ -239,6 +239,7 @@ export function AddPurchase({ onSave, onShare, onClose, initialInvoice }: AddPur
         paymentMode,
         customerSearch: initialInvoice.partyId ?? "",
         phoneNo: initialInvoice.partyPhone ?? "",
+        invoiceDate: initialInvoice.date ?? formatDateForDisplay(new Date()),
         rows: parsedRows.length
           ? [
             ...parsedRows.map((lineItem) => ({
@@ -288,6 +289,7 @@ export function AddPurchase({ onSave, onShare, onClose, initialInvoice }: AddPur
         }
 
         const loadedParties = (await partiesResponse.json()) as PartyOption[];
+        const activeParties = loadedParties.filter((p: any) => p.status !== 'inactive');
         const loadedItems = (await itemsResponse.json()) as ItemOption[];
         const purchaseBills = (await saleInvoicesResponse.json()) as Array<{ invoice_no?: string | null }>;
         const loadedBanks = (await banksResponse.json()) as BankOption[];
@@ -296,7 +298,7 @@ export function AddPurchase({ onSave, onShare, onClose, initialInvoice }: AddPur
           return;
         }
 
-        const sortedParties = [...loadedParties].sort((left, right) => left.name.localeCompare(right.name));
+        const sortedParties = [...activeParties].sort((left, right) => left.name.localeCompare(right.name));
         setParties(sortedParties);
         setItems(loadedItems);
         setBanks(loadedBanks);
@@ -325,7 +327,7 @@ export function AddPurchase({ onSave, onShare, onClose, initialInvoice }: AddPur
 
   const activeTab = tabs.find((t) => t.id === activeTabId)!;
   const displayedInvoiceNo = initialInvoice?.invoiceNo ?? nextInvoiceNo;
-  const displayedInvoiceDate = initialInvoice?.date ?? formatDateForDisplay(new Date());
+  const displayedInvoiceDate = activeTab.invoiceDate || initialInvoice?.date || formatDateForDisplay(new Date());
 
   const updateTab = (partial: Partial<PurchaseTab>) => {
     setTabs((prev) =>
@@ -815,6 +817,18 @@ export function AddPurchase({ onSave, onShare, onClose, initialInvoice }: AddPur
 
   const computedBalance = roundedTotal - (Number(activeTab.paid) || 0);
 
+  const isPartyMatch = (p: PartyOption, key?: string) => {
+    if (!key) return false;
+    if (String(p.id) === String(key)) return true;
+    if (p.name && p.name.trim().toLowerCase() === key.trim().toLowerCase()) return true;
+    const pNum = Number(p.id);
+    const keyNum = Number(key);
+    if (!isNaN(pNum) && !isNaN(keyNum) && pNum === keyNum) return true;
+    return false;
+  };
+
+  const activeParty = parties.find((p) => isPartyMatch(p, activeTab.customerSearch)) || null;
+
   return (
     <>
       <div
@@ -870,6 +884,7 @@ export function AddPurchase({ onSave, onShare, onClose, initialInvoice }: AddPur
                 displayedInvoiceNo={displayedInvoiceNo}
                 displayedInvoiceDate={displayedInvoiceDate}
                 setShowAddParty={setShowAddParty}
+                updateTab={updateTab}
               />
 
               <PurchaseTable
@@ -898,12 +913,12 @@ export function AddPurchase({ onSave, onShare, onClose, initialInvoice }: AddPur
                 fmt={fmt}
                 computedBalance={computedBalance}
                 handleAttachmentSelection={handleAttachmentSelection}
+                selectedParty={activeParty}
               />
             </div>
 
             <PurchaseFooter
               saveError={saveError}
-              onShare={onShare}
               handleSavePurchase={handleSavePurchase}
               isSaving={isSaving}
               initialInvoice={initialInvoice}

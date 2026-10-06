@@ -309,54 +309,56 @@ export function AddItemModal({
 
           {addItemTab === "stock" && (
             <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <div className="mb-1 flex items-center justify-between gap-3">
-                    <label className="block text-sm font-medium text-gray-700">
-                      Opening Stock
-                    </label>
+              {!itemBeingEdited && (
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <div className="mb-1 flex items-center justify-between gap-3">
+                      <label className="block text-sm font-medium text-gray-700">
+                        Opening Stock
+                      </label>
+                    </div>
+                    <input
+                      type="number"
+                      min="0"
+                      disabled={!!itemBeingEdited}
+                      onWheel={(e) => e.currentTarget.blur()}
+                      onKeyDown={(e) => {
+                        if (e.key === '-' || e.key === '+') e.preventDefault();
+                      }}
+                      value={addItemForm.openingStock}
+                      onChange={(event) =>
+                        onFormChange("openingStock", event.target.value)
+                      }
+                      className={`w-full border border-gray-300 rounded-lg px-3 py-2 text-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
+                        itemBeingEdited ? "bg-gray-100 cursor-not-allowed" : ""
+                      }`}
+                      placeholder="0"
+                    />
                   </div>
-                  <input
-                    type="number"
-                    min="0"
-                    disabled={!!itemBeingEdited}
-                    onWheel={(e) => e.currentTarget.blur()}
-                    onKeyDown={(e) => {
-                      if (e.key === '-' || e.key === '+') e.preventDefault();
-                    }}
-                    value={addItemForm.openingStock}
-                    onChange={(event) =>
-                      onFormChange("openingStock", event.target.value)
-                    }
-                    className={`w-full border border-gray-300 rounded-lg px-3 py-2 text-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
-                      itemBeingEdited ? "bg-gray-100 cursor-not-allowed" : ""
-                    }`}
-                    placeholder="0"
-                  />
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      At Price
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      disabled={!!itemBeingEdited}
+                      onWheel={(e) => e.currentTarget.blur()}
+                      onKeyDown={(e) => {
+                        if (e.key === '-' || e.key === '+') e.preventDefault();
+                      }}
+                      value={addItemForm.atPrice}
+                      onChange={(event) =>
+                        onFormChange("atPrice", event.target.value)
+                      }
+                      className={`w-full border border-gray-300 rounded-lg px-3 py-2 text-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
+                        itemBeingEdited ? "bg-gray-100 cursor-not-allowed" : ""
+                      }`}
+                      placeholder="0"
+                    />
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    At Price
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    disabled={!!itemBeingEdited}
-                    onWheel={(e) => e.currentTarget.blur()}
-                    onKeyDown={(e) => {
-                      if (e.key === '-' || e.key === '+') e.preventDefault();
-                    }}
-                    value={addItemForm.atPrice}
-                    onChange={(event) =>
-                      onFormChange("atPrice", event.target.value)
-                    }
-                    className={`w-full border border-gray-300 rounded-lg px-3 py-2 text-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
-                      itemBeingEdited ? "bg-gray-100 cursor-not-allowed" : ""
-                    }`}
-                    placeholder="0"
-                  />
-                </div>
-              </div>
+              )}
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -364,15 +366,12 @@ export function AddItemModal({
                   </label>
                   <input
                     type="date"
-                    disabled={!!itemBeingEdited}
                     placeholder="YYYY-MM-DD"
                     value={addItemForm.asOfDate}
                     onChange={(event) =>
                       onFormChange("asOfDate", event.target.value)
                     }
-                    className={`w-full border border-gray-300 rounded-lg px-3 py-2 text-sm ${
-                      itemBeingEdited ? "bg-gray-100 cursor-not-allowed" : ""
-                    }`}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
                   />
                 </div>
                 <div>

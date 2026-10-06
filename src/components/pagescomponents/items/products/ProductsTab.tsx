@@ -926,6 +926,15 @@ export function ProductsTab({
       units
     );
     const matchedSecondaryUnitId = getUnitIdFromLabel(item.secondaryUnit, units);
+    
+    const normalizedName = item.name.trim().toLowerCase();
+    const openingStockTx = itemTransactions.find(
+      (t) =>
+        (t.itemId === item.id || t.itemName.trim().toLowerCase() === normalizedName) &&
+        t.type === "Opening Stock"
+    );
+    const actualOpeningStock = openingStockTx ? openingStockTx.quantity : (item.stockQuantity ?? "");
+
     setItemBeingEdited(item);
     setAddItemTab("pricing");
     setAddItemForm({
@@ -943,7 +952,7 @@ export function ProductsTab({
         item.lowStock === null || item.lowStock === undefined
           ? ""
           : String(item.lowStock),
-      openingStock: String(item.stockQuantity ?? ""),
+      openingStock: String(actualOpeningStock),
       atPrice: item.atPrice != null ? String(item.atPrice) : "",
       asOfDate: new Date().toISOString().split("T")[0],
       mfgDate: item.mfgDate ?? "",
@@ -1077,6 +1086,16 @@ export function ProductsTab({
     const mfgDate = addItemForm.mfgDate || null;
     const expDate = addItemForm.expDate || null;
 
+    let finalStockQuantity = openingStock;
+    let finalStockValue = openingStockValue;
+    let finalAtPrice: number | null = addItemForm.atPrice !== "" ? Number(addItemForm.atPrice) : null;
+
+    if (itemBeingEdited) {
+      finalStockQuantity = itemBeingEdited.stockQuantity ?? 0;
+      finalStockValue = itemBeingEdited.stockValue ?? 0;
+      finalAtPrice = itemBeingEdited.atPrice ?? null;
+    }
+
     const payload = {
       id: itemBeingEdited?.id,
       name: normalizedName,
@@ -1085,8 +1104,8 @@ export function ProductsTab({
       salePrice,
       wholesalePrice: Number(addItemForm.wholesalePrice) || 0,
       purchasePrice,
-      atPrice: addItemForm.atPrice !== "" ? Number(addItemForm.atPrice) : null,
-      stockQuantity: openingStock,
+      atPrice: finalAtPrice,
+      stockQuantity: finalStockQuantity,
       unit: `${selectedUnit.fullName} (${selectedUnit.shortName})`,
       primaryUnit: baseUnit
         ? `${baseUnit.fullName} (${baseUnit.shortName})`
@@ -1100,10 +1119,11 @@ export function ProductsTab({
       imageFileName: addItemImageFileName,
       mfgDate,
       expDate,
-      stockValue: openingStockValue,
+      stockValue: finalStockValue,
       minStock: minWholesaleQty,
       lowStock: addItemForm.lowStockThreshold !== "" ? Number(addItemForm.lowStockThreshold) : null,
       status: addItemForm.status,
+      skipOpeningStockUpdate: !!itemBeingEdited,
     };
 
     setIsSavingItem(true);
@@ -1159,7 +1179,7 @@ export function ProductsTab({
         imgPath: createdItemPayload.imgPath ?? addItemExistingImagePath,
         mfgDate: createdItemPayload.mfgDate ?? mfgDate,
         expDate: createdItemPayload.expDate ?? expDate,
-        atPrice: createdItemPayload.atPrice ?? (addItemForm.atPrice !== "" ? Number(addItemForm.atPrice) : undefined),
+        atPrice: createdItemPayload.atPrice ?? (finalAtPrice !== null ? finalAtPrice : undefined),
         minStock:
           createdItemPayload.minStock ??
           (minWholesaleQty === 0 ? null : minWholesaleQty),
@@ -1175,14 +1195,14 @@ export function ProductsTab({
           createdItemPayload.purchasePrice ?? purchasePrice
         ),
         stockQuantity: Number(
-          createdItemPayload.stockQuantity ?? openingStock
+          createdItemPayload.stockQuantity ?? finalStockQuantity
         ),
         stockValue: Number(
-          createdItemPayload.stockValue ?? openingStockValue
+          createdItemPayload.stockValue ?? finalStockValue
         ),
         secondaryStock:
           createdItemPayload.secondaryStock ??
-          Number(createdItemPayload.stockQuantity ?? openingStock) *
+          Number(createdItemPayload.stockQuantity ?? finalStockQuantity) *
             (Number(conversionRate) || 0),
         status: addItemForm.status,
       };
@@ -1299,7 +1319,6 @@ export function ProductsTab({
           units={units}
           selectedUnit={selectedUnit}
           isSavingItem={isSavingItem}
-          addItemImageFileName={addItemImageFileName}
           addItemImageDataUrl={addItemImageDataUrl}
           addItemExistingImagePath={addItemExistingImagePath}
           onImageSelection={handleAddItemImageSelection}
@@ -1431,7 +1450,6 @@ export function ProductsTab({
         units={units}
         selectedUnit={selectedUnit}
         isSavingItem={isSavingItem}
-        addItemImageFileName={addItemImageFileName}
         addItemImageDataUrl={addItemImageDataUrl}
         addItemExistingImagePath={addItemExistingImagePath}
         onImageSelection={handleAddItemImageSelection}

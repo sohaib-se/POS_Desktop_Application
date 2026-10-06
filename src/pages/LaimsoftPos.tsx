@@ -145,7 +145,6 @@ export function LaimsoftPos({ onClose, initialInvoice }: LaimsoftPosProps) {
   const [modalDiscountPercent, setModalDiscountPercent] = useState("");
   const [modalDiscountAmount, setModalDiscountAmount] = useState("");
   const [modalDescription, setModalDescription] = useState("");
-  const [stopSaleOnNegativeStock] = useSettings('settings.stopSaleOnNegativeStock', false);
 
   // Add Party State
   const [showAddParty, setShowAddParty] = useState(false);
@@ -1124,28 +1123,59 @@ export function LaimsoftPos({ onClose, initialInvoice }: LaimsoftPosProps) {
       return;
     }
 
-    if (stopSaleOnNegativeStock) {
-      const itemQtyMap = new Map<string, number>();
-      for (const row of validRows) {
-        const item = items.find((i) => String(i.id) === row.itemId);
-        if (!item) continue;
-
-        const qty = Number(row.qty) || 0;
-        const isSecondary = row.unit === item.secondary_unit;
-        const convRate = Number(item.conversion_rate) || 1;
-        const primaryQtyEquiv = isSecondary && convRate > 0 ? qty / convRate : qty;
-
-        itemQtyMap.set(row.itemId, (itemQtyMap.get(row.itemId) || 0) + primaryQtyEquiv);
-      }
-
-      for (const [itemId, totalQty] of itemQtyMap.entries()) {
-        const item = items.find((i) => String(i.id) === itemId);
-        if (item) {
-          const currentStock = item.stock_quantity || 0;
-          if (totalQty > currentStock) {
-            setAlertState({ isOpen: true, title: "Insufficient Stock", message: `Cannot sell ${totalQty} of ${item.name}. Current stock is only ${currentStock}.` });
-            return;
+    const previousItemQtyMap = new Map<string, number>();
+    const currentEditingId = activeTab.editingInvoiceId;
+    if (currentEditingId) {
+      const originalSale = savedSales.find((s) => String(s.id) === String(currentEditingId));
+      if (originalSale && originalSale.lineItemsJson) {
+        try {
+          const lineItems = JSON.parse(originalSale.lineItemsJson) as Array<{
+            itemId?: string;
+            item_id?: string;
+            quantity?: number;
+            qty?: number;
+            unit?: string;
+          }>;
+          for (const li of lineItems) {
+            const itemIdStr = String(li.itemId ?? li.item_id ?? "");
+            if (!itemIdStr) continue;
+            const item = items.find((i) => String(i.id) === itemIdStr);
+            if (!item) continue;
+            
+            const qty = Number(li.quantity ?? li.qty ?? 0);
+            const isSecondary = li.unit === item.secondary_unit;
+            const convRate = Number(item.conversion_rate) || 1;
+            const primaryQtyEquiv = isSecondary && convRate > 0 ? qty / convRate : qty;
+            
+            previousItemQtyMap.set(itemIdStr, (previousItemQtyMap.get(itemIdStr) || 0) + primaryQtyEquiv);
           }
+        } catch {}
+      }
+    }
+
+    const itemQtyMap = new Map<string, number>();
+    for (const row of validRows) {
+      const item = items.find((i) => String(i.id) === row.itemId);
+      if (!item) continue;
+
+      const qty = Number(row.qty) || 0;
+      const isSecondary = row.unit === item.secondary_unit;
+      const convRate = Number(item.conversion_rate) || 1;
+      const primaryQtyEquiv = isSecondary && convRate > 0 ? qty / convRate : qty;
+
+      itemQtyMap.set(row.itemId, (itemQtyMap.get(row.itemId) || 0) + primaryQtyEquiv);
+    }
+
+    for (const [itemId, totalQty] of itemQtyMap.entries()) {
+      const item = items.find((i) => String(i.id) === itemId);
+      if (item) {
+        let currentStock = item.stock_quantity || 0;
+        const previouslySoldQty = previousItemQtyMap.get(itemId) || 0;
+        currentStock += previouslySoldQty;
+
+        if (totalQty > currentStock) {
+          setAlertState({ isOpen: true, title: "Insufficient Stock", message: `Cannot sell ${totalQty} of ${item.name}. Current stock is only ${item.stock_quantity || 0}.` });
+          return;
         }
       }
     }

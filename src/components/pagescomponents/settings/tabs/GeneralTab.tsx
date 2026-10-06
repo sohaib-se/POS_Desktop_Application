@@ -146,7 +146,6 @@ export function GeneralTab() {
   const [isPasscodeEnabled, setIsPasscodeEnabled] = useSettings('settings.isPasscodeEnabled', false);
   const [enableExpDate, setEnableExpDate] = useSettings('enableExpDate', true);
   const [enableMfgDate, setEnableMfgDate] = useSettings('enableMfgDate', true);
-  const [stopSaleOnNegativeStock, setStopSaleOnNegativeStock] = useSettings('settings.stopSaleOnNegativeStock', false);
   const [showSetupModal, setShowSetupModal] = useState(false);
   const [showRecoveryModal, setShowRecoveryModal] = useState(false);
   const [isChangePasscodeMode, setIsChangePasscodeMode] = useState(false);
@@ -453,11 +452,6 @@ export function GeneralTab() {
             </div>
           </div>
 
-          <SettingToggleRow 
-            label="Stop Sale on Negative Stock" 
-            checked={stopSaleOnNegativeStock} 
-            onChange={setStopSaleOnNegativeStock} 
-          />
         </Card>
 
         {/* Backup & History Card */}

@@ -687,8 +687,8 @@ export function AddSale({ onSave, onClose, initialInvoice, isConversion }: AddSa
     const rawDiscountPct = Number(activeTab.discountPercent || 0);
     const discountPercentValue = Math.min(100, Math.max(0, rawDiscountPct));
     const taxRateValue = parseTaxRate(activeTab.tax);
-    const taxAmountValue = subtotal * taxRateValue;
-    const grandTotalValue = subtotal + taxAmountValue - discountAmountValue;
+    const taxAmountValue = (subtotal - discountAmountValue) * taxRateValue;
+    const grandTotalValue = subtotal - discountAmountValue + taxAmountValue;
     const roundedValue = activeTab.roundOff ? Math.round(grandTotalValue) : grandTotalValue;
     const roundOffAmountValue = roundedValue - grandTotalValue;
 
@@ -776,9 +776,11 @@ export function AddSale({ onSave, onClose, initialInvoice, isConversion }: AddSa
         customerContact: activeTab.phoneNo || selectedParty?.phone || "",
         customerPhone: activeTab.phoneNo || selectedParty?.phone || "",
         customerEmail: (selectedParty as any)?.email || "",
-        received: receivedValue,
+        received: activeTab.paymentMode === "cash" ? roundedValue : receivedValue,
         paymentMode: activeTab.paymentMode === "cash" ? "Cash" : "Credit",
-        previousBalance: selectedParty?.balance || 0,
+        previousBalance: selectedParty ? (
+          Number(selectedParty.balance || 0) - (isEditingMode && String(selectedParty.id) === String(initialInvoice?.partyId) ? Number(initialInvoice?.balance || 0) : 0)
+        ) : 0,
         discount: discountAmountValue,
         discountPercent: Number(activeTab.discountPercent || 0),
         taxPercent: parseTaxRate(activeTab.tax) * 100,
@@ -968,10 +970,10 @@ export function AddSale({ onSave, onClose, initialInvoice, isConversion }: AddSa
     (s, r) => s + (parseFloat(r.qty) || 0) * (parseFloat(r.pricePerUnit) || 0), 0
   );
   const taxRate = parseTaxRate(activeTab.tax);
-  const taxAmount = totalAmount * taxRate;
   const rawDiscountAmount = activeTab.discountRs ? parseFloat(activeTab.discountRs) : 0;
   const discountAmount = Math.min(totalAmount, Math.max(0, rawDiscountAmount));
-  const grandTotal = totalAmount + taxAmount - discountAmount;
+  const taxAmount = (totalAmount - discountAmount) * taxRate;
+  const grandTotal = totalAmount - discountAmount + taxAmount;
   const roundedTotal = activeTab.roundOff ? Math.round(grandTotal) : grandTotal;
   const roundOffDiff = roundedTotal - grandTotal;
 

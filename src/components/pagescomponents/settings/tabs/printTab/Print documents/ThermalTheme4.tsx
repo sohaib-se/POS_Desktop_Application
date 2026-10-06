@@ -96,7 +96,7 @@ export function ThermalSaleInvoiceRetail({
     const balance = total - Number(received);
     const youSaved = Number(discount);
     const prevBalance = Number(previousBalance ?? 0);
-    const currentBalance = prevBalance + balance;
+    const currentBalance = (documentTitle === "Purchase Invoice" || documentTitle === "Purchase Bill") ? prevBalance - balance : prevBalance + balance;
 
     const fmt = (n: number) => ps.amountWithDecimal ? n.toFixed(2) : Math.round(n).toString();
     const businessName = (businessProfile?.business_name || "My Company").toUpperCase();
@@ -226,13 +226,13 @@ export function ThermalSaleInvoiceRetail({
             {rule("=")}
 
             {ps.receivedAmount && <div style={row}><span>RECEIVED:</span><span>{fmt(Number(received))}</span></div>}
-            {ps.balanceAmount && (
+            {ps.balanceAmount && documentTitle !== "Estimate" && (
                 <div style={{ ...row, fontWeight: 700 }}>
                     <span>BALANCE:</span>
                     <span>{fmt(Math.abs(balance))}</span>
                 </div>
             )}
-            {ps.previousBalance && (
+            {ps.previousBalance && documentTitle !== "Estimate" && (
             <div style={row}><span>PREV. BALANCE:</span><span>{fmt(prevBalance)}</span></div>
           )}
             {ps.currentBalanceOfParty && <div style={{ ...row, fontWeight: 700 }}><span>CURR. BALANCE:</span><span>{fmt(currentBalance)}</span></div>}

@@ -160,7 +160,7 @@ export function ThermalSaleInvoiceClassic({
     const total = subTotal - Number(discount) + taxAmount;
     const balance = total - Number(received);
     const prevBalance = Number(previousBalance ?? 0);
-    const currentBalance = prevBalance + balance;
+    const currentBalance = (documentTitle === "Purchase Invoice" || documentTitle === "Purchase Bill") ? prevBalance - balance : prevBalance + balance;
 
     const fmt = (n: number) => ps.amountWithDecimal ? n.toFixed(2) : Math.round(n).toString();
 
@@ -311,25 +311,25 @@ export function ThermalSaleInvoiceClassic({
             </div>
 
             <div style={{ fontSize: 12 }}>
-                {ps.receivedAmount && (
+                {ps.receivedAmount && documentTitle !== "Estimate" && (
                     <div style={{ display: "flex", justifyContent: "space-between", padding: "2px 0" }}>
                         <span>Received</span>
                         <span>{fmt(Number(received))}</span>
                     </div>
                 )}
-                {ps.balanceAmount && (
+                {ps.balanceAmount && documentTitle !== "Estimate" && (
                     <div style={{ display: "flex", justifyContent: "space-between", padding: "2px 0", fontWeight: 700 }}>
                         <span>Balance Due</span>
                         <span>{fmt(balance)}</span>
                     </div>
                 )}
-                {ps.previousBalance && (
+                {ps.previousBalance && documentTitle !== "Estimate" && (
                     <div style={{ display: "flex", justifyContent: "space-between", padding: "2px 0", color: "#111" }}>
                         <span>Previous Balance:</span>
                         <span>{fmt(prevBalance)}</span>
                     </div>
                 )}
-                {ps.currentBalanceOfParty && (
+                {ps.currentBalanceOfParty && documentTitle !== "Estimate" && (
                     <div style={{ display: "flex", justifyContent: "space-between", padding: "2px 0", fontWeight: 700 }}>
                         <span>Curr. Balance</span>
                         <span>{fmt(currentBalance)}</span>

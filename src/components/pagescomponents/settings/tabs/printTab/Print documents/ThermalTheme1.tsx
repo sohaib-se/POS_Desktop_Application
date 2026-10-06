@@ -141,7 +141,7 @@ export function ThermalSaleInvoice({
   const balance = total - Number(received);
   const youSaved = Number(discount);
   const prevBalance = Number(previousBalance ?? 0);
-  const currentBalance = prevBalance + balance;
+  const currentBalance = (documentTitle === "Purchase Invoice" || documentTitle === "Purchase Bill") ? prevBalance - balance : prevBalance + balance;
 
   const fmt = (n: number) => ps.amountWithDecimal ? n.toFixed(2) : Math.round(n).toString();
 
@@ -398,7 +398,7 @@ export function ThermalSaleInvoice({
         </div>
 
         {/* Received */}
-        {ps.receivedAmount && (
+        {ps.receivedAmount && documentTitle !== "Estimate" && (
           <div style={{ display: "flex", justifyContent: "space-between", lineHeight: 1.9 }}>
             <span style={{ paddingLeft: 24, color: LABEL_COLOR, fontWeight: 600 }}>Received</span>
             <span style={{ display: "flex", gap: 6, alignItems: "center" }}>
@@ -409,7 +409,7 @@ export function ThermalSaleInvoice({
         )}
 
         {/* Balance */}
-        {ps.balanceAmount && (
+        {ps.balanceAmount && documentTitle !== "Estimate" && (
           <div style={{ display: "flex", justifyContent: "space-between", lineHeight: 1.9 }}>
             <span style={{ paddingLeft: 24, color: LABEL_COLOR, fontWeight: 600 }}>Balance</span>
             <span style={{ display: "flex", gap: 6, alignItems: "center" }}>
@@ -420,7 +420,7 @@ export function ThermalSaleInvoice({
         )}
 
         {/* Previous Balance */}
-        {ps.previousBalance && (
+        {ps.previousBalance && documentTitle !== "Estimate" && (
           <div style={{ display: "flex", justifyContent: "space-between", lineHeight: 1.9 }}>
             <span style={{ paddingLeft: 24, color: LABEL_COLOR, fontWeight: 600 }}>Prev. Balance</span>
             <span style={{ display: "flex", gap: 6, alignItems: "center" }}>
@@ -431,7 +431,7 @@ export function ThermalSaleInvoice({
         )}
 
         {/* Current Balance */}
-        {ps.currentBalanceOfParty && (
+        {ps.currentBalanceOfParty && documentTitle !== "Estimate" && (
           <div style={{ display: "flex", justifyContent: "space-between", lineHeight: 1.9 }}>
             <span style={{ paddingLeft: 24, color: LABEL_COLOR, fontWeight: 700 }}>Curr. Balance</span>
             <span style={{ display: "flex", gap: 6, alignItems: "center" }}>

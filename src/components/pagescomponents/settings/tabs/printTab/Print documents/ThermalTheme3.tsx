@@ -85,7 +85,7 @@ export function ThermalSaleInvoiceImpact({
     const balance = total - Number(received);
     const youSaved = Number(discount);
     const prevBalance = Number(previousBalance ?? 0);
-    const currentBalance = prevBalance + balance;
+    const currentBalance = (documentTitle === "Purchase Invoice" || documentTitle === "Purchase Bill") ? prevBalance - balance : prevBalance + balance;
 
     const fmt = (n: number) => ps.amountWithDecimal ? n.toFixed(2) : Math.round(n).toString();
     const businessName = (businessProfile?.business_name || "My Company").toUpperCase();
@@ -194,7 +194,7 @@ export function ThermalSaleInvoiceImpact({
 
             {ps.receivedAmount && <div style={row}><span>RECEIVED</span><span>{fmt(Number(received))}</span></div>}
             {ps.balanceAmount && <div style={row}><span>BALANCE</span><span>{fmt(balance)}</span></div>}
-            {ps.previousBalance && (
+            {ps.previousBalance && documentTitle !== "Estimate" && (
             <div style={row}><span>PREV. BALANCE</span><span>{fmt(prevBalance)}</span></div>
           )}
             {ps.currentBalanceOfParty && <div style={{ ...row, fontWeight: 700 }}><span>CURR. BALANCE</span><span>{fmt(currentBalance)}</span></div>}

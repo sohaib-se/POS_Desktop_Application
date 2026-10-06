@@ -139,7 +139,7 @@ export function SaleInvoicePrintReport({
   const total = subTotal - discountAmount + taxAmount;
   const balance = total - Number(received);
   const prevBalance = Number(previousBalance ?? 0);
-  const currentBalance = prevBalance + balance;
+  const currentBalance = (documentTitle === "Purchase Invoice" || documentTitle === "Purchase Bill") ? prevBalance - balance : prevBalance + balance;
 
   const ps = usePrintTotalsSettings();
 
@@ -290,22 +290,22 @@ export function SaleInvoicePrintReport({
                 <div style={{ padding: "6px 12px", fontSize: 11 }}>{description || "No description provided."}</div>
               </div>
             )}
-            {ps.receivedAmount && (
+            {ps.receivedAmount && documentTitle !== "Estimate" && (
               <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 12px", fontSize: 11, borderBottom: "1px solid #e5e5e5" }}>
                 <span>Received</span><span>:</span><span style={{ whiteSpace: "nowrap" }}>{fmt(Number(received))}</span>
               </div>
             )}
-            {ps.balanceAmount && (
+            {ps.balanceAmount && documentTitle !== "Estimate" && (
               <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 12px", fontSize: 11, borderBottom: "1px solid #e5e5e5" }}>
                 <span>Balance</span><span>:</span><span style={{ whiteSpace: "nowrap" }}>{fmt(balance)}</span>
               </div>
             )}
-            {ps.previousBalance && (
+            {ps.previousBalance && documentTitle !== "Estimate" && (
               <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 12px", fontSize: 11, borderBottom: "1px solid #e5e5e5" }}>
                 <span>Previous Balance</span><span>:</span><span style={{ whiteSpace: "nowrap" }}>{fmt(prevBalance)}</span>
               </div>
             )}
-            {ps.currentBalanceOfParty && (
+            {ps.currentBalanceOfParty && documentTitle !== "Estimate" && (
               <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 12px", fontSize: 11, fontWeight: 700 }}>
                 <span>Current Balance</span><span>:</span><span style={{ whiteSpace: "nowrap" }}>{fmt(currentBalance)}</span>
               </div>

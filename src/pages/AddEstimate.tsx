@@ -266,9 +266,9 @@ export function AddEstimate({ onSave, onShare, onClose, initialEstimate }: AddEs
     (s, r) => s + (parseFloat(r.qty) || 0) * (parseFloat(r.pricePerUnit) || 0), 0
   );
   const calculatedTaxRate = activeTab.tax === "NONE" ? 0 : parseFloat(activeTab.tax.replace(/[^0-9.]/g, "")) / 100;
-  const taxAmount = totalAmount * calculatedTaxRate;
   const discountAmount = activeTab.discountRs ? parseFloat(activeTab.discountRs) : 0;
-  const finalAmount = totalAmount + taxAmount - discountAmount;
+  const taxAmount = (totalAmount - discountAmount) * calculatedTaxRate;
+  const finalAmount = totalAmount - discountAmount + taxAmount;
 
   const roundOffDiff = activeTab.roundOff ? Math.round(finalAmount) - finalAmount : 0;
   const roundedTotal = activeTab.roundOff ? Math.round(finalAmount) : finalAmount;

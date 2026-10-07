@@ -210,7 +210,6 @@ export function AddSale({ onSave, onClose, initialInvoice, isConversion }: AddSa
     balanceType: "to-receive" as "to-pay" | "to-receive",
     creditLimit: "no-limit" as "no-limit" | "custom", creditLimitAmount: "",
   });
-  const [stopSaleOnNegativeStock] = useSettings('settings.stopSaleOnNegativeStock', false);
   const [isBarcodeScanEnabled] = useSettings('settings.isBarcodeScanEnabled', false);
   const [isDoNotShowInvoicePreviewEnabled] = useSettings('settings.isDoNotShowInvoicePreviewEnabled', false);
   const imageInputRef = useRef<HTMLInputElement | null>(null);
@@ -651,29 +650,47 @@ export function AddSale({ onSave, onClose, initialInvoice, isConversion }: AddSa
       return;
     }
 
-    if (stopSaleOnNegativeStock) {
-      const itemQtyMap = new Map<string, number>();
-      for (const row of validRows) {
+    const previousItemQtyMap = new Map<string, number>();
+    if (initialInvoice && !isConversion) {
+      const prevRows = parseLineItems(initialInvoice.lineItemsJson);
+      for (const row of prevRows) {
         if (!row.itemId) continue;
-        const item = items.find((i) => String(i.id) === row.itemId);
+        const item = items.find((i) => String(i.id) === String(row.itemId));
         if (!item) continue;
 
-        const qty = Number(row.qty) || 0;
+        const qty = Number(row.quantity || 0);
         const isSecondary = row.unit === item.secondary_unit;
         const convRate = Number(item.conversion_rate) || 1;
         const primaryQtyEquiv = isSecondary && convRate > 0 ? qty / convRate : qty;
         
-        itemQtyMap.set(row.itemId, (itemQtyMap.get(row.itemId) || 0) + primaryQtyEquiv);
+        previousItemQtyMap.set(String(row.itemId), (previousItemQtyMap.get(String(row.itemId)) || 0) + primaryQtyEquiv);
       }
+    }
 
-      for (const [itemId, totalQty] of itemQtyMap.entries()) {
-        const item = items.find((i) => String(i.id) === itemId);
-        if (item) {
-          const currentStock = item.stock_quantity || 0;
-          if (totalQty > currentStock) {
-            setSaveError(`Cannot sell ${totalQty} of ${item.name}. Current stock is only ${currentStock}.`);
-            return;
-          }
+    const itemQtyMap = new Map<string, number>();
+    for (const row of validRows) {
+      if (!row.itemId) continue;
+      const item = items.find((i) => String(i.id) === row.itemId);
+      if (!item) continue;
+
+      const qty = Number(row.qty) || 0;
+      const isSecondary = row.unit === item.secondary_unit;
+      const convRate = Number(item.conversion_rate) || 1;
+      const primaryQtyEquiv = isSecondary && convRate > 0 ? qty / convRate : qty;
+      
+      itemQtyMap.set(row.itemId, (itemQtyMap.get(row.itemId) || 0) + primaryQtyEquiv);
+    }
+
+    for (const [itemId, totalQty] of itemQtyMap.entries()) {
+      const item = items.find((i) => String(i.id) === itemId);
+      if (item) {
+        let currentStock = item.stock_quantity || 0;
+        const previouslySoldQty = previousItemQtyMap.get(itemId) || 0;
+        currentStock += previouslySoldQty;
+
+        if (totalQty > currentStock) {
+          setSaveError(`Cannot sell ${totalQty} of ${item.name}. Current stock is only ${item.stock_quantity || 0}.`);
+          return;
         }
       }
     }
@@ -687,8 +704,8 @@ export function AddSale({ onSave, onClose, initialInvoice, isConversion }: AddSa
     const rawDiscountPct = Number(activeTab.discountPercent || 0);
     const discountPercentValue = Math.min(100, Math.max(0, rawDiscountPct));
     const taxRateValue = parseTaxRate(activeTab.tax);
-    const taxAmountValue = subtotal * taxRateValue;
-    const grandTotalValue = subtotal + taxAmountValue - discountAmountValue;
+    const taxAmountValue = (subtotal - discountAmountValue) * taxRateValue;
+    const grandTotalValue = subtotal - discountAmountValue + taxAmountValue;
     const roundedValue = activeTab.roundOff ? Math.round(grandTotalValue) : grandTotalValue;
     const roundOffAmountValue = roundedValue - grandTotalValue;
 
@@ -776,9 +793,11 @@ export function AddSale({ onSave, onClose, initialInvoice, isConversion }: AddSa
         customerContact: activeTab.phoneNo || selectedParty?.phone || "",
         customerPhone: activeTab.phoneNo || selectedParty?.phone || "",
         customerEmail: (selectedParty as any)?.email || "",
-        received: receivedValue,
+        received: activeTab.paymentMode === "cash" ? roundedValue : receivedValue,
         paymentMode: activeTab.paymentMode === "cash" ? "Cash" : "Credit",
-        previousBalance: selectedParty?.balance || 0,
+        previousBalance: selectedParty ? (
+          Number(selectedParty.balance || 0) - (isEditingMode && String(selectedParty.id) === String(initialInvoice?.partyId) ? Number(initialInvoice?.balance || 0) : 0)
+        ) : 0,
         discount: discountAmountValue,
         discountPercent: Number(activeTab.discountPercent || 0),
         taxPercent: parseTaxRate(activeTab.tax) * 100,
@@ -968,10 +987,10 @@ export function AddSale({ onSave, onClose, initialInvoice, isConversion }: AddSa
     (s, r) => s + (parseFloat(r.qty) || 0) * (parseFloat(r.pricePerUnit) || 0), 0
   );
   const taxRate = parseTaxRate(activeTab.tax);
-  const taxAmount = totalAmount * taxRate;
   const rawDiscountAmount = activeTab.discountRs ? parseFloat(activeTab.discountRs) : 0;
   const discountAmount = Math.min(totalAmount, Math.max(0, rawDiscountAmount));
-  const grandTotal = totalAmount + taxAmount - discountAmount;
+  const taxAmount = (totalAmount - discountAmount) * taxRate;
+  const grandTotal = totalAmount - discountAmount + taxAmount;
   const roundedTotal = activeTab.roundOff ? Math.round(grandTotal) : grandTotal;
   const roundOffDiff = roundedTotal - grandTotal;
 

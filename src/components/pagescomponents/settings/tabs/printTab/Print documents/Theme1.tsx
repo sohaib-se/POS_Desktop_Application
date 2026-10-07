@@ -139,7 +139,7 @@ export function Theme1InvoicePrintReport({
   const total = subTotal - discountAmount + taxAmount;
   const balance = total - Number(received || 0);
   const prevBalance = Number(previousBalance ?? 0);
-  const currentBalance = prevBalance + balance;
+  const currentBalance = (documentTitle === "Purchase Invoice" || documentTitle === "Purchase Bill") ? prevBalance - balance : prevBalance + balance;
 
   const ps = usePrintTotalsSettings();
 
@@ -284,8 +284,8 @@ export function Theme1InvoicePrintReport({
               >
                 Terms &amp; Conditions
               </div>
-              <p className="text-xs mt-1.5">
-                Goods once sold will not be taken back. Payment due within 15 days of invoice date.
+              <p className="text-xs mt-1.5 whitespace-pre-wrap">
+                {businessProfile?.terms_conditions}
               </p>
             </>
           )}
@@ -323,25 +323,25 @@ export function Theme1InvoicePrintReport({
             <span>Total</span>
             <span className="whitespace-nowrap">{fmt(total)}</span>
           </div>
-          {ps.receivedAmount && (
+          {ps.receivedAmount && documentTitle !== "Estimate" && (
             <div className="flex justify-between text-xs px-0 py-1 border-b border-gray-300">
               <span>Received</span>
               <span className="whitespace-nowrap">{fmt(Number(received || 0))}</span>
             </div>
           )}
-          {ps.balanceAmount && (
+          {ps.balanceAmount && documentTitle !== "Estimate" && (
             <div className="flex justify-between text-xs px-0 py-1 border-b border-gray-300">
               <span>Balance</span>
               <span className="whitespace-nowrap">{fmt(balance)}</span>
             </div>
           )}
-          {ps.previousBalance && (
+          {ps.previousBalance && documentTitle !== "Estimate" && (
             <div className="flex justify-between text-xs px-0 py-1 mt-2">
               <span>Previous Balance</span>
               <span className="whitespace-nowrap">{fmt(prevBalance)}</span>
             </div>
           )}
-          {ps.currentBalanceOfParty && (
+          {ps.currentBalanceOfParty && documentTitle !== "Estimate" && (
             <div className="flex justify-between text-xs px-0 py-1 font-bold">
               <span>Current Balance</span>
               <span className="whitespace-nowrap">{fmt(currentBalance)}</span>
@@ -380,6 +380,7 @@ function useCompanyInfo() {
     address: (userProfile as any).address,
     email: (userProfile as any).email,
     signature: (userProfile as any).signature as string | undefined,
+    terms_conditions: (userProfile as any).terms_conditions as string | undefined,
   });
   useEffect(() => {
     fetch("/api/user_profile")
@@ -393,6 +394,7 @@ function useCompanyInfo() {
             address: d.address || (userProfile as any).address,
             email: d.email || (userProfile as any).email,
             signature: d.signature_url || d.signature || undefined,
+            terms_conditions: d.terms_conditions || (userProfile as any).terms_conditions,
           });
         }
       })

@@ -10,7 +10,7 @@ import { ViewPaymentOutDialog } from "@/components/pagescomponents/payementout/V
 import { ViewEstimateDialog } from "@/components/pagescomponents/estimates/ViewEstimateDialog";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { AddEstimate } from "@/pages/AddEstimate";
-import { EnterPasscodeScreen } from "@/components/common/EnterPasscodeScreen";
+
 import type { SaleInvoiceViewRow } from "@/components/pagescomponents/saleinvoices/types";
 import type { PurchaseBillViewRow } from "@/components/pagescomponents/purchasebills/types";
 import { PartyTransactionsPrintPreviewModal } from "./PartyTransactionsPrintPreviewModal";
@@ -69,8 +69,6 @@ export function PartyDetails({
   const [currencyDisplay] = useSettings<'abbreviation' | 'icon'>('settings.currencyDisplay', 'abbreviation');
   const currencyStr = currencyDisplay === 'icon' ? currency.symbol : currency.code;
 
-  const [isPasscodeEnabled] = useSettings('settings.isPasscodeEnabled', false);
-  const [isPasscodeForTransactionEnabled] = useSettings('settings.isPasscodeForTransactionEnabled', false);
 
   const [showPrintPreview, setShowPrintPreview] = useState(false);
 
@@ -117,7 +115,6 @@ export function PartyDetails({
   const [viewingPaymentOut, setViewingPaymentOut] = useState<any | null>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [viewingEstimate, setViewingEstimate] = useState<any | null>(null);
-  const [passcodeAction, setPasscodeAction] = useState<{ type: 'edit' | 'delete', payload: PartyTransactionRow } | null>(null);
   const [deletePendingTransaction, setDeletePendingTransaction] = useState<PartyTransactionRow | null>(null);
   const [transactionError, setTransactionError] = useState<string | null>(null);
 
@@ -188,14 +185,6 @@ export function PartyDetails({
     }
   };
 
-  const handlePasscodeSuccess = () => {
-    if (passcodeAction?.type === 'delete') {
-      performDeleteTransaction(passcodeAction.payload);
-    } else if (passcodeAction?.type === 'edit') {
-      handleEditTransaction(passcodeAction.payload);
-    }
-    setPasscodeAction(null);
-  };
 
   const selectedPartyBalanceLabel =
     selectedParty && selectedParty.balance > 0
@@ -570,11 +559,7 @@ export function PartyDetails({
                     onClick={() => {
                       if (!canEdit) return;
                       if (invoice?.rawRow) {
-                        if (isPasscodeEnabled && isPasscodeForTransactionEnabled) {
-                          setPasscodeAction({ type: 'edit', payload: invoice });
-                        } else {
-                          handleEditTransaction(invoice);
-                        }
+                        handleEditTransaction(invoice);
                       }
                       setOpenRowMenuId(null);
                       setOpenRowMenuPosition(null);
@@ -587,11 +572,7 @@ export function PartyDetails({
                     className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50"
                     onClick={() => {
                       if (invoice) {
-                        if (isPasscodeEnabled && isPasscodeForTransactionEnabled) {
-                          setPasscodeAction({ type: 'delete', payload: invoice });
-                        } else {
-                          setDeletePendingTransaction(invoice);
-                        }
+                        setDeletePendingTransaction(invoice);
                       }
                       setOpenRowMenuId(null);
                       setOpenRowMenuPosition(null);
@@ -654,12 +635,6 @@ export function PartyDetails({
         </div>
       )}
 
-      {passcodeAction && (
-        <EnterPasscodeScreen
-          onSuccess={handlePasscodeSuccess}
-          onCancel={() => setPasscodeAction(null)}
-        />
-      )}
 
       {/* Print Preview Modal */}
       <PartyTransactionsPrintPreviewModal

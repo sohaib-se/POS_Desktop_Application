@@ -29,6 +29,7 @@ interface TaxInvoicePrintReportProps {
     address?: string;
     email?: string;
     signature?: string;
+    terms_conditions?: string;
   };
   received?: number;
   accentColor?: string;
@@ -148,7 +149,7 @@ export function TaxInvoicePrintReport({
   const total = subTotal - discountAmount + taxAmount;
   const balance = total - Number(received);
   const prevBalance = Number(previousBalance ?? 0);
-  const currentBalance = prevBalance + balance;
+  const currentBalance = (documentTitle === "Purchase Invoice" || documentTitle === "Purchase Bill") ? prevBalance - balance : prevBalance + balance;
 
   const ps = usePrintTotalsSettings();
 
@@ -285,8 +286,8 @@ export function TaxInvoicePrintReport({
                 <div style={{ backgroundColor: ACCENT, color: "#fff", fontWeight: 700, fontSize: 12, padding: "3px 10px", WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }}>
                   Terms &amp; Conditions
                 </div>
-                <div style={{ padding: "5px 10px", fontSize: 12 }}>
-                  Goods once sold will not be taken back. Payment due within 15 days of invoice date.
+                <div style={{ padding: "5px 10px", fontSize: 12, whiteSpace: "pre-wrap" }}>
+                  {businessProfile?.terms_conditions}
                 </div>
               </>
             )}
@@ -316,22 +317,22 @@ export function TaxInvoicePrintReport({
             <div style={{ display: "flex", justifyContent: "space-between", padding: "3px 10px", fontSize: 12, fontWeight: 700, borderBottom: "1px solid #e5e5e5" }}>
               <span>Total</span><span style={{ whiteSpace: "nowrap" }}>{fmt(total)}</span>
             </div>
-            {ps.receivedAmount && (
+            {ps.receivedAmount && documentTitle !== "Estimate" && (
               <div style={{ display: "flex", justifyContent: "space-between", padding: "3px 10px", fontSize: 12, borderBottom: "1px solid #e5e5e5" }}>
                 <span>Received</span><span style={{ whiteSpace: "nowrap" }}>{fmt(Number(received))}</span>
               </div>
             )}
-            {ps.balanceAmount && (
+            {ps.balanceAmount && documentTitle !== "Estimate" && (
               <div style={{ display: "flex", justifyContent: "space-between", padding: "3px 10px", fontSize: 12, borderBottom: "1px solid #e5e5e5" }}>
                 <span>Balance</span><span style={{ whiteSpace: "nowrap" }}>{fmt(balance)}</span>
               </div>
             )}
-            {ps.previousBalance && (
+            {ps.previousBalance && documentTitle !== "Estimate" && (
               <div style={{ display: "flex", justifyContent: "space-between", padding: "3px 10px", fontSize: 12, marginTop: 8 }}>
                 <span>Previous Balance</span><span style={{ whiteSpace: "nowrap" }}>{fmt(prevBalance)}</span>
               </div>
             )}
-            {ps.currentBalanceOfParty && (
+            {ps.currentBalanceOfParty && documentTitle !== "Estimate" && (
               <div style={{ display: "flex", justifyContent: "space-between", padding: "3px 10px", fontSize: 12, fontWeight: 700 }}>
                 <span>Current Balance</span><span style={{ whiteSpace: "nowrap" }}>{fmt(currentBalance)}</span>
               </div>
@@ -364,6 +365,7 @@ function useCompanyInfo() {
     address: (userProfile as any).address,
     email: (userProfile as any).email,
     signature: (userProfile as any).signature as string | undefined,
+    terms_conditions: (userProfile as any).terms_conditions as string | undefined,
   });
   useEffect(() => {
     fetch("/api/user_profile")
@@ -377,6 +379,7 @@ function useCompanyInfo() {
             address: d.address || (userProfile as any).address,
             email: d.email || (userProfile as any).email,
             signature: d.signature_url || d.signature || undefined,
+            terms_conditions: d.terms_conditions || (userProfile as any).terms_conditions,
           });
         }
       })

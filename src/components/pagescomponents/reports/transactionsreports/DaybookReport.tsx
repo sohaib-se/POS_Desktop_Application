@@ -7,7 +7,7 @@ import type { SaleInvoiceEditData, PurchaseBillEditData } from "@/types";
 import { SaleInvoiceDialog } from "../../saleinvoices/SaleInvoiceDialog";
 import { PurchaseBillDialog } from "../../purchasebills/PurchaseBillDialog";
 import { AddPurchase } from "../../../../pages/AddPurchase";
-import { EnterPasscodeScreen } from "@/components/common/EnterPasscodeScreen";
+
 import { ConfirmDeleteModal } from "@/components/common/ConfirmDeleteModal";
 
 interface DaybookReportProps {
@@ -88,35 +88,15 @@ export function DaybookReport({ onBack, onEditInvoice }: DaybookReportProps) {
   const [editingPurchase, setEditingPurchase] = useState<PurchaseBillEditData | null>(null);
   const [showAddPurchase, setShowAddPurchase] = useState(false);
 
-  const [isPasscodeEnabled] = useSettings('settings.isPasscodeEnabled', false);
-  const [isPasscodeForTransactionEnabled] = useSettings('settings.isPasscodeForTransactionEnabled', false);
-  const [passcodeAction, setPasscodeAction] = useState<{ type: 'edit' | 'delete', payload: TransactionRow } | null>(null);
   const [deleteModalState, setDeleteModalState] = useState<{isOpen: boolean, tx: TransactionRow | null}>({isOpen: false, tx: null});
   const [isDeleting, setIsDeleting] = useState(false);
 
   const handleEditClick = (tx: TransactionRow) => {
-    if (isPasscodeEnabled && isPasscodeForTransactionEnabled) {
-      setPasscodeAction({ type: 'edit', payload: tx });
-    } else {
-      handleEditTransaction(tx);
-    }
+    handleEditTransaction(tx);
   };
 
   const handleDeleteClick = (tx: TransactionRow) => {
-    if (isPasscodeEnabled && isPasscodeForTransactionEnabled) {
-      setPasscodeAction({ type: 'delete', payload: tx });
-    } else {
-      handleDeleteTransaction(tx);
-    }
-  };
-
-  const handlePasscodeSuccess = () => {
-    if (passcodeAction?.type === 'edit') {
-      handleEditTransaction(passcodeAction.payload);
-    } else if (passcodeAction?.type === 'delete') {
-      handleDeleteTransaction(passcodeAction.payload);
-    }
-    setPasscodeAction(null);
+    handleDeleteTransaction(tx);
   };
 
   useEffect(() => {
@@ -681,12 +661,6 @@ export function DaybookReport({ onBack, onEditInvoice }: DaybookReportProps) {
         </div>
       )}
 
-      {passcodeAction && (
-        <EnterPasscodeScreen
-          onSuccess={handlePasscodeSuccess}
-          onCancel={() => setPasscodeAction(null)}
-        />
-      )}
 
       <ConfirmDeleteModal
         isOpen={deleteModalState.isOpen}

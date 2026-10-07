@@ -15,7 +15,7 @@ import { PurchaseBillSummary } from "../components/pagescomponents/purchasebills
 import { PurchaseBillTable } from "../components/pagescomponents/purchasebills/PurchaseBillTable";
 import { PurchaseBillContextMenu } from "../components/pagescomponents/purchasebills/PurchaseBillContextMenu";
 import { PurchaseBillDialog } from "../components/pagescomponents/purchasebills/PurchaseBillDialog";
-import { EnterPasscodeScreen } from "@/components/common/EnterPasscodeScreen";
+
 import { ConfirmDeleteModal } from "@/components/common/ConfirmDeleteModal";
 import { PrintTab, type SalePrintData } from "@/components/pagescomponents/settings/tabs/PrintTab";
 
@@ -36,12 +36,9 @@ export function PurchaseBills({ onBack }: PurchaseBillsProps = {}) {
   const [statusMessage, setStatusMessage] = useState("");
   const searchInputRef = useRef<HTMLInputElement | null>(null);
 
-  const [isPasscodeEnabled] = useSettings('settings.isPasscodeEnabled', false);
-  const [isPasscodeForTransactionEnabled] = useSettings('settings.isPasscodeForTransactionEnabled', false);
   const [currency] = useSettings('settings.businessCurrency', { code: 'PKR', symbol: 'Rs' });
   const [currencyDisplay] = useSettings<'abbreviation' | 'icon'>('settings.currencyDisplay', 'abbreviation');
   const currencyStr = currencyDisplay === 'icon' ? currency.symbol : currency.code;
-  const [passcodeAction, setPasscodeAction] = useState<{ type: 'edit' | 'delete', payload: PurchaseBillViewRow } | null>(null);
   const [deleteModalState, setDeleteModalState] = useState<{isOpen: boolean, invoice: PurchaseBillViewRow | null}>({isOpen: false, invoice: null});
   const [isDeleting, setIsDeleting] = useState(false);
   const [printingInvoice, setPrintingInvoice] = useState<SalePrintData | null>(null);
@@ -237,31 +234,15 @@ export function PurchaseBills({ onBack }: PurchaseBillsProps = {}) {
   };
 
   const handleEditClick = (invoice: PurchaseBillViewRow) => {
-    if (isPasscodeEnabled && isPasscodeForTransactionEnabled) {
-      setPasscodeAction({ type: 'edit', payload: invoice });
-    } else {
-      setEditingInvoice(invoice as any);
-      setShowAddPurchase(true);
-    }
+    setEditingInvoice(invoice as any);
+    setShowAddPurchase(true);
   };
 
   const handleDeleteClick = (invoice: PurchaseBillViewRow) => {
-    if (isPasscodeEnabled && isPasscodeForTransactionEnabled) {
-      setPasscodeAction({ type: 'delete', payload: invoice });
-    } else {
-      handleDeleteInvoice(invoice);
-    }
+    handleDeleteInvoice(invoice);
   };
 
-  const handlePasscodeSuccess = () => {
-    if (passcodeAction?.type === 'edit') {
-      setEditingInvoice(passcodeAction.payload as any);
-      setShowAddPurchase(true);
-    } else if (passcodeAction?.type === 'delete') {
-      handleDeleteInvoice(passcodeAction.payload);
-    }
-    setPasscodeAction(null);
-  };
+
 
   const handlePrintClick = (invoice: PurchaseBillViewRow) => {
     let parsedItems: SalePrintData['records'] = [];
@@ -369,12 +350,6 @@ export function PurchaseBills({ onBack }: PurchaseBillsProps = {}) {
         </div>
       )}
 
-      {passcodeAction && (
-        <EnterPasscodeScreen
-          onSuccess={handlePasscodeSuccess}
-          onCancel={() => setPasscodeAction(null)}
-        />
-      )}
 
       <ConfirmDeleteModal
         isOpen={deleteModalState.isOpen}

@@ -22,7 +22,7 @@ interface ThermalTheme3Props {
     invoiceDate: string;
     customerName: string;
     customerPhone?: string;
-    businessProfile?: { business_name?: string; phone?: string; logo_url?: string; address?: string; email?: string };
+    businessProfile?: { business_name?: string; phone?: string; logo_url?: string; address?: string; email?: string; terms_conditions?: string };
     received?: number;
     discount?: number;
     discountPercent?: number;
@@ -85,7 +85,7 @@ export function ThermalSaleInvoiceImpact({
     const balance = total - Number(received);
     const youSaved = Number(discount);
     const prevBalance = Number(previousBalance ?? 0);
-    const currentBalance = prevBalance + balance;
+    const currentBalance = (documentTitle === "Purchase Invoice" || documentTitle === "Purchase Bill") ? prevBalance - balance : prevBalance + balance;
 
     const fmt = (n: number) => ps.amountWithDecimal ? n.toFixed(2) : Math.round(n).toString();
     const businessName = (businessProfile?.business_name || "My Company").toUpperCase();
@@ -194,7 +194,7 @@ export function ThermalSaleInvoiceImpact({
 
             {ps.receivedAmount && <div style={row}><span>RECEIVED</span><span>{fmt(Number(received))}</span></div>}
             {ps.balanceAmount && <div style={row}><span>BALANCE</span><span>{fmt(balance)}</span></div>}
-            {ps.previousBalance && (
+            {ps.previousBalance && documentTitle !== "Estimate" && (
             <div style={row}><span>PREV. BALANCE</span><span>{fmt(prevBalance)}</span></div>
           )}
             {ps.currentBalanceOfParty && <div style={{ ...row, fontWeight: 700 }}><span>CURR. BALANCE</span><span>{fmt(currentBalance)}</span></div>}
@@ -206,6 +206,18 @@ export function ThermalSaleInvoiceImpact({
                 <>
                     {rule("-")}
                     <div style={row}><span>YOU SAVED</span><span>{fmt(youSaved)}</span></div>
+                </>
+            )}
+
+            {ps.printTermsAndConditions && (
+                <>
+                    {rule("-")}
+                    <div style={{ textAlign: "center", marginTop: 4 }}>
+                        <div style={{ fontSize: 11, fontWeight: 700 }}>Terms &amp; Conditions</div>
+                        <div style={{ fontSize: 10, marginTop: 2, whiteSpace: "pre-wrap" }}>
+                            {businessProfile?.terms_conditions}
+                        </div>
+                    </div>
                 </>
             )}
         </div>
@@ -221,6 +233,7 @@ function useCompanyInfo() {
         logo_url: userProfile.logo as string | undefined,
         address: (userProfile as any).address as string | undefined,
         email: (userProfile as any).email as string | undefined,
+        terms_conditions: (userProfile as any).terms_conditions as string | undefined,
     });
 
     useEffect(() => {
@@ -234,6 +247,7 @@ function useCompanyInfo() {
                         logo_url: d.logo_url || d.logo || userProfile.logo,
                         address: d.address || (userProfile as any).address,
                         email: d.email || (userProfile as any).email,
+                        terms_conditions: d.terms_conditions || (userProfile as any).terms_conditions,
                     });
                 }
             })

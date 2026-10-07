@@ -6,7 +6,7 @@ import { PaymentInSummary } from "@/components/pagescomponents/paymentin/Payment
 import { PaymentInTable } from "@/components/pagescomponents/paymentin/PaymentInTable";
 import { AddPaymentInModal } from "@/components/pagescomponents/paymentin/AddPaymentInModal";
 import { PaymentInRowMenu } from "@/components/pagescomponents/paymentin/PaymentInRowMenu";
-import { EnterPasscodeScreen } from "@/components/common/EnterPasscodeScreen";
+
 import { PaymentInPrintPreviewModal } from "@/components/pagescomponents/paymentin/PaymentInPrintPreviewModal";
 import { PaymentInReceiptPreviewModal } from "@/components/pagescomponents/paymentin/PaymentInReceiptPreviewModal";
 import { useSettings } from "@/hooks/useSettings";
@@ -41,10 +41,7 @@ export function PaymentIn() {
   const [openRowMenuId, setOpenRowMenuId] = useState<string | null>(null);
   const [openRowMenuPosition, setOpenRowMenuPosition] = useState<{ left: number; top: number } | null>(null);
 
-  const [isPasscodeEnabled] = useSettings('settings.isPasscodeEnabled', false);
-  const [isPasscodeForTransactionEnabled] = useSettings('settings.isPasscodeForTransactionEnabled', false);
   const [currency] = useSettings('settings.businessCurrency', { code: 'PKR', symbol: 'Rs', name: 'Rupees' });
-  const [passcodeAction, setPasscodeAction] = useState<{ type: 'edit' | 'delete', payload: string } | null>(null);
 
   const [selectedMonth, setSelectedMonth] = useState<string>(() => {
     const now = new Date();
@@ -138,12 +135,7 @@ export function PaymentIn() {
 
   const confirmDelete = () => {
     if (!deleteConfirmId) return;
-
-    if (isPasscodeEnabled && isPasscodeForTransactionEnabled) {
-      setPasscodeAction({ type: 'delete', payload: deleteConfirmId });
-    } else {
-      executeDelete(deleteConfirmId);
-    }
+    executeDelete(deleteConfirmId);
     setDeleteConfirmId(null);
   };
 
@@ -192,51 +184,34 @@ export function PaymentIn() {
   };
 
   const handleEditClick = (show: boolean, record?: any) => {
-    if (show && isPasscodeEnabled && isPasscodeForTransactionEnabled) {
-      setPasscodeAction({ type: 'edit', payload: record ? record.id : '' });
-    } else {
-      if (show && record) {
-        setEditingRecordId(record.id);
-        setPaymentType(record.paymentType || record.payment_type || "Cash");
-        setAmount(String(record.amount || ""));
-        setReceiptNo(record.receiptNo || record.receipt_no || "");
+    if (show && record) {
+      setEditingRecordId(record.id);
+      setPaymentType(record.paymentType || record.payment_type || "Cash");
+      setAmount(String(record.amount || ""));
+      setReceiptNo(record.receiptNo || record.receipt_no || "");
 
-        let formattedDate = new Date().toISOString().split('T')[0];
-        if (record.date) {
-          if (record.date.includes('/')) {
-            const parts = record.date.split('/');
-            if (parts.length === 3) {
-              formattedDate = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
-            }
-          } else if (record.date.includes('-')) {
-            formattedDate = record.date.split('T')[0];
+      let formattedDate = new Date().toISOString().split('T')[0];
+      if (record.date) {
+        if (record.date.includes('/')) {
+          const parts = record.date.split('/');
+          if (parts.length === 3) {
+            formattedDate = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
           }
+        } else if (record.date.includes('-')) {
+          formattedDate = record.date.split('T')[0];
         }
-        setPaymentDate(formattedDate);
-        setDescription(record.description || "");
-        setShowDescription(!!record.description);
-        setImageDataUrl(record.attachment_image_path || record.attachmentImagePath || "");
-        setSelectedParty(String(record.partyId || record.party_id || ""));
-        setShowAddPayment(true);
-      } else {
-        handleCloseAddPayment(show);
       }
+      setPaymentDate(formattedDate);
+      setDescription(record.description || "");
+      setShowDescription(!!record.description);
+      setImageDataUrl(record.attachment_image_path || record.attachmentImagePath || "");
+      setSelectedParty(String(record.partyId || record.party_id || ""));
+      setShowAddPayment(true);
+    } else {
+      handleCloseAddPayment(show);
     }
   };
 
-  const handlePasscodeSuccess = () => {
-    if (passcodeAction?.type === 'delete') {
-      executeDelete(passcodeAction.payload);
-    } else if (passcodeAction?.type === 'edit') {
-      if (passcodeAction.payload) {
-        const record = records.find(r => r.id === passcodeAction.payload);
-        handleEditClick(true, record);
-      } else {
-        handleOpenAddPayment();
-      }
-    }
-    setPasscodeAction(null);
-  };
 
   const filteredRecords = records.filter(record => {
     let monthMatch = true;
@@ -517,12 +492,6 @@ export function PaymentIn() {
           onClose={() => setPreviewingRecord(null)}
         />
 
-        {passcodeAction && (
-          <EnterPasscodeScreen
-            onSuccess={handlePasscodeSuccess}
-            onCancel={() => setPasscodeAction(null)}
-          />
-        )}
 
         <Dialog open={showDiscardConfirm} onOpenChange={setShowDiscardConfirm}>
           <DialogContent

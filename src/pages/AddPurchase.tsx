@@ -536,8 +536,8 @@ export function AddPurchase({ onSave, onClose, initialInvoice }: AddPurchaseProp
     );
     const discountAmountValue = Number(activeTab.discountRs || 0);
     const taxRateValue = parseTaxRate(activeTab.tax);
-    const taxAmountValue = subtotal * taxRateValue;
-    const grandTotalValue = subtotal + taxAmountValue - discountAmountValue;
+    const taxAmountValue = (subtotal - discountAmountValue) * taxRateValue;
+    const grandTotalValue = subtotal - discountAmountValue + taxAmountValue;
     const roundedValue = activeTab.roundOff ? Math.round(grandTotalValue) : grandTotalValue;
     const roundOffAmountValue = roundedValue - grandTotalValue;
 
@@ -643,7 +643,9 @@ export function AddPurchase({ onSave, onClose, initialInvoice }: AddPurchaseProp
         customerPhone: activeTab.phoneNo || selectedParty.phone || "",
         received: paidAmountValue,
         paymentMode: activeTab.paymentType === "Cash" ? "Cash" : activeTab.paymentType,
-        previousBalance: selectedParty.balance || 0,
+        previousBalance: selectedParty ? (
+          Number(selectedParty.balance || 0) + (isEditing && String(selectedParty.id) === String(initialInvoice?.partyId) ? Number(initialInvoice?.balance || 0) : 0)
+        ) : 0,
         discount: discountAmountValue,
         discountPercent: Number(activeTab.discountPercent || 0),
         taxPercent: parseTaxRate(activeTab.tax) * 100,
@@ -807,9 +809,9 @@ export function AddPurchase({ onSave, onClose, initialInvoice }: AddPurchaseProp
     (s, r) => s + (parseFloat(r.qty) || 0) * (parseFloat(r.pricePerUnit) || 0), 0
   );
   const taxRate = parseTaxRate(activeTab.tax);
-  const taxAmount = totalAmount * taxRate;
   const discountAmount = activeTab.discountRs ? parseFloat(activeTab.discountRs) : 0;
-  const grandTotal = totalAmount + taxAmount - discountAmount;
+  const taxAmount = (totalAmount - discountAmount) * taxRate;
+  const grandTotal = totalAmount - discountAmount + taxAmount;
   const roundedTotal = activeTab.roundOff ? Math.round(grandTotal) : grandTotal;
   const roundOffDiff = roundedTotal - grandTotal;
 

@@ -191,8 +191,8 @@ export function PurchaseBillTable({
                       onClick={(event) => {
                         event.stopPropagation();
                         const targetRect = event.currentTarget.getBoundingClientRect();
-                        const menuWidth = 144;
-                        const menuHeight = 96;
+                        const menuWidth = 160;
+                        const menuHeight = 144;
                         const nextLeft = Math.max(8, Math.min(targetRect.right - menuWidth, window.innerWidth - menuWidth - 8));
                         const nextTop = targetRect.bottom + menuHeight > window.innerHeight
                           ? Math.max(8, targetRect.top - menuHeight - 8)

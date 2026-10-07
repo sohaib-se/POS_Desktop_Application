@@ -22,7 +22,7 @@ interface ThermalTheme1Props {
   invoiceDate: string;
   customerName: string;
   customerPhone?: string;
-  businessProfile?: { business_name?: string; phone?: string; logo_url?: string; address?: string; email?: string };
+  businessProfile?: { business_name?: string; phone?: string; logo_url?: string; address?: string; email?: string; terms_conditions?: string };
   received?: number;
   discount?: number;
   discountPercent?: number;
@@ -141,7 +141,7 @@ export function ThermalSaleInvoice({
   const balance = total - Number(received);
   const youSaved = Number(discount);
   const prevBalance = Number(previousBalance ?? 0);
-  const currentBalance = prevBalance + balance;
+  const currentBalance = (documentTitle === "Purchase Invoice" || documentTitle === "Purchase Bill") ? prevBalance - balance : prevBalance + balance;
 
   const fmt = (n: number) => ps.amountWithDecimal ? n.toFixed(2) : Math.round(n).toString();
 
@@ -398,7 +398,7 @@ export function ThermalSaleInvoice({
         </div>
 
         {/* Received */}
-        {ps.receivedAmount && (
+        {ps.receivedAmount && documentTitle !== "Estimate" && (
           <div style={{ display: "flex", justifyContent: "space-between", lineHeight: 1.9 }}>
             <span style={{ paddingLeft: 24, color: LABEL_COLOR, fontWeight: 600 }}>Received</span>
             <span style={{ display: "flex", gap: 6, alignItems: "center" }}>
@@ -409,7 +409,7 @@ export function ThermalSaleInvoice({
         )}
 
         {/* Balance */}
-        {ps.balanceAmount && (
+        {ps.balanceAmount && documentTitle !== "Estimate" && (
           <div style={{ display: "flex", justifyContent: "space-between", lineHeight: 1.9 }}>
             <span style={{ paddingLeft: 24, color: LABEL_COLOR, fontWeight: 600 }}>Balance</span>
             <span style={{ display: "flex", gap: 6, alignItems: "center" }}>
@@ -420,7 +420,7 @@ export function ThermalSaleInvoice({
         )}
 
         {/* Previous Balance */}
-        {ps.previousBalance && (
+        {ps.previousBalance && documentTitle !== "Estimate" && (
           <div style={{ display: "flex", justifyContent: "space-between", lineHeight: 1.9 }}>
             <span style={{ paddingLeft: 24, color: LABEL_COLOR, fontWeight: 600 }}>Prev. Balance</span>
             <span style={{ display: "flex", gap: 6, alignItems: "center" }}>
@@ -431,7 +431,7 @@ export function ThermalSaleInvoice({
         )}
 
         {/* Current Balance */}
-        {ps.currentBalanceOfParty && (
+        {ps.currentBalanceOfParty && documentTitle !== "Estimate" && (
           <div style={{ display: "flex", justifyContent: "space-between", lineHeight: 1.9 }}>
             <span style={{ paddingLeft: 24, color: LABEL_COLOR, fontWeight: 700 }}>Curr. Balance</span>
             <span style={{ display: "flex", gap: 6, alignItems: "center" }}>
@@ -470,6 +470,15 @@ export function ThermalSaleInvoice({
           </div>
         </>
       )}
+
+      {ps.printTermsAndConditions && (
+        <div style={{ marginTop: 8, textAlign: "center" }}>
+          <div style={{ fontSize: 11, fontWeight: 700 }}>Terms &amp; Conditions</div>
+          <div style={{ fontSize: 10, marginTop: 2, whiteSpace: "pre-wrap", color: "#666" }}>
+            {businessProfile?.terms_conditions}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -483,6 +492,7 @@ function useCompanyInfo() {
     logo_url: userProfile.logo as string | undefined,
     address: (userProfile as any).address as string | undefined,
     email: (userProfile as any).email as string | undefined,
+    terms_conditions: (userProfile as any).terms_conditions as string | undefined,
   });
 
   useEffect(() => {
@@ -496,6 +506,7 @@ function useCompanyInfo() {
             logo_url: d.logo_url || d.logo || userProfile.logo,
             address: d.address || (userProfile as any).address,
             email: d.email || (userProfile as any).email,
+            terms_conditions: d.terms_conditions || (userProfile as any).terms_conditions,
           });
         }
       })

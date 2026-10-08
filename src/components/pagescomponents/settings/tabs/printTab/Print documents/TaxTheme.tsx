@@ -155,96 +155,113 @@ export function TaxInvoicePrintReport({
 
   const fmt = (n: number) => `${currencyStr} ${ps.amountWithDecimal ? n.toFixed(2) : Math.round(n).toString()}`;
 
-  // MIN_ROWS/row-height matched to the other themes so this page fills the same length
-  const MIN_ROWS = 20;
+  const MIN_ROWS = 8;
   const fillerRows = Math.max(0, MIN_ROWS - records.length);
 
   const ACCENT = accentColor ?? "#8B85D6";
   const BORDER = "#1a1a1a";
 
   return (
-    <div style={{ background: "#fff", color: "#000", fontFamily: "Inter, system-ui, sans-serif", width: "100%", maxWidth: 794, margin: "0 auto", padding: "24px 40px", boxSizing: "border-box" }}>
-      {/* Title (outside the bordered box) */}
-      <div style={{ textAlign: "center", marginBottom: 10 }}>
-        <h1 style={{ fontSize: 20, fontWeight: 700, color: "#000", margin: 0 }}>{documentTitle}</h1>
-      </div>
+    <div
+      className="invoice-document print-area tax-theme"
+      style={{
+        background: "#fff",
+        color: "#000",
+        fontFamily: "Inter, system-ui, sans-serif",
+        width: "100%",
+        maxWidth: 820,
+        margin: "0 auto",
+        padding: "24px 32px",
+        boxSizing: "border-box",
+      }}
+    >
+      {/* ── TOP SECTION (Kept together) ── */}
+      <div className="invoice-top-section" style={{ breakInside: "avoid", pageBreakInside: "avoid", marginBottom: 12 }}>
+        {/* Title (outside the bordered box) */}
+        <div style={{ textAlign: "center", marginBottom: 10 }}>
+          <h1 style={{ fontSize: 20, fontWeight: 700, color: "#000", margin: 0 }}>{documentTitle}</h1>
+        </div>
 
-      <div style={{ border: `1px solid ${BORDER}` }}>
-        {/* Header: logo left, company info right */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", padding: "10px 12px", borderBottom: `1px solid ${BORDER}` }}>
-          <InvoiceLogo logoUrl={businessProfile?.logo_url} businessName={businessProfile?.business_name} size={64} />
-          <div style={{ textAlign: "right" }}>
-            <div style={{ fontSize: 20, fontWeight: 700 }}>{businessProfile?.business_name || "My Company"}</div>
-            <div style={{ fontSize: 12, marginTop: 2 }}>{businessProfile?.address || "Jhagra peshawar"}</div>
-            <div style={{ fontSize: 12, marginTop: 2 }}>
-              Phone no.: {businessProfile?.phone || ""} Email: {businessProfile?.email || "msoh@gmail.com"}
+        <div style={{ border: `1px solid ${BORDER}` }}>
+          {/* Header: logo left, company info right */}
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", padding: "10px 12px", borderBottom: `1px solid ${BORDER}` }}>
+            <InvoiceLogo logoUrl={businessProfile?.logo_url} businessName={businessProfile?.business_name} size={64} />
+            <div style={{ textAlign: "right" }}>
+              <div style={{ fontSize: 20, fontWeight: 700 }}>{businessProfile?.business_name || "My Company"}</div>
+              <div style={{ fontSize: 12, marginTop: 2 }}>{businessProfile?.address || "Jhagra peshawar"}</div>
+              <div style={{ fontSize: 12, marginTop: 2 }}>
+                Phone no.: {businessProfile?.phone || ""} Email: {businessProfile?.email || "msoh@gmail.com"}
+              </div>
+            </div>
+          </div>
+
+          {/* Bill To / Invoice Details bar, split down the middle */}
+          <div style={{ display: "flex", backgroundColor: ACCENT, WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }}>
+            <div style={{ width: "50%", padding: "3px 10px", fontSize: 12, fontWeight: 700, color: "#fff" }}>Bill To</div>
+            <div style={{ width: "50%", padding: "3px 10px", fontSize: 12, fontWeight: 700, color: "#fff", textAlign: "right" }}>Invoice Details</div>
+          </div>
+          <div style={{ display: "flex" }}>
+            <div style={{ width: "50%", padding: "6px 10px", borderRight: `1px solid ${BORDER}` }}>
+              <div style={{ fontSize: 13, fontWeight: 700 }}>{customerName}</div>
+              <div style={{ fontSize: 12, marginTop: 2 }}>Contact No. : {customerContact || "03129955494"}</div>
+            </div>
+            <div style={{ width: "50%", padding: "6px 10px", textAlign: "right", fontSize: 12 }}>
+              <div>Invoice No. : {invoiceNo}</div>
+              <div>Date : {formatDate(invoiceDate)}</div>
             </div>
           </div>
         </div>
+      </div>
 
-        {/* Bill To / Invoice Details bar, split down the middle */}
-        <div style={{ display: "flex", backgroundColor: ACCENT, WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }}>
-          <div style={{ width: "50%", padding: "3px 10px", fontSize: 12, fontWeight: 700, color: "#fff" }}>Bill To</div>
-          <div style={{ width: "50%", padding: "3px 10px", fontSize: 12, fontWeight: 700, color: "#fff", textAlign: "right" }}>Invoice Details</div>
-        </div>
-        <div style={{ display: "flex", borderBottom: `1px solid ${BORDER}` }}>
-          <div style={{ width: "50%", padding: "6px 10px", borderRight: `1px solid ${BORDER}` }}>
-            <div style={{ fontSize: 13, fontWeight: 700 }}>{customerName}</div>
-            <div style={{ fontSize: 12, marginTop: 2 }}>Contact No. : {customerContact || "03129955494"}</div>
-          </div>
-          <div style={{ width: "50%", padding: "6px 10px", textAlign: "right", fontSize: 12 }}>
-            <div>Invoice No. : {invoiceNo}</div>
-            <div>Date : {formatDate(invoiceDate)}</div>
-          </div>
-        </div>
-
-        {/* Items table */}
-        <table style={{ width: "100%", fontSize: 12, borderCollapse: "collapse" }}>
-          <thead>
-            <tr style={{ backgroundColor: ACCENT, color: "#fff", WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }}>
-              {ps.showSno && <th style={{ padding: "6px 8px", textAlign: "left", fontWeight: 700, border: `1px solid ${BORDER}`, width: 24 }}>#</th>}
-              <th style={{ padding: "6px 8px", textAlign: "left", fontWeight: 700, border: `1px solid ${BORDER}` }}>Item name</th>
-              {ps.showQuantity && <th style={{ padding: "6px 8px", textAlign: "right", fontWeight: 700, border: `1px solid ${BORDER}` }}>Quantity</th>}
-              {ps.showUnit && <th style={{ padding: "6px 8px", textAlign: "right", fontWeight: 700, border: `1px solid ${BORDER}` }}>Unit</th>}
-              {ps.showPricePerUnit && <th style={{ padding: "6px 8px", textAlign: "right", fontWeight: 700, border: `1px solid ${BORDER}` }}>Price/ Unit</th>}
-              <th style={{ padding: "6px 8px", textAlign: "right", fontWeight: 700, border: `1px solid ${BORDER}` }}>Amount</th>
+      {/* ── MIDDLE SECTION (Items table, can expand and paginate across pages) ── */}
+      <table style={{ width: "100%", fontSize: 12, borderCollapse: "collapse", border: `1px solid ${BORDER}`, marginBottom: 0 }}>
+        <thead style={{ display: "table-header-group" }}>
+          <tr style={{ backgroundColor: ACCENT, color: "#fff", WebkitPrintColorAdjust: "exact", printColorAdjust: "exact", breakInside: "avoid", pageBreakInside: "avoid" }}>
+            {ps.showSno && <th style={{ padding: "6px 8px", textAlign: "left", fontWeight: 700, border: `1px solid ${BORDER}`, width: 24 }}>#</th>}
+            <th style={{ padding: "6px 8px", textAlign: "left", fontWeight: 700, border: `1px solid ${BORDER}` }}>Item name</th>
+            {ps.showQuantity && <th style={{ padding: "6px 8px", textAlign: "right", fontWeight: 700, border: `1px solid ${BORDER}` }}>Quantity</th>}
+            {ps.showUnit && <th style={{ padding: "6px 8px", textAlign: "right", fontWeight: 700, border: `1px solid ${BORDER}` }}>Unit</th>}
+            {ps.showPricePerUnit && <th style={{ padding: "6px 8px", textAlign: "right", fontWeight: 700, border: `1px solid ${BORDER}` }}>Price/ Unit</th>}
+            <th style={{ padding: "6px 8px", textAlign: "right", fontWeight: 700, border: `1px solid ${BORDER}` }}>Amount</th>
+          </tr>
+        </thead>
+        <tbody>
+          {records.map((r, idx) => (
+            <tr key={r.id ?? idx} style={{ breakInside: "avoid", pageBreakInside: "avoid" }}>
+              {ps.showSno && <td style={{ padding: "4px 8px", border: `1px solid ${BORDER}` }}>{idx + 1}</td>}
+              <td style={{ padding: "4px 8px", border: `1px solid ${BORDER}`, fontWeight: 700 }}>{r.itemName || r.item_name || ""}</td>
+              {ps.showQuantity && <td style={{ padding: "4px 8px", border: `1px solid ${BORDER}`, textAlign: "right" }}>{r.quantity ?? ""}</td>}
+              {ps.showUnit && <td style={{ padding: "4px 8px", border: `1px solid ${BORDER}`, textAlign: "right" }}>{r.unit || ""}</td>}
+              {ps.showPricePerUnit && <td style={{ padding: "4px 8px", border: `1px solid ${BORDER}`, textAlign: "right", whiteSpace: "nowrap" }}>{currencyStr} {ps.amountWithDecimal ? Number(r.pricePerUnit ?? r.price_per_unit ?? 0).toFixed(2) : Math.round(Number(r.pricePerUnit ?? r.price_per_unit ?? 0)).toString()}</td>}
+              <td style={{ padding: "4px 8px", border: `1px solid ${BORDER}`, textAlign: "right", whiteSpace: "nowrap" }}>{currencyStr} {ps.amountWithDecimal ? Number(r.amount || 0).toFixed(2) : Math.round(Number(r.amount || 0)).toString()}</td>
             </tr>
-          </thead>
-          <tbody>
-            {records.map((r, idx) => (
-              <tr key={r.id ?? idx}>
-                {ps.showSno && <td style={{ padding: "4px 8px", border: `1px solid ${BORDER}` }}>{idx + 1}</td>}
-                <td style={{ padding: "4px 8px", border: `1px solid ${BORDER}`, fontWeight: 700 }}>{r.itemName || r.item_name || ""}</td>
-                {ps.showQuantity && <td style={{ padding: "4px 8px", border: `1px solid ${BORDER}`, textAlign: "right" }}>{r.quantity ?? ""}</td>}
-                {ps.showUnit && <td style={{ padding: "4px 8px", border: `1px solid ${BORDER}`, textAlign: "right" }}>{r.unit || ""}</td>}
-                {ps.showPricePerUnit && <td style={{ padding: "4px 8px", border: `1px solid ${BORDER}`, textAlign: "right", whiteSpace: "nowrap" }}>{currencyStr} {ps.amountWithDecimal ? Number(r.pricePerUnit ?? r.price_per_unit ?? 0).toFixed(2) : Math.round(Number(r.pricePerUnit ?? r.price_per_unit ?? 0)).toString()}</td>}
-                <td style={{ padding: "4px 8px", border: `1px solid ${BORDER}`, textAlign: "right", whiteSpace: "nowrap" }}>{currencyStr} {ps.amountWithDecimal ? Number(r.amount || 0).toFixed(2) : Math.round(Number(r.amount || 0)).toString()}</td>
-              </tr>
-            ))}
-            {fillerRows > 0 && (
-              <tr>
-                <td style={{ border: `1px solid ${BORDER}`, height: fillerRows * 34 }}></td>
-                <td style={{ border: `1px solid ${BORDER}` }}></td>
-                {ps.showQuantity && <td style={{ border: `1px solid ${BORDER}` }}></td>}
-                {ps.showUnit && <td style={{ border: `1px solid ${BORDER}` }}></td>}
-                {ps.showPricePerUnit && <td style={{ border: `1px solid ${BORDER}` }}></td>}
-                <td style={{ border: `1px solid ${BORDER}` }}></td>
-              </tr>
+          ))}
+          {Array.from({ length: fillerRows }).map((_, idx) => (
+            <tr key={`filler-${idx}`} style={{ height: 28, breakInside: "avoid", pageBreakInside: "avoid" }}>
+              {ps.showSno && <td style={{ padding: "4px 8px", border: `1px solid ${BORDER}` }}>&nbsp;</td>}
+              <td style={{ padding: "4px 8px", border: `1px solid ${BORDER}` }}>&nbsp;</td>
+              {ps.showQuantity && <td style={{ padding: "4px 8px", border: `1px solid ${BORDER}` }}>&nbsp;</td>}
+              {ps.showUnit && <td style={{ padding: "4px 8px", border: `1px solid ${BORDER}` }}>&nbsp;</td>}
+              {ps.showPricePerUnit && <td style={{ padding: "4px 8px", border: `1px solid ${BORDER}` }}>&nbsp;</td>}
+              <td style={{ padding: "4px 8px", border: `1px solid ${BORDER}` }}>&nbsp;</td>
+            </tr>
+          ))}
+          <tr style={{ fontWeight: 700, breakInside: "avoid", pageBreakInside: "avoid" }}>
+            <td style={{ padding: "6px 8px", border: `1px solid ${BORDER}` }} colSpan={ps.showSno ? 2 : 1}>Total</td>
+            {ps.showQuantity ? (
+              <td style={{ padding: "6px 8px", border: `1px solid ${BORDER}`, textAlign: "right" }}>{ps.totalItemQuantity ? totalQuantity : ""}</td>
+            ) : (
+              <td style={{ border: `1px solid ${BORDER}` }}></td>
             )}
-            <tr style={{ fontWeight: 700 }}>
-              <td style={{ padding: "6px 8px", border: `1px solid ${BORDER}` }} colSpan={ps.showSno ? 2 : 1}>Total</td>
-              {ps.showQuantity ? (
-                <td style={{ padding: "6px 8px", border: `1px solid ${BORDER}`, textAlign: "right" }}>{ps.totalItemQuantity ? totalQuantity : ""}</td>
-              ) : (
-                <td style={{ border: `1px solid ${BORDER}` }}></td>
-              )}
-              {ps.showUnit && <td style={{ border: `1px solid ${BORDER}` }}></td>}
-              {ps.showPricePerUnit && <td style={{ border: `1px solid ${BORDER}` }}></td>}
-              <td style={{ padding: "6px 8px", border: `1px solid ${BORDER}`, textAlign: "right", whiteSpace: "nowrap" }}>{fmt(total)}</td>
-            </tr>
-          </tbody>
-        </table>
+            {ps.showUnit && <td style={{ border: `1px solid ${BORDER}` }}></td>}
+            {ps.showPricePerUnit && <td style={{ border: `1px solid ${BORDER}` }}></td>}
+            <td style={{ padding: "6px 8px", border: `1px solid ${BORDER}`, textAlign: "right", whiteSpace: "nowrap" }}>{fmt(total)}</td>
+          </tr>
+        </tbody>
+      </table>
 
+      {/* ── BOTTOM SECTION (Payment, Terms, Amounts, Signatory - Kept together as one atomic unit) ── */}
+      <div className="invoice-bottom-section" style={{ border: `1px solid ${BORDER}`, borderTop: "none", breakInside: "avoid", pageBreakInside: "avoid" }}>
         {/* Footer: Invoice Amount In Words / Payment mode / Terms (left) + Amounts (right) */}
         <div style={{ display: "flex", alignItems: "stretch" }}>
           <div style={{ width: "50%", borderRight: `1px solid ${BORDER}`, display: "flex", flexDirection: "column" }}>

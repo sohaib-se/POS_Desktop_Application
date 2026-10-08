@@ -143,48 +143,50 @@ export function Theme4InvoicePrintReport({
 
   const fmt = (n: number) => `${currencyStr} ${ps.amountWithDecimal ? n.toFixed(2) : Math.round(n).toString()}`;
 
-  // Pad the item table with blank rows so short invoices still fill a full page, Tally-style
-  const MIN_ROWS = 10;
+  const MIN_ROWS = 8;
   const fillerRows = Math.max(0, MIN_ROWS - records.length);
 
   return (
-    <div className="print-area bg-white text-black font-sans w-full max-w-[794px] mx-auto px-10 py-6">
-      {/* Business Header */}
-      <div className="flex items-start justify-between mb-2">
-        <div>
-          <h1 className="text-xl font-bold">{businessProfile?.business_name || "My Company"}</h1>
-          <p className="text-xs text-gray-800 mt-0.5">{businessProfile?.address || "Jhagra peshawar"}</p>
-          <p className="text-xs text-gray-800 mt-0.5">Phone no. : {businessProfile?.phone || ""}</p>
-          <p className="text-xs text-gray-800 mt-0.5">Email : {businessProfile?.email || "msoh@gmail.com"}</p>
+    <div className="invoice-document print-area theme4 bg-white text-black font-sans w-full max-w-[820px] mx-auto px-8 py-6 box-border">
+      {/* ── TOP SECTION (Kept together) ── */}
+      <div className="invoice-top-section" style={{ breakInside: "avoid", pageBreakInside: "avoid" }}>
+        {/* Business Header */}
+        <div className="flex items-start justify-between mb-2">
+          <div>
+            <h1 className="text-xl font-bold">{businessProfile?.business_name || "My Company"}</h1>
+            <p className="text-xs text-gray-800 mt-0.5">{businessProfile?.address || "Jhagra peshawar"}</p>
+            <p className="text-xs text-gray-800 mt-0.5">Phone no. : {businessProfile?.phone || ""}</p>
+            <p className="text-xs text-gray-800 mt-0.5">Email : {businessProfile?.email || "msoh@gmail.com"}</p>
+          </div>
+          <InvoiceLogo logoUrl={businessProfile?.logo_url} businessName={businessProfile?.business_name} size={64} />
         </div>
-        <InvoiceLogo logoUrl={businessProfile?.logo_url} businessName={businessProfile?.business_name} size={64} />
-      </div>
 
-      {/* Invoice title */}
-      <div className="border-t-2 border-black pt-2 mb-4">
-        <h2 className="text-center text-lg font-bold" style={{ color: ACCENT }}>{documentTitle}</h2>
-      </div>
+        {/* Invoice title */}
+        <div className="border-t-2 border-black pt-2 mb-4">
+          <h2 className="text-center text-lg font-bold" style={{ color: ACCENT }}>{documentTitle}</h2>
+        </div>
 
-      {/* Bill To / Invoice Details */}
-      <div className="flex justify-between mb-1">
-        <p className="text-sm font-bold">Bill To</p>
-        <p className="text-sm font-bold">Invoice Details</p>
-      </div>
-      <div className="flex justify-between mb-1">
-        <p className="text-sm font-bold">{customerName}</p>
-        <div className="text-right text-sm">
-          <p>Invoice No. : {invoiceNo}</p>
-          <p>Date : {formatDate(invoiceDate)}</p>
+        {/* Bill To / Invoice Details */}
+        <div className="flex justify-between mb-1">
+          <p className="text-sm font-bold">Bill To</p>
+          <p className="text-sm font-bold">Invoice Details</p>
+        </div>
+        <div className="flex justify-between mb-1">
+          <p className="text-sm font-bold">{customerName}</p>
+          <div className="text-right text-sm">
+            <p>Invoice No. : {invoiceNo}</p>
+            <p>Date : {formatDate(invoiceDate)}</p>
+          </div>
+        </div>
+        <div className="flex justify-between mb-4">
+          <p className="text-sm">Contact No. : {customerContact || "03129955494"}</p>
         </div>
       </div>
-      <div className="flex justify-between mb-4">
-        <p className="text-sm">Contact No. : {customerContact || "03129955494"}</p>
-      </div>
 
-      {/* Items table */}
+      {/* ── MIDDLE SECTION (Items table, can expand and paginate across pages) ── */}
       <table className="w-full text-xs mb-0 border-collapse">
-        <thead style={{ backgroundColor: ACCENT, WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>
-          <tr className="text-white text-left">
+        <thead style={{ backgroundColor: ACCENT, WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact', display: 'table-header-group' }}>
+          <tr className="text-white text-left" style={{ breakInside: "avoid", pageBreakInside: "avoid" }}>
             {ps.showSno && <th className="py-1.5 px-2 font-bold w-8">#</th>}
             <th className="py-1.5 px-2 font-bold">Item name</th>
             {ps.showQuantity && <th className="py-1.5 px-2 font-bold text-right">Quantity</th>}
@@ -195,7 +197,7 @@ export function Theme4InvoicePrintReport({
         </thead>
         <tbody>
           {records.map((record, idx) => (
-            <tr key={record.id ?? idx} className="text-xs border-b border-gray-300">
+            <tr key={record.id ?? idx} className="text-xs border-b border-gray-300" style={{ breakInside: "avoid", pageBreakInside: "avoid" }}>
               {ps.showSno && <td className="py-1 px-2">{idx + 1}</td>}
               <td className="py-1 px-2 font-bold">{record.itemName || record.item_name || ""}</td>
               {ps.showQuantity && <td className="py-1 px-2 text-right">{record.quantity ?? ""}</td>}
@@ -210,117 +212,119 @@ export function Theme4InvoicePrintReport({
               </td>
             </tr>
           ))}
-          {fillerRows > 0 && (
-            <tr>
-              <td style={{ height: `${fillerRows * 34}px` }}></td>
-              <td></td>
-              {ps.showQuantity && <td></td>}
-              {ps.showUnit && <td></td>}
-              {ps.showPricePerUnit && <td></td>}
-              <td></td>
+          {Array.from({ length: fillerRows }).map((_, idx) => (
+            <tr key={`filler-${idx}`} className="text-xs border-b border-gray-300" style={{ height: 28, breakInside: "avoid", pageBreakInside: "avoid" }}>
+              {ps.showSno && <td className="py-1 px-2">&nbsp;</td>}
+              <td className="py-1 px-2">&nbsp;</td>
+              {ps.showQuantity && <td className="py-1 px-2 text-right">&nbsp;</td>}
+              {ps.showUnit && <td className="py-1 px-2 text-right">&nbsp;</td>}
+              {ps.showPricePerUnit && <td className="py-1 px-2 text-right">&nbsp;</td>}
+              <td className="py-1 px-2 text-right">&nbsp;</td>
             </tr>
-          )}
+          ))}
         </tbody>
       </table>
 
       {/* Total row */}
-      <div className="flex justify-between items-center border-t border-b border-gray-400 py-1.5 mb-4">
+      <div className="flex justify-between items-center border-t border-b border-gray-400 py-1.5 mb-4" style={{ breakInside: "avoid", pageBreakInside: "avoid" }}>
         <span className="text-sm font-bold pl-2">Total</span>
         {ps.totalItemQuantity && <span className="text-sm font-bold">{totalQuantity}</span>}
         <span className="text-sm font-bold pr-2 whitespace-nowrap">{fmt(total)}</span>
       </div>
 
-      {/* Footer: Amount in words / Payment mode / Terms + Amounts */}
-      <div className="flex gap-4">
-        <div className="flex-[55] pt-1.5">
-          {ps.amountInWords && (
-            <p className="text-xs">
-              <span className="font-bold">Invoice Amount in Words:</span> {numberToWords(total)} {currency.code === 'PKR' ? 'Rupees' : ''} only
-            </p>
-          )}
+      {/* ── BOTTOM SECTION (Payment, Terms, Amounts, Signatory - Kept together as one atomic unit) ── */}
+      <div className="invoice-bottom-section mt-4" style={{ breakInside: "avoid", pageBreakInside: "avoid" }}>
+        <div className="flex gap-4">
+          <div className="flex-[55] pt-1.5">
+            {ps.amountInWords && (
+              <p className="text-xs">
+                <span className="font-bold">Invoice Amount in Words:</span> {numberToWords(total)} {currency.code === 'PKR' ? 'Rupees' : ''} only
+              </p>
+            )}
 
-          {ps.printDescription && (
-            <p className="text-xs mt-2">
-              <span className="font-bold">Description:</span> {description || "No description provided."}
-            </p>
-          )}
+            {ps.printDescription && (
+              <p className="text-xs mt-2">
+                <span className="font-bold">Description:</span> {description || "No description provided."}
+              </p>
+            )}
 
-          {ps.paymentMode && (
-            <p className="text-xs mt-2">
-              <span className="font-bold">Payment mode:</span> {paymentMode || "Credit"}
-            </p>
-          )}
+            {ps.paymentMode && (
+              <p className="text-xs mt-2">
+                <span className="font-bold">Payment mode:</span> {paymentMode || "Credit"}
+              </p>
+            )}
 
-          {ps.printTermsAndConditions && (
-            <p className="text-xs mt-2">
-              <span className="font-bold">Terms &amp; Conditions:</span> <span className="whitespace-pre-wrap">{businessProfile?.terms_conditions}</span>
-            </p>
-          )}
-        </div>
-        <div className="flex-[45] border-t border-gray-400">
-          <div className="flex justify-between text-xs px-0 py-1 border-b border-gray-300">
-            <span>Sub Total</span>
-            <span className="whitespace-nowrap">{fmt(subTotal)}</span>
+            {ps.printTermsAndConditions && (
+              <p className="text-xs mt-2">
+                <span className="font-bold">Terms &amp; Conditions:</span> <span className="whitespace-pre-wrap">{businessProfile?.terms_conditions}</span>
+              </p>
+            )}
           </div>
-          {ps.discount && discountAmount > 0 && (
-            <div className="flex justify-between text-xs px-0 py-1 border-b border-gray-300 text-green-700">
-              <span>Discount {discountPercent > 0 ? `(${discountPercent}%)` : ""}</span>
-              <span className="whitespace-nowrap">- {fmt(discountAmount)}</span>
-            </div>
-          )}
-          {ps.taxDetails && taxAmount > 0 && (
+          <div className="flex-[45] border-t border-gray-400">
             <div className="flex justify-between text-xs px-0 py-1 border-b border-gray-300">
-              <span>Tax ({taxPercent}%)</span>
-              <span className="whitespace-nowrap">{fmt(taxAmount)}</span>
+              <span>Sub Total</span>
+              <span className="whitespace-nowrap">{fmt(subTotal)}</span>
             </div>
-          )}
-          {ps.youSaved && discountAmount > 0 && (
-            <div className="flex justify-between text-xs px-0 py-1 border-b border-gray-300 text-green-700 font-semibold">
-              <span>You Saved</span>
-              <span className="whitespace-nowrap">{fmt(discountAmount)}</span>
+            {ps.discount && discountAmount > 0 && (
+              <div className="flex justify-between text-xs px-0 py-1 border-b border-gray-300 text-green-700">
+                <span>Discount {discountPercent > 0 ? `(${discountPercent}%)` : ""}</span>
+                <span className="whitespace-nowrap">- {fmt(discountAmount)}</span>
+              </div>
+            )}
+            {ps.taxDetails && taxAmount > 0 && (
+              <div className="flex justify-between text-xs px-0 py-1 border-b border-gray-300">
+                <span>Tax ({taxPercent}%)</span>
+                <span className="whitespace-nowrap">{fmt(taxAmount)}</span>
+              </div>
+            )}
+            {ps.youSaved && discountAmount > 0 && (
+              <div className="flex justify-between text-xs px-0 py-1 border-b border-gray-300 text-green-700 font-semibold">
+                <span>You Saved</span>
+                <span className="whitespace-nowrap">{fmt(discountAmount)}</span>
+              </div>
+            )}
+            <div className="flex justify-between text-xs px-0 py-1 border-b border-gray-300 font-bold">
+              <span>Total</span>
+              <span className="whitespace-nowrap">{fmt(total)}</span>
             </div>
-          )}
-          <div className="flex justify-between text-xs px-0 py-1 border-b border-gray-300 font-bold">
-            <span>Total</span>
-            <span className="whitespace-nowrap">{fmt(total)}</span>
+            {ps.receivedAmount && documentTitle !== "Estimate" && (
+              <div className="flex justify-between text-xs px-0 py-1 border-b border-gray-300">
+                <span>Received</span>
+                <span className="whitespace-nowrap">{fmt(Number(received || 0))}</span>
+              </div>
+            )}
+            {ps.balanceAmount && documentTitle !== "Estimate" && (
+              <div className="flex justify-between text-xs px-0 py-1 border-b border-gray-300">
+                <span>Balance</span>
+                <span className="whitespace-nowrap">{fmt(balance)}</span>
+              </div>
+            )}
+            {ps.previousBalance && documentTitle !== "Estimate" && (
+              <div className="flex justify-between text-xs px-0 py-1 mt-2">
+                <span>Previous Balance</span>
+                <span className="whitespace-nowrap">{fmt(prevBalance)}</span>
+              </div>
+            )}
+            {ps.currentBalanceOfParty && documentTitle !== "Estimate" && (
+              <div className="flex justify-between text-xs px-0 py-1 font-bold">
+                <span>Current Balance</span>
+                <span className="whitespace-nowrap">{fmt(currentBalance)}</span>
+              </div>
+            )}
           </div>
-          {ps.receivedAmount && documentTitle !== "Estimate" && (
-            <div className="flex justify-between text-xs px-0 py-1 border-b border-gray-300">
-              <span>Received</span>
-              <span className="whitespace-nowrap">{fmt(Number(received || 0))}</span>
-            </div>
-          )}
-          {ps.balanceAmount && documentTitle !== "Estimate" && (
-            <div className="flex justify-between text-xs px-0 py-1 border-b border-gray-300">
-              <span>Balance</span>
-              <span className="whitespace-nowrap">{fmt(balance)}</span>
-            </div>
-          )}
-          {ps.previousBalance && documentTitle !== "Estimate" && (
-            <div className="flex justify-between text-xs px-0 py-1 mt-2">
-              <span>Previous Balance</span>
-              <span className="whitespace-nowrap">{fmt(prevBalance)}</span>
-            </div>
-          )}
-          {ps.currentBalanceOfParty && documentTitle !== "Estimate" && (
-            <div className="flex justify-between text-xs px-0 py-1 font-bold">
-              <span>Current Balance</span>
-              <span className="whitespace-nowrap">{fmt(currentBalance)}</span>
-            </div>
-          )}
         </div>
-      </div>
 
-      {/* Signatory */}
-      <div className="flex justify-end mt-10">
-        <div className="text-center">
-          <p className="text-sm">For : {businessProfile?.business_name || "My Company"}</p>
-          {businessProfile?.signature && (
-            <img src={businessProfile.signature} alt="Signature" style={{ maxHeight: 60, objectFit: "contain", margin: "10px auto" }} />
-          )}
-          <p className={`text-sm font-bold ${businessProfile?.signature ? 'mt-2' : 'mt-16'}`}>
-            {ps.printSignatureText || "Authorized Signatory"}
-          </p>
+        {/* Signatory */}
+        <div className="flex justify-end mt-8" style={{ breakInside: "avoid", pageBreakInside: "avoid" }}>
+          <div className="text-center">
+            <p className="text-sm">For : {businessProfile?.business_name || "My Company"}</p>
+            {businessProfile?.signature && (
+              <img src={businessProfile.signature} alt="Signature" style={{ maxHeight: 60, objectFit: "contain", margin: "10px auto" }} />
+            )}
+            <p className={`text-sm font-bold ${businessProfile?.signature ? 'mt-2' : 'mt-16'}`}>
+              {ps.printSignatureText || "Authorized Signatory"}
+            </p>
+          </div>
         </div>
       </div>
     </div>

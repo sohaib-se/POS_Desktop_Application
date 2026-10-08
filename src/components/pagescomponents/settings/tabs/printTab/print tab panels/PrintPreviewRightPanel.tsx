@@ -4,6 +4,8 @@ import html2pdf from "html2pdf.js";
 
 
 
+import type { PrinterType } from "./LeftPanel";
+
 /* ───────────────────────── Helpers ──────────────────────────────────── */
 
 /** Renders the invoice preview element to a PDF Blob using html2pdf.js. */
@@ -19,14 +21,24 @@ async function generateInvoicePdfBlob(filename: string): Promise<Blob | null> {
   clone.style.position = "fixed";
   clone.style.left = "-9999px";
   clone.style.top = "0";
-  clone.style.width = element.scrollWidth + "px";
+  clone.style.width = "794px";
   clone.style.background = "#fff";
+
+  const innerDocs = clone.querySelectorAll<HTMLElement>(".invoice-document, .print-area");
+  innerDocs.forEach(d => {
+    d.style.width = "100%";
+    d.style.maxWidth = "100%";
+    d.style.margin = "0";
+    d.style.padding = "24px 32px";
+    d.style.boxSizing = "border-box";
+  });
+
   document.body.appendChild(clone);
 
   try {
-    const blob: Blob = await html2pdf()
+    const blob: Blob = await (html2pdf as any)()
       .set({
-        margin: 0,
+        margin: [10, 10, 10, 10],
         filename,
         image: { type: "jpeg", quality: 0.98 },
         html2canvas: {
@@ -40,6 +52,7 @@ async function generateInvoicePdfBlob(filename: string): Promise<Blob | null> {
           format: "a4",
           orientation: "portrait",
         },
+        pagebreak: { mode: ["css", "legacy"] },
       })
       .from(clone)
       .outputPdf("blob");
@@ -57,6 +70,7 @@ export interface PrintPreviewRightPanelProps {
   /** Invoice number shown in the filename */
   invoiceNo?: string | number;
   autoPrint?: boolean;
+  activePrinter?: PrinterType;
 }
 
 /* ───────────────────────── Component ───────────────────────────────── */
@@ -66,6 +80,7 @@ export function PrintPreviewRightPanel({
   onPrint,
   invoiceNo,
   autoPrint,
+  activePrinter = "regular",
 }: PrintPreviewRightPanelProps) {
   const [isPdfBusy, setIsPdfBusy] = useState(false);
   const [pdfStatus, setPdfStatus] = useState<"idle" | "generating" | "ready">("idle");
@@ -105,8 +120,6 @@ export function PrintPreviewRightPanel({
     }
   };
 
-
-
   const handlePrint = () => {
     if (onPrint) {
       onPrint();
@@ -119,6 +132,8 @@ export function PrintPreviewRightPanel({
       return;
     }
 
+    const isThermal = activePrinter === "thermal";
+
     // Clone the invoice content into a dedicated print container
     const printContainer = document.createElement("div");
     printContainer.id = "__invoice_print_only__";
@@ -127,31 +142,114 @@ export function PrintPreviewRightPanel({
     clone.style.zoom = "1";
     clone.style.transform = "none";
     clone.style.transformOrigin = "unset";
-    clone.style.width = "900px";
+    clone.style.width = isThermal ? "80mm" : "100%";
+    clone.style.maxWidth = isThermal ? "80mm" : "100%";
+    clone.style.margin = isThermal ? "0 auto" : "0";
+    clone.style.padding = "0";
+
+    // Also strip fixed max-width and margins from inner root documents
+    if (clone.matches(".invoice-document, .print-area")) {
+      if (!isThermal) {
+        clone.style.width = "100%";
+        clone.style.maxWidth = "100%";
+        clone.style.margin = "0";
+        clone.style.padding = "0";
+        clone.style.boxSizing = "border-box";
+      }
+    }
+    const innerDocuments = clone.querySelectorAll<HTMLElement>(".invoice-document, .print-area");
+    innerDocuments.forEach((doc) => {
+      if (!isThermal) {
+        doc.style.width = "100%";
+        doc.style.maxWidth = "100%";
+        doc.style.margin = "0";
+        doc.style.padding = "0";
+        doc.style.boxSizing = "border-box";
+      }
+    });
+
     printContainer.appendChild(clone);
     document.body.appendChild(printContainer);
 
     // Inject a <style> that hides every direct body child EXCEPT our container
-    // Using display:none (not just visibility:hidden) removes them from layout,
-    // so the browser page count is based solely on the invoice content.
     const styleEl = document.createElement("style");
     styleEl.id = "__invoice_print_style__";
     styleEl.textContent = `
       @media print {
-        @page { size: auto; margin: 10mm; }
-        body > *:not(#__invoice_print_only__) { display: none !important; }
+        @page {
+          size: auto;
+          margin: ${isThermal ? "2mm" : "10mm"};
+        }
+        html, body {
+          width: 100% !important;
+          height: auto !important;
+          min-height: 0 !important;
+          margin: 0 !important;
+          padding: 0 !important;
+          background: #fff !important;
+          overflow: visible !important;
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+        }
+        body > *:not(#__invoice_print_only__) {
+          display: none !important;
+        }
         #__invoice_print_only__ {
           display: block !important;
           visibility: visible !important;
           position: static !important;
-          margin: 0 !important;
+          margin: ${isThermal ? "0 auto" : "0"} !important;
           padding: 0 !important;
           background: #fff !important;
-          width: 900px !important;
+          width: ${isThermal ? "80mm" : "100%"} !important;
+          max-width: ${isThermal ? "80mm" : "100%"} !important;
           box-sizing: border-box !important;
+          overflow: visible !important;
         }
         #__invoice_print_only__ * {
           visibility: visible !important;
+          box-sizing: border-box !important;
+        }
+        #__invoice_print_only__ .invoice-document,
+        #__invoice_print_only__ .print-area {
+          width: 100% !important;
+          max-width: 100% !important;
+          margin: 0 !important;
+          padding: 0 !important;
+          box-shadow: none !important;
+          border-radius: 0 !important;
+        }
+        /* Table pagination rules */
+        #__invoice_print_only__ table {
+          width: 100% !important;
+          border-collapse: collapse !important;
+        }
+        #__invoice_print_only__ thead {
+          display: table-header-group !important;
+          break-inside: avoid !important;
+          page-break-inside: avoid !important;
+        }
+        #__invoice_print_only__ tr {
+          break-inside: avoid !important;
+          page-break-inside: avoid !important;
+        }
+        #__invoice_print_only__ tbody tr {
+          page-break-inside: avoid !important;
+          break-inside: avoid !important;
+        }
+        /* Keep header and bottom sections intact */
+        #__invoice_print_only__ .invoice-top-section {
+          break-inside: avoid !important;
+          page-break-inside: avoid !important;
+        }
+        #__invoice_print_only__ .invoice-bottom-section {
+          break-inside: avoid !important;
+          page-break-inside: avoid !important;
+          display: block !important;
+        }
+        #__invoice_print_only__ .invoice-bottom-section * {
+          break-inside: avoid !important;
+          page-break-inside: avoid !important;
         }
       }
     `;

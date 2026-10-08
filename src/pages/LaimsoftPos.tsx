@@ -8,7 +8,6 @@ import { ActionButtons } from "../components/pagescomponents/laimsoftpos/ActionB
 import { RightPanel } from "../components/pagescomponents/laimsoftpos/RightPanel";
 import { Modals } from "../components/pagescomponents/laimsoftpos/Modals";
 import { ConfirmActionModal } from "@/components/common/ConfirmActionModal";
-import { useSettings } from "@/hooks/useSettings";
 import { AddPartyDialog } from "../components/pagescomponents/parties/AddPartyDialog";
 import {
   type SalePrintData,
@@ -297,7 +296,23 @@ export function LaimsoftPos({ onClose, initialInvoice }: LaimsoftPosProps) {
       clone.style.zoom = "1";
       clone.style.transform = "none";
       clone.style.transformOrigin = "unset";
-      clone.style.width = isThermal ? "380px" : "900px";
+      clone.style.width = isThermal ? "80mm" : "100%";
+      clone.style.maxWidth = isThermal ? "80mm" : "100%";
+      clone.style.margin = isThermal ? "0 auto" : "0";
+      clone.style.padding = "0";
+
+      // Also strip fixed max-width and margins from inner root documents
+      const innerDocs = clone.querySelectorAll<HTMLElement>(".invoice-document, .print-area, .pos-print-content");
+      innerDocs.forEach((doc) => {
+        if (!isThermal) {
+          doc.style.width = "100%";
+          doc.style.maxWidth = "100%";
+          doc.style.margin = "0";
+          doc.style.padding = "0";
+          doc.style.boxSizing = "border-box";
+        }
+      });
+
       printContainer.appendChild(clone);
       document.body.appendChild(printContainer);
 
@@ -309,6 +324,17 @@ export function LaimsoftPos({ onClose, initialInvoice }: LaimsoftPosProps) {
             size: auto;
             margin: ${isThermal ? "2mm" : "10mm"};
           }
+          html, body {
+            width: 100% !important;
+            height: auto !important;
+            min-height: 0 !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            background: #fff !important;
+            overflow: visible !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
           body > *:not(#__pos_invoice_print_only__) {
             display: none !important;
           }
@@ -316,14 +342,52 @@ export function LaimsoftPos({ onClose, initialInvoice }: LaimsoftPosProps) {
             display: block !important;
             visibility: visible !important;
             position: static !important;
-            margin: 0 auto !important;
+            margin: ${isThermal ? "0 auto" : "0"} !important;
             padding: 0 !important;
             background: #fff !important;
-            width: ${isThermal ? "380px" : "900px"} !important;
+            width: ${isThermal ? "80mm" : "100%"} !important;
+            max-width: ${isThermal ? "80mm" : "100%"} !important;
             box-sizing: border-box !important;
+            overflow: visible !important;
           }
           #__pos_invoice_print_only__ * {
             visibility: visible !important;
+            box-sizing: border-box !important;
+          }
+          #__pos_invoice_print_only__ .invoice-document,
+          #__pos_invoice_print_only__ .print-area,
+          #__pos_invoice_print_only__ .pos-print-content {
+            width: 100% !important;
+            max-width: 100% !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            box-shadow: none !important;
+            border-radius: 0 !important;
+          }
+          #__pos_invoice_print_only__ table {
+            width: 100% !important;
+            border-collapse: collapse !important;
+          }
+          #__pos_invoice_print_only__ thead {
+            display: table-header-group !important;
+            break-inside: avoid !important;
+            page-break-inside: avoid !important;
+          }
+          #__pos_invoice_print_only__ tr {
+            break-inside: avoid !important;
+            page-break-inside: avoid !important;
+          }
+          #__pos_invoice_print_only__ tbody tr {
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+          }
+          #__pos_invoice_print_only__ .invoice-top-section {
+            break-inside: avoid !important;
+            page-break-inside: avoid !important;
+          }
+          #__pos_invoice_print_only__ .invoice-bottom-section {
+            break-inside: avoid !important;
+            page-break-inside: avoid !important;
           }
         }
       `;

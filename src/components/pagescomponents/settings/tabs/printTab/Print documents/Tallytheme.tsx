@@ -145,49 +145,64 @@ export function SaleInvoicePrintReport({
 
   const fmt = (n: number) => `${currencyStr} ${ps.amountWithDecimal ? n.toFixed(2) : Math.round(n).toString()}`;
 
-  const MIN_ROWS = 16;
+  const MIN_ROWS = 8;
   const fillerRows = Math.max(0, MIN_ROWS - records.length);
 
   return (
-    <div style={{ background: "#fff", color: "#000", fontFamily: "Inter, system-ui, sans-serif", width: "100%", maxWidth: 794, margin: "0 auto", padding: "24px 40px", boxSizing: "border-box" }}>
-      {/* Title */}
-      <div style={{ textAlign: "center", marginBottom: 16 }}>
-        <h1 style={{ fontSize: 28, fontWeight: 700, color: HEADER_COLOR, margin: 0 }}>{documentTitle}</h1>
-      </div>
+    <div
+      className="invoice-document print-area tally-theme"
+      style={{
+        background: "#fff",
+        color: "#000",
+        fontFamily: "Inter, system-ui, sans-serif",
+        width: "100%",
+        maxWidth: 820,
+        margin: "0 auto",
+        padding: "24px 32px",
+        boxSizing: "border-box",
+      }}
+    >
+      {/* ── TOP SECTION (Kept together) ── */}
+      <div className="invoice-top-section" style={{ breakInside: "avoid", pageBreakInside: "avoid" }}>
+        {/* Title */}
+        <div style={{ textAlign: "center", marginBottom: 16 }}>
+          <h1 style={{ fontSize: 28, fontWeight: 700, color: HEADER_COLOR, margin: 0 }}>{documentTitle}</h1>
+        </div>
 
-      {/* Company / Bill To / Invoice Details */}
-      <div style={{ border: "1px solid #1a1a1a", marginBottom: 16 }}>
-        <div style={{ padding: "8px 12px", display: "flex", alignItems: "center", gap: 14 }}>
-          <InvoiceLogo logoUrl={businessProfile?.logo_url} businessName={businessProfile?.business_name} size={72} />
-          <div>
-            <div style={{ fontSize: 20, fontWeight: 700, color: HEADER_COLOR }}>{businessProfile?.business_name || "My Company"}</div>
-            <div style={{ fontSize: 11, color: HEADER_COLOR, marginTop: 2 }}>{businessProfile?.address || "Jhagra peshawar"}</div>
-            <div style={{ fontSize: 11, color: HEADER_COLOR, marginTop: 2 }}>
-              Phone: <strong>{businessProfile?.phone || ""}</strong>
-              <span style={{ marginLeft: 16 }}>Email: <strong>{businessProfile?.email || "msoh@gmail.com"}</strong></span>
+        {/* Company / Bill To / Invoice Details */}
+        <div style={{ border: "1px solid #1a1a1a", marginBottom: 16 }}>
+          <div style={{ padding: "8px 12px", display: "flex", alignItems: "center", gap: 14 }}>
+            <InvoiceLogo logoUrl={businessProfile?.logo_url} businessName={businessProfile?.business_name} size={72} />
+            <div>
+              <div style={{ fontSize: 20, fontWeight: 700, color: HEADER_COLOR }}>{businessProfile?.business_name || "My Company"}</div>
+              <div style={{ fontSize: 11, color: HEADER_COLOR, marginTop: 2 }}>{businessProfile?.address || "Jhagra peshawar"}</div>
+              <div style={{ fontSize: 11, color: HEADER_COLOR, marginTop: 2 }}>
+                Phone: <strong>{businessProfile?.phone || ""}</strong>
+                <span style={{ marginLeft: 16 }}>Email: <strong>{businessProfile?.email || "msoh@gmail.com"}</strong></span>
+              </div>
+            </div>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", borderTop: "1px solid #1a1a1a" }}>
+            <div style={{ borderRight: "1px solid #1a1a1a" }}>
+              <div style={{ padding: "4px 12px", fontSize: 11, fontWeight: 700, borderBottom: "1px solid #1a1a1a", backgroundColor: "#F2F2F2", color: HEADER_COLOR }}>Bill To:</div>
+              <div style={{ padding: "8px 12px", fontSize: 13, fontWeight: 700 }}>{customerName}</div>
+              <div style={{ padding: "0 12px 8px 12px", fontSize: 11 }}>Contact No: <strong>{customerContact || "03129955494"}</strong></div>
+            </div>
+            <div>
+              <div style={{ padding: "4px 12px", fontSize: 11, fontWeight: 700, borderBottom: "1px solid #1a1a1a", backgroundColor: "#F2F2F2", color: HEADER_COLOR }}>Invoice Details:</div>
+              <div style={{ padding: "8px 12px", fontSize: 11, color: HEADER_COLOR, lineHeight: 1.6 }}>
+                <div>Invoice No.: <strong>{invoiceNo}</strong></div>
+                <div>Date: <strong>{formatDate(invoiceDate)}</strong></div>
+              </div>
             </div>
           </div>
         </div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", borderTop: "1px solid #1a1a1a" }}>
-          <div style={{ borderRight: "1px solid #1a1a1a" }}>
-            <div style={{ padding: "4px 12px", fontSize: 11, fontWeight: 700, borderBottom: "1px solid #1a1a1a", backgroundColor: "#F2F2F2", color: HEADER_COLOR }}>Bill To:</div>
-            <div style={{ padding: "8px 12px", fontSize: 13, fontWeight: 700 }}>{customerName}</div>
-            <div style={{ padding: "0 12px 8px 12px", fontSize: 11 }}>Contact No: <strong>{customerContact || "03129955494"}</strong></div>
-          </div>
-          <div>
-            <div style={{ padding: "4px 12px", fontSize: 11, fontWeight: 700, borderBottom: "1px solid #1a1a1a", backgroundColor: "#F2F2F2", color: HEADER_COLOR }}>Invoice Details:</div>
-            <div style={{ padding: "8px 12px", fontSize: 11, color: HEADER_COLOR, lineHeight: 1.6 }}>
-              <div>Invoice No.: <strong>{invoiceNo}</strong></div>
-              <div>Date: <strong>{formatDate(invoiceDate)}</strong></div>
-            </div>
-          </div>
-        </div>
       </div>
 
-      {/* Items table */}
+      {/* ── MIDDLE SECTION (Items table, can expand and paginate across pages) ── */}
       <table style={{ width: "100%", fontSize: 12, borderCollapse: "collapse", border: "1px solid #1a1a1a" }}>
-        <thead>
-          <tr style={{ backgroundColor: "#D3D3D3", color: HEADER_COLOR }}>
+        <thead style={{ display: "table-header-group" }}>
+          <tr style={{ backgroundColor: "#D3D3D3", color: HEADER_COLOR, breakInside: "avoid", pageBreakInside: "avoid" }}>
             {ps.showSno && <th style={{ padding: "6px 8px", textAlign: "left", fontWeight: 700, border: "1px solid #1a1a1a", width: 24 }}>#</th>}
             <th style={{ padding: "6px 8px", textAlign: "left", fontWeight: 700, border: "1px solid #1a1a1a" }}>Item name</th>
             {ps.showQuantity && <th style={{ padding: "6px 8px", textAlign: "right", fontWeight: 700, border: "1px solid #1a1a1a" }}>Quantity</th>}
@@ -198,7 +213,7 @@ export function SaleInvoicePrintReport({
         </thead>
         <tbody>
           {records.map((r, idx) => (
-            <tr key={r.id ?? idx}>
+            <tr key={r.id ?? idx} style={{ breakInside: "avoid", pageBreakInside: "avoid" }}>
               {ps.showSno && <td style={{ padding: "4px 8px", border: "1px solid #1a1a1a" }}>{idx + 1}</td>}
               <td style={{ padding: "4px 8px", border: "1px solid #1a1a1a", fontWeight: 700 }}>{r.itemName || r.item_name || ""}</td>
               {ps.showQuantity && <td style={{ padding: "4px 8px", border: "1px solid #1a1a1a", textAlign: "right" }}>{r.quantity ?? ""}</td>}
@@ -207,17 +222,17 @@ export function SaleInvoicePrintReport({
               <td style={{ padding: "4px 8px", border: "1px solid #1a1a1a", textAlign: "right", whiteSpace: "nowrap" }}>{currencyStr} {ps.amountWithDecimal ? Number(r.amount || 0).toFixed(2) : Math.round(Number(r.amount || 0)).toString()}</td>
             </tr>
           ))}
-          {fillerRows > 0 && (
-            <tr>
-              <td style={{ border: "1px solid #1a1a1a", height: fillerRows * 34 }}></td>
-              <td style={{ border: "1px solid #1a1a1a" }}></td>
-              {ps.showQuantity && <td style={{ border: "1px solid #1a1a1a" }}></td>}
-              {ps.showUnit && <td style={{ border: "1px solid #1a1a1a" }}></td>}
-              {ps.showPricePerUnit && <td style={{ border: "1px solid #1a1a1a" }}></td>}
-              <td style={{ border: "1px solid #1a1a1a" }}></td>
+          {Array.from({ length: fillerRows }).map((_, idx) => (
+            <tr key={`filler-${idx}`} style={{ height: 28, breakInside: "avoid", pageBreakInside: "avoid" }}>
+              {ps.showSno && <td style={{ padding: "4px 8px", border: "1px solid #1a1a1a" }}>&nbsp;</td>}
+              <td style={{ padding: "4px 8px", border: "1px solid #1a1a1a" }}>&nbsp;</td>
+              {ps.showQuantity && <td style={{ padding: "4px 8px", border: "1px solid #1a1a1a" }}>&nbsp;</td>}
+              {ps.showUnit && <td style={{ padding: "4px 8px", border: "1px solid #1a1a1a" }}>&nbsp;</td>}
+              {ps.showPricePerUnit && <td style={{ padding: "4px 8px", border: "1px solid #1a1a1a" }}>&nbsp;</td>}
+              <td style={{ padding: "4px 8px", border: "1px solid #1a1a1a" }}>&nbsp;</td>
             </tr>
-          )}
-          <tr style={{ fontWeight: 700 }}>
+          ))}
+          <tr style={{ fontWeight: 700, breakInside: "avoid", pageBreakInside: "avoid" }}>
             <td style={{ padding: "6px 8px", border: "1px solid #1a1a1a" }} colSpan={ps.showSno ? 2 : 1}>Total</td>
             {ps.showQuantity ? (
               <td style={{ padding: "6px 8px", border: "1px solid #1a1a1a", textAlign: "right" }}>{ps.totalItemQuantity ? totalQuantity : ""}</td>
@@ -231,102 +246,105 @@ export function SaleInvoicePrintReport({
         </tbody>
       </table>
 
-      {/* Payment Mode / Terms  +  Totals block */}
-      <div style={{ border: "1px solid #1a1a1a", borderTop: "none", marginBottom: 16 }}>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr" }}>
-          <div style={{ borderRight: "1px solid #1a1a1a" }}>
-            {ps.paymentMode && (
-              <>
-                <div style={{ padding: "4px 12px", fontSize: 11, fontWeight: 700, borderBottom: "1px solid #1a1a1a", backgroundColor: "#F2F2F2", color: HEADER_COLOR }}>
-                  Payment Mode:
-                </div>
-                <div style={{ padding: "6px 12px", fontSize: 11, borderBottom: "1px solid #e5e5e5" }}>
-                  {paymentMode || "Credit"}
-                </div>
-              </>
-            )}
-            {ps.printTermsAndConditions && (
-              <>
-                <div style={{ padding: "4px 12px", fontSize: 11, fontWeight: 700, borderBottom: "1px solid #1a1a1a", backgroundColor: "#F2F2F2", color: HEADER_COLOR }}>
-                  Terms &amp; Conditions:
-                </div>
-                <div style={{ padding: "6px 12px", fontSize: 11, whiteSpace: "pre-wrap" }}>
-                  {businessProfile?.terms_conditions}
-                </div>
-              </>
-            )}
-          </div>
-          <div>
-            <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 12px", fontSize: 11, borderBottom: "1px solid #e5e5e5" }}>
-              <span>Sub Total</span><span>:</span><span style={{ whiteSpace: "nowrap" }}>{fmt(subTotal)}</span>
+      {/* ── BOTTOM SECTION (Payment, Terms, Amounts, Signatory - Kept together as one atomic unit) ── */}
+      <div className="invoice-bottom-section" style={{ breakInside: "avoid", pageBreakInside: "avoid" }}>
+        {/* Payment Mode / Terms  +  Totals block */}
+        <div style={{ border: "1px solid #1a1a1a", borderTop: "none", marginBottom: 16 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr" }}>
+            <div style={{ borderRight: "1px solid #1a1a1a" }}>
+              {ps.paymentMode && (
+                <>
+                  <div style={{ padding: "4px 12px", fontSize: 11, fontWeight: 700, borderBottom: "1px solid #1a1a1a", backgroundColor: "#F2F2F2", color: HEADER_COLOR }}>
+                    Payment Mode:
+                  </div>
+                  <div style={{ padding: "6px 12px", fontSize: 11, borderBottom: "1px solid #e5e5e5" }}>
+                    {paymentMode || "Credit"}
+                  </div>
+                </>
+              )}
+              {ps.printTermsAndConditions && (
+                <>
+                  <div style={{ padding: "4px 12px", fontSize: 11, fontWeight: 700, borderBottom: "1px solid #1a1a1a", backgroundColor: "#F2F2F2", color: HEADER_COLOR }}>
+                    Terms &amp; Conditions:
+                  </div>
+                  <div style={{ padding: "6px 12px", fontSize: 11, whiteSpace: "pre-wrap" }}>
+                    {businessProfile?.terms_conditions}
+                  </div>
+                </>
+              )}
             </div>
-            {ps.discount && discountAmount > 0 && (
-              <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 12px", fontSize: 11, borderBottom: "1px solid #e5e5e5", color: "green" }}>
-                <span>Discount {discountPercent > 0 ? `(${discountPercent}%)` : ""}</span><span>:</span><span style={{ whiteSpace: "nowrap" }}>- {fmt(discountAmount)}</span>
-              </div>
-            )}
-            {ps.taxDetails && taxAmount > 0 && (
+            <div>
               <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 12px", fontSize: 11, borderBottom: "1px solid #e5e5e5" }}>
-                <span>Tax ({taxPercent}%)</span><span>:</span><span style={{ whiteSpace: "nowrap" }}>{fmt(taxAmount)}</span>
+                <span>Sub Total</span><span>:</span><span style={{ whiteSpace: "nowrap" }}>{fmt(subTotal)}</span>
               </div>
-            )}
-            {ps.youSaved && discountAmount > 0 && (
-              <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 12px", fontSize: 11, borderBottom: "1px solid #e5e5e5", color: "green", fontWeight: 700 }}>
-                <span>You Saved</span><span>:</span><span style={{ whiteSpace: "nowrap" }}>{fmt(discountAmount)}</span>
+              {ps.discount && discountAmount > 0 && (
+                <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 12px", fontSize: 11, borderBottom: "1px solid #e5e5e5", color: "green" }}>
+                  <span>Discount {discountPercent > 0 ? `(${discountPercent}%)` : ""}</span><span>:</span><span style={{ whiteSpace: "nowrap" }}>- {fmt(discountAmount)}</span>
+                </div>
+              )}
+              {ps.taxDetails && taxAmount > 0 && (
+                <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 12px", fontSize: 11, borderBottom: "1px solid #e5e5e5" }}>
+                  <span>Tax ({taxPercent}%)</span><span>:</span><span style={{ whiteSpace: "nowrap" }}>{fmt(taxAmount)}</span>
+                </div>
+              )}
+              {ps.youSaved && discountAmount > 0 && (
+                <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 12px", fontSize: 11, borderBottom: "1px solid #e5e5e5", color: "green", fontWeight: 700 }}>
+                  <span>You Saved</span><span>:</span><span style={{ whiteSpace: "nowrap" }}>{fmt(discountAmount)}</span>
+                </div>
+              )}
+              <div style={{ display: "flex", justifyContent: "space-between", padding: "6px 12px", fontSize: 13, fontWeight: 700, borderBottom: "1px solid #1a1a1a" }}>
+                <span>Total</span><span>:</span><span style={{ whiteSpace: "nowrap" }}>{fmt(total)}</span>
               </div>
-            )}
-            <div style={{ display: "flex", justifyContent: "space-between", padding: "6px 12px", fontSize: 13, fontWeight: 700, borderBottom: "1px solid #1a1a1a" }}>
-              <span>Total</span><span>:</span><span style={{ whiteSpace: "nowrap" }}>{fmt(total)}</span>
+              {ps.amountInWords && (
+                <div style={{ borderBottom: "1px solid #e5e5e5" }}>
+                  <div style={{ padding: "4px 12px", fontSize: 11, fontWeight: 700, backgroundColor: "#F2F2F2", color: HEADER_COLOR }}>Invoice Amount in Words:</div>
+                  <div style={{ padding: "6px 12px", fontSize: 11 }}>{numberToWords(total)} {currency.code === "PKR" ? "Rupees" : ""} only</div>
+                </div>
+              )}
+              {ps.printDescription && (
+                <div style={{ borderBottom: "1px solid #e5e5e5" }}>
+                  <div style={{ padding: "4px 12px", fontSize: 11, fontWeight: 700, backgroundColor: "#F2F2F2", color: HEADER_COLOR }}>Description:</div>
+                  <div style={{ padding: "6px 12px", fontSize: 11 }}>{description || "No description provided."}</div>
+                </div>
+              )}
+              {ps.receivedAmount && documentTitle !== "Estimate" && (
+                <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 12px", fontSize: 11, borderBottom: "1px solid #e5e5e5" }}>
+                  <span>Received</span><span>:</span><span style={{ whiteSpace: "nowrap" }}>{fmt(Number(received))}</span>
+                </div>
+              )}
+              {ps.balanceAmount && documentTitle !== "Estimate" && (
+                <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 12px", fontSize: 11, borderBottom: "1px solid #e5e5e5" }}>
+                  <span>Balance</span><span>:</span><span style={{ whiteSpace: "nowrap" }}>{fmt(balance)}</span>
+                </div>
+              )}
+              {ps.previousBalance && documentTitle !== "Estimate" && (
+                <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 12px", fontSize: 11, borderBottom: "1px solid #e5e5e5" }}>
+                  <span>Previous Balance</span><span>:</span><span style={{ whiteSpace: "nowrap" }}>{fmt(prevBalance)}</span>
+                </div>
+              )}
+              {ps.currentBalanceOfParty && documentTitle !== "Estimate" && (
+                <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 12px", fontSize: 11, fontWeight: 700 }}>
+                  <span>Current Balance</span><span>:</span><span style={{ whiteSpace: "nowrap" }}>{fmt(currentBalance)}</span>
+                </div>
+              )}
             </div>
-            {ps.amountInWords && (
-              <div style={{ borderBottom: "1px solid #e5e5e5" }}>
-                <div style={{ padding: "4px 12px", fontSize: 11, fontWeight: 700, backgroundColor: "#F2F2F2", color: HEADER_COLOR }}>Invoice Amount in Words:</div>
-                <div style={{ padding: "6px 12px", fontSize: 11 }}>{numberToWords(total)} {currency.code === "PKR" ? "Rupees" : ""} only</div>
-              </div>
-            )}
-            {ps.printDescription && (
-              <div style={{ borderBottom: "1px solid #e5e5e5" }}>
-                <div style={{ padding: "4px 12px", fontSize: 11, fontWeight: 700, backgroundColor: "#F2F2F2", color: HEADER_COLOR }}>Description:</div>
-                <div style={{ padding: "6px 12px", fontSize: 11 }}>{description || "No description provided."}</div>
-              </div>
-            )}
-            {ps.receivedAmount && documentTitle !== "Estimate" && (
-              <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 12px", fontSize: 11, borderBottom: "1px solid #e5e5e5" }}>
-                <span>Received</span><span>:</span><span style={{ whiteSpace: "nowrap" }}>{fmt(Number(received))}</span>
-              </div>
-            )}
-            {ps.balanceAmount && documentTitle !== "Estimate" && (
-              <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 12px", fontSize: 11, borderBottom: "1px solid #e5e5e5" }}>
-                <span>Balance</span><span>:</span><span style={{ whiteSpace: "nowrap" }}>{fmt(balance)}</span>
-              </div>
-            )}
-            {ps.previousBalance && documentTitle !== "Estimate" && (
-              <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 12px", fontSize: 11, borderBottom: "1px solid #e5e5e5" }}>
-                <span>Previous Balance</span><span>:</span><span style={{ whiteSpace: "nowrap" }}>{fmt(prevBalance)}</span>
-              </div>
-            )}
-            {ps.currentBalanceOfParty && documentTitle !== "Estimate" && (
-              <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 12px", fontSize: 11, fontWeight: 700 }}>
-                <span>Current Balance</span><span>:</span><span style={{ whiteSpace: "nowrap" }}>{fmt(currentBalance)}</span>
-              </div>
-            )}
           </div>
         </div>
-      </div>
 
-      {/* Signatory */}
-      <div style={{ display: "flex", justifyContent: "flex-end" }}>
-        <div style={{ border: "1px solid #1a1a1a", width: 280 }}>
-          <div style={{ padding: "4px 12px", fontSize: 11, fontWeight: 700, borderBottom: "1px solid #1a1a1a", backgroundColor: "#F2F2F2", color: HEADER_COLOR }}>
-            For {businessProfile?.business_name || "My Company"}:
-          </div>
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-end", paddingBottom: 8, minHeight: 64 }}>
-            {businessProfile?.signature && (
-              <img src={businessProfile.signature} alt="Signature" style={{ maxHeight: 40, objectFit: "contain", marginTop: 8 }} />
-            )}
-            <span style={{ fontSize: 11, color: "#555", marginTop: businessProfile?.signature ? 4 : "auto" }}>
-              {ps.printSignatureText || "Authorized Signatory"}
-            </span>
+        {/* Signatory */}
+        <div style={{ display: "flex", justifyContent: "flex-end" }}>
+          <div style={{ border: "1px solid #1a1a1a", width: 280 }}>
+            <div style={{ padding: "4px 12px", fontSize: 11, fontWeight: 700, borderBottom: "1px solid #1a1a1a", backgroundColor: "#F2F2F2", color: HEADER_COLOR }}>
+              For {businessProfile?.business_name || "My Company"}:
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-end", paddingBottom: 8, minHeight: 64 }}>
+              {businessProfile?.signature && (
+                <img src={businessProfile.signature} alt="Signature" style={{ maxHeight: 40, objectFit: "contain", marginTop: 8 }} />
+              )}
+              <span style={{ fontSize: 11, color: "#555", marginTop: businessProfile?.signature ? 4 : "auto" }}>
+                {ps.printSignatureText || "Authorized Signatory"}
+              </span>
+            </div>
           </div>
         </div>
       </div>

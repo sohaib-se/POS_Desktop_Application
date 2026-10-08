@@ -144,53 +144,55 @@ export function Theme3InvoicePrintReport({
 
   const fmt = (n: number) => `${currencyStr} ${ps.amountWithDecimal ? n.toFixed(2) : Math.round(n).toString()}`;
 
-  // Pad the item table with blank rows so short invoices still fill a full page, Tally-style
-  const MIN_ROWS = 10;
+  const MIN_ROWS = 8;
   const fillerRows = Math.max(0, MIN_ROWS - records.length);
 
   return (
-    <div className="print-area bg-white text-black font-sans w-full max-w-[794px] mx-auto px-10 py-6">
-      {/* Business Header banner */}
-      <div
-        className="flex items-center justify-between px-4 py-3 mb-4"
-        style={{ backgroundColor: ACCENT, WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}
-      >
-        <InvoiceLogo logoUrl={businessProfile?.logo_url} businessName={businessProfile?.business_name} size={68} />
-        <div className="text-right text-white">
-          <h1 className="text-xl font-bold">{businessProfile?.business_name || "My Company"}</h1>
-          <p className="text-xs mt-0.5">{businessProfile?.address || "Jhagra peshawar"}</p>
-          <p className="text-xs mt-0.5">
-            Phone no.: {businessProfile?.phone || ""} Email: {businessProfile?.email || "msoh@gmail.com"}
-          </p>
+    <div className="invoice-document print-area theme3 bg-white text-black font-sans w-full max-w-[820px] mx-auto px-8 py-6 box-border">
+      {/* ── TOP SECTION (Kept together) ── */}
+      <div className="invoice-top-section" style={{ breakInside: "avoid", pageBreakInside: "avoid" }}>
+        {/* Business Header banner */}
+        <div
+          className="flex items-center justify-between px-4 py-3 mb-4"
+          style={{ backgroundColor: ACCENT, WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}
+        >
+          <InvoiceLogo logoUrl={businessProfile?.logo_url} businessName={businessProfile?.business_name} size={68} />
+          <div className="text-right text-white">
+            <h1 className="text-xl font-bold">{businessProfile?.business_name || "My Company"}</h1>
+            <p className="text-xs mt-0.5">{businessProfile?.address || "Jhagra peshawar"}</p>
+            <p className="text-xs mt-0.5">
+              Phone no.: {businessProfile?.phone || ""} Email: {businessProfile?.email || "msoh@gmail.com"}
+            </p>
+          </div>
+        </div>
+
+        {/* Invoice title */}
+        <h2 className="text-center text-lg font-bold mb-3" style={{ color: ACCENT }}>{documentTitle}</h2>
+
+        {/* Bill To / Invoice Details bar */}
+        <div
+          className="flex justify-between px-2 py-1 text-xs font-bold text-white mb-1"
+          style={{ backgroundColor: ACCENT, WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}
+        >
+          <span>Bill To</span>
+          <span>Invoice Details</span>
+        </div>
+        <div className="flex justify-between mb-4">
+          <div>
+            <p className="text-sm font-bold">{customerName}</p>
+            <p className="text-sm">Contact No. : {customerContact || "03129955494"}</p>
+          </div>
+          <div className="text-right text-sm">
+            <p>Invoice No. : {invoiceNo}</p>
+            <p>Date : {formatDate(invoiceDate)}</p>
+          </div>
         </div>
       </div>
 
-      {/* Invoice title */}
-      <h2 className="text-center text-lg font-bold mb-3" style={{ color: ACCENT }}>{documentTitle}</h2>
-
-      {/* Bill To / Invoice Details bar */}
-      <div
-        className="flex justify-between px-2 py-1 text-xs font-bold text-white mb-1"
-        style={{ backgroundColor: ACCENT, WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}
-      >
-        <span>Bill To</span>
-        <span>Invoice Details</span>
-      </div>
-      <div className="flex justify-between mb-4">
-        <div>
-          <p className="text-sm font-bold">{customerName}</p>
-          <p className="text-sm">Contact No. : {customerContact || "03129955494"}</p>
-        </div>
-        <div className="text-right text-sm">
-          <p>Invoice No. : {invoiceNo}</p>
-          <p>Date : {formatDate(invoiceDate)}</p>
-        </div>
-      </div>
-
-      {/* Items table */}
+      {/* ── MIDDLE SECTION (Items table, can expand and paginate across pages) ── */}
       <table className="w-full text-xs mb-4 border-collapse border" style={{ borderColor: ACCENT }}>
-        <thead style={{ backgroundColor: ACCENT, WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>
-          <tr className="text-white text-left">
+        <thead style={{ backgroundColor: ACCENT, WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact', display: 'table-header-group' }}>
+          <tr className="text-white text-left" style={{ breakInside: "avoid", pageBreakInside: "avoid" }}>
             {ps.showSno && <th className="py-1.5 px-2 font-bold w-8 border" style={{ borderColor: ACCENT }}>#</th>}
             <th className="py-1.5 px-2 font-bold border" style={{ borderColor: ACCENT }}>Item name</th>
             {ps.showQuantity && <th className="py-1.5 px-2 font-bold text-right border" style={{ borderColor: ACCENT }}>Quantity</th>}
@@ -201,7 +203,7 @@ export function Theme3InvoicePrintReport({
         </thead>
         <tbody>
           {records.map((record, idx) => (
-            <tr key={record.id ?? idx} className="text-xs">
+            <tr key={record.id ?? idx} className="text-xs" style={{ breakInside: "avoid", pageBreakInside: "avoid" }}>
               {ps.showSno && <td className="py-1 px-2 border" style={{ borderColor: ACCENT }}>{idx + 1}</td>}
               <td className="py-1 px-2 font-bold border" style={{ borderColor: ACCENT }}>{record.itemName || record.item_name || ""}</td>
               {ps.showQuantity && <td className="py-1 px-2 text-right border" style={{ borderColor: ACCENT }}>{record.quantity ?? ""}</td>}
@@ -216,17 +218,17 @@ export function Theme3InvoicePrintReport({
               </td>
             </tr>
           ))}
-          {fillerRows > 0 && (
-            <tr>
-              <td className="border" style={{ borderColor: ACCENT, height: `${fillerRows * 34}px` }}></td>
-              <td className="border" style={{ borderColor: ACCENT }}></td>
-              {ps.showQuantity && <td className="border" style={{ borderColor: ACCENT }}></td>}
-              {ps.showUnit && <td className="border" style={{ borderColor: ACCENT }}></td>}
-              {ps.showPricePerUnit && <td className="border" style={{ borderColor: ACCENT }}></td>}
-              <td className="border" style={{ borderColor: ACCENT }}></td>
+          {Array.from({ length: fillerRows }).map((_, idx) => (
+            <tr key={`filler-${idx}`} className="text-xs" style={{ height: 28, breakInside: "avoid", pageBreakInside: "avoid" }}>
+              {ps.showSno && <td className="py-1 px-2 border" style={{ borderColor: ACCENT }}>&nbsp;</td>}
+              <td className="py-1 px-2 border" style={{ borderColor: ACCENT }}>&nbsp;</td>
+              {ps.showQuantity && <td className="py-1 px-2 text-right border" style={{ borderColor: ACCENT }}>&nbsp;</td>}
+              {ps.showUnit && <td className="py-1 px-2 text-right border" style={{ borderColor: ACCENT }}>&nbsp;</td>}
+              {ps.showPricePerUnit && <td className="py-1 px-2 text-right border" style={{ borderColor: ACCENT }}>&nbsp;</td>}
+              <td className="py-1 px-2 text-right border" style={{ borderColor: ACCENT }}>&nbsp;</td>
             </tr>
-          )}
-          <tr className="text-xs font-bold">
+          ))}
+          <tr className="text-xs font-bold" style={{ breakInside: "avoid", pageBreakInside: "avoid" }}>
             <td className="py-1.5 px-2 border" style={{ borderColor: ACCENT }} colSpan={ps.showSno ? 2 : 1}>Total</td>
             {ps.showQuantity ? (
               <td className="py-1.5 px-2 border text-right" style={{ borderColor: ACCENT }}>{ps.totalItemQuantity ? totalQuantity : ""}</td>
@@ -240,135 +242,137 @@ export function Theme3InvoicePrintReport({
         </tbody>
       </table>
 
-      {/* Footer: Amount in words + Payment mode | Amounts */}
-      <div className="flex gap-4">
-        <div className="flex-[55]">
-          {ps.amountInWords && (
-            <>
-              <div
-                className="px-2 py-1 text-xs font-bold text-white"
-                style={{ backgroundColor: ACCENT, WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}
-              >
-                Invoice Amount In Words
-              </div>
-              <p className="text-xs mt-1.5">
-                {numberToWords(total)} {currency.code === 'PKR' ? 'Rupees' : ''} only
-              </p>
-            </>
-          )}
+      {/* ── BOTTOM SECTION (Payment, Terms, Amounts, Signatory - Kept together as one atomic unit) ── */}
+      <div className="invoice-bottom-section mt-4" style={{ breakInside: "avoid", pageBreakInside: "avoid" }}>
+        <div className="flex gap-4">
+          <div className="flex-[55]">
+            {ps.amountInWords && (
+              <>
+                <div
+                  className="px-2 py-1 text-xs font-bold text-white"
+                  style={{ backgroundColor: ACCENT, WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}
+                >
+                  Invoice Amount In Words
+                </div>
+                <p className="text-xs mt-1.5">
+                  {numberToWords(total)} {currency.code === 'PKR' ? 'Rupees' : ''} only
+                </p>
+              </>
+            )}
 
-          {ps.printDescription && (
-            <>
-              <div
-                className="px-2 py-1 text-xs font-bold text-white mt-4"
-                style={{ backgroundColor: ACCENT, WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}
-              >
-                Description
-              </div>
-              <p className="text-xs mt-1.5">
-                {description || "No description provided."}
-              </p>
-            </>
-          )}
+            {ps.printDescription && (
+              <>
+                <div
+                  className="px-2 py-1 text-xs font-bold text-white mt-4"
+                  style={{ backgroundColor: ACCENT, WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}
+                >
+                  Description
+                </div>
+                <p className="text-xs mt-1.5">
+                  {description || "No description provided."}
+                </p>
+              </>
+            )}
 
-          {ps.paymentMode && (
-            <>
-              <div
-                className="px-2 py-1 text-xs font-bold text-white mt-4"
-                style={{ backgroundColor: ACCENT, WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}
-              >
-                Payment mode
-              </div>
-              <p className="text-xs mt-1.5">
-                {paymentMode || "Credit"}
-              </p>
-            </>
-          )}
+            {ps.paymentMode && (
+              <>
+                <div
+                  className="px-2 py-1 text-xs font-bold text-white mt-4"
+                  style={{ backgroundColor: ACCENT, WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}
+                >
+                  Payment mode
+                </div>
+                <p className="text-xs mt-1.5">
+                  {paymentMode || "Credit"}
+                </p>
+              </>
+            )}
 
-          {ps.printTermsAndConditions && (
-            <>
-              <div
-                className="px-2 py-1 text-xs font-bold text-white mt-4"
-                style={{ backgroundColor: ACCENT, WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}
-              >
-                Terms &amp; Conditions
+            {ps.printTermsAndConditions && (
+              <>
+                <div
+                  className="px-2 py-1 text-xs font-bold text-white mt-4"
+                  style={{ backgroundColor: ACCENT, WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}
+                >
+                  Terms &amp; Conditions
+                </div>
+                <p className="text-xs mt-1.5 whitespace-pre-wrap">
+                  {businessProfile?.terms_conditions}
+                </p>
+              </>
+            )}
+          </div>
+          <div className="flex-[45]">
+            <div
+              className="px-2 py-1 text-xs font-bold text-white"
+              style={{ backgroundColor: ACCENT, WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}
+            >
+              Amounts
+            </div>
+            <div className="flex justify-between text-xs px-0 py-1 border-b border-gray-300">
+              <span>Sub Total</span>
+              <span className="whitespace-nowrap">{fmt(subTotal)}</span>
+            </div>
+            {ps.discount && discountAmount > 0 && (
+              <div className="flex justify-between text-xs px-0 py-1 border-b border-gray-300 text-green-700">
+                <span>Discount {discountPercent > 0 ? `(${discountPercent}%)` : ""}</span>
+                <span className="whitespace-nowrap">- {fmt(discountAmount)}</span>
               </div>
-              <p className="text-xs mt-1.5 whitespace-pre-wrap">
-                {businessProfile?.terms_conditions}
-              </p>
-            </>
-          )}
+            )}
+            {ps.taxDetails && taxAmount > 0 && (
+              <div className="flex justify-between text-xs px-0 py-1 border-b border-gray-300">
+                <span>Tax ({taxPercent}%)</span>
+                <span className="whitespace-nowrap">{fmt(taxAmount)}</span>
+              </div>
+            )}
+            {ps.youSaved && discountAmount > 0 && (
+              <div className="flex justify-between text-xs px-0 py-1 border-b border-gray-300 text-green-700 font-semibold">
+                <span>You Saved</span>
+                <span className="whitespace-nowrap">{fmt(discountAmount)}</span>
+              </div>
+            )}
+            <div className="flex justify-between text-xs px-0 py-1 border-b border-gray-300 font-bold">
+              <span>Total</span>
+              <span className="whitespace-nowrap">{fmt(total)}</span>
+            </div>
+            {ps.receivedAmount && documentTitle !== "Estimate" && (
+              <div className="flex justify-between text-xs px-0 py-1 border-b border-gray-300">
+                <span>Received</span>
+                <span className="whitespace-nowrap">{fmt(Number(received || 0))}</span>
+              </div>
+            )}
+            {ps.balanceAmount && documentTitle !== "Estimate" && (
+              <div className="flex justify-between text-xs px-0 py-1 border-b border-gray-300">
+                <span>Balance</span>
+                <span className="whitespace-nowrap">{fmt(balance)}</span>
+              </div>
+            )}
+            {ps.previousBalance && documentTitle !== "Estimate" && (
+              <div className="flex justify-between text-xs px-0 py-1 mt-2">
+                <span>Previous Balance</span>
+                <span className="whitespace-nowrap">{fmt(prevBalance)}</span>
+              </div>
+            )}
+            {ps.currentBalanceOfParty && documentTitle !== "Estimate" && (
+              <div className="flex justify-between text-xs px-0 py-1 font-bold">
+                <span>Current Balance</span>
+                <span className="whitespace-nowrap">{fmt(currentBalance)}</span>
+              </div>
+            )}
+          </div>
         </div>
-        <div className="flex-[45]">
-          <div
-            className="px-2 py-1 text-xs font-bold text-white"
-            style={{ backgroundColor: ACCENT, WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}
-          >
-            Amounts
-          </div>
-          <div className="flex justify-between text-xs px-0 py-1 border-b border-gray-300">
-            <span>Sub Total</span>
-            <span className="whitespace-nowrap">{fmt(subTotal)}</span>
-          </div>
-          {ps.discount && discountAmount > 0 && (
-            <div className="flex justify-between text-xs px-0 py-1 border-b border-gray-300 text-green-700">
-              <span>Discount {discountPercent > 0 ? `(${discountPercent}%)` : ""}</span>
-              <span className="whitespace-nowrap">- {fmt(discountAmount)}</span>
-            </div>
-          )}
-          {ps.taxDetails && taxAmount > 0 && (
-            <div className="flex justify-between text-xs px-0 py-1 border-b border-gray-300">
-              <span>Tax ({taxPercent}%)</span>
-              <span className="whitespace-nowrap">{fmt(taxAmount)}</span>
-            </div>
-          )}
-          {ps.youSaved && discountAmount > 0 && (
-            <div className="flex justify-between text-xs px-0 py-1 border-b border-gray-300 text-green-700 font-semibold">
-              <span>You Saved</span>
-              <span className="whitespace-nowrap">{fmt(discountAmount)}</span>
-            </div>
-          )}
-          <div className="flex justify-between text-xs px-0 py-1 border-b border-gray-300 font-bold">
-            <span>Total</span>
-            <span className="whitespace-nowrap">{fmt(total)}</span>
-          </div>
-          {ps.receivedAmount && documentTitle !== "Estimate" && (
-            <div className="flex justify-between text-xs px-0 py-1 border-b border-gray-300">
-              <span>Received</span>
-              <span className="whitespace-nowrap">{fmt(Number(received || 0))}</span>
-            </div>
-          )}
-          {ps.balanceAmount && documentTitle !== "Estimate" && (
-            <div className="flex justify-between text-xs px-0 py-1 border-b border-gray-300">
-              <span>Balance</span>
-              <span className="whitespace-nowrap">{fmt(balance)}</span>
-            </div>
-          )}
-          {ps.previousBalance && documentTitle !== "Estimate" && (
-            <div className="flex justify-between text-xs px-0 py-1 mt-2">
-              <span>Previous Balance</span>
-              <span className="whitespace-nowrap">{fmt(prevBalance)}</span>
-            </div>
-          )}
-          {ps.currentBalanceOfParty && documentTitle !== "Estimate" && (
-            <div className="flex justify-between text-xs px-0 py-1 font-bold">
-              <span>Current Balance</span>
-              <span className="whitespace-nowrap">{fmt(currentBalance)}</span>
-            </div>
-          )}
-        </div>
-      </div>
 
-      {/* Signatory */}
-      <div className="flex justify-end mt-10">
-        <div className="text-center">
-          <p className="text-sm">For : {businessProfile?.business_name || "My Company"}</p>
-          {businessProfile?.signature && (
-            <img src={businessProfile.signature} alt="Signature" style={{ maxHeight: 60, objectFit: "contain", margin: "10px auto" }} />
-          )}
-          <p className={`text-sm font-bold ${businessProfile?.signature ? 'mt-2' : 'mt-16'}`}>
-            {ps.printSignatureText || "Authorized Signatory"}
-          </p>
+        {/* Signatory */}
+        <div className="flex justify-end mt-8" style={{ breakInside: "avoid", pageBreakInside: "avoid" }}>
+          <div className="text-center">
+            <p className="text-sm">For : {businessProfile?.business_name || "My Company"}</p>
+            {businessProfile?.signature && (
+              <img src={businessProfile.signature} alt="Signature" style={{ maxHeight: 60, objectFit: "contain", margin: "10px auto" }} />
+            )}
+            <p className={`text-sm font-bold ${businessProfile?.signature ? 'mt-2' : 'mt-16'}`}>
+              {ps.printSignatureText || "Authorized Signatory"}
+            </p>
+          </div>
         </div>
       </div>
     </div>

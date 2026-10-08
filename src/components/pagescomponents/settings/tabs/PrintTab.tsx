@@ -543,6 +543,17 @@ export function PrintTab({ isPreviewMode = false, saleData = null, onClose, auto
             size: auto;
             margin: 10mm;
           }
+          html, body {
+            width: 100% !important;
+            height: auto !important;
+            min-height: 0 !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            background: #fff !important;
+            overflow: visible !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
           body * {
             visibility: hidden !important;
           }
@@ -550,16 +561,14 @@ export function PrintTab({ isPreviewMode = false, saleData = null, onClose, auto
             visibility: visible !important;
           }
           .print-area-wrapper {
-            position: fixed !important;
-            left: 0 !important;
-            top: 0 !important;
-            width: 100vw !important;
+            position: static !important;
+            width: 100% !important;
+            max-width: 100% !important;
             height: auto !important;
             margin: 0 !important;
             padding: 0 !important;
             background: #fff !important;
             overflow: visible !important;
-            zoom: 1 !important;
             display: block !important;
           }
           /* Reset the inner zoom/scale wrapper that is used for screen preview */
@@ -570,23 +579,66 @@ export function PrintTab({ isPreviewMode = false, saleData = null, onClose, auto
             width: 100% !important;
             max-width: 100% !important;
             flex-shrink: unset !important;
+            margin: 0 !important;
+            padding: 0 !important;
+          }
+          .invoice-document,
+          .print-area {
+            width: 100% !important;
+            max-width: 100% !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            box-shadow: none !important;
+            border-radius: 0 !important;
           }
           .print-tab-modal {
             position: static !important;
             background: transparent !important;
+            overflow: visible !important;
+            height: auto !important;
           }
           .print-tab-top-bar, .print-tab-left, .print-tab-right {
             display: none !important;
           }
           .print-tab-body {
             display: block !important;
+            overflow: visible !important;
+            height: auto !important;
           }
           .print-tab-center {
             background: transparent !important;
             overflow: visible !important;
+            height: auto !important;
           }
           .print-tab-preview-scroll {
             overflow: visible !important;
+            height: auto !important;
+          }
+          thead {
+            display: table-header-group !important;
+            break-inside: avoid !important;
+            page-break-inside: avoid !important;
+          }
+          tr {
+            break-inside: avoid !important;
+            page-break-inside: avoid !important;
+          }
+          tbody tr {
+            break-inside: avoid !important;
+            page-break-inside: avoid !important;
+          }
+          .invoice-top-section {
+            break-inside: avoid !important;
+            page-break-inside: avoid !important;
+          }
+          .invoice-bottom-section {
+            break-inside: avoid !important;
+            page-break-inside: avoid !important;
+            display: block !important;
+          }
+          .invoice-bottom-section * {
+            break-inside: avoid !important;
+            page-break-inside: avoid !important;
           }
         }
       `}</style>
@@ -642,6 +694,7 @@ export function PrintTab({ isPreviewMode = false, saleData = null, onClose, auto
                 onClose={handleClose}
                 invoiceNo={saleData?.invoiceNo}
                 autoPrint={autoPrint}
+                activePrinter={activePrinter}
               />
             ) : (
               <RightPanel

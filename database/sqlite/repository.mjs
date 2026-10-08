@@ -369,6 +369,12 @@ export function deductItemStockFifo(itemId, quantity, isSecondary, conversionRat
     const validConversion = Number.isFinite(Number(conversionRate)) && Number(conversionRate) > 0;
     const secondaryQty = (!isSecondary && validConversion) ? primaryQty * Number(conversionRate) : Number(quantity);
 
+    const itemRow = db.prepare('SELECT stock_quantity FROM items WHERE id = ?').get(String(itemId));
+    const currentStock = Number(itemRow?.stock_quantity ?? 0);
+    if (primaryQty > currentStock) {
+      throw new Error(`Insufficient stock. Current stock is ${currentStock}.`);
+    }
+
     // --- FIFO: walk layers oldest-first, accumulate value to deduct ---
     const layers = db.prepare(`
       SELECT id, remaining_quantity, at_price

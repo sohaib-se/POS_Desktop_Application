@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { X } from "lucide-react";
 import { Dialog, DialogContent } from "./ui";
 import type { Item, AdjustStockForm } from "./types";
@@ -21,6 +22,57 @@ export function AdjustStockModal({
   isSavingAdjustment,
   onSave,
 }: AdjustStockModalProps) {
+  const [stockErrorPopup, setStockErrorPopup] = useState<string | null>(null);
+
+  const isReduce = adjustStockForm.type === "Reduce";
+  const isSecondary =
+    Boolean(selectedItem?.secondaryUnit) &&
+    adjustStockForm.unit === selectedItem?.secondaryUnit;
+
+  const currentPrimaryStock = selectedItem?.stockQuantity ?? 0;
+
+  let availableStockInChosenUnit = 0;
+  if (selectedItem) {
+    if (isSecondary) {
+      if (selectedItem.secondaryStock != null) {
+        availableStockInChosenUnit = selectedItem.secondaryStock;
+      } else if (selectedItem.conversionRate && selectedItem.conversionRate > 0) {
+        availableStockInChosenUnit = currentPrimaryStock * selectedItem.conversionRate;
+      } else {
+        availableStockInChosenUnit = currentPrimaryStock;
+      }
+    } else {
+      availableStockInChosenUnit = currentPrimaryStock;
+    }
+  }
+  availableStockInChosenUnit = Math.max(0, availableStockInChosenUnit);
+
+  const displayUnit = adjustStockForm.unit || selectedItem?.primaryUnit || selectedItem?.unit || "";
+  const requestedQty = Number(adjustStockForm.qty) || 0;
+  const isExceedingStock = isReduce && requestedQty > availableStockInChosenUnit;
+
+  const handleSaveClick = () => {
+    if (!selectedItem) return;
+
+    if (isReduce) {
+      if (requestedQty > availableStockInChosenUnit) {
+        const unitSuffix = displayUnit ? ` ${displayUnit}` : "";
+        if (availableStockInChosenUnit <= 0) {
+          setStockErrorPopup(
+            `Current stock of ${selectedItem.name} is 0${unitSuffix}. You cannot reduce stock.`
+          );
+        } else {
+          setStockErrorPopup(
+            `Current stock of ${selectedItem.name} is only ${availableStockInChosenUnit}${unitSuffix}.`
+          );
+        }
+        return;
+      }
+    }
+
+    onSave();
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="w-full sm:max-w-[900px] !max-w-[900px] p-6 bg-white rounded-lg shadow-2xl overflow-visible">
@@ -91,7 +143,7 @@ export function AdjustStockModal({
         </div>
 
         {/* Form Row */}
-        <div className="flex gap-4 mb-8 items-center">
+        <div className="flex gap-4 mb-8 items-start">
           <div className="w-[180px]">
             <input
               type="number"
@@ -106,14 +158,21 @@ export function AdjustStockModal({
                 if (Number(val) < 0) return;
                 onFormChange({ qty: val });
               }}
-              className="w-full border border-[#D1D5DB] rounded-[4px] px-3 py-[8px] text-[14px] outline-none placeholder:text-[#9CA3AF] text-[#1A202C]"
+              className={`w-full border rounded-[4px] px-3 py-[8px] text-[14px] outline-none placeholder:text-[#9CA3AF] text-[#1A202C] ${
+                isExceedingStock ? "border-red-500 focus:border-red-500" : "border-[#D1D5DB]"
+              }`}
             />
+            {isExceedingStock && (
+              <p className="text-[11px] text-red-500 mt-1 font-medium leading-tight">
+                Exceeds stock ({availableStockInChosenUnit} {displayUnit})
+              </p>
+            )}
           </div>
           <div className="w-[80px]">
             <select
               value={adjustStockForm.unit}
               onChange={(e) => onFormChange({ unit: e.target.value })}
-              className="w-full text-[14px] outline-none bg-transparent text-[#4B5563] font-medium cursor-pointer"
+              className="w-full text-[14px] outline-none bg-transparent text-[#4B5563] font-medium cursor-pointer py-[8px]"
             >
               {selectedItem?.primaryUnit || selectedItem?.unit ? (
                 <option
@@ -162,7 +221,7 @@ export function AdjustStockModal({
         {/* Footer Action */}
         <div className="flex justify-end pt-2">
           <button
-            onClick={onSave}
+            onClick={handleSaveClick}
             disabled={
               isSavingAdjustment ||
               !adjustStockForm.qty ||
@@ -174,6 +233,30 @@ export function AdjustStockModal({
             Save
           </button>
         </div>
+
+        {/* Insufficient Stock Error Popup Modal */}
+        {stockErrorPopup && (
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 backdrop-blur-[2px]">
+            <div className="bg-white rounded-xl p-6 w-full max-w-sm shadow-2xl text-center animate-in fade-in zoom-in-95 duration-150">
+              <div className="w-12 h-12 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center mx-auto mb-4">
+                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+                </svg>
+              </div>
+              <h3 className="text-lg font-bold text-gray-900 mb-2">Insufficient Stock</h3>
+              <p className="text-sm text-gray-600 mb-6 leading-relaxed">
+                {stockErrorPopup}
+              </p>
+              <button
+                type="button"
+                onClick={() => setStockErrorPopup(null)}
+                className="w-full py-2.5 bg-[#1A73E8] hover:bg-[#1557B0] text-white font-semibold rounded-lg text-sm transition-colors"
+              >
+                OK
+              </button>
+            </div>
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   );

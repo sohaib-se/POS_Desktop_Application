@@ -556,6 +556,25 @@ export function ProductsTab({
 
       if (!isAdd && !adjustStockForm.id) {
         // ── REDUCE STOCK (new) ──
+        // Guard: prevent reducing stock more than available stock
+        const currentPrimaryStock = selectedItem.stockQuantity ?? 0;
+        let availableStock = currentPrimaryStock;
+        if (isSecondary && selectedItem.conversionRate && selectedItem.conversionRate > 0) {
+          availableStock = selectedItem.secondaryStock ?? (currentPrimaryStock * selectedItem.conversionRate);
+        }
+        availableStock = Math.max(0, availableStock);
+        if (qty > availableStock) {
+          const unitLabel = adjustStockForm.unit || selectedItem.primaryUnit || selectedItem.unit || "";
+          const unitSuffix = unitLabel ? ` ${unitLabel}` : "";
+          setErrorModalMessage(
+            availableStock <= 0
+              ? `Current stock of ${selectedItem.name} is 0${unitSuffix}. You cannot reduce stock.`
+              : `Current stock of ${selectedItem.name} is only ${availableStock}${unitSuffix}.`
+          );
+          setIsSavingAdjustment(false);
+          return;
+        }
+
         // The backend handles FIFO deduction and returns the updated item.
         // We do NOT call /api/items separately — it would overwrite the FIFO value.
         const adjustResponse = await fetch(endpoint, {

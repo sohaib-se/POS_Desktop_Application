@@ -197,10 +197,6 @@ export function PurchaseBills({ onBack }: PurchaseBillsProps = {}) {
     );
   };
 
-  const openViewDialog = (invoice: PurchaseBillViewRow) => {
-    setViewingInvoice(invoice);
-  };
-
   const handleDeleteInvoice = (invoice: PurchaseBillViewRow) => {
     setDeleteModalState({isOpen: true, invoice});
   };
@@ -327,7 +323,6 @@ export function PurchaseBills({ onBack }: PurchaseBillsProps = {}) {
         openRowMenuId={openRowMenuId}
         openRowMenuPosition={openRowMenuPosition}
         invoiceRows={invoiceRows}
-        openViewDialog={openViewDialog}
         setOpenRowMenuId={setOpenRowMenuId}
         setOpenRowMenuPosition={setOpenRowMenuPosition}
         onEditInvoice={handleEditClick}

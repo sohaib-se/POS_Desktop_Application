@@ -1,11 +1,10 @@
-import { Search, Pencil, Trash2, Download, Printer } from "lucide-react";
+import { Pencil, Trash2, Download, Printer } from "lucide-react";
 import type { PurchaseBillViewRow } from "./types";
 
 interface PurchaseBillContextMenuProps {
   openRowMenuId: string | null;
   openRowMenuPosition: { left: number; top: number } | null;
   invoiceRows: PurchaseBillViewRow[];
-  openViewDialog: (invoice: PurchaseBillViewRow) => void;
   setOpenRowMenuId: (id: string | null) => void;
   setOpenRowMenuPosition: (pos: { left: number; top: number } | null) => void;
   onEditInvoice: (invoice: PurchaseBillViewRow) => void;
@@ -17,7 +16,6 @@ export function PurchaseBillContextMenu({
   openRowMenuId,
   openRowMenuPosition,
   invoiceRows,
-  openViewDialog,
   setOpenRowMenuId,
   setOpenRowMenuPosition,
   onEditInvoice,
@@ -37,17 +35,6 @@ export function PurchaseBillContextMenu({
       style={{ left: openRowMenuPosition.left, top: openRowMenuPosition.top }}
       onClick={(event) => event.stopPropagation()}
     >
-      <button
-        className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-gray-50"
-        onClick={() => {
-          openViewDialog(targetInvoice);
-          setOpenRowMenuId(null);
-          setOpenRowMenuPosition(null);
-        }}
-      >
-        <Search className="w-4 h-4 text-gray-500" />
-        View
-      </button>
       <button
         className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-gray-50"
         onClick={() => {
@@ -106,7 +93,7 @@ export function PurchaseBillContextMenu({
         }}
       >
         <Printer className="w-4 h-4 text-gray-500" />
-        Print
+        Print & Preview
       </button>
       <button
         className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50"

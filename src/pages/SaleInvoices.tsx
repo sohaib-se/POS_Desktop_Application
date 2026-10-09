@@ -10,7 +10,6 @@ import {
   fallbackSaleInvoices,
   getMonthKeyFromDate,
   formatDateDisplay,
-  monthLabelForFilter,
 } from "../components/pagescomponents/saleinvoices/utils";
 import { SaleInvoiceHeader } from "../components/pagescomponents/saleinvoices/SaleInvoiceHeader";
 import { SaleInvoiceFilters } from "../components/pagescomponents/saleinvoices/SaleInvoiceFilters";
@@ -46,9 +45,9 @@ export function SaleInvoices({ onViewChange, onEditInvoice, onEditPosInvoice, on
   const [currencyDisplay] = useSettings<'abbreviation' | 'icon'>('settings.currencyDisplay', 'abbreviation');
   const currencyStr = currencyDisplay === 'icon' ? currency.symbol : currency.code;
   const [invoiceToDelete, setInvoiceToDelete] = useState<SaleInvoiceViewRow | null>(null);
-  const [isDeleting, setIsDeleting] = useState(false);
+  const [, setIsDeleting] = useState(false);
   const [invoiceToReturn, setInvoiceToReturn] = useState<SaleInvoiceViewRow | null>(null);
-  const [isReturning, setIsReturning] = useState(false);
+  const [, setIsReturning] = useState(false);
   const [printingInvoice, setPrintingInvoice] = useState<SalePrintData | null>(null);
 
   useEffect(() => {
@@ -161,11 +160,6 @@ export function SaleInvoices({ onViewChange, onEditInvoice, onEditPosInvoice, on
     };
   }, [loadSaleInvoices]);
 
-  const monthOptions = useMemo(() => {
-    const uniqueMonths = new Set(invoiceRows.map((row) => row.monthKey));
-    uniqueMonths.add(getMonthKeyFromDate(formatDateDisplay(new Date())));
-    return Array.from(uniqueMonths).sort((left, right) => right.localeCompare(left));
-  }, [invoiceRows]);
 
   const selectedMonthRows = useMemo(() => {
     if (!selectedMonthKey) {
@@ -193,8 +187,6 @@ export function SaleInvoices({ onViewChange, onEditInvoice, onEditPosInvoice, on
   const totalReceived = validRows.filter((invoice) => invoice.balance === 0).reduce((sum, invoice) => sum + invoice.amount, 0);
   const totalBalance = validRows.reduce((sum, invoice) => sum + invoice.balance, 0);
 
-  const currentMonthKey = getMonthKeyFromDate(formatDateDisplay(new Date()));
-  const monthButtonLabel = selectedMonthKey === currentMonthKey ? "This Month" : monthLabelForFilter(selectedMonthKey);
 
   const handleDownloadCsv = () => {
     exportSaleInvoicesToExcel(
@@ -212,9 +204,6 @@ export function SaleInvoices({ onViewChange, onEditInvoice, onEditPosInvoice, on
     );
   };
 
-  const openViewDialog = (invoice: SaleInvoiceViewRow) => {
-    setViewingInvoice(invoice);
-  };
 
   const handleDeleteInvoice = async () => {
     if (!invoiceToDelete) return;
@@ -376,7 +365,6 @@ export function SaleInvoices({ onViewChange, onEditInvoice, onEditPosInvoice, on
         openRowMenuId={openRowMenuId}
         openRowMenuPosition={openRowMenuPosition}
         invoiceRows={invoiceRows}
-        openViewDialog={openViewDialog}
         setOpenRowMenuId={setOpenRowMenuId}
         setOpenRowMenuPosition={setOpenRowMenuPosition}
         onEditInvoice={handleEditClick}

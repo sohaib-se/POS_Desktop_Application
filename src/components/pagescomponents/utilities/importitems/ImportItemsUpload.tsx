@@ -15,7 +15,8 @@ export interface ImportedItem {
   "Wholesale Price": string | number;
   "Purchase Price": string | number;
   "Minimum Wholesale Quantity": string | number;
-  "Low Threshold Quantity": string | number;
+  "Low Threshold Quantity"?: string | number;
+  "Low Stock Quantity"?: string | number;
   "Opening Stock": string | number;
   "At Price": string | number;
   "As Of Date": string;
@@ -41,7 +42,7 @@ export function ImportItemsUpload({ onItemsImported }: ImportItemsUploadProps) {
           const firstSheetName = workbook.SheetNames[0];
           const worksheet = workbook.Sheets[firstSheetName];
           
-          const expectedHeaders = [
+          const baseHeaders = [
             "Item Name",
             "Category",
             "Item Code",
@@ -53,7 +54,6 @@ export function ImportItemsUpload({ onItemsImported }: ImportItemsUploadProps) {
             "Wholesale Price",
             "Purchase Price",
             "Minimum Wholesale Quantity",
-            "Low Threshold Quantity",
             "Opening Stock",
             "At Price",
             "As Of Date",
@@ -63,7 +63,8 @@ export function ImportItemsUpload({ onItemsImported }: ImportItemsUploadProps) {
 
           const headerRow = xlsx.utils.sheet_to_json<string[]>(worksheet, { header: 1 })[0] || [];
           
-          const isValid = expectedHeaders.every(header => headerRow.includes(header));
+          const hasLowStock = headerRow.includes("Low Threshold Quantity") || headerRow.includes("Low Stock Quantity");
+          const isValid = baseHeaders.every(header => headerRow.includes(header)) && hasLowStock;
           if (!isValid) {
             toast.error("Invalid file format. Please make sure the file matches the sample format exactly.");
             return;

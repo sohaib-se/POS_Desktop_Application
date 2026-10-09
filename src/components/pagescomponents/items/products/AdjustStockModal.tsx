@@ -51,8 +51,25 @@ export function AdjustStockModal({
   const requestedQty = Number(adjustStockForm.qty) || 0;
   const isExceedingStock = isReduce && requestedQty > availableStockInChosenUnit;
 
-  const handleSaveClick = () => {
+  const handleSaveClick = async () => {
     if (!selectedItem) return;
+
+    if (adjustStockForm.id) {
+      try {
+        const checkRes = await fetch(`/api/adjust_stock_transactions?checkConsumed=${adjustStockForm.id}`);
+        if (checkRes.ok) {
+          const checkData = await checkRes.json();
+          if (checkData.consumed) {
+            setStockErrorPopup(
+              "Sales have already been made from this transaction (the remaining stock and stock quantity are not equal). You cannot edit this transaction."
+            );
+            return;
+          }
+        }
+      } catch (err) {
+        console.error("Failed to check stock adjustment consumption:", err);
+      }
+    }
 
     if (isReduce) {
       if (requestedQty > availableStockInChosenUnit) {

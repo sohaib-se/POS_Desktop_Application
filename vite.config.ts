@@ -641,10 +641,19 @@ function sqliteApiPlugin() {
           // @ts-expect-error Runtime-only Node module used in Vite middleware.
           const repository = await import('./database/sqlite/repository.mjs');
 
-          const urlParts = req.url?.split('/').filter(Boolean) || [];
-          const id = urlParts.length > 0 ? urlParts[0] : null;
+          const requestUrl = new URL(req.url ?? '/', 'http://localhost');
+          const checkConsumedId = requestUrl.searchParams.get('checkConsumed') || requestUrl.searchParams.get('check_consumed');
+          const urlParts = requestUrl.pathname.split('/').filter(Boolean);
+          const id = requestUrl.searchParams.get('id') || (urlParts.length > 0 ? urlParts[0] : null);
 
           if (req.method === 'GET') {
+            if (checkConsumedId) {
+              const consumed = repository.isStockAdjustmentConsumed(checkConsumedId);
+              res.statusCode = 200;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify({ consumed }));
+              return;
+            }
             const adjustments = repository.getStockAdjustments();
             res.statusCode = 200;
             res.setHeader('Content-Type', 'application/json');
@@ -688,6 +697,15 @@ function sqliteApiPlugin() {
           }
 
           if (req.method === 'PUT' && id) {
+            if (repository.isStockAdjustmentConsumed(id)) {
+              res.statusCode = 409;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify({
+                message: 'STOCK_CONSUMED',
+                detail: 'Sales have already been made from this stock adjustment (remaining stock and stock quantity are not equal). You cannot edit this transaction.'
+              }));
+              return;
+            }
             const payload = await parseJsonBody(req);
             repository.updateStockAdjustment(id, payload);
             res.statusCode = 200;
@@ -697,6 +715,16 @@ function sqliteApiPlugin() {
           }
 
           if (req.method === 'DELETE' && id) {
+            if (repository.isStockAdjustmentConsumed(id)) {
+              res.statusCode = 409;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify({
+                message: 'STOCK_CONSUMED',
+                detail: 'Sales have already been made from this stock adjustment (remaining stock and stock quantity are not equal). You cannot delete this transaction.'
+              }));
+              return;
+            }
+
             // Before deleting, look up the record so we can reverse its effect.
             const existingAdjustment = repository.getStockAdjustmentById(id) as any;
 
@@ -3817,6 +3845,14 @@ function sqliteApiPlugin() {
           };
 
           if (req.method === 'GET') {
+            const checkConsumedId = requestUrl.searchParams.get('checkConsumed') || requestUrl.searchParams.get('check_consumed');
+            if (checkConsumedId) {
+              const consumed = repository.isPurchaseFifoConsumed(checkConsumedId);
+              res.statusCode = 200;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify({ consumed }));
+              return;
+            }
             const purchaseBills = repository.getPurchaseBills();
             res.statusCode = 200;
             res.setHeader('Content-Type', 'application/json');
@@ -4007,6 +4043,17 @@ function sqliteApiPlugin() {
                 res.statusCode = 404;
                 res.setHeader('Content-Type', 'application/json');
                 res.end(JSON.stringify({ message: 'Purchase bill not found.' }));
+                return;
+              }
+
+              // ── Guard: block editing if any FIFO layer has been consumed by sales ──
+              if (repository.isPurchaseFifoConsumed(id)) {
+                res.statusCode = 409;
+                res.setHeader('Content-Type', 'application/json');
+                res.end(JSON.stringify({
+                  message: 'FIFO_CONSUMED',
+                  detail: 'Sales have already been made from this purchase bill (the remaining stock and stock quantity are not equal). You cannot edit this purchase bill.'
+                }));
                 return;
               }
 

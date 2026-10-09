@@ -615,6 +615,30 @@ export function isPurchaseFifoConsumed(purchaseBillId) {
   }
 }
 
+/**
+ * Returns true if an 'Add Stock' or 'Opening Stock' transaction has had any
+ * of its stock consumed by sales or reductions (i.e. remaining_quantity != quantity).
+ */
+export function isStockAdjustmentConsumed(adjustmentId) {
+  const db = openDatabase();
+  try {
+    const row = db.prepare(`
+      SELECT quantity, remaining_quantity, adjustment_type
+      FROM adjust_stock_transactions
+      WHERE id = ?
+    `).get(String(adjustmentId));
+    if (!row) return false;
+    if (row.adjustment_type !== 'Add Stock' && row.adjustment_type !== 'Opening Stock') {
+      return false;
+    }
+    const qty = Number(row.quantity ?? 0);
+    const rem = Number(row.remaining_quantity ?? qty);
+    return Math.abs(rem - qty) > 0.00001;
+  } finally {
+    db.close();
+  }
+}
+
 
 
 export function getSaleInvoices() {

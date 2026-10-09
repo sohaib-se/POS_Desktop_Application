@@ -13,7 +13,23 @@ interface Item {
   category?: string;
   purchase_price?: number | string;
   stock_quantity?: number | string;
+  stock_value?: number | string | null;
+  stockValue?: number | string | null;
 }
+
+const getItemStockValue = (item: Item): number => {
+  if (item.stock_value != null) {
+    const val = Number(item.stock_value);
+    if (!isNaN(val)) return Math.max(0, val);
+  }
+  if (item.stockValue != null) {
+    const val = Number(item.stockValue);
+    if (!isNaN(val)) return Math.max(0, val);
+  }
+  const price = Number(item.purchase_price || 0);
+  const qty = Number(item.stock_quantity || 0);
+  return Math.max(0, price * qty);
+};
 
 export function StockDetails({ onBack }: StockDetailsProps) {
   const [currency] = useSettings('settings.businessCurrency', { code: 'PKR', symbol: 'Rs' });
@@ -50,9 +66,7 @@ export function StockDetails({ onBack }: StockDetailsProps) {
 
   const totalStockValue = useMemo(() => {
     return displayData.reduce((total, item) => {
-        const price = Number(item.purchase_price || 0);
-        const qty = Number(item.stock_quantity || 0);
-        return total + (price * qty);
+        return total + getItemStockValue(item);
     }, 0);
   }, [displayData]);
 
@@ -102,7 +116,7 @@ export function StockDetails({ onBack }: StockDetailsProps) {
       const r = rowIdx + 1;
       const price = Number(row.purchase_price || 0);
       const qty = Number(row.stock_quantity || 0);
-      const stockValue = price * qty;
+      const stockValue = getItemStockValue(row);
       
       const rowData = [
         { v: r.toString(), t: "s" as const },
@@ -178,7 +192,7 @@ export function StockDetails({ onBack }: StockDetailsProps) {
     const rowsHTML = displayData.map((row, i) => {
       const price = Number(row.purchase_price || 0);
       const qty = Number(row.stock_quantity || 0);
-      const stockValue = price * qty;
+      const stockValue = getItemStockValue(row);
       return `
         <tr>
           <td class="center">${i + 1}</td>
@@ -323,7 +337,7 @@ export function StockDetails({ onBack }: StockDetailsProps) {
                   displayData.map((row, index) => {
                       const price = Number(row.purchase_price || 0);
                       const qty = Number(row.stock_quantity || 0);
-                      const stockValue = price * qty;
+                      const stockValue = getItemStockValue(row);
                       return (
                         <tr key={row.id} className={`transition-colors hover:bg-gray-50/50`}>
                             <td className="px-4 py-3 text-gray-900 border-r border-white/50 text-center">{index + 1}</td>

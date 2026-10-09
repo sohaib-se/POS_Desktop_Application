@@ -1,13 +1,11 @@
 import { useSettings } from "@/hooks/useSettings";
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import { parseLineItems } from '../../saleinvoices/utils';
 
 interface ProfitAndLossProps {
   onBack: () => void;
 }
-
-
 
 export function ProfitAndLoss({ onBack }: ProfitAndLossProps) {
   const [dateFrom, setDateFrom] = useState('');
@@ -23,32 +21,44 @@ export function ProfitAndLoss({ onBack }: ProfitAndLossProps) {
   const [currencyDisplay] = useSettings<'abbreviation' | 'icon'>('settings.currencyDisplay', 'abbreviation');
   const currencyStr = currencyDisplay === 'icon' ? currency.symbol : currency.code;
 
+  const loadData = useCallback(async () => {
+    try {
+      setLoading(true);
+      const timestamp = Date.now();
+      const [salesRes, purchasesRes, expensesRes, itemsRes] = await Promise.all([
+        fetch(`/api/sale_invoices?t=${timestamp}`).catch(() => null),
+        fetch(`/api/purchase_bills?t=${timestamp}`).catch(() => null),
+        fetch(`/api/expense_records?t=${timestamp}`).catch(() => null),
+        fetch(`/api/items?t=${timestamp}`).catch(() => null),
+      ]);
+
+      if (salesRes && salesRes.ok) setSales(await salesRes.json());
+      if (purchasesRes && purchasesRes.ok) setPurchases(await purchasesRes.json());
+      if (expensesRes && expensesRes.ok) setExpenses(await expensesRes.json());
+      if (itemsRes && itemsRes.ok) setItems(await itemsRes.json());
+
+    } catch (error) {
+      console.error("Failed to load profit and loss data", error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
-    const loadData = async () => {
-      try {
-        setLoading(true);
-        const [salesRes, purchasesRes, expensesRes, itemsRes] = await Promise.all([
-          fetch("/api/sale_invoices").catch(() => null),
-          fetch("/api/purchase_bills").catch(() => null),
-          fetch("/api/expense_records").catch(() => null),
-          fetch("/api/items").catch(() => null),
-        ]);
+    void loadData();
 
-        if (salesRes && salesRes.ok) setSales(await salesRes.json());
-        if (purchasesRes && purchasesRes.ok) setPurchases(await purchasesRes.json());
-        if (expensesRes && expensesRes.ok) setExpenses(await expensesRes.json());
-        if (itemsRes && itemsRes.ok) setItems(await itemsRes.json());
-
-      } catch (error) {
-        console.error("Failed to load profit and loss data", error);
-      } finally {
-        setLoading(false);
-      }
+    const handleRefresh = () => {
+      void loadData();
     };
 
-    void loadData();
-  }, []);
+    window.addEventListener("sale-invoices-refresh", handleRefresh);
+    window.addEventListener("focus", handleRefresh);
+
+    return () => {
+      window.removeEventListener("sale-invoices-refresh", handleRefresh);
+      window.removeEventListener("focus", handleRefresh);
+    };
+  }, [loadData]);
 
   const stats = useMemo(() => {
     const parseLocalDate = (dStr: string) => {
@@ -103,10 +113,17 @@ export function ProfitAndLoss({ onBack }: ProfitAndLossProps) {
         const itemId = String(item.itemId);
         const qty = Number(item.quantity || item.qty || 0);
         const invoiceSalePrice = Number(item.price || 0);
-        const purchasePrice = itemPurchasePriceMap.get(itemId) || 0;
+        let itemCost = 0;
+        if (item.totalCost != null && Number.isFinite(Number(item.totalCost))) {
+          itemCost = Number(item.totalCost);
+        } else if (item.costPrice != null && Number.isFinite(Number(item.costPrice))) {
+          itemCost = qty * Number(item.costPrice);
+        } else {
+          itemCost = qty * (itemPurchasePriceMap.get(itemId) || 0);
+        }
 
-        // Calculate gross profit for this specific item based on its sale price in the invoice
-        grossProfit += (invoiceSalePrice - purchasePrice) * qty;
+        // Calculate gross profit for this specific item based on its sale price and at-price cost
+        grossProfit += (invoiceSalePrice * qty) - itemCost;
       });
 
       // Subtract any invoice-level discount to get the true net gross profit

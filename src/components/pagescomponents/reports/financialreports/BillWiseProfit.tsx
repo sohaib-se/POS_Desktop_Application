@@ -1,11 +1,13 @@
 import { useSettings } from "@/hooks/useSettings";
-import { ArrowLeft, Search, Printer, Download, Eye, X } from 'lucide-react';
+import { ArrowLeft, Search, Printer, Download, Eye, X, Pencil } from 'lucide-react';
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import * as XLSXStyle from "xlsx-js-style";
 import { getMonthKeyFromDate, parseLineItems, formatDateDisplay } from '../../saleinvoices/utils';
+import type { SaleInvoiceEditData } from '@/types';
 
 interface BillWiseProfitProps {
   onBack: () => void;
+  onEditInvoice?: (invoice: SaleInvoiceEditData) => void;
 }
 
 interface SaleProfitData {
@@ -18,7 +20,36 @@ interface SaleProfitData {
   rawSale: any;
 }
 
-export function BillWiseProfit({ onBack }: BillWiseProfitProps) {
+function mapToSaleInvoiceEditData(s: any): SaleInvoiceEditData {
+  return {
+    id: String(s.id),
+    invoiceNo: s.invoice_no ?? s.invoiceNo ?? "",
+    date: s.date ?? "",
+    partyName: s.party_name ?? s.partyName ?? "Cash Sale",
+    partyId: s.party_id ?? s.partyId ?? undefined,
+    partyPhone: s.party_phone ?? s.partyPhone ?? undefined,
+    paymentType: s.payment_type ?? s.paymentType ?? s.payment_mode ?? s.paymentMode ?? "Cash",
+    paymentMode: s.payment_mode ?? s.paymentMode ?? undefined,
+    amount: Number(s.amount ?? 0),
+    balance: Number(s.balance ?? 0),
+    subtotal: Number(s.subtotal ?? 0),
+    discountPercent: Number(s.discount_percent ?? s.discountPercent ?? 0),
+    discountAmount: Number(s.discount_amount ?? s.discountAmount ?? 0),
+    taxLabel: s.tax_label ?? s.taxLabel ?? undefined,
+    taxRate: Number(s.tax_rate ?? s.taxRate ?? 0),
+    taxAmount: Number(s.tax_amount ?? s.taxAmount ?? 0),
+    roundOff: Boolean(s.round_off ?? s.roundOff),
+    roundOffAmount: Number(s.round_off_amount ?? s.roundOffAmount ?? 0),
+    description: s.description ?? undefined,
+    lineItemsJson: s.line_items_json ?? s.lineItemsJson ?? null,
+    attachmentImagePath: s.attachment_image_path ?? s.attachmentImagePath ?? null,
+    attachmentImageName: s.attachment_image_name ?? s.attachmentImageName ?? null,
+    attachmentDocumentPath: s.attachment_document_path ?? s.attachmentDocumentPath ?? null,
+    attachmentDocumentName: s.attachment_document_name ?? s.attachmentDocumentName ?? null,
+  };
+}
+
+export function BillWiseProfit({ onBack, onEditInvoice }: BillWiseProfitProps) {
   const [currency] = useSettings('settings.businessCurrency', { code: 'PKR', symbol: 'Rs' });
   const [currencyDisplay] = useSettings<'abbreviation' | 'icon'>('settings.currencyDisplay', 'abbreviation');
   const currencyStr = currencyDisplay === 'icon' ? currency.symbol : currency.code;
@@ -67,9 +98,10 @@ export function BillWiseProfit({ onBack }: BillWiseProfitProps) {
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
+      const timestamp = Date.now();
       const [salesRes, itemsRes] = await Promise.all([
-        fetch("/api/sale_invoices").catch(() => null),
-        fetch("/api/items").catch(() => null),
+        fetch(`/api/sale_invoices?t=${timestamp}`).catch(() => null),
+        fetch(`/api/items?t=${timestamp}`).catch(() => null),
       ]);
       
       let sales: any[] = [];
@@ -89,14 +121,65 @@ export function BillWiseProfit({ onBack }: BillWiseProfitProps) {
 
   useEffect(() => {
     void loadData();
+
+    const handleRefresh = () => {
+      void loadData();
+    };
+
+    window.addEventListener("sale-invoices-refresh", handleRefresh);
+    window.addEventListener("focus", handleRefresh);
+
+    return () => {
+      window.removeEventListener("sale-invoices-refresh", handleRefresh);
+      window.removeEventListener("focus", handleRefresh);
+    };
   }, [loadData]);
 
-  const displayData = useMemo(() => {
-    const itemPurchasePriceMap = new Map<string, number>();
+  const itemPurchasePriceMap = useMemo(() => {
+    const map = new Map<string, number>();
     rawItems.forEach(item => {
-      itemPurchasePriceMap.set(String(item.id), Number(item.purchase_price || 0));
+      map.set(String(item.id), Number(item.purchase_price || 0));
     });
+    return map;
+  }, [rawItems]);
 
+  // Keep details modal synchronized if a sale is updated in background/edit
+  useEffect(() => {
+    if (selectedInvoiceForDetails) {
+      const updated = rawSales.find(s => String(s.id) === String(selectedInvoiceForDetails.id));
+      if (updated) {
+        let totalCost = 0;
+        const lineItems = parseLineItems(updated.line_items_json);
+        lineItems.forEach((item: any) => {
+          const itemId = String(item.itemId);
+          const qty = Number(item.quantity || item.qty || 0);
+          let itemCost = 0;
+          if (item.totalCost != null && Number.isFinite(Number(item.totalCost))) {
+            itemCost = Number(item.totalCost);
+          } else if (item.costPrice != null && Number.isFinite(Number(item.costPrice))) {
+            itemCost = qty * Number(item.costPrice);
+          } else {
+            const fallbackPrice = itemPurchasePriceMap.get(itemId) || 0;
+            itemCost = qty * fallbackPrice;
+          }
+          totalCost += itemCost;
+        });
+
+        const subtotal = Number(updated.subtotal || 0);
+        const discount = Number(updated.discount_amount || 0);
+        const netSaleAmount = subtotal > 0 ? (subtotal - discount) : Number(updated.amount || 0);
+        const profit = netSaleAmount - totalCost;
+
+        setSelectedInvoiceForDetails({
+          ...updated,
+          computedCost: totalCost,
+          computedProfit: profit,
+        });
+      }
+    }
+  }, [rawSales, itemPurchasePriceMap]);
+
+  const displayData = useMemo(() => {
     const filteredSales = selectedMonthKey 
         ? rawSales.filter(s => getMonthKeyFromDate(s.date) === selectedMonthKey && !s.transaction_type?.includes("Returned"))
         : rawSales.filter(s => !s.transaction_type?.includes("Returned"));
@@ -109,13 +192,21 @@ export function BillWiseProfit({ onBack }: BillWiseProfitProps) {
       lineItems.forEach((item: any) => {
           const itemId = String(item.itemId);
           const qty = Number(item.quantity || item.qty || 0);
-          const cost = itemPurchasePriceMap.get(itemId) || 0;
-          totalCost += (qty * cost);
+          let itemCost = 0;
+          if (item.totalCost != null && Number.isFinite(Number(item.totalCost))) {
+            itemCost = Number(item.totalCost);
+          } else if (item.costPrice != null && Number.isFinite(Number(item.costPrice))) {
+            itemCost = qty * Number(item.costPrice);
+          } else {
+            const fallbackPrice = itemPurchasePriceMap.get(itemId) || 0;
+            itemCost = qty * fallbackPrice;
+          }
+          totalCost += itemCost;
       });
 
       const subtotal = Number(sale.subtotal || 0);
       const discount = Number(sale.discount_amount || 0);
-      const netSaleAmount = subtotal - discount;
+      const netSaleAmount = subtotal > 0 ? (subtotal - discount) : amount;
       const profit = netSaleAmount - totalCost;
 
       return {
@@ -125,7 +216,7 @@ export function BillWiseProfit({ onBack }: BillWiseProfitProps) {
         partyName: sale.party_name || 'Cash Sale',
         amount: amount,
         profit: profit,
-        rawSale: sale
+        rawSale: { ...sale, computedCost: totalCost, computedProfit: profit }
       };
     });
 
@@ -140,7 +231,7 @@ export function BillWiseProfit({ onBack }: BillWiseProfitProps) {
     }
 
     return data;
-  }, [rawSales, rawItems, selectedMonthKey, searchQuery]);
+  }, [rawSales, itemPurchasePriceMap, selectedMonthKey, searchQuery]);
 
   const { totalSales, totalProfit } = useMemo(() => {
     return displayData.reduce(
@@ -457,13 +548,24 @@ export function BillWiseProfit({ onBack }: BillWiseProfitProps) {
                       {currencyStr} {row.profit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </td>
                     <td className="px-6 py-4 text-center">
-                      <button
-                        onClick={() => setSelectedInvoiceForDetails(row.rawSale)}
-                        className="text-blue-600 hover:text-blue-800 hover:bg-blue-50 p-2 rounded-lg transition-colors flex items-center justify-center w-full"
-                        title="View Details"
-                      >
-                        <Eye className="w-4 h-4" />
-                      </button>
+                      <div className="flex items-center justify-center gap-1.5">
+                        <button
+                          onClick={() => setSelectedInvoiceForDetails(row.rawSale)}
+                          className="text-blue-600 hover:text-blue-800 hover:bg-blue-50 p-2 rounded-lg transition-colors"
+                          title="View Details"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </button>
+                        {onEditInvoice && (
+                          <button
+                            onClick={() => onEditInvoice(mapToSaleInvoiceEditData(row.rawSale))}
+                            className="text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 p-2 rounded-lg transition-colors"
+                            title="Edit Sale Transaction"
+                          >
+                            <Pencil className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -505,22 +607,32 @@ export function BillWiseProfit({ onBack }: BillWiseProfitProps) {
               </button>
             </div>
             <div className="p-6 overflow-auto flex-1">
-              <div className="grid grid-cols-2 gap-4 mb-6">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-6 bg-gray-50 p-4 rounded-lg">
                 <div>
-                  <p className="text-sm text-gray-500">Date</p>
-                  <p className="font-medium">{selectedInvoiceForDetails.date}</p>
+                  <p className="text-xs text-gray-500 uppercase font-medium">Date</p>
+                  <p className="font-semibold text-gray-800">{selectedInvoiceForDetails.date}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-gray-500">Party</p>
-                  <p className="font-medium">{selectedInvoiceForDetails.party_name || 'Cash Sale'}</p>
+                  <p className="text-xs text-gray-500 uppercase font-medium">Party</p>
+                  <p className="font-semibold text-gray-800">{selectedInvoiceForDetails.party_name || 'Cash Sale'}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-gray-500">Subtotal</p>
-                  <p className="font-medium">{currencyStr} {Number(selectedInvoiceForDetails.subtotal || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+                  <p className="text-xs text-gray-500 uppercase font-medium">Subtotal</p>
+                  <p className="font-semibold text-gray-800">{currencyStr} {Number(selectedInvoiceForDetails.subtotal || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-gray-500">Discount</p>
-                  <p className="font-medium">{currencyStr} {Number(selectedInvoiceForDetails.discount_amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+                  <p className="text-xs text-gray-500 uppercase font-medium">Discount</p>
+                  <p className="font-semibold text-gray-800">{currencyStr} {Number(selectedInvoiceForDetails.discount_amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500 uppercase font-medium">Total Cost</p>
+                  <p className="font-semibold text-gray-800">{currencyStr} {Number(selectedInvoiceForDetails.computedCost ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500 uppercase font-medium">Profit / Loss</p>
+                  <p className={`font-semibold ${Number(selectedInvoiceForDetails.computedProfit ?? 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    {currencyStr} {Number(selectedInvoiceForDetails.computedProfit ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                  </p>
                 </div>
               </div>
               
@@ -531,27 +643,54 @@ export function BillWiseProfit({ onBack }: BillWiseProfitProps) {
                     <th className="px-4 py-2 font-medium">Item</th>
                     <th className="px-4 py-2 font-medium text-right">Qty</th>
                     <th className="px-4 py-2 font-medium text-right">Price</th>
+                    <th className="px-4 py-2 font-medium text-right">Cost Price</th>
                     <th className="px-4 py-2 font-medium text-right">Total</th>
+                    <th className="px-4 py-2 font-medium text-right">Profit</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
                   {parseLineItems(selectedInvoiceForDetails.line_items_json).map((item: any, idx: number) => {
-                    const itemName = rawItems.find(i => String(i.id) === String(item.itemId))?.name || 'Unknown Item';
+                    const itemName = rawItems.find(i => String(i.id) === String(item.itemId))?.name || item.name || 'Unknown Item';
                     const qty = Number(item.quantity || item.qty || 0);
                     const price = Number(item.sale_price || item.price || 0);
+                    const costPrice = item.costPrice != null && Number.isFinite(Number(item.costPrice))
+                      ? Number(item.costPrice)
+                      : (item.totalCost != null && qty > 0 ? Number(item.totalCost) / qty : (itemPurchasePriceMap.get(String(item.itemId)) || 0));
+                    const totalSale = qty * price;
+                    const totalItemCost = item.totalCost != null && Number.isFinite(Number(item.totalCost))
+                      ? Number(item.totalCost)
+                      : qty * costPrice;
+                    const itemProfit = totalSale - totalItemCost;
                     return (
                       <tr key={idx}>
-                        <td className="px-4 py-3">{itemName}</td>
+                        <td className="px-4 py-3 font-medium text-gray-900">{itemName}</td>
                         <td className="px-4 py-3 text-right">{qty}</td>
                         <td className="px-4 py-3 text-right">{currencyStr} {price.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
-                        <td className="px-4 py-3 text-right font-medium">{currencyStr} {(qty * price).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                        <td className="px-4 py-3 text-right text-gray-600">{currencyStr} {costPrice.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                        <td className="px-4 py-3 text-right font-medium">{currencyStr} {totalSale.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                        <td className={`px-4 py-3 text-right font-medium ${itemProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                          {currencyStr} {itemProfit.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                        </td>
                       </tr>
-                    )
+                    );
                   })}
                 </tbody>
               </table>
             </div>
-            <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 flex justify-end">
+            <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 flex justify-end gap-2.5">
+              {onEditInvoice && (
+                <button 
+                  onClick={() => {
+                    const raw = selectedInvoiceForDetails;
+                    setSelectedInvoiceForDetails(null);
+                    onEditInvoice(mapToSaleInvoiceEditData(raw));
+                  }}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors flex items-center gap-1.5 shadow-sm"
+                >
+                  <Pencil className="w-4 h-4" />
+                  Edit Sale Transaction
+                </button>
+              )}
               <button 
                 onClick={() => setSelectedInvoiceForDetails(null)}
                 className="px-4 py-2 bg-gray-800 text-white rounded-lg text-sm font-medium hover:bg-gray-900 transition-colors"

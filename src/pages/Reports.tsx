@@ -22,11 +22,29 @@ interface ReportsProps {
 }
 
 export function Reports({ onViewChange, onEditInvoice, initialReport }: ReportsProps) {
-  const [activeReport, setActiveReport] = useState<{ category: string; name: string } | null>(initialReport || null);
+  const [activeReport, setActiveReport] = useState<{ category: string; name: string } | null>(() => {
+    if (initialReport) return initialReport;
+    try {
+      const saved = sessionStorage.getItem("pos_active_report");
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return null;
+  });
+
+  const handleSetActiveReport = (report: { category: string; name: string } | null) => {
+    setActiveReport(report);
+    try {
+      if (report) {
+        sessionStorage.setItem("pos_active_report", JSON.stringify(report));
+      } else {
+        sessionStorage.removeItem("pos_active_report");
+      }
+    } catch {}
+  };
 
   useEffect(() => {
     if (initialReport) {
-      setActiveReport(initialReport);
+      handleSetActiveReport(initialReport);
     }
   }, [initialReport]);
 
@@ -34,50 +52,50 @@ export function Reports({ onViewChange, onEditInvoice, initialReport }: ReportsP
     if (activeReport.name === 'Sale') {
       return (
         <SaleReport 
-          onBack={() => setActiveReport(null)} 
+          onBack={() => handleSetActiveReport(null)} 
           onViewChange={onViewChange!} 
           onEditInvoice={onEditInvoice!} 
         />
       );
     }
     if (activeReport.name === 'Purchase') {
-      return <PurchaseReport onBack={() => setActiveReport(null)} />;
+      return <PurchaseReport onBack={() => handleSetActiveReport(null)} />;
     }
     if (activeReport.name === 'Day book') {
-      return <DaybookReport onBack={() => setActiveReport(null)} onEditInvoice={onEditInvoice!} />;
+      return <DaybookReport onBack={() => handleSetActiveReport(null)} onEditInvoice={onEditInvoice!} />;
     }
     if (activeReport.name === 'All Transactions') {
-      return <AllTransactionsReport onBack={() => setActiveReport(null)} onEditInvoice={onEditInvoice!} />;
+      return <AllTransactionsReport onBack={() => handleSetActiveReport(null)} onEditInvoice={onEditInvoice!} />;
     }
   }
 
   if (activeReport?.category === 'Party Reports') {
     if (activeReport.name === 'All parties') {
-      return <AllPartiesReport onBack={() => setActiveReport(null)} />;
+      return <AllPartiesReport onBack={() => handleSetActiveReport(null)} />;
     }
     if (activeReport.name === 'Party report') {
-      return <PartyReport onBack={() => setActiveReport(null)} />;
+      return <PartyReport onBack={() => handleSetActiveReport(null)} />;
     }
   }
 
   if (activeReport?.category === 'Financial Reports') {
     if (activeReport.name === 'Profit And Loss') {
-      return <ProfitAndLoss onBack={() => setActiveReport(null)} />;
+      return <ProfitAndLoss onBack={() => handleSetActiveReport(null)} />;
     }
     if (activeReport.name === 'Bill Wise Profit') {
-      return <BillWiseProfit onBack={() => setActiveReport(null)} />;
+      return <BillWiseProfit onBack={() => handleSetActiveReport(null)} onEditInvoice={onEditInvoice} />;
     }
   }
 
   if (activeReport?.category === 'Item/Stock Reports') {
     if (activeReport.name === 'Sale Purchase By Party') {
-      return <SalePurchaseByParty onBack={() => setActiveReport(null)} />;
+      return <SalePurchaseByParty onBack={() => handleSetActiveReport(null)} />;
     }
     if (activeReport.name === 'Low stock details') {
-      return <LowStockDetails onBack={() => setActiveReport(null)} />;
+      return <LowStockDetails onBack={() => handleSetActiveReport(null)} />;
     }
     if (activeReport.name === 'Stock details') {
-      return <StockDetails onBack={() => setActiveReport(null)} />;
+      return <StockDetails onBack={() => handleSetActiveReport(null)} />;
     }
   }
 
@@ -85,7 +103,7 @@ export function Reports({ onViewChange, onEditInvoice, initialReport }: ReportsP
     <div className="h-full flex flex-col bg-white">
       <ReportsList 
         categories={reportCategories} 
-        onReportClick={(category, name) => setActiveReport({ category, name })}
+        onReportClick={(category, name) => handleSetActiveReport({ category, name })}
       />
     </div>
   );

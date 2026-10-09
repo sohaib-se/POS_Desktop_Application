@@ -3374,18 +3374,41 @@ function sqliteApiPlugin() {
 
               try {
                 const allItems = repository.getItems();
+                let lineItemsUpdated = false;
                 for (const lineItem of lineItems) {
-                  if (!lineItem.itemId || !lineItem.quantity) continue;
-                  const dbItem = allItems.find((i: any) => i.id === lineItem.itemId);
+                  const soldQty = Number(lineItem.quantity ?? lineItem.qty ?? 0);
+                  if (!lineItem.itemId || soldQty <= 0) continue;
+                  lineItem.quantity = soldQty;
+                  const dbItem = allItems.find((i: any) => String(i.id) === String(lineItem.itemId));
                   if (!dbItem) continue;
 
                   const isSecondary = lineItem.unit === dbItem.secondary_unit;
-                  repository.deductItemStockFifo(
-                    lineItem.itemId,
-                    lineItem.quantity,
-                    isSecondary,
-                    dbItem.conversion_rate
-                  );
+                  try {
+                    const fifoResult = repository.deductItemStockFifo(
+                      lineItem.itemId,
+                      soldQty,
+                      isSecondary,
+                      dbItem.conversion_rate
+                    );
+                    if (fifoResult && typeof fifoResult.costPerUnit === 'number') {
+                      lineItem.costPrice = fifoResult.costPerUnit;
+                      lineItem.totalCost = fifoResult.valueToDeduct;
+                      lineItemsUpdated = true;
+                    }
+                  } catch (fifoErr) {
+                    console.error('[Sale] Failed fifo deduction for item:', lineItem.itemId, fifoErr);
+                  }
+
+                  if (lineItem.costPrice == null) {
+                    const fallbackPrice = Number(dbItem.purchase_price || 0);
+                    lineItem.costPrice = fallbackPrice;
+                    lineItem.totalCost = soldQty * fallbackPrice;
+                    lineItemsUpdated = true;
+                  }
+                }
+                if (lineItemsUpdated) {
+                  invoice.lineItemsJson = JSON.stringify(lineItems);
+                  repository.updateSaleInvoice(invoice.id, invoice);
                 }
               } catch (stockError) {
                 console.error("Failed to deduct stock:", stockError);
@@ -3501,30 +3524,58 @@ function sqliteApiPlugin() {
                 const oldLineItems = JSON.parse(existingInvoice.line_items_json || '[]');
                 const allItemsBeforeRestore = repository.getItems();
                 for (const oldItem of oldLineItems) {
-                  if (!oldItem.itemId || !oldItem.quantity) continue;
+                  const oldQty = Number(oldItem.quantity ?? oldItem.qty ?? 0);
+                  if (!oldItem.itemId || oldQty <= 0) continue;
                   const dbItem = allItemsBeforeRestore.find((i: any) => String(i.id) === String(oldItem.itemId));
                   if (!dbItem) continue;
                   const isSecondary = oldItem.unit === dbItem.secondary_unit;
-                  repository.restoreItemStockFifo(
-                    oldItem.itemId,
-                    Number(oldItem.quantity),
-                    isSecondary,
-                    dbItem.conversion_rate
-                  );
+                  try {
+                    repository.restoreItemStockFifo(
+                      oldItem.itemId,
+                      oldQty,
+                      isSecondary,
+                      dbItem.conversion_rate
+                    );
+                  } catch (restoreErr) {
+                    console.error('[Edit Sale] Failed to restore stock for item:', oldItem.itemId, restoreErr);
+                  }
                 }
 
                 const allItemsAfterRestore = repository.getItems();
+                let lineItemsUpdated = false;
                 for (const newItem of lineItems) {
-                  if (!newItem.itemId || !newItem.quantity) continue;
+                  const newQty = Number(newItem.quantity ?? newItem.qty ?? 0);
+                  if (!newItem.itemId || newQty <= 0) continue;
+                  newItem.quantity = newQty;
                   const dbItem = allItemsAfterRestore.find((i: any) => String(i.id) === String(newItem.itemId));
-                  if (!dbItem) continue;
-                  const isSecondary = newItem.unit === dbItem.secondary_unit;
-                  repository.deductItemStockFifo(
-                    newItem.itemId,
-                    Number(newItem.quantity),
-                    isSecondary,
-                    dbItem.conversion_rate
-                  );
+                  const isSecondary = dbItem ? newItem.unit === dbItem.secondary_unit : false;
+                  const convRate = dbItem?.conversion_rate;
+                  try {
+                    const fifoResult = repository.deductItemStockFifo(
+                      newItem.itemId,
+                      newQty,
+                      isSecondary,
+                      convRate
+                    );
+                    if (fifoResult && typeof fifoResult.costPerUnit === 'number') {
+                      newItem.costPrice = fifoResult.costPerUnit;
+                      newItem.totalCost = fifoResult.valueToDeduct;
+                      lineItemsUpdated = true;
+                    }
+                  } catch (deductErr) {
+                    console.error('[Edit Sale] Failed to deduct fifo for item:', newItem.itemId, deductErr);
+                  }
+
+                  if (newItem.costPrice == null && dbItem) {
+                    const fallbackPrice = Number(dbItem.purchase_price || 0);
+                    newItem.costPrice = fallbackPrice;
+                    newItem.totalCost = newQty * fallbackPrice;
+                    lineItemsUpdated = true;
+                  }
+                }
+                if (lineItemsUpdated) {
+                  invoice.lineItemsJson = JSON.stringify(lineItems);
+                  repository.updateSaleInvoice(id, invoice);
                 }
               } catch (stockError) {
                 console.error('[Edit Sale] Failed to update stock:', stockError);

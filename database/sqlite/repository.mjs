@@ -369,6 +369,8 @@ export function deductItemStockFifo(itemId, quantity, isSecondary, conversionRat
     const validConversion = Number.isFinite(Number(conversionRate)) && Number(conversionRate) > 0;
     const secondaryQty = (!isSecondary && validConversion) ? primaryQty * Number(conversionRate) : Number(quantity);
 
+    const itemRow = db.prepare('SELECT stock_quantity, purchase_price FROM items WHERE id = ?').get(String(itemId));
+
     // --- FIFO: walk layers oldest-first, accumulate value to deduct ---
     const layers = db.prepare(`
       SELECT id, remaining_quantity, at_price
@@ -381,6 +383,7 @@ export function deductItemStockFifo(itemId, quantity, isSecondary, conversionRat
 
     let remaining = primaryQty;
     let valueToDeduct = 0;
+    const layersConsumed = [];
 
     for (const layer of layers) {
       if (remaining <= 0) break;
@@ -390,12 +393,29 @@ export function deductItemStockFifo(itemId, quantity, isSecondary, conversionRat
       valueToDeduct += consumed * unitCost;
       remaining -= consumed;
 
+      layersConsumed.push({
+        layerId: layer.id,
+        quantity: consumed,
+        atPrice: unitCost,
+        totalCost: consumed * unitCost,
+      });
+
       // Decrement the layer's remaining_quantity
       db.prepare(
         'UPDATE adjust_stock_transactions SET remaining_quantity = remaining_quantity - ? WHERE id = ?'
       ).run(consumed, layer.id);
     }
-    // If remaining > 0 the item is oversold; value deduction stops at 0 (handled by MAX below)
+
+    if (remaining > 0) {
+      const fallbackCost = Number(itemRow?.purchase_price ?? 0);
+      valueToDeduct += remaining * fallbackCost;
+      layersConsumed.push({
+        layerId: 'fallback',
+        quantity: remaining,
+        atPrice: fallbackCost,
+        totalCost: remaining * fallbackCost,
+      });
+    }
 
     // --- Update the item ---
     db.prepare(`
@@ -411,7 +431,16 @@ export function deductItemStockFifo(itemId, quantity, isSecondary, conversionRat
       WHERE id = @id
     `).run({ id: String(itemId), primaryQty, secondaryQty, valueToDeduct });
 
-    return true;
+    const soldQty = Number(quantity);
+    const costPerUnit = soldQty > 0 ? valueToDeduct / soldQty : 0;
+
+    return {
+      success: true,
+      valueToDeduct,
+      costPerUnit,
+      primaryCostPerUnit: primaryQty > 0 ? valueToDeduct / primaryQty : 0,
+      layersConsumed,
+    };
   } finally {
     db.close();
   }
@@ -461,6 +490,12 @@ export function restoreItemStockFifo(itemId, quantity, isSecondary, conversionRa
       db.prepare(
         'UPDATE adjust_stock_transactions SET remaining_quantity = remaining_quantity + ? WHERE id = ?'
       ).run(restore, layer.id);
+    }
+
+    if (remaining > 0) {
+      const itemRow = db.prepare('SELECT purchase_price FROM items WHERE id = ?').get(String(itemId));
+      const fallbackCost = Number(itemRow?.purchase_price ?? 0);
+      valueToRestore += remaining * fallbackCost;
     }
 
     // --- Update the item ---
@@ -609,9 +644,134 @@ export function isPurchaseFifoConsumed(purchaseBillId) {
   }
 }
 
+/**
+ * Returns true if an 'Add Stock' or 'Opening Stock' transaction has had any
+ * of its stock consumed by sales or reductions (i.e. remaining_quantity != quantity).
+ */
+export function isStockAdjustmentConsumed(adjustmentId) {
+  const db = openDatabase();
+  try {
+    const row = db.prepare(`
+      SELECT quantity, remaining_quantity, adjustment_type
+      FROM adjust_stock_transactions
+      WHERE id = ?
+    `).get(String(adjustmentId));
+    if (!row) return false;
+    if (row.adjustment_type !== 'Add Stock' && row.adjustment_type !== 'Opening Stock') {
+      return false;
+    }
+    const qty = Number(row.quantity ?? 0);
+    const rem = Number(row.remaining_quantity ?? qty);
+    return Math.abs(rem - qty) > 0.00001;
+  } finally {
+    db.close();
+  }
+}
 
+
+
+export function backfillSaleInvoiceCosts() {
+  const db = openDatabase();
+  try {
+    const allSales = db.prepare('SELECT id, invoice_no, date, line_items_json, created_at FROM sale_invoices ORDER BY created_at ASC, id ASC').all();
+    const allItems = db.prepare('SELECT id, name, purchase_price, secondary_unit, conversion_rate FROM items').all();
+
+    // Check if any sale is missing costPrice on line items
+    let hasMissingCost = false;
+    for (const sale of allSales) {
+      if (!sale.line_items_json) continue;
+      try {
+        const lineItems = JSON.parse(sale.line_items_json);
+        if (Array.isArray(lineItems) && lineItems.some(li => li.costPrice == null && li.totalCost == null)) {
+          hasMissingCost = true;
+          break;
+        }
+      } catch (e) {}
+    }
+
+    if (!hasMissingCost) return;
+
+    for (const item of allItems) {
+      const itemId = String(item.id);
+      const layers = db.prepare(`
+        SELECT id, quantity, at_price, date, created_at
+        FROM adjust_stock_transactions
+        WHERE item_id = ?
+          AND adjustment_type IN ('Opening Stock', 'Add Stock', 'Purchase Bill')
+        ORDER BY date ASC, created_at ASC
+      `).all(itemId);
+
+      const simLayers = layers.map(l => ({
+        id: l.id,
+        available: Number(l.quantity ?? 0),
+        atPrice: Number(l.at_price ?? 0),
+        date: l.date,
+        createdAt: l.created_at,
+      }));
+
+      for (const sale of allSales) {
+        if (!sale.line_items_json) continue;
+        let lineItems;
+        try {
+          lineItems = JSON.parse(sale.line_items_json);
+        } catch (e) {
+          continue;
+        }
+        if (!Array.isArray(lineItems)) continue;
+
+        let saleModified = false;
+        for (const li of lineItems) {
+          if (String(li.itemId) !== itemId) continue;
+          const qty = Number(li.quantity || li.qty || 0);
+          if (qty <= 0) continue;
+
+          const isSecondary = li.unit === item.secondary_unit;
+          const validConversion = Number.isFinite(Number(item.conversion_rate)) && Number(item.conversion_rate) > 0;
+          const primaryQty = (isSecondary && validConversion) ? qty / Number(item.conversion_rate) : qty;
+
+          let rem = primaryQty;
+          let costValue = 0;
+
+          const availableLayers = simLayers.filter(l => !l.createdAt || !sale.created_at || l.createdAt <= sale.created_at);
+
+          for (const layer of availableLayers) {
+            if (rem <= 0) break;
+            if (layer.available <= 0) continue;
+            const consumed = Math.min(rem, layer.available);
+            costValue += consumed * layer.atPrice;
+            layer.available -= consumed;
+            rem -= consumed;
+          }
+
+          if (rem > 0) {
+            const fallbackCost = Number(item.purchase_price ?? 0);
+            costValue += rem * fallbackCost;
+          }
+
+          const costPerUnit = qty > 0 ? costValue / qty : 0;
+          if (li.costPrice == null) {
+            li.costPrice = costPerUnit;
+            li.totalCost = costValue;
+            saleModified = true;
+          }
+        }
+
+        if (saleModified) {
+          sale.line_items_json = JSON.stringify(lineItems);
+          db.prepare('UPDATE sale_invoices SET line_items_json = ? WHERE id = ?').run(
+            sale.line_items_json,
+            sale.id
+          );
+        }
+      }
+    }
+  } finally {
+    db.close();
+  }
+}
 
 export function getSaleInvoices() {
+  backfillSaleInvoiceCosts();
   const db = openDatabase();
   const rows = db.prepare('SELECT * FROM sale_invoices ORDER BY created_at DESC, invoice_no DESC').all();
   db.close();

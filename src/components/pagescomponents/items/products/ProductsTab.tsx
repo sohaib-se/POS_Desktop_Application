@@ -255,6 +255,11 @@ export function ProductsTab({
     itemName: string;
   } | null>(null);
 
+  const [blockedEditModal, setBlockedEditModal] = useState<{
+    type: "Add Stock" | "Purchase";
+    itemName: string;
+  } | null>(null);
+
   const [showStockDetailsPopup, setShowStockDetailsPopup] = useState(false);
   const [transactionToDelete, setTransactionToDelete] = useState<ItemTransactionRow | null>(null);
   const [errorModalMessage, setErrorModalMessage] = useState<string | null>(null);
@@ -527,6 +532,25 @@ export function ProductsTab({
         }
       }
 
+      if (adjustStockForm.id) {
+        try {
+          const checkRes = await fetch(`/api/adjust_stock_transactions?checkConsumed=${adjustStockForm.id}`);
+          if (checkRes.ok) {
+            const checkData = await checkRes.json();
+            if (checkData.consumed) {
+              setBlockedEditModal({
+                type: "Add Stock",
+                itemName: selectedItem.name,
+              });
+              setIsSavingAdjustment(false);
+              return;
+            }
+          }
+        } catch (err) {
+          console.error(err);
+        }
+      }
+
       const qty = Number(adjustStockForm.qty);
       const atPrice = Number(adjustStockForm.atPrice) || 0;
       let baseQtyChange = qty;
@@ -556,6 +580,25 @@ export function ProductsTab({
 
       if (!isAdd && !adjustStockForm.id) {
         // ── REDUCE STOCK (new) ──
+        // Guard: prevent reducing stock more than available stock
+        const currentPrimaryStock = selectedItem.stockQuantity ?? 0;
+        let availableStock = currentPrimaryStock;
+        if (isSecondary && selectedItem.conversionRate && selectedItem.conversionRate > 0) {
+          availableStock = selectedItem.secondaryStock ?? (currentPrimaryStock * selectedItem.conversionRate);
+        }
+        availableStock = Math.max(0, availableStock);
+        if (qty > availableStock) {
+          const unitLabel = adjustStockForm.unit || selectedItem.primaryUnit || selectedItem.unit || "";
+          const unitSuffix = unitLabel ? ` ${unitLabel}` : "";
+          setErrorModalMessage(
+            availableStock <= 0
+              ? `Current stock of ${selectedItem.name} is 0${unitSuffix}. You cannot reduce stock.`
+              : `Current stock of ${selectedItem.name} is only ${availableStock}${unitSuffix}.`
+          );
+          setIsSavingAdjustment(false);
+          return;
+        }
+
         // The backend handles FIFO deduction and returns the updated item.
         // We do NOT call /api/items separately — it would overwrite the FIFO value.
         const adjustResponse = await fetch(endpoint, {
@@ -670,26 +713,79 @@ export function ProductsTab({
     }
   };
 
-  const handleEditTransaction = (transaction: ItemTransactionRow) => {
-    if (transaction.type === "Sale") {
+  const handleEditTransaction = async (transaction: ItemTransactionRow) => {
+    if (transaction.type === "Sale" || transaction.type === "Sale (Returned)") {
       setEditingSale(transaction.rawTransaction);
       setShowAddSale(true);
-    } else if (transaction.type === "Purchase") {
+      return;
+    }
+
+    if (transaction.type === "Purchase") {
+      const apiId = transaction.rawTransaction?.id;
+      if (apiId) {
+        try {
+          const res = await fetch(`/api/purchase_bills?checkConsumed=${apiId}`);
+          if (res.ok) {
+            const data = await res.json();
+            if (data.consumed) {
+              setBlockedEditModal({
+                type: "Purchase",
+                itemName: transaction.itemName || selectedItem?.name || "this item",
+              });
+              return;
+            }
+          }
+        } catch (err) {
+          console.error("Failed to check purchase consumption:", err);
+        }
+      }
       setEditingPurchase(transaction.rawTransaction);
       setShowAddPurchase(true);
-    } else {
-      if (transaction.rawTransaction) {
-        setAdjustStockForm({
-          id: transaction.rawTransaction.id,
-          type: transaction.type === "Add Stock" || transaction.type === "Opening Stock" ? "Add" : "Reduce",
-          date: transaction.date,
-          qty: String(transaction.quantity),
-          unit: transaction.unit,
-          atPrice: String(transaction.price),
-          details: transaction.rawTransaction.details || "",
+      return;
+    }
+
+    if (transaction.type === "Add Stock" || transaction.type === "Opening Stock") {
+      const raw = transaction.rawTransaction as Record<string, unknown>;
+      const totalQty = Number(raw?.quantity ?? 0);
+      const remainingQty = Number(raw?.remaining_quantity ?? raw?.remainingQuantity ?? totalQty);
+      if (Math.abs(remainingQty - totalQty) > 0.00001) {
+        setBlockedEditModal({
+          type: "Add Stock",
+          itemName: transaction.itemName || selectedItem?.name || "this item",
         });
-        setShowAdjustStockModal(true);
+        return;
       }
+      const apiId = raw?.id;
+      if (apiId) {
+        try {
+          const res = await fetch(`/api/adjust_stock_transactions?checkConsumed=${apiId}`);
+          if (res.ok) {
+            const data = await res.json();
+            if (data.consumed) {
+              setBlockedEditModal({
+                type: "Add Stock",
+                itemName: transaction.itemName || selectedItem?.name || "this item",
+              });
+              return;
+            }
+          }
+        } catch (err) {
+          console.error("Failed to check stock adjustment consumption:", err);
+        }
+      }
+    }
+
+    if (transaction.rawTransaction) {
+      setAdjustStockForm({
+        id: transaction.rawTransaction.id,
+        type: transaction.type === "Add Stock" || transaction.type === "Opening Stock" ? "Add" : "Reduce",
+        date: transaction.date,
+        qty: String(transaction.quantity),
+        unit: transaction.unit,
+        atPrice: String(transaction.price),
+        details: transaction.rawTransaction.details || "",
+      });
+      setShowAdjustStockModal(true);
     }
   };
 
@@ -699,9 +795,9 @@ export function ProductsTab({
 
     // ── Guard: block deletion of Add Stock / Opening Stock if stock has been consumed ──
     if (transaction.type === "Add Stock" || transaction.type === "Opening Stock") {
-      const raw = transaction.rawTransaction as Record<string, unknown>;
-      const totalQty = Number(raw.quantity ?? 0);
-      const remainingQty = Number(raw.remaining_quantity ?? raw.remainingQuantity ?? totalQty);
+      const raw = transaction.rawTransaction as Record<string, unknown> | undefined;
+      const totalQty = Number(raw?.quantity ?? transaction.quantity ?? 0);
+      const remainingQty = Number(raw?.remaining_quantity ?? raw?.remainingQuantity ?? totalQty);
       if (remainingQty < totalQty) {
         setBlockedDeleteModal({
           type: "Add Stock",
@@ -837,6 +933,16 @@ export function ProductsTab({
               skipOpeningStockUpdate: true,
             };
 
+            const res = await fetch(`/api/adjust_stock_transactions/${apiId}`, { method: "DELETE" });
+            if (res.status === 409) {
+              setBlockedDeleteModal({
+                type: "Add Stock",
+                itemName: transaction.itemName || selectedItem?.name || "this item",
+              });
+              return;
+            }
+            if (!res.ok && res.status !== 204 && res.status !== 200) throw new Error("Failed to delete adjustment");
+
             const response = await fetch("/api/items", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
@@ -859,13 +965,17 @@ export function ProductsTab({
               prev.map((item) => (item.id === updatedItem.id ? updatedItem : item))
             );
             setSelectedItem(updatedItem);
-
-            const res = await fetch(`/api/adjust_stock_transactions/${apiId}`, { method: "DELETE" });
-            if (!res.ok && res.status !== 204 && res.status !== 200) throw new Error("Failed to delete adjustment");
           }
         } else {
           // No selected item — just delete the record
           const res = await fetch(`/api/adjust_stock_transactions/${apiId}`, { method: "DELETE" });
+          if (res.status === 409) {
+            setBlockedDeleteModal({
+              type: "Add Stock",
+              itemName: transaction.itemName || "this item",
+            });
+            return;
+          }
           if (!res.ok && res.status !== 204 && res.status !== 200) throw new Error("Failed to delete adjustment");
         }
       }
@@ -1613,6 +1723,60 @@ export function ProductsTab({
               <div className="flex justify-end mt-5">
                 <button
                   onClick={() => setBlockedDeleteModal(null)}
+                  className="px-6 py-2 bg-[#1A73E8] hover:bg-[#1557B0] text-white text-sm font-semibold rounded-lg transition-colors"
+                >
+                  Got it
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Blocked Edit Warning Modal */}
+      {blockedEditModal && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center">
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-black/40"
+            onClick={() => setBlockedEditModal(null)}
+          />
+          <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
+            {/* Coloured top bar */}
+            <div className="h-1.5 w-full bg-gradient-to-r from-amber-400 to-orange-500" />
+            <div className="p-6">
+              {/* Icon + title */}
+              <div className="flex items-start gap-4 mb-4">
+                <div className="flex-shrink-0 w-11 h-11 rounded-full bg-amber-50 flex items-center justify-center">
+                  <svg className="w-6 h-6 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="text-[17px] font-semibold text-gray-900 leading-tight">
+                    Cannot Edit This Transaction
+                  </h3>
+                  <p className="mt-1 text-sm text-gray-500">
+                    {blockedEditModal.type === "Purchase" ? "Purchase" : "Add Stock"} transaction for{" "}
+                    <span className="font-medium text-gray-700">{blockedEditModal.itemName}</span>
+                  </p>
+                </div>
+              </div>
+
+              {/* Body */}
+              <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 text-sm text-amber-800 leading-relaxed">
+                Sales have already been made from this transaction (the remaining stock and the stock quantity are not equal).
+                To edit this{" "}
+                <span className="font-semibold">
+                  {blockedEditModal.type === "Purchase" ? "Purchase" : "Add Stock"}
+                </span>{" "}
+                transaction, you must first delete or edit the sales that consumed stock from this batch.
+              </div>
+
+              {/* Action */}
+              <div className="flex justify-end mt-5">
+                <button
+                  onClick={() => setBlockedEditModal(null)}
                   className="px-6 py-2 bg-[#1A73E8] hover:bg-[#1557B0] text-white text-sm font-semibold rounded-lg transition-colors"
                 >
                   Got it

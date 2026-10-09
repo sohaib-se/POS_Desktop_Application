@@ -150,7 +150,7 @@ export function PartyDetails({
     }
   };
 
-  const handleEditTransaction = (invoice: PartyTransactionRow) => {
+  const handleEditTransaction = async (invoice: PartyTransactionRow) => {
     if (invoice?.rawRow) {
       const raw = invoice.rawRow;
       if (invoice.type === 'Sale' && onEditSaleInvoice) {
@@ -166,6 +166,22 @@ export function PartyDetails({
           description: raw.description, lineItemsJson: raw.line_items_json
         });
       } else if (invoice.type === 'Purchase') {
+        if (raw.id) {
+          try {
+            const checkRes = await fetch(`/api/purchase_bills?checkConsumed=${raw.id}`);
+            if (checkRes.ok) {
+              const checkData = await checkRes.json();
+              if (checkData.consumed) {
+                setTransactionError(
+                  "Sales have already been made from this purchase bill (the remaining stock and the stock quantity are not equal). You cannot edit this purchase bill."
+                );
+                return;
+              }
+            }
+          } catch (e) {
+            console.error(e);
+          }
+        }
         setEditingPurchaseInvoice({
           id: raw.id, invoiceNo: raw.invoice_no, date: raw.date, partyName: raw.party_name,
           partyId: raw.party_id, partyPhone: raw.party_phone,

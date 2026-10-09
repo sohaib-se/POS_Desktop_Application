@@ -140,6 +140,20 @@ export function AddPurchase({ onSave, onClose, initialInvoice }: AddPurchaseProp
 
   const [showAddParty, setShowAddParty] = useState(false);
   const [showDiscardDialog, setShowDiscardDialog] = useState(false);
+  const [blockedEditModal, setBlockedEditModal] = useState(false);
+
+  useEffect(() => {
+    if (initialInvoice?.id) {
+      void fetch(`/api/purchase_bills?checkConsumed=${initialInvoice.id}`)
+        .then((res) => res.json())
+        .then((data) => {
+          if (data?.consumed) {
+            setBlockedEditModal(true);
+          }
+        })
+        .catch(console.error);
+    }
+  }, [initialInvoice?.id]);
   const [tabClosePendingId, setTabClosePendingId] = useState<number | null>(null);
   const [partyBeingEdited, setPartyBeingEdited] = useState<any>(null);
   const [activeTabParty, setActiveTabParty] = useState<"address" | "credit">("address");
@@ -563,6 +577,22 @@ export function AddPurchase({ onSave, onClose, initialInvoice }: AddPurchaseProp
 
     try {
       const isEditing = Boolean(initialInvoice);
+      if (isEditing && initialInvoice?.id) {
+        try {
+          const checkRes = await fetch(`/api/purchase_bills?checkConsumed=${initialInvoice.id}`);
+          if (checkRes.ok) {
+            const checkData = await checkRes.json();
+            if (checkData.consumed) {
+              setBlockedEditModal(true);
+              setIsSaving(false);
+              return;
+            }
+          }
+        } catch (e) {
+          console.error(e);
+        }
+      }
+
       const response = await fetch(isEditing ? `/api/purchase_bills/${initialInvoice?.id}` : "/api/purchase_bills", {
         method: isEditing ? "PUT" : "POST",
         headers: {
@@ -604,8 +634,13 @@ export function AddPurchase({ onSave, onClose, initialInvoice }: AddPurchaseProp
       });
 
       if (!response.ok) {
+        if (response.status === 409) {
+          setBlockedEditModal(true);
+          setIsSaving(false);
+          return;
+        }
         const errorData = await response.json().catch(() => null);
-        throw new Error(errorData?.message || "Failed to save purchase");
+        throw new Error(errorData?.detail || errorData?.message || "Failed to save purchase");
       }
 
       const savedInvoice = (await response.json()) as { invoiceNo?: string };
@@ -973,6 +1008,18 @@ export function AddPurchase({ onSave, onClose, initialInvoice }: AddPurchaseProp
         icon="warning"
         onConfirm={() => { const id = tabClosePendingId!; setTabClosePendingId(null); doCloseTab(id); }}
         onCancel={() => setTabClosePendingId(null)}
+      />
+
+      <ConfirmDialog
+        open={blockedEditModal}
+        title="Cannot Edit This Purchase Bill"
+        message="Sales have already been made from this purchase bill (the remaining stock and the stock quantity are not equal). You cannot edit this purchase bill."
+        confirmLabel="OK"
+        cancelLabel="Close"
+        confirmColor="#1976d2"
+        icon="warning"
+        onConfirm={() => { setBlockedEditModal(false); if (onClose) onClose(); }}
+        onCancel={() => { setBlockedEditModal(false); if (onClose) onClose(); }}
       />
     </>
   );

@@ -87,6 +87,10 @@ export function DaybookReport({ onBack, onEditInvoice }: DaybookReportProps) {
   const [viewingPurchase, setViewingPurchase] = useState<any | null>(null);
   const [editingPurchase, setEditingPurchase] = useState<PurchaseBillEditData | null>(null);
   const [showAddPurchase, setShowAddPurchase] = useState(false);
+  const [blockedEditModal, setBlockedEditModal] = useState<{
+    invoiceNo: string;
+    partyName: string;
+  } | null>(null);
 
   const [deleteModalState, setDeleteModalState] = useState<{isOpen: boolean, tx: TransactionRow | null}>({isOpen: false, tx: null});
   const [isDeleting, setIsDeleting] = useState(false);
@@ -356,6 +360,15 @@ export function DaybookReport({ onBack, onEditInvoice }: DaybookReportProps) {
         method: "DELETE",
       });
 
+      if (response.status === 409) {
+        setBlockedEditModal({
+          invoiceNo: tx.invoiceNo,
+          partyName: tx.partyName,
+        });
+        setDeleteModalState({ isOpen: false, tx: null });
+        return;
+      }
+
       if (!response.ok && response.status !== 204) {
         throw new Error(`Failed to delete ${tx.type.toLowerCase()}`);
       }
@@ -379,10 +392,28 @@ export function DaybookReport({ onBack, onEditInvoice }: DaybookReportProps) {
     }
   };
 
-  const handleEditTransaction = (tx: TransactionRow) => {
+  const handleEditTransaction = async (tx: TransactionRow) => {
     if (tx.type.includes("Sale")) {
       if (onEditInvoice) onEditInvoice(tx.rawInvoice);
     } else {
+      const apiId = tx.rawInvoice?.id || tx.originalId;
+      if (apiId) {
+        try {
+          const res = await fetch(`/api/purchase_bills?checkConsumed=${apiId}`);
+          if (res.ok) {
+            const data = await res.json();
+            if (data.consumed) {
+              setBlockedEditModal({
+                invoiceNo: tx.invoiceNo,
+                partyName: tx.partyName,
+              });
+              return;
+            }
+          }
+        } catch (err) {
+          console.error(err);
+        }
+      }
       setEditingPurchase(tx.rawInvoice);
       setShowAddPurchase(true);
     }
@@ -670,6 +701,51 @@ export function DaybookReport({ onBack, onEditInvoice }: DaybookReportProps) {
         message={`Are you sure you want to delete ${deleteModalState.tx?.type.toLowerCase()} invoice ${deleteModalState.tx?.invoiceNo} for ${deleteModalState.tx?.partyName}? This action cannot be undone.`}
         isDeleting={isDeleting}
       />
+
+      {/* Blocked Edit Warning Modal */}
+      {blockedEditModal && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center">
+          <div
+            className="absolute inset-0 bg-black/40"
+            onClick={() => setBlockedEditModal(null)}
+          />
+          <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
+            <div className="h-1.5 w-full bg-gradient-to-r from-amber-400 to-orange-500" />
+            <div className="p-6">
+              <div className="flex items-start gap-4 mb-4">
+                <div className="flex-shrink-0 w-11 h-11 rounded-full bg-amber-50 flex items-center justify-center">
+                  <svg className="w-6 h-6 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="text-[17px] font-semibold text-gray-900 leading-tight">
+                    Cannot Edit This Purchase Bill
+                  </h3>
+                  <p className="mt-1 text-sm text-gray-500">
+                    Invoice #{blockedEditModal.invoiceNo} -{" "}
+                    <span className="font-medium text-gray-700">{blockedEditModal.partyName}</span>
+                  </p>
+                </div>
+              </div>
+
+              <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 text-sm text-amber-800 leading-relaxed">
+                Sales have already been made from this purchase bill (the remaining stock and the stock quantity are not equal).
+                To edit this purchase bill, you must first delete or edit the sales that consumed stock from this batch.
+              </div>
+
+              <div className="flex justify-end mt-5">
+                <button
+                  onClick={() => setBlockedEditModal(null)}
+                  className="px-6 py-2 bg-[#1A73E8] hover:bg-[#1557B0] text-white text-sm font-semibold rounded-lg transition-colors"
+                >
+                  Got it
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

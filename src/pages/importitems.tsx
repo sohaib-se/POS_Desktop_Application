@@ -27,12 +27,12 @@ export function ImportItems({ onViewChange }: ImportItemsProps = {}) {
       // Pre-fetch items to prevent duplication
       const itemsRes = await fetch("/api/items");
       const existingItems = itemsRes.ok ? await itemsRes.json() : [];
-      const existingItemNames = new Set(existingItems.map((i: any) => i.name.toLowerCase()));
+      const existingItemNames = new Set(existingItems.map((i: { name?: string }) => (i.name || "").toLowerCase()));
 
       // Pre-fetch categories
       const catRes = await fetch("/api/categories");
       const existingCategories = catRes.ok ? await catRes.json() : [];
-      const categoryNames = new Set(existingCategories.map((c: any) => c.name.toLowerCase()));
+      const categoryNames = new Set(existingCategories.map((c: { name?: string }) => (c.name || "").toLowerCase()));
 
       for (const item of importedItems) {
         const itemName = item["Item Name"]?.toString().trim() || "Unnamed Item";
@@ -76,7 +76,7 @@ export function ImportItems({ onViewChange }: ImportItemsProps = {}) {
           conversionRate: Number(item["Conversion Rate"]) || null,
           imgPath: item["Item Image"]?.toString().trim() || null,
           minStock: Number(item["Minimum Wholesale Quantity"]) || 0,
-          lowStock: item["Low Threshold Quantity"] ? Number(item["Low Threshold Quantity"]) : null,
+          lowStock: (item["Low Stock Quantity"] ?? item["Low Threshold Quantity"]) ? Number(item["Low Stock Quantity"] ?? item["Low Threshold Quantity"]) : null,
           mfgDate: item["Manufacturing Date"]?.toString().trim() || null,
           expDate: item["Expiry Date"]?.toString().trim() || null,
           stockValue: (Number(item["Opening Stock"]) || 0) * (item["At Price"] ? Number(item["At Price"]) : Number(item["Purchase Price"]) || 0),
@@ -94,19 +94,19 @@ export function ImportItems({ onViewChange }: ImportItemsProps = {}) {
         }
       }
       
-      if (successCount > 0 || skippedCount > 0) {
-        if (successCount > 0 && skippedCount === 0) {
+      if (successCount > 0) {
+        if (skippedCount === 0) {
           toast.success(`Successfully imported ${successCount} items!`);
-        } else if (successCount > 0 && skippedCount > 0) {
+        } else {
           toast.success(`Imported ${successCount} items. Skipped ${skippedCount} duplicates.`);
-        } else if (successCount === 0 && skippedCount > 0) {
-          toast.warning(`No items imported. Skipped ${skippedCount} duplicates.`);
         }
         
         setImportedItems([]); // Disappear from import page
         if (onViewChange) {
           onViewChange("items"); // Navigate to items page
         }
+      } else if (skippedCount > 0) {
+        toast.warning(`No items imported. Skipped ${skippedCount} duplicates.`);
       } else {
         toast.error("Failed to import items.");
       }
@@ -173,7 +173,7 @@ export function ImportItems({ onViewChange }: ImportItemsProps = {}) {
                       <td className="px-4 py-3 whitespace-nowrap">{item["Wholesale Price"]}</td>
                       <td className="px-4 py-3 whitespace-nowrap">{item["Purchase Price"]}</td>
                       <td className="px-4 py-3 whitespace-nowrap">{item["Minimum Wholesale Quantity"]}</td>
-                      <td className="px-4 py-3 whitespace-nowrap">{item["Low Threshold Quantity"]}</td>
+                      <td className="px-4 py-3 whitespace-nowrap">{item["Low Stock Quantity"] ?? item["Low Threshold Quantity"]}</td>
                       <td className="px-4 py-3 whitespace-nowrap">{item["Opening Stock"]}</td>
                     </tr>
                   ))}

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
-import { CheckCircle2, XCircle, Info } from "lucide-react";
+import { CheckCircle2, XCircle, Info, AlertTriangle } from "lucide-react";
 
-export type ToastType = "success" | "error" | "info";
+export type ToastType = "success" | "error" | "info" | "warning";
 
 interface ToastMessage {
   id: number;
@@ -20,6 +20,10 @@ export const toast = {
   },
   info: (message: string) => {
     const t = { id: Date.now() + Math.random(), message, type: "info" as const };
+    window.dispatchEvent(new CustomEvent("show-toast", { detail: t }));
+  },
+  warning: (message: string) => {
+    const t = { id: Date.now() + Math.random(), message, type: "warning" as const };
     window.dispatchEvent(new CustomEvent("show-toast", { detail: t }));
   }
 };
@@ -60,7 +64,14 @@ function ToastItem({ toast }: { toast: ToastMessage }) {
     return () => clearTimeout(timer);
   }, []);
 
-  const bg = toast.type === "success" ? "#10b981" : toast.type === "error" ? "#ef4444" : "#3b82f6";
+  const bg =
+    toast.type === "success"
+      ? "#10b981"
+      : toast.type === "error"
+      ? "#ef4444"
+      : toast.type === "warning"
+      ? "#f59e0b"
+      : "#3b82f6";
 
   return (
     <div
@@ -82,6 +93,8 @@ function ToastItem({ toast }: { toast: ToastMessage }) {
         <CheckCircle2 size={20} strokeWidth={2.5} />
       ) : toast.type === "error" ? (
         <XCircle size={20} strokeWidth={2.5} />
+      ) : toast.type === "warning" ? (
+        <AlertTriangle size={20} strokeWidth={2.5} />
       ) : (
         <Info size={20} strokeWidth={2.5} />
       )}

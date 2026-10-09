@@ -308,7 +308,7 @@ function App() {
       case "utilities-bulk-update":
         return <UpdateItemsInBulk setUnsavedChanges={setGlobalUnsavedChanges} />;
       case "utilities-import-parties":
-        return <ImportParties />;
+        return <ImportParties onViewChange={handleViewChange} />;
       case "utilities-export-items":
         return <ExportItems />;
       case "utilities-recycle-bin":

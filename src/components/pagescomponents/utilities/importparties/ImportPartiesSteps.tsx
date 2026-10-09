@@ -68,7 +68,7 @@ export function ImportPartiesSteps() {
   };
 
   return (
-    <div className="flex flex-col gap-6 pt-2">
+    <div className="flex flex-col gap-6 pt-2 w-full min-w-0">
       <div>
         <h3 className="text-[#E53935] font-semibold text-sm mb-2">STEP 1</h3>
         <p className="text-gray-600 text-sm mb-3">

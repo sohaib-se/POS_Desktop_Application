@@ -96,12 +96,12 @@ export function ImportPartiesUpload({ onPartiesImported }: ImportPartiesUploadPr
   };
 
   return (
-    <div className="flex flex-col">
+    <div className="flex flex-col w-full min-w-0">
       <p className="text-sm text-gray-500 mb-2">
         Upload your .xls/ .xlsx (excel sheet)
       </p>
       <div 
-        className={`bg-[#F8FBFF] p-8 rounded-xl border border-dashed transition-colors flex flex-col items-center justify-center text-center h-64
+        className={`bg-[#F8FBFF] p-8 rounded-xl border border-dashed transition-colors flex flex-col items-center justify-center text-center h-64 w-full
           ${isDragging ? 'border-blue-500 bg-blue-100' : 'border-[#4382FF]'}`}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}

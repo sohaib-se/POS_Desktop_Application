@@ -9,7 +9,7 @@ interface ImportPartiesProps {
   onViewChange?: (view: ViewType) => void;
 }
 
-export function ImportParties({ onViewChange }: ImportPartiesProps) {
+export function ImportParties({ onViewChange }: ImportPartiesProps = {}) {
   const [importedParties, setImportedParties] = useState<ImportedParty[]>([]);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -28,8 +28,8 @@ export function ImportParties({ onViewChange }: ImportPartiesProps) {
       const partiesRes = await fetch("/api/parties");
       const existingParties = partiesRes.ok ? await partiesRes.json() : [];
       
-      const existingNames = new Set(existingParties.map((p: any) => p.name?.toLowerCase()));
-      const existingPhones = new Set(existingParties.map((p: any) => p.phone?.toString()));
+      const existingNames = new Set(existingParties.map((p: { name?: string; phone?: string }) => p.name?.toLowerCase()));
+      const existingPhones = new Set(existingParties.map((p: { name?: string; phone?: string }) => p.phone?.toString()));
 
       for (const party of importedParties) {
         const partyName = party["Party Name"]?.toString().trim();
@@ -70,19 +70,19 @@ export function ImportParties({ onViewChange }: ImportPartiesProps) {
         }
       }
       
-      if (successCount > 0 || skippedCount > 0) {
-        if (successCount > 0 && skippedCount === 0) {
+      if (successCount > 0) {
+        if (skippedCount === 0) {
           toast.success(`Successfully imported ${successCount} parties!`);
-        } else if (successCount > 0 && skippedCount > 0) {
+        } else {
           toast.success(`Imported ${successCount} parties. Skipped ${skippedCount} duplicates.`);
-        } else if (successCount === 0 && skippedCount > 0) {
-          toast.warning(`No parties imported. Skipped ${skippedCount} duplicates.`);
         }
         
         setImportedParties([]); // Disappear from import page
         if (onViewChange) {
           onViewChange("parties"); // Navigate to parties page
         }
+      } else if (skippedCount > 0) {
+        toast.warning(`No parties imported. Skipped ${skippedCount} duplicates.`);
       } else {
         toast.error("Failed to import parties.");
       }
@@ -98,63 +98,57 @@ export function ImportParties({ onViewChange }: ImportPartiesProps) {
     <div className="h-full bg-white flex flex-col">
       <div className="flex-1 overflow-y-auto p-6">
         <ImportPartiesHeader />
-        <div className="grid grid-cols-[1.5fr_1fr] gap-12">
-          {/* Left Column: Steps and Preview */}
-          <div>
-            <ImportPartiesSteps />
-            
-            {importedParties.length > 0 && (
-              <div className="mt-4">
-                <div className="flex items-center justify-between mb-4">
-                  <h4 className="text-sm font-semibold text-gray-800">
-                    Imported Parties Preview ({importedParties.length})
-                  </h4>
-                  <button 
-                    onClick={handleSaveParties}
-                    disabled={isSaving}
-                    className="bg-[#1976D2] text-white px-6 py-2 rounded-lg text-sm font-medium hover:bg-blue-600 transition-colors disabled:opacity-50"
-                  >
-                    {isSaving ? "Saving..." : "Complete Import"}
-                  </button>
-                </div>
-                
-                <div className="overflow-x-auto border border-gray-200 rounded-lg">
-                  <table className="w-full text-sm text-left">
-                    <thead className="bg-[#4382FF] text-white">
-                      <tr>
-                        <th className="px-4 py-3 font-medium whitespace-nowrap">Party Name</th>
-                        <th className="px-4 py-3 font-medium whitespace-nowrap">Phone</th>
-                        <th className="px-4 py-3 font-medium whitespace-nowrap">Email</th>
-                        <th className="px-4 py-3 font-medium whitespace-nowrap">Billing Address</th>
-                        <th className="px-4 py-3 font-medium whitespace-nowrap">Shipping Address</th>
-                        <th className="px-4 py-3 font-medium whitespace-nowrap">Balance</th>
-                        <th className="px-4 py-3 font-medium whitespace-nowrap">Credit Limit</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-200 bg-white">
-                      {importedParties.map((party, index) => (
-                        <tr key={index} className="hover:bg-gray-50">
-                          <td className="px-4 py-3 whitespace-nowrap">{party["Party Name"]}</td>
-                          <td className="px-4 py-3 whitespace-nowrap">{party["Phone Number"]}</td>
-                          <td className="px-4 py-3 whitespace-nowrap">{party["Email"]}</td>
-                          <td className="px-4 py-3 whitespace-nowrap max-w-[150px] truncate">{party["Billing Address"]}</td>
-                          <td className="px-4 py-3 whitespace-nowrap max-w-[150px] truncate">{party["Shipping Address"]}</td>
-                          <td className="px-4 py-3 whitespace-nowrap">{party["Opening Balance"]}</td>
-                          <td className="px-4 py-3 whitespace-nowrap">{party["Credit Limit"]}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Right Column: Upload Box */}
-          <div>
-            <ImportPartiesUpload onPartiesImported={handlePartiesImported} />
-          </div>
+        
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+          <ImportPartiesSteps />
+          <ImportPartiesUpload onPartiesImported={handlePartiesImported} />
         </div>
+
+        {importedParties.length > 0 && (
+          <div className="mt-8 border-t border-gray-200 pt-8 min-w-0">
+            <div className="flex items-center justify-between mb-4">
+              <h4 className="text-lg font-semibold text-gray-800">
+                Imported Parties Preview ({importedParties.length})
+              </h4>
+              <button 
+                onClick={handleSaveParties}
+                disabled={isSaving}
+                className="bg-[#1976D2] text-white px-6 py-2 rounded-lg text-sm font-medium hover:bg-blue-600 transition-colors disabled:opacity-50"
+              >
+                {isSaving ? "Saving..." : "Complete Import"}
+              </button>
+            </div>
+            
+            <div className="overflow-x-auto border border-gray-200 rounded-lg">
+              <table className="w-full text-sm text-left">
+                <thead className="bg-[#4382FF] text-white">
+                  <tr>
+                    <th className="px-4 py-3 font-medium whitespace-nowrap">Party Name</th>
+                    <th className="px-4 py-3 font-medium whitespace-nowrap">Phone</th>
+                    <th className="px-4 py-3 font-medium whitespace-nowrap">Email</th>
+                    <th className="px-4 py-3 font-medium whitespace-nowrap">Billing Address</th>
+                    <th className="px-4 py-3 font-medium whitespace-nowrap">Shipping Address</th>
+                    <th className="px-4 py-3 font-medium whitespace-nowrap">Balance</th>
+                    <th className="px-4 py-3 font-medium whitespace-nowrap">Credit Limit</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200 bg-white">
+                  {importedParties.map((party, index) => (
+                    <tr key={index} className="hover:bg-gray-50">
+                      <td className="px-4 py-3 whitespace-nowrap">{party["Party Name"]}</td>
+                      <td className="px-4 py-3 whitespace-nowrap">{party["Phone Number"]}</td>
+                      <td className="px-4 py-3 whitespace-nowrap">{party["Email"]}</td>
+                      <td className="px-4 py-3 whitespace-nowrap max-w-[150px] truncate">{party["Billing Address"]}</td>
+                      <td className="px-4 py-3 whitespace-nowrap max-w-[150px] truncate">{party["Shipping Address"]}</td>
+                      <td className="px-4 py-3 whitespace-nowrap">{party["Opening Balance"]}</td>
+                      <td className="px-4 py-3 whitespace-nowrap">{party["Credit Limit"]}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

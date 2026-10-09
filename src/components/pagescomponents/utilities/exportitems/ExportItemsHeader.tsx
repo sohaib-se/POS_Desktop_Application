@@ -15,9 +15,11 @@ import {
   ShoppingCart,
   TrendingUp,
   Boxes,
+  AlertTriangle,
 } from "lucide-react";
 import { useState } from "react";
 import * as XLSX from "xlsx-js-style";
+import { toast } from "@/components/ui/Toast";
 
 const FIELD_META = [
   { label: "Item Name",                  icon: Package,        color: "text-violet-500" },
@@ -31,6 +33,7 @@ const FIELD_META = [
   { label: "Wholesale Price",            icon: TrendingUp,     color: "text-emerald-500"},
   { label: "Purchase Price",             icon: ShoppingCart,   color: "text-orange-500" },
   { label: "Minimum Wholesale Quantity", icon: BarChart2,      color: "text-amber-500"  },
+  { label: "Low Stock Quantity",         icon: AlertTriangle,  color: "text-amber-600"  },
   { label: "Opening Stock",              icon: Boxes,          color: "text-sky-500"    },
   { label: "At Price",                   icon: DollarSign,     color: "text-lime-600"   },
   { label: "As Of Date",                 icon: Calendar,       color: "text-rose-400"   },
@@ -38,33 +41,72 @@ const FIELD_META = [
   { label: "Expiry Date",                icon: Calendar,       color: "text-red-400"    },
 ];
 
+interface ItemRecord {
+  name?: string;
+  category?: string;
+  code?: string;
+  unit?: string;
+  primary_unit?: string;
+  secondary_unit?: string;
+  conversion_rate?: number | string | null;
+  img_path?: string | null;
+  imgPath?: string | null;
+  sale_price?: number | null;
+  salePrice?: number | null;
+  wholesale_price?: number | null;
+  wholesalePrice?: number | null;
+  purchase_price?: number | null;
+  purchasePrice?: number | null;
+  min_stock?: number | null;
+  minStock?: number | null;
+  min_wholesale_quantity?: number | null;
+  low_stock?: number | null;
+  lowStock?: number | null;
+  low_stock_quantity?: number | null;
+  stock_quantity?: number | null;
+  stockQuantity?: number | null;
+  at_price?: number | null;
+  atPrice?: number | null;
+  created_at?: string | null;
+  as_of_date?: string | null;
+  mfg_date?: string | null;
+  mfgDate?: string | null;
+  exp_date?: string | null;
+  expDate?: string | null;
+}
+
 export function ExportItemsHeader() {
   const [isExporting, setIsExporting] = useState(false);
 
   const handleExport = async () => {
+    if (isExporting) return;
     try {
       setIsExporting(true);
+      // Give React a frame to render the loading state
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
       const res = await fetch('/api/items');
       if (!res.ok) throw new Error("Failed to fetch items");
-      const items = await res.json();
+      const items = (await res.json()) as ItemRecord[];
       
-      const data = items.map((item: any) => ({
+      const data = items.map((item) => ({
         "Item Name": item.name || "",
         "Category": item.category || "",
         "Item Code": item.code || "",
         "Primary Unit": item.primary_unit || item.unit || "",
         "Secondary Unit": item.secondary_unit || "",
-        "Conversion Rate": item.conversion_rate || "",
-        "Item Image": item.img_path || "",
-        "Sale Price": item.sale_price || 0,
-        "Wholesale Price": item.wholesale_price || 0,
-        "Purchase Price": item.purchase_price || 0,
-        "Minimum Wholesale Quantity": "",
-        "Opening Stock": item.stock_quantity || 0,
-        "At Price": item.at_price || "",
-        "As Of Date": item.created_at ? new Date(item.created_at).toLocaleDateString() : "",
-        "Manufacturing Date": item.mfg_date || "",
-        "Expiry Date": item.exp_date || ""
+        "Conversion Rate": item.conversion_rate ?? "",
+        "Item Image": item.img_path || item.imgPath || "",
+        "Sale Price": item.sale_price ?? item.salePrice ?? 0,
+        "Wholesale Price": item.wholesale_price ?? item.wholesalePrice ?? 0,
+        "Purchase Price": item.purchase_price ?? item.purchasePrice ?? 0,
+        "Minimum Wholesale Quantity": item.min_stock ?? item.minStock ?? item.min_wholesale_quantity ?? "",
+        "Low Stock Quantity": item.low_stock ?? item.lowStock ?? item.low_stock_quantity ?? "",
+        "Opening Stock": item.stock_quantity ?? item.stockQuantity ?? 0,
+        "At Price": item.at_price ?? item.atPrice ?? "",
+        "As Of Date": item.created_at ? new Date(item.created_at).toLocaleDateString() : (item.as_of_date || ""),
+        "Manufacturing Date": item.mfg_date || item.mfgDate || "",
+        "Expiry Date": item.exp_date || item.expDate || ""
       }));
 
       const ws = XLSX.utils.json_to_sheet(data);
@@ -90,9 +132,10 @@ export function ExportItemsHeader() {
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, "Inventory");
       XLSX.writeFile(wb, "Inventory_Items.xlsx");
+      toast.success("Items exported successfully!");
     } catch (error) {
       console.error("Error exporting items:", error);
-      alert("Failed to export items.");
+      toast.error("Failed to export items.");
     } finally {
       setIsExporting(false);
     }
@@ -116,12 +159,19 @@ export function ExportItemsHeader() {
         <button
           onClick={handleExport}
           disabled={isExporting}
-          className="flex items-center gap-2 bg-[#E53935] hover:bg-red-600 disabled:bg-red-300 text-white px-5 py-2.5 rounded-lg text-sm font-semibold shadow-sm hover:shadow-md transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0"
+          className="flex items-center gap-2 bg-[#E53935] hover:bg-red-600 disabled:bg-red-400 disabled:cursor-not-allowed text-white px-5 py-2.5 rounded-lg text-sm font-semibold shadow-sm hover:shadow-md transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0 disabled:transform-none"
         >
-          {isExporting
-            ? <Loader2 className="w-4 h-4 animate-spin" />
-            : <Download className="w-4 h-4" />}
-          {isExporting ? "Exporting…" : "Export to Excel"}
+          {isExporting ? (
+            <>
+              <Loader2 className="w-4 h-4 animate-spin shrink-0" />
+              <span>Exporting...</span>
+            </>
+          ) : (
+            <>
+              <Download className="w-4 h-4 shrink-0" />
+              <span>Export Items</span>
+            </>
+          )}
         </button>
       </div>
 

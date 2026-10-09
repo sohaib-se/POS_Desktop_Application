@@ -1,12 +1,10 @@
-import { Search, Pencil, Trash2, Download, Printer } from "lucide-react";
+import { Pencil, Trash2, Download, Printer } from "lucide-react";
 import type { SaleInvoiceViewRow } from "./types";
-import type { SaleInvoiceEditData } from "@/types";
 
 interface SaleInvoiceContextMenuProps {
   openRowMenuId: string | null;
   openRowMenuPosition: { left: number; top: number } | null;
   invoiceRows: SaleInvoiceViewRow[];
-  openViewDialog: (invoice: SaleInvoiceViewRow) => void;
   setOpenRowMenuId: (id: string | null) => void;
   setOpenRowMenuPosition: (pos: { left: number; top: number } | null) => void;
   onEditInvoice: (invoice: SaleInvoiceViewRow) => void;
@@ -19,7 +17,6 @@ export function SaleInvoiceContextMenu({
   openRowMenuId,
   openRowMenuPosition,
   invoiceRows,
-  openViewDialog,
   setOpenRowMenuId,
   setOpenRowMenuPosition,
   onEditInvoice,
@@ -38,17 +35,6 @@ export function SaleInvoiceContextMenu({
       style={{ left: openRowMenuPosition.left, top: openRowMenuPosition.top }}
       onClick={(event) => event.stopPropagation()}
     >
-      <button
-        className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-gray-50"
-        onClick={() => {
-          openViewDialog(targetInvoice);
-          setOpenRowMenuId(null);
-          setOpenRowMenuPosition(null);
-        }}
-      >
-        <Search className="w-4 h-4 text-gray-500" />
-        View
-      </button>
       {!targetInvoice.transaction.includes('Returned') && (
         <button
           className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-gray-50"
@@ -109,7 +95,7 @@ export function SaleInvoiceContextMenu({
         }}
       >
         <Printer className="w-4 h-4 text-gray-500" />
-        Print
+        Print & Preview
       </button>
       {!targetInvoice.transaction.includes('Returned') && (
         <button

@@ -14,9 +14,10 @@ export function useSettings<T>(key: string, defaultValue: T) {
   });
 
   useEffect(() => {
-    const handleStorageChange = (e: any) => {
-      if (e.detail?.key === key) {
-        setValue(e.detail.value);
+    const handleStorageChange = (e: Event) => {
+      const customEvent = e as CustomEvent<{ key?: string; value: T }>;
+      if (customEvent.detail?.key === key) {
+        setValue(customEvent.detail.value);
       }
     };
 
@@ -30,23 +31,23 @@ export function useSettings<T>(key: string, defaultValue: T) {
 
   // Support both direct values and functional updates (matching React.Dispatch<SetStateAction<T>>)
   const updateValue = (newValueOrUpdater: T | ((prev: T) => T)) => {
-    setValue((prev) => {
-      const resolved =
-        typeof newValueOrUpdater === 'function'
-          ? (newValueOrUpdater as (prev: T) => T)(prev)
-          : newValueOrUpdater;
+    let resolved: T;
+    if (typeof newValueOrUpdater === 'function') {
+      resolved = (newValueOrUpdater as (prev: T) => T)(value);
+    } else {
+      resolved = newValueOrUpdater;
+    }
 
-      try {
-        localStorage.setItem(key, JSON.stringify(resolved));
-        window.dispatchEvent(
-          new CustomEvent('settings-updated', { detail: { key, value: resolved } })
-        );
-      } catch {
-        // localStorage write failed (e.g. quota exceeded) — skip silently
-      }
+    try {
+      localStorage.setItem(key, JSON.stringify(resolved));
+      window.dispatchEvent(
+        new CustomEvent('settings-updated', { detail: { key, value: resolved } })
+      );
+    } catch {
+      // localStorage write failed (e.g. quota exceeded) — skip silently
+    }
 
-      return resolved;
-    });
+    setValue(resolved);
   };
 
   return [value, updateValue] as const;

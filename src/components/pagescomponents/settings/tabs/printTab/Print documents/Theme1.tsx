@@ -208,7 +208,7 @@ export function Theme1InvoicePrintReport({
                   {currencyStr} {ps.amountWithDecimal ? Number(record.pricePerUnit ?? record.price_per_unit ?? 0).toFixed(2) : Math.round(Number(record.pricePerUnit ?? record.price_per_unit ?? 0)).toString()}
                 </td>
               )}
-              <td className="py-1 px-2 text-right whitespace-nowrap border border-gray-300">
+              <td className="py-1 px-2 text-right whitespace-nowrap">
                 {currencyStr} {ps.amountWithDecimal ? Number(record.amount || 0).toFixed(2) : Math.round(Number(record.amount || 0)).toString()}
               </td>
             </tr>
@@ -220,7 +220,7 @@ export function Theme1InvoicePrintReport({
               {ps.showQuantity && <td className="py-1 px-2 text-right">&nbsp;</td>}
               {ps.showUnit && <td className="py-1 px-2 text-right">&nbsp;</td>}
               {ps.showPricePerUnit && <td className="py-1 px-2 text-right">&nbsp;</td>}
-              <td className="py-1 px-2 text-right border border-gray-300">&nbsp;</td>
+              <td className="py-1 px-2 text-right">&nbsp;</td>
             </tr>
           ))}
         </tbody>

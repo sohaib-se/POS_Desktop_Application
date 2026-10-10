@@ -57,7 +57,11 @@ export function getParties() {
   const db = openDatabase();
   const rows = db.prepare('SELECT * FROM parties ORDER BY name ASC').all();
   db.close();
-  return rows;
+  return rows.map(r => ({
+    ...r,
+    creditLimit: r.credit_limit !== null && r.credit_limit !== undefined ? Number(r.credit_limit) : null,
+    shippingAddress: r.shipping_address ?? null
+  }));
 }
 
 export function getNextPartyId() {
@@ -87,8 +91,8 @@ export function upsertParty(party) {
     ...party,
     email: party.email ?? null,
     address: party.address ?? null,
-    shipping_address: party.shippingAddress ?? null,
-    credit_limit: party.creditLimit ?? null,
+    shipping_address: party.shippingAddress !== undefined ? party.shippingAddress : (party.shipping_address ?? null),
+    credit_limit: party.creditLimit !== undefined ? party.creditLimit : (party.credit_limit !== undefined ? party.credit_limit : null),
     status: party.status ?? 'active'
   });
   db.close();

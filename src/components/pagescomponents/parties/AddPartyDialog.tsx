@@ -42,6 +42,7 @@ interface AddPartyDialogProps {
   // Credit Limit Error Dialog
   showCreditLimitError: boolean;
   setShowCreditLimitError: (show: boolean) => void;
+  creditLimitErrorMessage?: string;
 }
 
 export function AddPartyDialog({
@@ -66,6 +67,7 @@ export function AddPartyDialog({
 
   showCreditLimitError,
   setShowCreditLimitError,
+  creditLimitErrorMessage,
 }: AddPartyDialogProps) {
   const [isShippingAddressEnabled] = useSettings('settings.isShippingAddressEnabled', true);
 
@@ -430,7 +432,7 @@ export function AddPartyDialog({
             <DialogTitle className="text-red-600">Validation Error</DialogTitle>
           </DialogHeader>
           <div className="py-2 text-sm text-gray-700">
-            Credit amount cannot be greater than the credit limit.
+            {creditLimitErrorMessage || "Credit amount cannot be greater than the credit limit."}
           </div>
           <div className="flex justify-end pt-4">
             <button

@@ -295,7 +295,7 @@ export function AddSaleBottomActions({
                 <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
                 <polyline points="22 4 12 14.01 9 11.01" />
               </svg>
-              <span>Available Credit: {(selectedParty.creditLimit || selectedParty.credit_limit) ? `Rs ${fmt((selectedParty.creditLimit || selectedParty.credit_limit || 0) - (selectedParty.balance || 0))}` : "No Limit"}</span>
+              <span>Available Credit: {(selectedParty.creditLimit != null || selectedParty.credit_limit != null) ? `Rs ${fmt(Number(selectedParty.creditLimit ?? selectedParty.credit_limit ?? 0) - (selectedParty.balance || 0))}` : "No Limit"}</span>
             </div>
           </div>
         </div>

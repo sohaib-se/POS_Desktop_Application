@@ -228,8 +228,23 @@ export function AddSale({ onSave, onClose, initialInvoice, isConversion }: AddSa
   };
 
   const handleSaveParty = async (options?: { closeDialog?: boolean; resetForm?: boolean }) => {
+    if (!partyForm.name.trim() || isSavingParty) return;
+
+    if (partyForm.creditLimit === 'custom' && partyForm.creditLimitAmount && partyForm.balanceType === 'to-receive') {
+      const openingBalance = Number(partyForm.openingBalance || 0);
+      const creditLimitAmount = Number(partyForm.creditLimitAmount || 0);
+      if (Math.abs(openingBalance) > creditLimitAmount) {
+        setShowCreditLimitError(true);
+        return;
+      }
+    }
+
     setIsSavingParty(true);
     try {
+      const parsedCreditLimit = partyForm.creditLimit === "custom" && partyForm.creditLimitAmount !== "" && !isNaN(Number(partyForm.creditLimitAmount))
+        ? Number(partyForm.creditLimitAmount)
+        : null;
+
       const payload = {
         id: partyBeingEdited?.id,
         name: partyForm.name,
@@ -238,7 +253,7 @@ export function AddSale({ onSave, onClose, initialInvoice, isConversion }: AddSa
         address: partyForm.billingAddress || null,
         shippingAddress: partyForm.shippingAddress || null,
         balance: (Number(partyForm.openingBalance) || 0) * (partyForm.balanceType === "to-pay" ? -1 : 1),
-        creditLimit: partyForm.creditLimit === "custom" ? Number(partyForm.creditLimitAmount) : null,
+        creditLimit: parsedCreditLimit,
         type: "customer"
       };
       const response = await fetch("/api/parties", {
@@ -249,17 +264,22 @@ export function AddSale({ onSave, onClose, initialInvoice, isConversion }: AddSa
       if (response.ok) {
         const newParty = await response.json();
         if (newParty) {
+          const formattedParty = {
+            ...newParty,
+            creditLimit: newParty.creditLimit ?? newParty.credit_limit ?? parsedCreditLimit,
+            credit_limit: newParty.credit_limit ?? newParty.creditLimit ?? parsedCreditLimit,
+          };
           setParties((prev) => {
-            const exists = prev.find(p => String(p.id) === String(newParty.id));
+            const exists = prev.find(p => String(p.id) === String(formattedParty.id));
             const updated = exists
-              ? prev.map(p => String(p.id) === String(newParty.id) ? newParty : p)
-              : [...prev, newParty];
+              ? prev.map(p => String(p.id) === String(formattedParty.id) ? formattedParty : p)
+              : [...prev, formattedParty];
             return updated.sort((a, b) => a.name.localeCompare(b.name));
           });
-          if (newParty.id) {
+          if (formattedParty.id) {
             updateTab({
-              customerSearch: String(newParty.id),
-              phoneNo: newParty.phone ?? "",
+              customerSearch: String(formattedParty.id),
+              phoneNo: formattedParty.phone ?? "",
             });
           }
         }
@@ -627,6 +647,8 @@ export function AddSale({ onSave, onClose, initialInvoice, isConversion }: AddSa
         const currentBalance = Number(selectedParty.balance) || 0;
         const newBalance = currentBalance + computedBalance;
         if (newBalance > Number(limit)) {
+          setSaveError(`Credit limit of Rs ${Number(limit).toLocaleString()} exceeded for this party.`);
+          toast.error(`Credit limit of Rs ${Number(limit).toLocaleString()} exceeded for this party.`);
           setShowCreditLimitError(true);
           return;
         }
@@ -766,6 +788,8 @@ export function AddSale({ onSave, onClose, initialInvoice, isConversion }: AddSa
         ? String(Number(savedInvoice.invoiceNo) + 1)
         : String(Number(nextInvoiceNo) + 1);
       setNextInvoiceNo(nextNo);
+
+      await fetchParties();
 
       window.dispatchEvent(
         new CustomEvent("sale-invoices-refresh", {
@@ -1141,6 +1165,7 @@ export function AddSale({ onSave, onClose, initialInvoice, isConversion }: AddSa
         handleDeleteParty={async () => {}}
         showCreditLimitError={showCreditLimitError}
         setShowCreditLimitError={setShowCreditLimitError}
+        creditLimitErrorMessage="The balance with this sale exceeds the customer's credit limit. Please adjust the sale amount or increase the credit limit."
       />
       <ConfirmDeleteModal
         isOpen={tabToClose !== null}

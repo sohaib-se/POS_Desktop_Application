@@ -2065,6 +2065,10 @@ function sqliteApiPlugin() {
                   ? providedId
                   : String(repository.getNextPartyId());
 
+                const parsedCreditLimit = payload.creditLimit !== undefined && payload.creditLimit !== null && payload.creditLimit !== '' && !isNaN(Number(payload.creditLimit))
+                  ? Number(payload.creditLimit)
+                  : null;
+
                 const party = {
                   id: normalizedId,
                   name: String(payload.name).trim(),
@@ -2072,8 +2076,10 @@ function sqliteApiPlugin() {
                   email: payload.email ? String(payload.email) : null,
                   address: payload.address ? String(payload.address) : null,
                   shippingAddress: payload.shippingAddress ? String(payload.shippingAddress) : null,
+                  shipping_address: payload.shippingAddress ? String(payload.shippingAddress) : null,
                   balance: Number.isFinite(normalizedBalance) ? normalizedBalance : 0,
-                  creditLimit: payload.creditLimit ? Number(payload.creditLimit) : null,
+                  creditLimit: parsedCreditLimit,
+                  credit_limit: parsedCreditLimit,
                   type: payload.type ?? 'customer',
                   status: payload.status ?? 'active'
                 };

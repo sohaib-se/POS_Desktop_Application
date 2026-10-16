@@ -3,8 +3,8 @@ import { BackupToComputerSettings } from "@/components/pagescomponents/backup/ba
 
 export function BackupToComputer() {
   return (
-    <div className="h-full flex flex-col bg-white p-6">
-      <div className="max-w-3xl">
+    <div className="h-full flex flex-col bg-gray-50/50 p-6 overflow-y-auto">
+      <div className="max-w-4xl mx-auto w-full">
         <BackupToComputerHeader />
         <BackupToComputerSettings />
       </div>

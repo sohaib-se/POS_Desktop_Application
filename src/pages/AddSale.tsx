@@ -212,6 +212,7 @@ export function AddSale({ onSave, onClose, initialInvoice, isConversion }: AddSa
   });
   const [isBarcodeScanEnabled] = useSettings('settings.isBarcodeScanEnabled', false);
   const [isDoNotShowInvoicePreviewEnabled] = useSettings('settings.isDoNotShowInvoicePreviewEnabled', false);
+  const [isDisablePrintEnabled] = useSettings('settings.isDisablePrintEnabled', false);
   const imageInputRef = useRef<HTMLInputElement | null>(null);
   const documentInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -829,11 +830,16 @@ export function AddSale({ onSave, onClose, initialInvoice, isConversion }: AddSa
         documentTitle: "Invoice",
       };
 
-      updateTab({
-        showPreview: true,
-        savedSaleForPreview: saleDataForPreview,
-        isDirty: false,
-      });
+      if (isDisablePrintEnabled) {
+        toast.success(isEditingMode ? "Sale invoice updated successfully!" : "Sale invoice saved successfully!");
+        handleCloseTabPreview(activeTab.id);
+      } else {
+        updateTab({
+          showPreview: true,
+          savedSaleForPreview: saleDataForPreview,
+          isDirty: false,
+        });
+      }
 
     } catch (error) {
       console.error(error);
@@ -1063,7 +1069,7 @@ export function AddSale({ onSave, onClose, initialInvoice, isConversion }: AddSa
         } : undefined}
       />
 
-      {activeTab?.showPreview && activeTab.savedSaleForPreview && !isDoNotShowInvoicePreviewEnabled ? (
+      {!isDisablePrintEnabled && activeTab?.showPreview && activeTab.savedSaleForPreview && !isDoNotShowInvoicePreviewEnabled ? (
         <div style={{ flex: 1, position: "relative", minHeight: 0 }}>
           <PrintTab
             isPreviewMode={true}
@@ -1074,7 +1080,7 @@ export function AddSale({ onSave, onClose, initialInvoice, isConversion }: AddSa
         </div>
       ) : (
         <>
-          {activeTab?.showPreview && activeTab.savedSaleForPreview && isDoNotShowInvoicePreviewEnabled && (
+          {!isDisablePrintEnabled && activeTab?.showPreview && activeTab.savedSaleForPreview && isDoNotShowInvoicePreviewEnabled && (
             <div style={{ position: "absolute", opacity: 0, pointerEvents: "none" }}>
               <PrintTab
                 isPreviewMode={true}

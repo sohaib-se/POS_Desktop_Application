@@ -9,10 +9,13 @@ import { RightPanel } from "../components/pagescomponents/laimsoftpos/RightPanel
 import { Modals } from "../components/pagescomponents/laimsoftpos/Modals";
 import { ConfirmActionModal } from "@/components/common/ConfirmActionModal";
 import { AddPartyDialog } from "../components/pagescomponents/parties/AddPartyDialog";
+import { useSettings } from "@/hooks/useSettings";
 import {
   type SalePrintData,
   useCompanyInfo,
   InvoiceThemeContent,
+  getDefaultPrinter,
+  getDefaultTheme,
 } from "../components/pagescomponents/settings/tabs/PrintTab";
 
 interface LaimsoftPosProps {
@@ -114,6 +117,7 @@ export function LaimsoftPos({ onClose, initialInvoice }: LaimsoftPosProps) {
   const [savedSales, setSavedSales] = useState<SavedSaleRecord[]>([]);
   const [nextInvoiceNo, setNextInvoiceNo] = useState("1");
   const [isSaving, setIsSaving] = useState(false);
+  const [isDisablePrintEnabled] = useSettings('settings.isDisablePrintEnabled', false);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
   const [alertState, setAlertState] = useState<{ isOpen: boolean; title: string; message: string }>({ isOpen: false, title: "", message: "" });
   const [confirmCloseState, setConfirmCloseState] = useState<{ isOpen: boolean; type: 'tab' | 'all'; tabId?: number }>({ isOpen: false, type: 'tab' });
@@ -277,9 +281,9 @@ export function LaimsoftPos({ onClose, initialInvoice }: LaimsoftPosProps) {
   }, [activeTabId]);
 
   useEffect(() => {
-    if (!directPrintSale) return;
+    if (!directPrintSale || isDisablePrintEnabled) return;
 
-    const activePrinter = (localStorage.getItem("print_activePrinter") as "regular" | "thermal") || "regular";
+    const activePrinter = getDefaultPrinter();
     const isThermal = activePrinter === "thermal";
 
     const timer = setTimeout(() => {
@@ -1475,7 +1479,11 @@ export function LaimsoftPos({ onClose, initialInvoice }: LaimsoftPosProps) {
       );
       }
 
-      setDirectPrintSale(saleDataForPrint);
+      if (!isDisablePrintEnabled) {
+        setDirectPrintSale(saleDataForPrint);
+      } else {
+        showToast(currentEditingId ? "Sale updated successfully!" : "Sale saved successfully!", "success");
+      }
     } catch (error) {
       console.error(error);
       showToast("Failed to save sale. Please try again.", "error");
@@ -1638,7 +1646,7 @@ export function LaimsoftPos({ onClose, initialInvoice }: LaimsoftPosProps) {
       />
 
       {/* Hidden print container for direct POS printing without preview */}
-      {directPrintSale && (
+      {!isDisablePrintEnabled && directPrintSale && (
         <div
           id="pos-direct-print-container"
           aria-hidden="true"
@@ -1646,7 +1654,7 @@ export function LaimsoftPos({ onClose, initialInvoice }: LaimsoftPosProps) {
             position: "fixed",
             left: "-9999px",
             top: "-9999px",
-            width: ((localStorage.getItem("print_activePrinter") || "regular") === "thermal") ? "380px" : "900px",
+            width: getDefaultPrinter() === "thermal" ? "380px" : "900px",
             opacity: 0,
             pointerEvents: "none",
             zIndex: -1,
@@ -1655,11 +1663,8 @@ export function LaimsoftPos({ onClose, initialInvoice }: LaimsoftPosProps) {
           <div className="pos-print-content">
             <InvoiceThemeContent
               saleData={directPrintSale}
-              activePrinter={((localStorage.getItem("print_activePrinter") as "regular" | "thermal") || "regular")}
-              selectedThemeId={
-                localStorage.getItem("print_selectedThemeId") ||
-                (((localStorage.getItem("print_activePrinter") || "regular") === "thermal") ? "thermal1" : "tally")
-              }
+              activePrinter={getDefaultPrinter()}
+              selectedThemeId={getDefaultTheme(getDefaultPrinter())}
               selectedColor={localStorage.getItem("print_selectedColor") || "#a78bfa"}
               companyInfo={companyInfo}
             />

@@ -8,8 +8,6 @@ import { EstimatesSummary } from "../components/pagescomponents/estimates/Estima
 import { EstimatesTable } from "../components/pagescomponents/estimates/EstimatesTable";
 import { EstimateRowMenu } from "../components/pagescomponents/estimates/EstimateRowMenu";
 import { ViewEstimateDialog } from "../components/pagescomponents/estimates/ViewEstimateDialog";
-
-import { useSettings } from "@/hooks/useSettings";
 import { PrintTab, type SalePrintData } from "@/components/pagescomponents/settings/tabs/PrintTab";
 
 export function Estimates({ onConvertEstimateToSale }: { onConvertEstimateToSale?: (data: any) => void }) {

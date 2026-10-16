@@ -88,7 +88,6 @@ const menuItems: MenuItem[] = [
     children: [
       { id: "sync-auto-backup", label: "Auto Backup" },
       { id: "sync-backup-computer", label: "Backup to Computer" },
-      { id: "sync-backup-drive", label: "Backup to Drive" },
       { id: "sync-restore-backup", label: "Restore Backup" },
     ],
   },

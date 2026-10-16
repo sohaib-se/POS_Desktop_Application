@@ -135,6 +135,7 @@ export function AddPurchase({ onSave, onClose, initialInvoice }: AddPurchaseProp
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
   const [isDoNotShowInvoicePreviewEnabled] = useSettings('settings.isDoNotShowInvoicePreviewEnabled', false);
+  const [isDisablePrintEnabled] = useSettings('settings.isDisablePrintEnabled', false);
   const imageInputRef = useRef<HTMLInputElement | null>(null);
   const documentInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -688,10 +689,15 @@ export function AddPurchase({ onSave, onClose, initialInvoice }: AddPurchaseProp
         documentTitle: "Purchase Invoice",
       };
 
-      updateTab({
-        showPreview: true,
-        savedPurchaseForPreview: purchaseDataForPreview,
-      });
+      if (isDisablePrintEnabled) {
+        toast.success(isEditing ? "Purchase bill updated successfully!" : "Purchase bill saved successfully!");
+        handleCloseTabPreview(activeTab.id);
+      } else {
+        updateTab({
+          showPreview: true,
+          savedPurchaseForPreview: purchaseDataForPreview,
+        });
+      }
 
     } catch (error: any) {
       console.error(error);
@@ -890,7 +896,7 @@ export function AddPurchase({ onSave, onClose, initialInvoice }: AddPurchaseProp
           displayedInvoiceNo={displayedInvoiceNo}
         />
 
-        {activeTab?.showPreview && activeTab.savedPurchaseForPreview && !isDoNotShowInvoicePreviewEnabled ? (
+        {!isDisablePrintEnabled && activeTab?.showPreview && activeTab.savedPurchaseForPreview && !isDoNotShowInvoicePreviewEnabled ? (
           <div style={{ flex: 1, position: "relative", minHeight: 0 }}>
             <PrintTab
               isPreviewMode={true}
@@ -901,7 +907,7 @@ export function AddPurchase({ onSave, onClose, initialInvoice }: AddPurchaseProp
           </div>
         ) : (
           <>
-            {activeTab?.showPreview && activeTab.savedPurchaseForPreview && isDoNotShowInvoicePreviewEnabled && (
+            {!isDisablePrintEnabled && activeTab?.showPreview && activeTab.savedPurchaseForPreview && isDoNotShowInvoicePreviewEnabled && (
               <div style={{ position: "absolute", opacity: 0, pointerEvents: "none" }}>
                 <PrintTab
                   isPreviewMode={true}

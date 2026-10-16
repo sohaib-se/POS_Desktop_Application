@@ -1,7 +1,9 @@
-import { X } from "lucide-react";
+import { useState, useRef } from "react";
+import { X, RefreshCw } from "lucide-react";
 import html2pdf from "html2pdf.js";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { PaymentOutPrintReport } from "./PaymentOutPrintReport";
+import { toast } from "@/components/ui/Toast";
 
 interface PaymentOutPrintPreviewModalProps {
   showPrintPreview: boolean;
@@ -12,6 +14,163 @@ interface PaymentOutPrintPreviewModalProps {
   businessProfile: any;
 }
 
+/** Prepares the isolated print container with print-only styles, returning a cleanup function */
+function setupPrintContainer(): (() => void) | null {
+  const reportEl = document.querySelector(".payment-out-print-dialog-content .print-area") as HTMLElement | null;
+  if (!reportEl) return null;
+
+  // Clean up any lingering print containers or injected styles
+  document.getElementById("__payment_out_all_print_only__")?.remove();
+  document.getElementById("__payment_out_all_print_style__")?.remove();
+
+  // Clone the report content into a dedicated print-only container
+  const printContainer = document.createElement("div");
+  printContainer.id = "__payment_out_all_print_only__";
+  printContainer.style.position = "fixed";
+  printContainer.style.left = "-99999px";
+  printContainer.style.top = "0";
+  printContainer.style.opacity = "0";
+  printContainer.style.pointerEvents = "none";
+
+  const clone = reportEl.cloneNode(true) as HTMLElement;
+  clone.style.zoom = "1";
+  clone.style.transform = "none";
+  clone.style.transformOrigin = "unset";
+  clone.style.width = "100%";
+  clone.style.maxWidth = "100%";
+  clone.style.margin = "0";
+  clone.style.boxSizing = "border-box";
+
+  printContainer.appendChild(clone);
+  document.body.appendChild(printContainer);
+
+  const styleEl = document.createElement("style");
+  styleEl.id = "__payment_out_all_print_style__";
+  styleEl.textContent = `
+    @media print {
+      @page {
+        size: A4 portrait;
+        margin: 0;
+      }
+      html, body {
+        width: 100% !important;
+        height: auto !important;
+        min-height: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        background: #fff !important;
+        overflow: visible !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+        color-adjust: exact !important;
+      }
+      #root {
+        display: none !important;
+      }
+      body > *:not(#__payment_out_all_print_only__):not([data-slot="dialog-portal"]) {
+        display: none !important;
+      }
+      [data-slot="dialog-portal"] {
+        display: none !important;
+      }
+      #__payment_out_all_print_only__ {
+        display: block !important;
+        visibility: visible !important;
+        position: static !important;
+        left: auto !important;
+        top: auto !important;
+        opacity: 1 !important;
+        pointer-events: auto !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        background: #fff !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+        overflow: visible !important;
+      }
+      #__payment_out_all_print_only__ * {
+        visibility: visible !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+        color-adjust: exact !important;
+      }
+      #__payment_out_all_print_only__ .print-area {
+        width: 100% !important;
+        max-width: 100% !important;
+        margin: 0 !important;
+        padding: 15mm !important;
+        box-shadow: none !important;
+        border-radius: 0 !important;
+      }
+      /* Table pagination rules */
+      #__payment_out_all_print_only__ table {
+        width: 100% !important;
+        border-collapse: collapse !important;
+      }
+      #__payment_out_all_print_only__ thead {
+        display: table-header-group !important;
+        break-inside: avoid !important;
+        page-break-inside: avoid !important;
+      }
+      #__payment_out_all_print_only__ thead th {
+        background-color: #D3D3D3 !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+      #__payment_out_all_print_only__ tr {
+        break-inside: avoid !important;
+        page-break-inside: avoid !important;
+      }
+      #__payment_out_all_print_only__ tbody tr {
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+      }
+    }
+  `;
+  document.head.appendChild(styleEl);
+
+  return () => {
+    if (document.body.contains(printContainer)) document.body.removeChild(printContainer);
+    if (document.head.contains(styleEl)) document.head.removeChild(styleEl);
+  };
+}
+
+/** Fallback PDF generator for browser environments outside Electron */
+async function generateFallbackPdfBlob(filename: string, elementToPrint?: HTMLElement | null): Promise<Blob | null> {
+  const source =
+    elementToPrint ||
+    (document.getElementById("__payment_out_all_print_only__")?.querySelector(".print-area") as HTMLElement | null) ||
+    (document.querySelector(".payment-out-print-dialog-content .print-area") as HTMLElement | null);
+  if (!source) return null;
+
+  const clone = source.cloneNode(true) as HTMLElement;
+  clone.style.position = "fixed";
+  clone.style.left = "-9999px";
+  clone.style.top = "0";
+  clone.style.width = "794px";
+  clone.style.background = "#fff";
+  clone.style.margin = "0";
+  clone.style.padding = "20px";
+  document.body.appendChild(clone);
+
+  try {
+    const blob: Blob = await (html2pdf as any)()
+      .set({
+        margin: [10, 10, 10, 10],
+        filename,
+        image: { type: "jpeg", quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true, logging: false, backgroundColor: "#ffffff" },
+        jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+      })
+      .from(clone)
+      .outputPdf("blob");
+    return blob;
+  } finally {
+    document.body.removeChild(clone);
+  }
+}
+
 export function PaymentOutPrintPreviewModal({
   showPrintPreview,
   setShowPrintPreview,
@@ -20,100 +179,184 @@ export function PaymentOutPrintPreviewModal({
   selectedMonth,
   businessProfile,
 }: PaymentOutPrintPreviewModalProps) {
-  const getPdfOptions = () => ({
-    margin: 10,
-    filename: 'PaymentOutReport.pdf',
-    image: { type: 'jpeg', quality: 1 },
-    html2canvas: { scale: 2, useCORS: true, windowWidth: 794 },
-    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-  });
+  const [isBusy, setIsBusy] = useState<"idle" | "opening" | "saving">("idle");
+  const isMountedRef = useRef(true);
 
-  const handleOpenPDF = () => {
-    const element = document.querySelector('.print-area') as HTMLElement;
-    if (element) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (html2pdf as any)().set(getPdfOptions()).from(element).output('bloburl').then((url: string) => {
-        window.open(url, '_blank');
-      });
+  const safeParty = (selectedPartyName || "All_Parties").replace(/[^a-zA-Z0-9_\-]/g, "_");
+  const pdfFilename = `Payment_Out_Report_${safeParty}.pdf`;
+
+  const handleOpenPDF = async () => {
+    if (isBusy !== "idle") return;
+    setIsBusy("opening");
+
+    const reportEl = document.querySelector(".payment-out-print-dialog-content .print-area") as HTMLElement | null;
+    const cleanup = setupPrintContainer();
+
+    // Close preview popup immediately as requested
+    setShowPrintPreview(false);
+
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 80));
+
+      if (window.electronAPI?.openPdf) {
+        const result = await window.electronAPI.openPdf({
+          defaultFilename: pdfFilename,
+          title: "Payment-Out Transactions Report",
+          pdfOptions: {
+            printBackground: true,
+            preferCSSPageSize: true,
+            landscape: false,
+            pageSize: "A4",
+          },
+        });
+
+        if (!result.success && !result.canceled) {
+          throw new Error(result.failureReason || "Failed to open PDF");
+        }
+      } else {
+        // Fallback for browser outside Electron
+        const blob = await generateFallbackPdfBlob(pdfFilename, reportEl);
+        if (blob) {
+          const url = URL.createObjectURL(blob);
+          window.open(url, "_blank");
+          setTimeout(() => URL.revokeObjectURL(url), 10000);
+        } else {
+          toast.error("Could not generate report preview.");
+        }
+      }
+    } catch (err: any) {
+      console.error("Open PDF error:", err);
+      toast.error(`Could not open PDF: ${err?.message || "Unknown error"}`);
+    } finally {
+      cleanup?.();
+      if (isMountedRef.current) setIsBusy("idle");
     }
   };
 
-  const handleSavePDF = () => {
-    const element = document.querySelector('.print-area') as HTMLElement;
-    if (element) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (html2pdf as any)().set(getPdfOptions()).from(element).save();
+  const handleSavePDF = async () => {
+    if (isBusy !== "idle") return;
+    setIsBusy("saving");
+
+    const reportEl = document.querySelector(".payment-out-print-dialog-content .print-area") as HTMLElement | null;
+    const cleanup = setupPrintContainer();
+
+    // Close preview popup immediately as requested so save as window opens directly
+    setShowPrintPreview(false);
+
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 80));
+
+      if (window.electronAPI?.savePdf) {
+        const result = await window.electronAPI.savePdf({
+          defaultFilename: pdfFilename,
+          title: "Save Payment-Out Report as PDF",
+          pdfOptions: {
+            printBackground: true,
+            preferCSSPageSize: true,
+            landscape: false,
+            pageSize: "A4",
+          },
+        });
+
+        if (result.canceled) {
+          return;
+        }
+
+        if (!result.success) {
+          throw new Error(result.failureReason || "Failed to save PDF");
+        }
+
+        toast.success("PDF saved successfully.");
+      } else {
+        // Fallback for browser outside Electron
+        const blob = await generateFallbackPdfBlob(pdfFilename, reportEl);
+        if (!blob) {
+          toast.error("Could not generate report preview.");
+          return;
+        }
+
+        if ("showSaveFilePicker" in window) {
+          try {
+            const handle = await (window as any).showSaveFilePicker({
+              suggestedName: pdfFilename,
+              types: [
+                {
+                  description: "PDF Document (*.pdf)",
+                  accept: { "application/pdf": [".pdf"] },
+                },
+              ],
+            });
+            const writable = await handle.createWritable();
+            await writable.write(blob);
+            await writable.close();
+            toast.success("PDF saved successfully.");
+            return;
+          } catch (pickerErr: any) {
+            if (pickerErr?.name === "AbortError") return;
+          }
+        }
+
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = pdfFilename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(url), 5000);
+        toast.success("PDF downloaded.");
+      }
+    } catch (err: any) {
+      console.error("Save PDF error:", err);
+      toast.error(`Could not save PDF: ${err?.message || "Unknown error"}`);
+    } finally {
+      cleanup?.();
+      if (isMountedRef.current) setIsBusy("idle");
     }
+  };
+
+  const handlePrint = () => {
+    const cleanup = setupPrintContainer();
+    if (!cleanup) {
+      window.print();
+      return;
+    }
+
+    const onAfterPrint = () => {
+      cleanup();
+      window.removeEventListener("afterprint", onAfterPrint);
+    };
+
+    window.addEventListener("afterprint", onAfterPrint);
+    window.print();
+
+    setTimeout(onAfterPrint, 3000);
   };
 
   return (
     <Dialog open={showPrintPreview} onOpenChange={setShowPrintPreview}>
-      {/*
-        Print-only CSS, kept local to this modal so it works no matter which
-        page renders it (previously this fix only existed as a global
-        <style> block on the Payment-In page, which "leaked" and happened to
-        fix the Payment-In modal too, but never reached Payment-Out).
-        - Hides everything on the page except .print-area, so the
-          underlying list page behind the dialog doesn't spill onto a
-          second printed sheet.
-        - Anchors .print-area at the top-left of the printed page instead
-          of wherever it happened to sit in the page's normal flow, which
-          is what was causing the inconsistent top margin.
-      */}
       <style>{`
-        @media print {
-          * {
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
-            color-adjust: exact !important;
-          }
-          body * {
-            visibility: hidden;
-          }
-          .print-area, .print-area * {
-            visibility: visible;
-          }
-          .print-area {
-            position: absolute !important;
-            left: 0 !important;
-            top: 0 !important;
-            width: 100% !important;
-            max-width: 100% !important;
-            margin: 0 !important;
-            padding: 15mm !important;
-          }
-          .print-dialog-content {
-            position: static !important;
-            inset: auto !important;
-            transform: none !important;
-            width: 100% !important;
-            max-width: 100% !important;
-            height: auto !important;
-            max-height: none !important;
-            overflow: visible !important;
-            box-shadow: none !important;
-            border: none !important;
-            padding: 0 !important;
-            margin: 0 !important;
-          }
-          @page {
-            size: A4 portrait;
-            margin: 0;
-          }
+        .payment-out-print-dialog-content,
+        [data-slot="dialog-overlay"] {
+          animation: none !important;
+          transition: none !important;
         }
       `}</style>
       <DialogContent
         showCloseButton={false}
-        className="print-dialog-content rounded-xl border-0 bg-white p-0 shadow-xl flex flex-col print:shadow-none print:m-0 print:p-0 print:border-none"
+        onPointerDownOutside={(e) => e.preventDefault()}
+        onInteractOutside={(e) => e.preventDefault()}
+        onFocusOutside={(e) => e.preventDefault()}
+        className="payment-out-print-dialog-content rounded-xl border-0 bg-white p-0 shadow-xl flex flex-col !animate-none !duration-0 data-[state=open]:!animate-none data-[state=closed]:!animate-none"
         style={{ width: "750px", maxWidth: "96vw" }}
       >
-        <div className="flex items-center justify-between p-4 border-b print:hidden">
-          <h2 className="text-xl font-bold">Preview</h2>
+        <div className="flex items-center justify-between p-4 border-b">
+          <h2 className="text-xl font-bold text-gray-900">Preview</h2>
           <button onClick={() => setShowPrintPreview(false)} className="text-gray-500 hover:text-gray-700">
             <X className="w-5 h-5" />
           </button>
         </div>
-        <div className="overflow-visible print:overflow-visible">
+        <div className="overflow-auto max-h-[65vh]">
           <PaymentOutPrintReport
             records={records}
             selectedPartyName={selectedPartyName}
@@ -121,28 +364,34 @@ export function PaymentOutPrintPreviewModal({
             businessProfile={businessProfile}
           />
         </div>
-        <div className="p-4 border-t flex justify-end gap-3 print:hidden">
+        <div className="p-4 border-t flex justify-end gap-3">
           <button
             onClick={handleOpenPDF}
-            className="rounded-full px-6 py-2 border border-red-500 text-red-500 font-medium text-sm hover:bg-red-50 transition-colors"
+            disabled={isBusy !== "idle"}
+            className="rounded-full px-6 py-2 border border-red-500 text-red-500 font-medium text-sm hover:bg-red-50 transition-colors flex items-center gap-2 disabled:opacity-60"
           >
-            Open PDF
+            {isBusy === "opening" && <RefreshCw size={14} className="animate-spin" />}
+            {isBusy === "opening" ? "Opening PDF..." : "Open PDF"}
           </button>
           <button
-            onClick={() => window.print()}
-            className="rounded-full px-6 py-2 border border-red-500 text-red-500 font-medium text-sm hover:bg-red-50 transition-colors"
+            onClick={handlePrint}
+            disabled={isBusy !== "idle"}
+            className="rounded-full px-6 py-2 border border-red-500 text-red-500 font-medium text-sm hover:bg-red-50 transition-colors disabled:opacity-60"
           >
             Print
           </button>
           <button
             onClick={handleSavePDF}
-            className="rounded-full px-6 py-2 border border-red-500 text-red-500 font-medium text-sm hover:bg-red-50 transition-colors"
+            disabled={isBusy !== "idle"}
+            className="rounded-full px-6 py-2 border border-red-500 text-red-500 font-medium text-sm hover:bg-red-50 transition-colors flex items-center gap-2 disabled:opacity-60"
           >
-            Save PDF
+            {isBusy === "saving" && <RefreshCw size={14} className="animate-spin" />}
+            {isBusy === "saving" ? "Saving PDF..." : "Save PDF"}
           </button>
           <button
             onClick={() => setShowPrintPreview(false)}
-            className="rounded-full px-6 py-2 bg-red-500 text-white font-medium text-sm hover:bg-red-600 transition-colors"
+            disabled={isBusy !== "idle"}
+            className="rounded-full px-6 py-2 bg-red-500 text-white font-medium text-sm hover:bg-red-600 transition-colors disabled:opacity-60"
           >
             Close
           </button>

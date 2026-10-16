@@ -46,6 +46,7 @@ export function RightPanel({
 }: RightPanelProps) {
   const [currency] = useSettings('settings.businessCurrency', { code: 'PKR', symbol: 'Rs' });
   const [currencyDisplay] = useSettings<'abbreviation' | 'icon'>('settings.currencyDisplay', 'abbreviation');
+  const [isDisablePrintEnabled] = useSettings('settings.isDisablePrintEnabled', false);
   const currencyStr = currencyDisplay === 'icon' ? currency.symbol : currency.code;
 
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -296,8 +297,14 @@ export function RightPanel({
           disabled={isSaving || receivedLessThanTotal}
           className="w-full rounded border border-green-400/60 bg-green-200/50 py-3.5 text-sm font-bold text-green-800 hover:bg-green-300/50 transition-colors shadow-sm disabled:opacity-50"
         >
-          {isSaving ? "Saving..." : (isEditing ? "Print & Update" : "Print & Save")}{" "}
-          <span className="font-normal text-green-700 ml-1">[Ctrl+P]</span>
+          {isSaving
+            ? "Saving..."
+            : isDisablePrintEnabled
+            ? (isEditing ? "Update" : "Save")
+            : (isEditing ? "Print & Update" : "Print & Save")}{" "}
+          <span className="font-normal text-green-700 ml-1">
+            {isDisablePrintEnabled ? "[Ctrl+S]" : "[Ctrl+P]"}
+          </span>
         </button>
 
         {/* Two big arrows below complete sale button */}

@@ -8,7 +8,6 @@ interface ExpenseFooterProps {
 export function ExpenseFooter({
   saveError,
   isSaving,
-  onShare,
   handleSaveExpense,
 }: ExpenseFooterProps) {
   return (

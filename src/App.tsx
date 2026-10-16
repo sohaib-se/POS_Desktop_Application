@@ -31,18 +31,28 @@ import { RecycleBin } from "@/pages/recyclebin";
 import { EditProfile } from "@/pages/EditProfile";
 import { AutoBackup } from "@/pages/autobackup";
 import { BackupToComputer } from "@/pages/backuptocomputer";
-import { BackupToDrive } from "@/pages/backuptodrive";
 import { RestoreBackup } from "@/pages/restorebackup";
 import { LaimsoftPos } from "@/pages/LaimsoftPos";
 import { GlobalSearch } from "@/components/common/GlobalSearch";
 import { AllTransactions } from "@/pages/AllTransactions";
 import { ConfirmActionModal } from "@/components/common/ConfirmActionModal";
 import type { SaleInvoiceEditData, ViewType } from "@/types";
+import { RefreshCw } from "lucide-react";
 
 function App() {
   const [isAppLocked, setIsAppLocked] = useState(true);
   const [isInitializing, setIsInitializing] = useState(true);
   const [headerSearchQuery, setHeaderSearchQuery] = useState("");
+  const [isAutoBackingUpOnClose, setIsAutoBackingUpOnClose] = useState(false);
+
+  useEffect(() => {
+    if (window.electronAPI?.autoBackup?.onClosingBackup) {
+      const cleanup = window.electronAPI.autoBackup.onClosingBackup(() => {
+        setIsAutoBackingUpOnClose(true);
+      });
+      return cleanup;
+    }
+  }, []);
 
   // Business profile state shared between Sidebar and EditProfile
   const [profileBusinessName, setProfileBusinessName] = useState("Laimsoft");
@@ -120,10 +130,20 @@ function App() {
     window.addEventListener("keydown", handleKeyDown);
     window.addEventListener("open-global-search", handleOpenSearch);
     window.addEventListener("profile-saved", handleProfileSaved);
+
+    const handleNavigate = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (detail?.page) {
+        handleViewChange(detail.page as ViewType);
+      }
+    };
+    window.addEventListener("navigate-to-page", handleNavigate);
+
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("open-global-search", handleOpenSearch);
       window.removeEventListener("profile-saved", handleProfileSaved);
+      window.removeEventListener("navigate-to-page", handleNavigate);
     };
   }, [fetchProfile]);
 
@@ -293,8 +313,6 @@ function App() {
         return <AutoBackup />;
       case "sync-backup-computer":
         return <BackupToComputer />;
-      case "sync-backup-drive":
-        return <BackupToDrive />;
       case "sync-restore-backup":
         return <RestoreBackup />;
       case "settings":
@@ -404,6 +422,25 @@ function App() {
         confirmText="Discard Changes"
         cancelText="Stay on Page"
       />
+
+      {isAutoBackingUpOnClose && (
+        <div className="fixed inset-0 z-[99999] bg-slate-900/85 backdrop-blur-md flex flex-col items-center justify-center p-4 select-none">
+          <div className="bg-white rounded-2xl p-8 max-w-sm w-full shadow-2xl flex flex-col items-center text-center animate-in fade-in zoom-in-95 duration-200">
+            <div className="w-16 h-16 rounded-2xl bg-blue-50 text-[#1976D2] flex items-center justify-center mb-4 shadow-inner">
+              <RefreshCw className="w-8 h-8 animate-spin" />
+            </div>
+            <h3 className="text-lg font-bold text-slate-900 mb-1">
+              Saving Automatic Backup...
+            </h3>
+            <p className="text-xs text-slate-500 mb-5 leading-relaxed">
+              Securing your database before closing. Please do not turn off your computer.
+            </p>
+            <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
+              <div className="bg-[#1976D2] h-full w-2/3 animate-pulse rounded-full" />
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

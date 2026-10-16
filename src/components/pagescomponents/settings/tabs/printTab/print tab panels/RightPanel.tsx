@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { getPrintTotalsSettings, setPrintTotalsSettings } from "@/hooks/usePrintSettings";
 import { PhoneInput } from "@/components/ui/phone-input";
+import type { PrinterType } from "./LeftPanel";
 
 /* ─────────────────────────── Shared primitives ──────────────────────── */
 
@@ -364,7 +365,6 @@ function PhoneRow({
 
 interface PrintSettings {
   // Header — loaded from profile
-  makeRegularDefault: boolean;
   companyName: string;
   logoUrl: string;
   signatureUrl: string;
@@ -397,7 +397,6 @@ interface PrintSettings {
 }
 
 const DEFAULT_SETTINGS: PrintSettings = {
-  makeRegularDefault: false,
   companyName: "",
   logoUrl: "",
   signatureUrl: "",
@@ -431,9 +430,22 @@ export interface RightPanelProps {
   onCancel?: () => void;
   hasUnsavedChanges?: boolean;
   onDirtyChange?: (isDirty: boolean) => void;
+  selectedThemeId?: string | null;
+  activePrinter?: PrinterType;
+  selectedColor?: string;
+  onRevertThemes?: () => void;
 }
 
-export function RightPanel({ onSave, onCancel, hasUnsavedChanges = false, onDirtyChange }: RightPanelProps = {}) {
+export function RightPanel({
+  onSave,
+  onCancel,
+  hasUnsavedChanges = false,
+  onDirtyChange,
+  selectedThemeId,
+  activePrinter,
+  selectedColor,
+  onRevertThemes,
+}: RightPanelProps = {}) {
   const [initialSettings, setInitialSettings] = useState<PrintSettings>(() => {
     // Merge persisted Totals & Taxes settings with the rest of the defaults
     const saved = getPrintTotalsSettings();
@@ -460,8 +472,24 @@ export function RightPanel({ onSave, onCancel, hasUnsavedChanges = false, onDirt
   const [isSaving, setIsSaving] = useState(false);
   const [localToast, setLocalToast] = useState<{ message: string, type: "success" | "error" } | null>(null);
 
+  const initialThemeIdRef = useRef<string | null>(selectedThemeId ?? null);
+  const initialPrinterRef = useRef<PrinterType>(activePrinter ?? "regular");
+  const initialColorRef = useRef<string>(selectedColor ?? "#a78bfa");
+
   useEffect(() => {
-    const dirty = JSON.stringify(settings) !== JSON.stringify(initialSettings);
+    if (initialThemeIdRef.current === null && selectedThemeId) {
+      initialThemeIdRef.current = selectedThemeId;
+    }
+  }, [selectedThemeId]);
+
+  useEffect(() => {
+    const isThemeDirty =
+      (selectedThemeId !== undefined && initialThemeIdRef.current !== null && selectedThemeId !== initialThemeIdRef.current) ||
+      (activePrinter !== undefined && activePrinter !== initialPrinterRef.current) ||
+      (selectedColor !== undefined && selectedColor !== initialColorRef.current);
+
+    const isSettingsDirty = JSON.stringify(settings) !== JSON.stringify(initialSettings);
+    const dirty = isSettingsDirty || isThemeDirty;
     setIsDirty(dirty);
     onDirtyChange?.(dirty);
 
@@ -477,7 +505,7 @@ export function RightPanel({ onSave, onCancel, hasUnsavedChanges = false, onDirt
         signature: settings.signatureUrl,
       }
     }));
-  }, [settings, initialSettings, onDirtyChange]);
+  }, [settings, initialSettings, selectedThemeId, activePrinter, selectedColor, onDirtyChange]);
 
   /* Load profile on mount */
   useEffect(() => {
@@ -541,8 +569,10 @@ export function RightPanel({ onSave, onCancel, hasUnsavedChanges = false, onDirt
         }),
       });
       if (res.ok) {
+        const isThermal = activePrinter === "thermal";
         setPrintTotalsSettings({
           ...getPrintTotalsSettings(),
+          makeThermalDefault: isThermal,
           totalItemQuantity: settings.totalItemQuantity,
           amountWithDecimal: settings.amountWithDecimal,
           receivedAmount: settings.receivedAmount,
@@ -558,6 +588,27 @@ export function RightPanel({ onSave, onCancel, hasUnsavedChanges = false, onDirt
           printSignatureText: settings.printSignatureText,
           paymentMode: settings.paymentMode,
         });
+
+        // Persist default printer and selected theme based on active printer
+        localStorage.setItem("print_makeThermalDefault", String(isThermal));
+        localStorage.setItem("print_activePrinter", isThermal ? "thermal" : "regular");
+
+        if (selectedThemeId) {
+          localStorage.setItem("print_selectedThemeId", selectedThemeId);
+          if (isThermal || selectedThemeId.startsWith("thermal")) {
+            localStorage.setItem("print_selectedThermalThemeId", selectedThemeId);
+          } else {
+            localStorage.setItem("print_selectedRegularThemeId", selectedThemeId);
+          }
+        }
+        if (selectedColor) {
+          localStorage.setItem("print_selectedColor", selectedColor);
+        }
+
+        initialThemeIdRef.current = selectedThemeId ?? null;
+        initialPrinterRef.current = activePrinter ?? (isThermal ? "thermal" : "regular");
+        initialColorRef.current = selectedColor ?? "#a78bfa";
+
         // Clear removal flags in the committed baseline
         const committed = { ...settings, logoRemoved: false, signatureRemoved: false };
         setInitialSettings(committed);
@@ -567,6 +618,13 @@ export function RightPanel({ onSave, onCancel, hasUnsavedChanges = false, onDirt
         setTimeout(() => setLocalToast(null), 3000);
         // Notify App.tsx so it can re-fetch the profile and refresh the sidebar logo
         window.dispatchEvent(new CustomEvent("profile-saved"));
+        window.dispatchEvent(new CustomEvent("print-theme-saved", {
+          detail: {
+            themeId: selectedThemeId,
+            printer: activePrinter,
+            makeThermalDefault: isThermal,
+          }
+        }));
         if (onSave) onSave();
       } else {
         setIsSaving(false);
@@ -582,6 +640,7 @@ export function RightPanel({ onSave, onCancel, hasUnsavedChanges = false, onDirt
 
   const handleCancel = () => {
     setSettings(initialSettings);
+    onRevertThemes?.();
     if (onCancel) onCancel();
   };
 
@@ -629,7 +688,7 @@ export function RightPanel({ onSave, onCancel, hasUnsavedChanges = false, onDirt
       <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column" }}>
         {/* ── Print Company Info / Header ── */}
         <SettingsSection title="Print Company Info / Header">
-          <ToggleRow label="Make Regular Printer Default" checked={settings.makeRegularDefault} onChange={(v) => set("makeRegularDefault", v)} />
+          {/* Company Name — synced to profile */}
 
           {/* Company Name — synced to profile */}
           <InputRow

@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import { getPrintTotalsSettings } from "@/hooks/usePrintSettings";
 import { SaleInvoicePrintReport, TallyThemePreview } from "./printTab/Print documents/Tallytheme";
 import { Theme1InvoicePrintReport, Theme1Preview } from "./printTab/Print documents/Theme1";
 import { Theme2InvoicePrintReport, Theme2Preview } from "./printTab/Print documents/Theme2";
@@ -9,10 +10,9 @@ import { ThermalSaleInvoice, ThermalTheme1Preview } from "./printTab/Print docum
 import { ThermalSaleInvoiceClassic, ThermalTheme2Preview } from "./printTab/Print documents/ThermalTheme2";
 import { ThermalSaleInvoiceImpact, ThermalTheme3Preview } from "./printTab/Print documents/ThermalTheme3";
 import { ThermalSaleInvoiceRetail, ThermalTheme4Preview } from "./printTab/Print documents/ThermalTheme4";
-import { LeftPanel, REGULAR_THEMES, THERMAL_THEMES } from "./printTab/print tab panels/LeftPanel";
+import { LeftPanel, type PrinterType } from "./printTab/print tab panels/LeftPanel";
 import { RightPanel } from "./printTab/print tab panels/RightPanel";
 import { PrintPreviewRightPanel } from "./printTab/print tab panels/PrintPreviewRightPanel";
-import type { PrinterType } from "./printTab/print tab panels/LeftPanel";
 import { userProfile } from "@/data/mockData";
 
 export interface SaleInvoiceLineItem {
@@ -311,20 +311,67 @@ export function InvoiceThemeContent({
 }
 
 
+/* ─────────────────────────── Helper Functions ─────────────────────────── */
+
+export function getDefaultPrinter(): PrinterType {
+  const isThermal =
+    localStorage.getItem("print_makeThermalDefault") === "true" ||
+    getPrintTotalsSettings().makeThermalDefault === true;
+  if (isThermal) return "thermal";
+  const stored = localStorage.getItem("print_activePrinter") as PrinterType | null;
+  if (stored === "regular" || stored === "thermal") return stored;
+  return "regular";
+}
+
+export function getDefaultTheme(printer?: PrinterType): string {
+  const p = printer || getDefaultPrinter();
+  if (p === "thermal") {
+    const savedThermal =
+      localStorage.getItem("print_selectedThermalThemeId") ||
+      (localStorage.getItem("print_selectedThemeId")?.startsWith("thermal")
+        ? localStorage.getItem("print_selectedThemeId")
+        : null);
+    return savedThermal || "thermal1";
+  }
+  const savedRegular =
+    localStorage.getItem("print_selectedRegularThemeId") ||
+    (!localStorage.getItem("print_selectedThemeId")?.startsWith("thermal")
+      ? localStorage.getItem("print_selectedThemeId")
+      : null);
+  return savedRegular || "tally";
+}
+
 /* ─────────────────────────── Main component ─────────────────────────── */
 
-export function PrintTab({ isPreviewMode = false, saleData = null, onClose, autoPrint = false }: PrintTabProps) {
+export function PrintTab({
+  isPreviewMode = false,
+  saleData = null,
+  onClose,
+  onSave,
+  onCancel,
+  autoPrint = false,
+}: PrintTabProps) {
   const companyInfo = useCompanyInfo();
-  const [activePrinter, setActivePrinter] = useState<PrinterType>(() =>
-    (localStorage.getItem("print_activePrinter") as PrinterType) || "regular"
+
+  const [activePrinter, setActivePrinter] = useState<PrinterType>(getDefaultPrinter);
+
+  const [thermalThemeId, setThermalThemeId] = useState<string>(() => getDefaultTheme("thermal"));
+  const [regularThemeId, setRegularThemeId] = useState<string>(() => getDefaultTheme("regular"));
+
+  const [selectedThemeId, setSelectedThemeId] = useState<string | null>(() =>
+    getDefaultTheme(getDefaultPrinter())
   );
-  const [selectedThemeId, setSelectedThemeId] = useState<string | null>(() => {
-    return localStorage.getItem("print_selectedThemeId") || "tally";
-  });
   const [selectedColor, setSelectedColor] = useState<string>(
     () => localStorage.getItem("print_selectedColor") || "#a78bfa"
   );
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+
+  // Store initial values to revert on cancel
+  const initialPrinterRef = useRef<PrinterType>(activePrinter);
+  const initialThemeIdRef = useRef<string | null>(selectedThemeId);
+  const initialColorRef = useRef<string>(selectedColor);
+  const initialThermalThemeRef = useRef<string>(thermalThemeId);
+  const initialRegularThemeRef = useRef<string>(regularThemeId);
 
   const handleClose = () => {
     if (hasUnsavedChanges) {
@@ -340,24 +387,49 @@ export function PrintTab({ isPreviewMode = false, saleData = null, onClose, auto
 
   const handlePrinterChange = (p: PrinterType) => {
     setActivePrinter(p);
-    localStorage.setItem("print_activePrinter", p);
-    const themes = p === "regular" ? REGULAR_THEMES : THERMAL_THEMES;
-    if (themes.length > 0) {
-      setSelectedThemeId(themes[0].id);
-      localStorage.setItem("print_selectedThemeId", themes[0].id);
-    } else {
-      setSelectedThemeId(null);
+    const targetTheme = p === "thermal" ? thermalThemeId : regularThemeId;
+    setSelectedThemeId(targetTheme);
+    if (isPreviewMode) {
+      localStorage.setItem("print_activePrinter", p);
     }
   };
 
   const handleThemeSelect = (id: string) => {
     setSelectedThemeId(id);
-    localStorage.setItem("print_selectedThemeId", id);
+    if (activePrinter === "thermal" || id.startsWith("thermal")) {
+      setThermalThemeId(id);
+    } else {
+      setRegularThemeId(id);
+    }
+    if (isPreviewMode) {
+      localStorage.setItem("print_selectedThemeId", id);
+    }
   };
 
   const handleColorChange = (color: string) => {
     setSelectedColor(color);
-    localStorage.setItem("print_selectedColor", color);
+    if (isPreviewMode) {
+      localStorage.setItem("print_selectedColor", color);
+    }
+  };
+
+  const handleRevertThemes = () => {
+    setActivePrinter(initialPrinterRef.current);
+    setSelectedThemeId(initialThemeIdRef.current);
+    setSelectedColor(initialColorRef.current);
+    setThermalThemeId(initialThermalThemeRef.current);
+    setRegularThemeId(initialRegularThemeRef.current);
+    setHasUnsavedChanges(false);
+  };
+
+  const handleSavedThemes = () => {
+    initialPrinterRef.current = activePrinter;
+    initialThemeIdRef.current = selectedThemeId;
+    initialColorRef.current = selectedColor;
+    initialThermalThemeRef.current = thermalThemeId;
+    initialRegularThemeRef.current = regularThemeId;
+    setHasUnsavedChanges(false);
+    if (onSave) onSave();
   };
 
   const renderPreview = () => {
@@ -700,6 +772,12 @@ export function PrintTab({ isPreviewMode = false, saleData = null, onClose, auto
               <RightPanel
                 hasUnsavedChanges={hasUnsavedChanges}
                 onDirtyChange={setHasUnsavedChanges}
+                selectedThemeId={selectedThemeId}
+                activePrinter={activePrinter}
+                selectedColor={selectedColor}
+                onRevertThemes={handleRevertThemes}
+                onSave={handleSavedThemes}
+                onCancel={onCancel}
               />
             )}
           </div>

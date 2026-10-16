@@ -11,6 +11,8 @@ import { useState, useEffect } from "react";
 const STORAGE_KEY = "print_totals_settings";
 
 export interface PrintTotalsSettings {
+  /** Make thermal printer default across print previews and POS */
+  makeThermalDefault?: boolean;
   /** Show the total item quantity row in the invoice */
   totalItemQuantity: boolean;
   /** Show amounts with decimal places (.00) */
@@ -51,6 +53,7 @@ export interface PrintTotalsSettings {
 }
 
 export const DEFAULT_PRINT_TOTALS: PrintTotalsSettings = {
+  makeThermalDefault: false,
   totalItemQuantity: true,
   amountWithDecimal: true,
   receivedAmount: true,
@@ -77,18 +80,28 @@ export function getPrintTotalsSettings(): PrintTotalsSettings {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
-      return { ...DEFAULT_PRINT_TOTALS, ...JSON.parse(raw) };
+      const parsed = JSON.parse(raw);
+      if (parsed.makeThermalDefault === undefined) {
+        parsed.makeThermalDefault = localStorage.getItem("print_makeThermalDefault") === "true";
+      }
+      return { ...DEFAULT_PRINT_TOTALS, ...parsed };
     }
   } catch {
     // ignore parse errors
   }
-  return { ...DEFAULT_PRINT_TOTALS };
+  return {
+    ...DEFAULT_PRINT_TOTALS,
+    makeThermalDefault: localStorage.getItem("print_makeThermalDefault") === "true",
+  };
 }
 
 /** Persist settings to localStorage and notify listeners. */
 export function setPrintTotalsSettings(settings: PrintTotalsSettings): void {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
+    if (settings.makeThermalDefault !== undefined) {
+      localStorage.setItem("print_makeThermalDefault", String(settings.makeThermalDefault));
+    }
     // Dispatch a custom event so any mounted theme component can re-render
     window.dispatchEvent(new CustomEvent("print-settings-changed", { detail: settings }));
   } catch {

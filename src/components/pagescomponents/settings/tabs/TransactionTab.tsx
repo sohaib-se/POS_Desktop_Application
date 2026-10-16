@@ -10,6 +10,7 @@ export function TransactionTab() {
   const [isBarcodeScanEnabled, setIsBarcodeScanEnabled] = useSettings('settings.isBarcodeScanEnabled', false);
 
   const [isDoNotShowInvoicePreviewEnabled, setIsDoNotShowInvoicePreviewEnabled] = useSettings('settings.isDoNotShowInvoicePreviewEnabled', false);
+  const [isDisablePrintEnabled, setIsDisablePrintEnabled] = useSettings('settings.isDisablePrintEnabled', false);
   const [roundOffLimit, setRoundOffLimit] = useSettings('settings.roundOffLimit', 1);
 
   return (
@@ -137,6 +138,11 @@ export function TransactionTab() {
             label="Do not Show Invoice Preview" 
             checked={isDoNotShowInvoicePreviewEnabled} 
             onChange={setIsDoNotShowInvoicePreviewEnabled} 
+          />
+          <SettingToggleRow 
+            label="Disable Print" 
+            checked={isDisablePrintEnabled} 
+            onChange={setIsDisablePrintEnabled} 
           />
 
         </Card>

@@ -27,7 +27,6 @@ const searchableItems: { label: string; view: ViewType }[] = [
   { label: "Reports", view: "reports" },
   { label: "Auto Backup", view: "sync-auto-backup" },
   { label: "Backup to Computer", view: "sync-backup-computer" },
-  { label: "Backup to Drive", view: "sync-backup-drive" },
   { label: "Restore Backup", view: "sync-restore-backup" },
   { label: "Import Items", view: "utilities-import-items" },
   { label: "Barcode Generator", view: "utilities-barcode" },

@@ -5,8 +5,18 @@ import Database from 'better-sqlite3';
 
 const currentDir = path.dirname(fileURLToPath(import.meta.url));
 const workspaceRoot = path.resolve(currentDir, '../..');
-const dataDir = path.join(workspaceRoot, 'data');
-const dbPath = path.join(dataDir, 'pos.db');
+const dataDir = process.env.POS_DATA_DIR || path.join(workspaceRoot, 'data');
+const dbPath = process.env.POS_DB_PATH || path.join(dataDir, 'pos.db');
+
+function getNativeBindingPath() {
+  const isElectron = Boolean(process.versions && process.versions.electron);
+  const targetDir = isElectron ? 'node-v132-win32-x64' : 'node-v127-win32-x64';
+  const customPath = path.join(workspaceRoot, 'node_modules/better-sqlite3/lib/binding', targetDir, 'better_sqlite3.node');
+  if (fs.existsSync(customPath)) {
+    return customPath;
+  }
+  return undefined;
+}
 
 function ensurePartiesColumns(db) {
   const rows = db.prepare('PRAGMA table_info(parties)').all();
@@ -443,7 +453,8 @@ function ensureExpenseCategoriesColumns(db) {
 
 export function openDatabase() {
   ensureDataDirectory();
-  const db = new Database(dbPath);
+  const nativeBinding = getNativeBindingPath();
+  const db = new Database(dbPath, nativeBinding ? { nativeBinding } : undefined);
   db.pragma('journal_mode = WAL');
   db.pragma('foreign_keys = ON');
 

@@ -210,7 +210,6 @@ export type ViewType =
   | 'backup'
   | 'sync-auto-backup'
   | 'sync-backup-computer'
-  | 'sync-backup-drive'
   | 'sync-restore-backup'
   | 'settings'
   | 'utilities'

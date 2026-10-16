@@ -82,6 +82,7 @@ export function AddEstimate({ onSave, onShare, onClose, initialEstimate }: AddEs
     creditLimit: "no-limit" as "no-limit" | "custom", creditLimitAmount: "",
   });
   const [isDoNotShowInvoicePreviewEnabled] = useSettings('settings.isDoNotShowInvoicePreviewEnabled', false);
+  const [isDisablePrintEnabled] = useSettings('settings.isDisablePrintEnabled', false);
 
   const resetPartyForm = () => {
     setPartyForm({
@@ -384,24 +385,29 @@ export function AddEstimate({ onSave, onShare, onClose, initialEstimate }: AddEs
           documentTitle: "Estimate",
         };
 
-        setTabs(prev => {
-          return prev.map(t => {
-            if (t.id === activeTabId) {
-              return {
-                ...t,
-                showPreview: true,
-                savedEstimateForPreview: estimateDataForPreview,
-              };
-            } else {
-              const nextEstNo = String(Number(t.estimateNo) + 1);
-              return {
-                ...t,
-                estimateNo: nextEstNo,
-                label: `Estimate #${nextEstNo}`
-              };
-            }
+        if (isDisablePrintEnabled) {
+          toast.success(initialEstimate ? "Estimate updated successfully!" : "Estimate saved successfully!");
+          handleCloseTabPreview(activeTabId);
+        } else {
+          setTabs(prev => {
+            return prev.map(t => {
+              if (t.id === activeTabId) {
+                return {
+                  ...t,
+                  showPreview: true,
+                  savedEstimateForPreview: estimateDataForPreview,
+                };
+              } else {
+                const nextEstNo = String(Number(t.estimateNo) + 1);
+                return {
+                  ...t,
+                  estimateNo: nextEstNo,
+                  label: `Estimate #${nextEstNo}`
+                };
+              }
+            });
           });
-        });
+        }
       } else {
         const err = await response.json();
         toast.error(err.message || "Failed to save estimate");
@@ -601,7 +607,7 @@ export function AddEstimate({ onSave, onShare, onClose, initialEstimate }: AddEs
         onClose={handleCloseRequest}
       />
 
-      {activeTab?.showPreview && activeTab.savedEstimateForPreview && !isDoNotShowInvoicePreviewEnabled ? (
+      {!isDisablePrintEnabled && activeTab?.showPreview && activeTab.savedEstimateForPreview && !isDoNotShowInvoicePreviewEnabled ? (
         <div style={{ flex: 1, position: "relative", minHeight: 0 }}>
           <PrintTab
             isPreviewMode={true}
@@ -612,7 +618,7 @@ export function AddEstimate({ onSave, onShare, onClose, initialEstimate }: AddEs
         </div>
       ) : (
         <>
-          {activeTab?.showPreview && activeTab.savedEstimateForPreview && isDoNotShowInvoicePreviewEnabled && (
+          {!isDisablePrintEnabled && activeTab?.showPreview && activeTab.savedEstimateForPreview && isDoNotShowInvoicePreviewEnabled && (
             <div style={{ position: "absolute", opacity: 0, pointerEvents: "none" }}>
               <PrintTab
                 isPreviewMode={true}

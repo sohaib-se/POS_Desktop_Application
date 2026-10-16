@@ -1,4 +1,4 @@
-import { ChevronDown, Calendar, Building2 } from "lucide-react";
+import { Calendar } from "lucide-react";
 
 export function EstimatesFilters({ 
   selectedMonth, 

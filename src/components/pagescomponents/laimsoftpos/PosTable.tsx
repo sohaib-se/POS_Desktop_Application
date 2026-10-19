@@ -53,7 +53,12 @@ export function PosTable({ activeTab, updateTab, updateRow, columns }: PosTableP
                     e.stopPropagation();
                     updateTab({ selectedRowId: row.id });
                   }}
-                  onChange={(e) => updateRow(row.id, "qty", e.target.value)}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (/^\d*\.?\d*$/.test(val)) {
+                      updateRow(row.id, "qty", val);
+                    }
+                  }}
                   className="w-full bg-transparent outline-none focus:bg-white focus:ring-1 focus:ring-blue-400 px-1 rounded"
                 />
               </div>
@@ -68,9 +73,12 @@ export function PosTable({ activeTab, updateTab, updateRow, columns }: PosTableP
                     e.stopPropagation();
                     updateTab({ selectedRowId: row.id });
                   }}
-                  onChange={(e) =>
-                    updateRow(row.id, "pricePerUnit", e.target.value)
-                  }
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (/^\d*\.?\d*$/.test(val)) {
+                      updateRow(row.id, "pricePerUnit", val);
+                    }
+                  }}
                   className="w-full bg-transparent outline-none focus:bg-white focus:ring-1 focus:ring-blue-400 px-1 rounded"
                 />
               </div>

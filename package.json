@@ -136,11 +136,11 @@
     "win": {
       "icon": "assets/app-icon.ico",
       "target": [
-        "nsis",
-        "portable"
+        "nsis"
       ]
     },
     "nsis": {
+      "include": "build/installer.nsh",
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
@@ -148,7 +148,8 @@
       "installerIcon": "assets/app-icon.ico",
       "uninstallerIcon": "assets/app-icon.ico",
       "installerHeaderIcon": "assets/app-icon.ico",
-      "shortcutName": "POS Desktop Application"
+      "shortcutName": "POS Desktop Application",
+      "artifactName": "${productName} Setup ${version}.${ext}"
     }
   }
 }

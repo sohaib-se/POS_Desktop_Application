@@ -100,7 +100,12 @@ export function Modals({
                 type="text"
                 autoFocus
                 value={modalQuantity}
-                onChange={(e) => setModalQuantity(e.target.value)}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (/^\d*\.?\d*$/.test(val)) {
+                    setModalQuantity(val);
+                  }
+                }}
                 className="w-full border border-blue-400 rounded px-3 py-1.5 text-sm text-gray-800 outline-none ring-1 ring-blue-400/20"
               />
             </div>

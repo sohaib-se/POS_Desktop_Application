@@ -259,12 +259,15 @@ export function RightPanel({
               <input
                 type="text"
                 value={effectiveAmountReceived}
-                onChange={(e) =>
-                  updateTab({
-                    amountReceived: e.target.value,
-                    isAmountReceivedDirty: true,
-                  })
-                }
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (/^\d*\.?\d*$/.test(val)) {
+                    updateTab({
+                      amountReceived: val,
+                      isAmountReceivedDirty: true,
+                    });
+                  }
+                }}
                 className="w-full text-sm text-gray-800 text-right outline-none bg-transparent"
               />
             </div>

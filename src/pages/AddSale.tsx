@@ -453,8 +453,41 @@ export function AddSale({ onSave, onClose, initialInvoice, isConversion }: AddSa
 
     void loadLookupData();
 
+    const handleSaleRefresh = async () => {
+      try {
+        const res = await fetch("/api/sale_invoices");
+        if (!res.ok) return;
+        const saleInvoices = (await res.json()) as Array<{ invoice_no?: string | null }>;
+        const nextNo = String(
+          saleInvoices.reduce((highest, invoice) => {
+            const invoiceNumber = Number(invoice.invoice_no ?? 0);
+            return Number.isFinite(invoiceNumber) && invoiceNumber > highest ? invoiceNumber : highest;
+          }, 0) + 1,
+        );
+        setNextInvoiceNo(nextNo);
+        setTabs((previousTabs) =>
+          previousTabs.map((tab) => {
+            const isNewTab = !initialInvoice || isConversion;
+            if (isNewTab && !tab.showPreview) {
+              return {
+                ...tab,
+                invoiceNo: nextNo,
+                label: `Sale #${nextNo}`,
+              };
+            }
+            return tab;
+          })
+        );
+      } catch (err) {
+        console.error(err);
+      }
+    };
+
+    window.addEventListener("sale-invoices-refresh", handleSaleRefresh);
+
     return () => {
       cancelled = true;
+      window.removeEventListener("sale-invoices-refresh", handleSaleRefresh);
     };
   }, []);
 
@@ -832,13 +865,28 @@ export function AddSale({ onSave, onClose, initialInvoice, isConversion }: AddSa
 
       if (isDisablePrintEnabled) {
         toast.success(isEditingMode ? "Sale invoice updated successfully!" : "Sale invoice saved successfully!");
-        handleCloseTabPreview(activeTab.id);
+        handleCloseTabPreview(activeTab.id, nextNo);
       } else {
-        updateTab({
-          showPreview: true,
-          savedSaleForPreview: saleDataForPreview,
-          isDirty: false,
-        });
+        setTabs((prev) =>
+          prev.map((t) => {
+            if (t.id === activeTab.id) {
+              return {
+                ...t,
+                showPreview: true,
+                savedSaleForPreview: saleDataForPreview,
+                isDirty: false,
+              };
+            }
+            if (!initialInvoice || isConversion) {
+              return {
+                ...t,
+                invoiceNo: nextNo,
+                label: `Sale #${nextNo}`,
+              };
+            }
+            return t;
+          })
+        );
       }
 
     } catch (error) {
@@ -849,12 +897,13 @@ export function AddSale({ onSave, onClose, initialInvoice, isConversion }: AddSa
     }
   };
 
-  const handleCloseTabPreview = (tabId: number) => {
+  const handleCloseTabPreview = (tabId: number, updatedNextNo?: string) => {
     onSave?.();
     const isEditingMode = Boolean(initialInvoice) && !isConversion;
     if (isEditingMode) {
       onClose?.();
     } else {
+      const targetNo = updatedNextNo || nextInvoiceNo;
       setTabs((prev) => {
         const remaining = prev.filter((t) => t.id !== tabId);
         if (remaining.length === 0) {
@@ -864,7 +913,11 @@ export function AddSale({ onSave, onClose, initialInvoice, isConversion }: AddSa
         if (activeTabId === tabId) {
           setActiveTabId(remaining[remaining.length - 1].id);
         }
-        return remaining;
+        return remaining.map((t) => ({
+          ...t,
+          invoiceNo: targetNo,
+          label: `Sale #${targetNo}`,
+        }));
       });
     }
   };

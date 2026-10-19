@@ -495,20 +495,53 @@ export function LaimsoftPos({ onClose, initialInvoice }: LaimsoftPosProps) {
         );
         setNextInvoiceNo(nextNo);
 
-        setTabs((prev) => {
-          if (prev.length === 1 && prev[0].rows.length === 0 && prev[0].invoiceNo === "1") {
-            return [{ ...prev[0], invoiceNo: nextNo }];
-          }
-          return prev;
-        });
+        setTabs((prev) =>
+          prev.map((t) =>
+            !t.editingInvoiceId && (t.invoiceNo === "1" || prev.length === 1)
+              ? { ...t, invoiceNo: nextNo }
+              : t
+          )
+        );
       } catch (error) {
         console.error(error);
       }
     };
 
     void loadLookupData();
+
+    const handleSaleRefresh = async () => {
+      try {
+        const res = await fetch("/api/sale_invoices");
+        if (!res.ok) return;
+        const saleInvoices = (await res.json()) as SaleInvoiceApiRecord[];
+        const nextNo = String(
+          saleInvoices.reduce((highest, invoice) => {
+            const invNo = Number(invoice.invoice_no ?? invoice.invoiceNo ?? 0);
+            return Number.isFinite(invNo) && invNo > highest ? invNo : highest;
+          }, 0) + 1
+        );
+        setNextInvoiceNo(nextNo);
+        setTabs((prev) =>
+          prev.map((t) =>
+            !t.editingInvoiceId
+              ? {
+                  ...t,
+                  invoiceNo: nextNo,
+                  draftSnapshot: t.draftSnapshot ? { ...t.draftSnapshot, invoiceNo: nextNo } : t.draftSnapshot,
+                }
+              : t
+          )
+        );
+      } catch (err) {
+        console.error(err);
+      }
+    };
+
+    window.addEventListener("sale-invoices-refresh", handleSaleRefresh);
+
     return () => {
       cancelled = true;
+      window.removeEventListener("sale-invoices-refresh", handleSaleRefresh);
     };
   }, []);
 
@@ -1133,6 +1166,9 @@ export function LaimsoftPos({ onClose, initialInvoice }: LaimsoftPosProps) {
   };
 
   const updateRow = (id: number, field: keyof PosRow, value: string) => {
+    if ((field === "qty" || field === "pricePerUnit") && !/^\d*\.?\d*$/.test(value)) {
+      return;
+    }
     const newRows = activeTab.rows.map((r) => {
       if (r.id === id) {
         const updated = { ...r, [field]: value };
@@ -1163,12 +1199,15 @@ export function LaimsoftPos({ onClose, initialInvoice }: LaimsoftPosProps) {
   };
 
   const handleDiscountPercentChange = (val: string) => {
+    if (!/^\d*\.?\d*$/.test(val)) return;
+    if (Number(val) > 100) return;
     setModalDiscountPercent(val);
     const p = Number(val) || 0;
     setModalDiscountAmount(((subTotalAmount * p) / 100).toFixed(2));
   };
 
   const handleDiscountAmountChange = (val: string) => {
+    if (!/^\d*\.?\d*$/.test(val)) return;
     setModalDiscountAmount(val);
     const a = Number(val) || 0;
     if (subTotalAmount > 0) {
@@ -1403,6 +1442,12 @@ export function LaimsoftPos({ onClose, initialInvoice }: LaimsoftPosProps) {
                   editingInvoiceId: null,
                   draftSnapshot: null,
                 }
+              : !t.editingInvoiceId
+              ? {
+                  ...t,
+                  invoiceNo: targetNextNo,
+                  draftSnapshot: t.draftSnapshot ? { ...t.draftSnapshot, invoiceNo: targetNextNo } : t.draftSnapshot,
+                }
               : t
           )
         );
@@ -1473,6 +1518,12 @@ export function LaimsoftPos({ onClose, initialInvoice }: LaimsoftPosProps) {
                 description: "",
                 editingInvoiceId: null,
                 draftSnapshot: null,
+              }
+            : !t.editingInvoiceId
+            ? {
+                ...t,
+                invoiceNo: targetNextNo,
+                draftSnapshot: t.draftSnapshot ? { ...t.draftSnapshot, invoiceNo: targetNextNo } : t.draftSnapshot,
               }
             : t
         )

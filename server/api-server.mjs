@@ -4299,12 +4299,66 @@ function registerApiRoutes(middlewares, customAppDataRoot) {
           return;
         }
         const payload = await parseJsonBody(req);
+        const txAmount = id.startsWith("cash_payment_out_")
+          ? -Math.abs(Number(payload.amount || 0))
+          : Math.abs(Number(payload.amount || 0));
         repository.updateCashInHandTransaction(id, {
           date: payload.date,
           name: payload.name,
           type: payload.type,
-          amount: Number(payload.amount)
+          amount: txAmount
         });
+
+        if (id.startsWith("cash_payment_in_")) {
+          const paymentInId = id.slice("cash_payment_in_".length);
+          const existingRecord = repository.getPaymentInRecordById(paymentInId);
+          if (existingRecord) {
+            const oldAmount = Math.abs(Number(existingRecord.amount || 0));
+            const newAmount = Math.abs(Number(payload.amount || 0));
+            if (existingRecord.party_id) {
+              try {
+                const allParties = repository.getParties();
+                const party = allParties.find((p) => String(p.id) === String(existingRecord.party_id));
+                if (party) {
+                  party.balance = Number(party.balance || 0) + oldAmount - newAmount;
+                  repository.upsertParty(party);
+                }
+              } catch (balanceError) {
+                console.error("Failed to update party balance on cash payment in edit:", balanceError);
+              }
+            }
+            existingRecord.amount = newAmount;
+            if (payload.date) existingRecord.date = payload.date;
+            if (payload.name) existingRecord.party_name = payload.name;
+            repository.updatePaymentInRecord(existingRecord);
+          }
+        }
+
+        if (id.startsWith("cash_payment_out_")) {
+          const paymentOutId = id.slice("cash_payment_out_".length);
+          const existingRecord = repository.getPaymentOutRecordById(paymentOutId);
+          if (existingRecord) {
+            const oldAmount = Math.abs(Number(existingRecord.amount || 0));
+            const newAmount = Math.abs(Number(payload.amount || 0));
+            if (existingRecord.party_id) {
+              try {
+                const allParties = repository.getParties();
+                const party = allParties.find((p) => String(p.id) === String(existingRecord.party_id));
+                if (party) {
+                  party.balance = Number(party.balance || 0) - oldAmount + newAmount;
+                  repository.upsertParty(party);
+                }
+              } catch (balanceError) {
+                console.error("Failed to update party balance on cash payment out edit:", balanceError);
+              }
+            }
+            existingRecord.amount = newAmount;
+            if (payload.date) existingRecord.date = payload.date;
+            if (payload.name) existingRecord.party_name = payload.name;
+            repository.updatePaymentOutRecord(paymentOutId, existingRecord);
+          }
+        }
+
         res.statusCode = 200;
         res.setHeader("Content-Type", "application/json");
         res.end(JSON.stringify({ success: true }));
@@ -4319,6 +4373,58 @@ function registerApiRoutes(middlewares, customAppDataRoot) {
           res.setHeader("Content-Type", "application/json");
           res.end(JSON.stringify({ message: "Transaction id is required." }));
           return;
+        }
+        if (id.startsWith("cash_payment_in_")) {
+          const paymentInId = id.slice("cash_payment_in_".length);
+          const existingRecord = repository.getPaymentInRecordById(paymentInId);
+          if (existingRecord) {
+            if (existingRecord.party_id) {
+              try {
+                const allParties = repository.getParties();
+                const party = allParties.find((p) => String(p.id) === String(existingRecord.party_id));
+                if (party) {
+                  party.balance = Number(party.balance || 0) + Number(existingRecord.amount || 0);
+                  repository.upsertParty(party);
+                }
+              } catch (balanceError) {
+                console.error("Failed to restore party balance on cash payment in delete:", balanceError);
+              }
+            }
+            if (existingRecord.attachment_image_path || existingRecord.attachmentImagePath) {
+              try {
+                removeManagedPaymentInAttachmentFile(existingRecord.attachment_image_path || existingRecord.attachmentImagePath);
+              } catch (attError) {
+                console.error("Failed to remove payment in attachment:", attError);
+              }
+            }
+            repository.deletePaymentInRecord(paymentInId);
+          }
+        }
+        if (id.startsWith("cash_payment_out_")) {
+          const paymentOutId = id.slice("cash_payment_out_".length);
+          const existingRecord = repository.getPaymentOutRecordById(paymentOutId);
+          if (existingRecord) {
+            if (existingRecord.party_id) {
+              try {
+                const allParties = repository.getParties();
+                const party = allParties.find((p) => String(p.id) === String(existingRecord.party_id));
+                if (party) {
+                  party.balance = Number(party.balance || 0) - Number(existingRecord.amount || 0);
+                  repository.upsertParty(party);
+                }
+              } catch (balanceError) {
+                console.error("Failed to restore party balance on cash payment out delete:", balanceError);
+              }
+            }
+            if (existingRecord.attachment_image_path || existingRecord.attachmentImagePath) {
+              try {
+                removeManagedPaymentOutAttachmentFile(existingRecord.attachment_image_path || existingRecord.attachmentImagePath);
+              } catch (attError) {
+                console.error("Failed to remove payment out attachment:", attError);
+              }
+            }
+            repository.deletePaymentOutRecord(paymentOutId);
+          }
         }
         if (id.startsWith("cash_expense_")) {
           const expenseId = id.slice("cash_expense_".length);

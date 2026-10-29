@@ -169,15 +169,19 @@ export function updatePaymentInRecord(record) {
       updated_at = datetime('now')
     WHERE id = @id
   `).run({
-    ...record,
-    partyId: record.partyId ?? null,
-    receiptNo: record.receiptNo ?? null,
+    id: String(record.id),
+    receiptNo: record.receiptNo ?? record.receipt_no ?? null,
+    date: record.date ?? null,
+    partyName: record.partyName ?? record.party_name ?? null,
+    partyId: record.partyId ?? record.party_id ?? null,
+    amount: Number(record.amount) || 0,
+    paymentType: record.paymentType ?? record.payment_type ?? 'Cash',
     reference: record.reference ?? null,
     description: record.description ?? null,
-    attachmentImagePath: record.attachmentImagePath ?? null,
-    attachmentImageName: record.attachmentImageName ?? null,
-    attachmentDocumentPath: record.attachmentDocumentPath ?? null,
-    attachmentDocumentName: record.attachmentDocumentName ?? null,
+    attachmentImagePath: record.attachmentImagePath ?? record.attachment_image_path ?? null,
+    attachmentImageName: record.attachmentImageName ?? record.attachment_image_name ?? null,
+    attachmentDocumentPath: record.attachmentDocumentPath ?? record.attachment_document_path ?? null,
+    attachmentDocumentName: record.attachmentDocumentName ?? record.attachment_document_name ?? null,
   });
   db.close();
 }
@@ -201,10 +205,10 @@ export function deletePaymentInRecord(id) {
         Date.now().toString() + Math.floor(Math.random()*1000),
         String(id),
         JSON.stringify(row),
-        row.payment_no || '',
+        row.receipt_no || row.payment_no || '',
         row.party_name || '',
         row.amount || 0,
-        row.payment_mode || ''
+        row.payment_type || row.payment_mode || ''
       );
     } catch(e) { console.error('Error inserting to recycle_bin', e); }
   }

@@ -166,6 +166,7 @@ export function ThermalSaleInvoiceClassic({
 
     return (
         <div
+            className="thermal-receipt"
             style={{
                 background: "#fff",
                 color: "#111",

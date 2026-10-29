@@ -122,6 +122,9 @@ export function CashInHandView({
   const isAdjustCash = (tx: any) =>
     tx.type === 'Increase Cash' || tx.type === 'Decrease Cash';
 
+  const isPaymentInOrOut = (tx: any) =>
+    String(tx.id).startsWith('cash_payment_in_') || String(tx.id).startsWith('cash_payment_out_');
+
   return (
     <div className="h-full flex flex-col bg-[#D0DCE7] gap-1">
       {/* Header */}
@@ -308,6 +311,12 @@ export function CashInHandView({
               {isTransfer(editingTransaction) && (
                 <span className="ml-1 text-blue-500 font-medium">(Syncs with bank account)</span>
               )}
+              {String(editingTransaction.id).startsWith('cash_payment_in_') && (
+                <span className="ml-1 text-blue-500 font-medium">(Syncs with Payment In & Party)</span>
+              )}
+              {String(editingTransaction.id).startsWith('cash_payment_out_') && (
+                <span className="ml-1 text-blue-500 font-medium">(Syncs with Payment Out & Party)</span>
+              )}
             </p>
             <label className="block text-sm text-gray-600 mb-1">Amount</label>
             <input
@@ -340,10 +349,15 @@ export function CashInHandView({
           style={{ top: contextMenu.y, left: contextMenu.x }}
           onClick={(e) => e.stopPropagation()}
         >
-          {isAdjustCash(contextMenu.transaction) && (
+          {(isAdjustCash(contextMenu.transaction) || isPaymentInOrOut(contextMenu.transaction) || isTransfer(contextMenu.transaction)) && (
             <button
               onClick={() => {
-                setEditingAdjustTx(contextMenu.transaction);
+                if (isAdjustCash(contextMenu.transaction)) {
+                  setEditingAdjustTx(contextMenu.transaction);
+                } else {
+                  setEditingTransaction(contextMenu.transaction);
+                  setEditAmount(String(Math.abs(contextMenu.transaction.amount || 0)));
+                }
                 setContextMenu(null);
               }}
               className="w-full text-left px-4 py-2 text-sm text-blue-600 hover:bg-blue-50 flex items-center gap-2"

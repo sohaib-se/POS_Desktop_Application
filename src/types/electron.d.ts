@@ -114,6 +114,7 @@ export interface AutoBackupAPI {
 export interface ElectronAPI {
   platform: string;
   printReceipt: (options?: { silent?: boolean; deviceName?: string }) => Promise<{ success: boolean; failureReason?: string }>;
+  cutReceipt?: (options?: { deviceName?: string; printerName?: string }) => Promise<{ success: boolean; output?: string; failureReason?: string }>;
   getPrinters: () => Promise<any[]>;
   savePdf: (options?: SavePdfOptions) => Promise<SavePdfResult>;
   openPdf: (options?: SavePdfOptions) => Promise<SavePdfResult>;

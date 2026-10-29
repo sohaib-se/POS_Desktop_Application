@@ -613,7 +613,7 @@ export function PrintTab({
         @media print {
           @page {
             size: auto;
-            margin: 10mm;
+            margin: ${activePrinter === "thermal" ? "0 !important" : "10mm"};
           }
           html, body {
             width: 100% !important;
@@ -649,10 +649,21 @@ export function PrintTab({
             transform: none !important;
             transform-origin: unset !important;
             width: 100% !important;
-            max-width: 100% !important;
+            max-width: ${activePrinter === "thermal" ? "80mm" : "100%"} !important;
             flex-shrink: unset !important;
-            margin: 0 !important;
+            margin: ${activePrinter === "thermal" ? "0 auto" : "0"} !important;
             padding: 0 !important;
+            box-shadow: none !important;
+            border-radius: 0 !important;
+          }
+          .thermal-receipt {
+            width: 100% !important;
+            max-width: 100% !important;
+            margin: 0 !important;
+            padding: 2mm 1mm !important;
+            box-sizing: border-box !important;
+            box-shadow: none !important;
+            border-radius: 0 !important;
           }
           .invoice-document,
           .print-area {

@@ -48,26 +48,26 @@ export function CashBank({ subView }: CashBankProps) {
 
   // Re-fetch cash transactions whenever an expense record is added/deleted from the Expenses page,
   // so Cash In Hand stays in sync without a manual page refresh.
-  useEffect(() => {
-    const handleExpensesRefresh = () => {
-      if (subView === "cash-in-hand") {
-        fetchTransactions();
-      }
-    };
-    window.addEventListener("expenses-refresh", handleExpensesRefresh);
-    return () => window.removeEventListener("expenses-refresh", handleExpensesRefresh);
-  }, [subView]);
-
-  // Re-fetch cash transactions whenever a purchase bill is added/deleted from the Purchase Bills page,
+  // Re-fetch cash transactions whenever related events occur,
   // so Cash In Hand stays in sync without a manual page refresh.
   useEffect(() => {
-    const handlePurchaseRefresh = () => {
+    const handleRefresh = () => {
       if (subView === "cash-in-hand") {
         fetchTransactions();
       }
     };
-    window.addEventListener("purchase-bills-refresh", handlePurchaseRefresh);
-    return () => window.removeEventListener("purchase-bills-refresh", handlePurchaseRefresh);
+    window.addEventListener("expenses-refresh", handleRefresh);
+    window.addEventListener("purchase-bills-refresh", handleRefresh);
+    window.addEventListener("payment-in-refresh", handleRefresh);
+    window.addEventListener("payment-out-refresh", handleRefresh);
+    window.addEventListener("cash-transactions-refresh", handleRefresh);
+    return () => {
+      window.removeEventListener("expenses-refresh", handleRefresh);
+      window.removeEventListener("purchase-bills-refresh", handleRefresh);
+      window.removeEventListener("payment-in-refresh", handleRefresh);
+      window.removeEventListener("payment-out-refresh", handleRefresh);
+      window.removeEventListener("cash-transactions-refresh", handleRefresh);
+    };
   }, [subView]);
 
   useEffect(() => {
@@ -89,6 +89,16 @@ export function CashBank({ subView }: CashBankProps) {
         // If we deleted a linked cash purchase, notify the Purchase Bills page to re-fetch its records too.
         if (id.startsWith('cash_purchase_')) {
           window.dispatchEvent(new CustomEvent('purchase-bills-refresh'));
+        }
+        // If we deleted a linked cash payment in, notify the Payment In page and Parties.
+        if (id.startsWith('cash_payment_in_')) {
+          window.dispatchEvent(new CustomEvent('payment-in-refresh'));
+          window.dispatchEvent(new CustomEvent('parties-refresh'));
+        }
+        // If we deleted a linked cash payment out, notify the Payment Out page and Parties.
+        if (id.startsWith('cash_payment_out_')) {
+          window.dispatchEvent(new CustomEvent('payment-out-refresh'));
+          window.dispatchEvent(new CustomEvent('parties-refresh'));
         }
       } else {
         toast.error("Cannot delete a system transaction here. Delete the original invoice instead.");
@@ -115,6 +125,14 @@ export function CashBank({ subView }: CashBankProps) {
       });
       if (res.ok) {
         fetchTransactions();
+        if (tx.id.startsWith('cash_payment_in_')) {
+          window.dispatchEvent(new CustomEvent('payment-in-refresh'));
+          window.dispatchEvent(new CustomEvent('parties-refresh'));
+        }
+        if (tx.id.startsWith('cash_payment_out_')) {
+          window.dispatchEvent(new CustomEvent('payment-out-refresh'));
+          window.dispatchEvent(new CustomEvent('parties-refresh'));
+        }
         setEditingTransaction(null);
       } else {
         toast.error("Could not edit this transaction.");

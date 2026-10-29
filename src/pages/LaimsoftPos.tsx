@@ -306,13 +306,19 @@ export function LaimsoftPos({ onClose, initialInvoice }: LaimsoftPosProps) {
       clone.style.padding = "0";
 
       // Also strip fixed max-width and margins from inner root documents
-      const innerDocs = clone.querySelectorAll<HTMLElement>(".invoice-document, .print-area, .pos-print-content");
+      const innerDocs = clone.querySelectorAll<HTMLElement>(".invoice-document, .print-area, .pos-print-content, .thermal-receipt");
       innerDocs.forEach((doc) => {
         if (!isThermal) {
           doc.style.width = "100%";
           doc.style.maxWidth = "100%";
           doc.style.margin = "0";
           doc.style.padding = "0";
+          doc.style.boxSizing = "border-box";
+        } else {
+          doc.style.width = "100%";
+          doc.style.maxWidth = "100%";
+          doc.style.margin = "0";
+          doc.style.padding = "2mm 1mm";
           doc.style.boxSizing = "border-box";
         }
       });
@@ -326,7 +332,7 @@ export function LaimsoftPos({ onClose, initialInvoice }: LaimsoftPosProps) {
         @media print {
           @page {
             size: auto;
-            margin: ${isThermal ? "2mm" : "10mm"};
+            margin: ${isThermal ? "0 !important" : "10mm"};
           }
           html, body {
             width: 100% !important;
@@ -349,7 +355,7 @@ export function LaimsoftPos({ onClose, initialInvoice }: LaimsoftPosProps) {
             margin: ${isThermal ? "0 auto" : "0"} !important;
             padding: 0 !important;
             background: #fff !important;
-            width: ${isThermal ? "80mm" : "100%"} !important;
+            width: ${isThermal ? "100%" : "100%"} !important;
             max-width: ${isThermal ? "80mm" : "100%"} !important;
             box-sizing: border-box !important;
             overflow: visible !important;
@@ -357,6 +363,15 @@ export function LaimsoftPos({ onClose, initialInvoice }: LaimsoftPosProps) {
           #__pos_invoice_print_only__ * {
             visibility: visible !important;
             box-sizing: border-box !important;
+          }
+          #__pos_invoice_print_only__ .thermal-receipt {
+            width: 100% !important;
+            max-width: 100% !important;
+            margin: 0 !important;
+            padding: 2mm 1mm !important;
+            box-sizing: border-box !important;
+            box-shadow: none !important;
+            border-radius: 0 !important;
           }
           #__pos_invoice_print_only__ .invoice-document,
           #__pos_invoice_print_only__ .print-area,
@@ -397,7 +412,10 @@ export function LaimsoftPos({ onClose, initialInvoice }: LaimsoftPosProps) {
       `;
       document.head.appendChild(styleEl);
 
+      let isHandled = false;
       const cleanup = () => {
+        if (isHandled) return;
+        isHandled = true;
         if (document.body.contains(printContainer)) {
           document.body.removeChild(printContainer);
         }
@@ -405,12 +423,15 @@ export function LaimsoftPos({ onClose, initialInvoice }: LaimsoftPosProps) {
           document.head.removeChild(styleEl);
         }
         window.removeEventListener("afterprint", cleanup);
+        if (isThermal && window.electronAPI?.cutReceipt) {
+          window.electronAPI.cutReceipt();
+        }
         setDirectPrintSale(null);
       };
 
       window.addEventListener("afterprint", cleanup);
       window.print();
-      setTimeout(cleanup, 3000);
+      setTimeout(cleanup, 4000);
     }, 60);
 
     return () => clearTimeout(timer);

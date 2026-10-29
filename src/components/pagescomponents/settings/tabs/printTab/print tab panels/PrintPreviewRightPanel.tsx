@@ -87,10 +87,12 @@ function setupPrintContainer(activePrinter: PrinterType): (() => void) | null {
   clone.style.zoom = "1";
   clone.style.transform = "none";
   clone.style.transformOrigin = "unset";
-  clone.style.width = isThermal ? "80mm" : "100%";
+  clone.style.width = isThermal ? "100%" : "100%";
   clone.style.maxWidth = isThermal ? "80mm" : "100%";
   clone.style.margin = isThermal ? "0 auto" : "0";
   clone.style.padding = "0";
+  clone.style.boxShadow = "none";
+  clone.style.borderRadius = "0";
 
   if (clone.matches(".invoice-document, .print-area")) {
     if (!isThermal) {
@@ -113,6 +115,22 @@ function setupPrintContainer(activePrinter: PrinterType): (() => void) | null {
     }
   });
 
+  const thermalDocs = clone.querySelectorAll<HTMLElement>(".thermal-receipt");
+  thermalDocs.forEach((doc) => {
+    doc.style.width = "100%";
+    doc.style.maxWidth = "100%";
+    doc.style.margin = "0";
+    doc.style.padding = "2mm 1mm";
+    doc.style.boxSizing = "border-box";
+  });
+  if (clone.matches(".thermal-receipt")) {
+    clone.style.width = "100%";
+    clone.style.maxWidth = "100%";
+    clone.style.margin = "0";
+    clone.style.padding = "2mm 1mm";
+    clone.style.boxSizing = "border-box";
+  }
+
   printContainer.appendChild(clone);
   document.body.appendChild(printContainer);
 
@@ -121,8 +139,8 @@ function setupPrintContainer(activePrinter: PrinterType): (() => void) | null {
   styleEl.textContent = `
     @media print {
       @page {
-        size: ${isThermal ? "80mm auto" : "A4 portrait"};
-        margin: ${isThermal ? "2mm" : "10mm"};
+        size: ${isThermal ? "auto" : "A4 portrait"};
+        margin: ${isThermal ? "0 !important" : "10mm"};
       }
       html, body {
         width: 100% !important;
@@ -149,7 +167,7 @@ function setupPrintContainer(activePrinter: PrinterType): (() => void) | null {
         margin: ${isThermal ? "0 auto" : "0"} !important;
         padding: 0 !important;
         background: #fff !important;
-        width: ${isThermal ? "80mm" : "100%"} !important;
+        width: ${isThermal ? "100%" : "100%"} !important;
         max-width: ${isThermal ? "80mm" : "100%"} !important;
         box-sizing: border-box !important;
         overflow: visible !important;
@@ -157,6 +175,15 @@ function setupPrintContainer(activePrinter: PrinterType): (() => void) | null {
       #__invoice_print_only__ * {
         visibility: visible !important;
         box-sizing: border-box !important;
+      }
+      #__invoice_print_only__ .thermal-receipt {
+        width: 100% !important;
+        max-width: 100% !important;
+        margin: 0 !important;
+        padding: 2mm 1mm !important;
+        box-sizing: border-box !important;
+        box-shadow: none !important;
+        border-radius: 0 !important;
       }
       #__invoice_print_only__ .invoice-document,
       #__invoice_print_only__ .print-area {
@@ -343,16 +370,27 @@ export function PrintPreviewRightPanel({
       return;
     }
 
+    let isHandled = false;
     const onAfterPrint = () => {
+      if (isHandled) return;
+      isHandled = true;
       cleanup();
       window.removeEventListener("afterprint", onAfterPrint);
+      if (activePrinter === "thermal" && window.electronAPI?.cutReceipt) {
+        window.electronAPI.cutReceipt();
+      }
     };
 
     window.addEventListener("afterprint", onAfterPrint);
     window.print();
 
     // Safety fallback — cleanup if afterprint never fires
-    setTimeout(onAfterPrint, 3000);
+    setTimeout(() => {
+      if (!isHandled) {
+        cleanup();
+        window.removeEventListener("afterprint", onAfterPrint);
+      }
+    }, 4000);
   };
 
   useEffect(() => {

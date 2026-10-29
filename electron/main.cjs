@@ -1,6 +1,7 @@
 const { app, BrowserWindow, ipcMain, dialog, shell } = require('electron');
 const path = require('path');
 const fs = require('fs');
+const { execFile } = require('child_process');
 const backupService = require('./backup-service.cjs');
 const autoBackupService = require('./auto-backup-service.cjs');
 
@@ -166,6 +167,29 @@ async function createWindow() {
         },
         (success, failureReason) => {
           resolve({ success, failureReason });
+        }
+      );
+    });
+  });
+
+  // Handle direct thermal printer paper cutting
+  ipcMain.handle('cut-receipt', async (event, options = {}) => {
+    return new Promise((resolve) => {
+      const printerName = options.deviceName || options.printerName || '';
+      const scriptPath = path.join(__dirname, 'cut-printer.ps1');
+      execFile(
+        'powershell',
+        ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', scriptPath, '-PrinterName', printerName],
+        { windowsHide: true },
+        (error, stdout) => {
+          if (error) {
+            console.error('Cut printer error:', error);
+            resolve({ success: false, failureReason: error.message });
+            return;
+          }
+          const output = (stdout || '').trim();
+          const success = output.startsWith('SUCCESS');
+          resolve({ success, output });
         }
       );
     });

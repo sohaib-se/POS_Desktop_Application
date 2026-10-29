@@ -3,6 +3,7 @@ const { contextBridge, ipcRenderer } = require('electron');
 contextBridge.exposeInMainWorld('electronAPI', {
   platform: process.platform,
   printReceipt: (options) => ipcRenderer.invoke('print-receipt', options),
+  cutReceipt: (options) => ipcRenderer.invoke('cut-receipt', options),
   getPrinters: () => ipcRenderer.invoke('get-printers'),
   savePdf: (options) => ipcRenderer.invoke('save-pdf', options),
   openPdf: (options) => ipcRenderer.invoke('open-pdf', options),

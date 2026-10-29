@@ -123,14 +123,16 @@ export function ThermalSaleInvoiceRetail({
                 overflow: "hidden",
                 whiteSpace: "nowrap",
                 margin: "6px 0",
+                letterSpacing: 2,
             }}
         >
-            {"*".repeat(38)}
+            {"*".repeat(48)}
         </div>
     );
 
     return (
         <div
+            className="thermal-receipt"
             style={{
                 background: "#fff",
                 color: "#000",

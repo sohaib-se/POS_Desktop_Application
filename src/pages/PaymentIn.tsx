@@ -123,6 +123,8 @@ export function PaymentIn() {
       }
       setRecords((prev) => prev.filter((r) => r.id !== id));
       window.dispatchEvent(new CustomEvent('bank-accounts-refresh'));
+      window.dispatchEvent(new CustomEvent('cash-transactions-refresh'));
+      window.dispatchEvent(new CustomEvent('parties-refresh'));
     } catch (error) {
       console.error("Delete error:", error);
       alert("Failed to delete the selected transaction.");
@@ -305,6 +307,8 @@ export function PaymentIn() {
         resetAddPaymentForm();
         fetchData();
         window.dispatchEvent(new CustomEvent('bank-accounts-refresh'));
+        window.dispatchEvent(new CustomEvent('cash-transactions-refresh'));
+        window.dispatchEvent(new CustomEvent('parties-refresh'));
       } else {
         alert("Failed to save payment in record.");
       }

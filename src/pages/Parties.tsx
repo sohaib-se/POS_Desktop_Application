@@ -322,6 +322,13 @@ export function Parties({ isReportView, onBack, onEditSaleInvoice }: PartiesProp
 
   useEffect(() => {
     loadPartiesAndTransactions();
+    const handleRefresh = () => {
+      loadPartiesAndTransactions();
+    };
+    window.addEventListener('parties-refresh', handleRefresh);
+    return () => {
+      window.removeEventListener('parties-refresh', handleRefresh);
+    };
   }, [loadPartiesAndTransactions]);
 
 

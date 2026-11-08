@@ -1,6 +1,7 @@
 import React from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { X, ChevronDown, FilePlus2, Camera } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 interface AddPaymentInModalProps {
   showAddPayment: boolean;
@@ -31,6 +32,8 @@ interface AddPaymentInModalProps {
 }
 
 export function AddPaymentInModal(props: AddPaymentInModalProps) {
+  const { t } = useTranslation();
+
   return (
       <Dialog open={props.showAddPayment} onOpenChange={props.setShowAddPayment}>
         <DialogContent
@@ -41,7 +44,7 @@ export function AddPaymentInModal(props: AddPaymentInModalProps) {
           <div className="flex flex-col bg-white">
             <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
               <h2 className="text-[18px] font-semibold text-slate-900">
-                Payment-In
+                {t("paymentIn.title")}
               </h2>
               <div className="flex items-center gap-3">
                 <button
@@ -61,7 +64,7 @@ export function AddPaymentInModal(props: AddPaymentInModalProps) {
                   <div>
                     <div className="relative">
                       <label className="absolute -top-2 left-3 bg-white px-1 text-[11px] font-medium text-slate-500 z-10">
-                        Party <span className="text-[#E53935]">*</span>
+                        {t("parties.party")} <span className="text-[#E53935]">*</span>
                       </label>
                       <select
                         value={props.selectedParty}
@@ -91,13 +94,13 @@ export function AddPaymentInModal(props: AddPaymentInModalProps) {
 
                   <div className="relative w-[180px]">
                     <label className="absolute -top-2 left-3 bg-white px-1 text-[11px] font-medium text-slate-500 z-10">
-                      Payment Type
+                      {t("common.paymentType")}
                     </label>
                     <select 
                       value={props.paymentType}
                       onChange={e => props.setPaymentType(e.target.value)}
                       className="h-11 w-full rounded border border-slate-300 bg-white px-3 text-[14px] text-slate-900 outline-none focus:border-[#1976D2] appearance-none pr-8">
-                      <option value="Cash">Cash</option>
+                      <option value="Cash">{t("common.cash")}</option>
                       {props.bankAccounts.map((b, i) => (
                         <option key={i} value={b.name}>{b.name}</option>
                       ))}
@@ -112,11 +115,11 @@ export function AddPaymentInModal(props: AddPaymentInModalProps) {
                       className="inline-flex w-fit items-center gap-2 rounded border border-slate-300 bg-white px-4 py-2.5 text-[13px] font-semibold uppercase tracking-wide text-slate-400 shadow-sm"
                     >
                       <FilePlus2 className="h-4 w-4" />
-                      Add Description
+                      {t("common.addDescription")}
                     </button>
                   ) : (
                     <textarea 
-                      placeholder="Add description..." 
+                      placeholder={`${t("common.addDescription")}...`} 
                       value={props.description}
                       onChange={e => props.setDescription(e.target.value)}
                       onBlur={(e) => {
@@ -157,7 +160,7 @@ export function AddPaymentInModal(props: AddPaymentInModalProps) {
                             onClick={() => props.fileInputRef.current?.click()}
                             className="text-[11px] font-bold text-white tracking-wide hover:text-gray-200"
                           >
-                            CHANGE
+                            {t("items.change").toUpperCase()}
                           </button>
                           <button 
                             type="button"
@@ -167,7 +170,7 @@ export function AddPaymentInModal(props: AddPaymentInModalProps) {
                             }}
                             className="text-[11px] font-bold text-white tracking-wide hover:text-gray-200"
                           >
-                            DELETE
+                            {t("common.delete").toUpperCase()}
                           </button>
                         </div>
                       </div>
@@ -196,7 +199,7 @@ export function AddPaymentInModal(props: AddPaymentInModalProps) {
                   <div className="grid grid-cols-2 gap-8">
                     <div>
                       <label className="mb-1.5 block text-[12px] text-slate-500">
-                        Receipt No
+                        {t("paymentIn.receiptNo")}
                       </label>
                       <input
                         type="text"
@@ -207,7 +210,7 @@ export function AddPaymentInModal(props: AddPaymentInModalProps) {
                     </div>
                     <div>
                       <label className="mb-1.5 block text-[12px] text-slate-500">
-                        Date
+                        {t("common.date")}
                       </label>
                       <div className="relative">
                         <input
@@ -222,7 +225,7 @@ export function AddPaymentInModal(props: AddPaymentInModalProps) {
 
                   <div className="flex items-center gap-6 mt-auto pt-8">
                     <label className="text-[13px] text-slate-500 whitespace-nowrap">
-                      Received
+                      {t("paymentIn.received")}
                     </label>
                     <input
                       type="number"
@@ -251,7 +254,7 @@ export function AddPaymentInModal(props: AddPaymentInModalProps) {
                     onClick={props.handleSave}
                     className="h-9 rounded bg-[#1E88F7] px-8 text-[14px] font-semibold text-white shadow-[0_4px_12px_rgba(30,136,247,0.3)] hover:bg-[#1878dd]"
                   >
-                    Save
+                    {t("common.save")}
                   </button>
                 </div>
               </div>

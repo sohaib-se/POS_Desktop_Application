@@ -1,6 +1,7 @@
 import { useSettings } from "@/hooks/useSettings";
 import { useCallback, useEffect, useState, useMemo } from "react";
 import { Printer, ArrowLeft } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import * as XLSXStyle from "xlsx-js-style";
 
 interface LowStockDetailsProps {
@@ -18,6 +19,7 @@ interface Item {
 }
 
 export function LowStockDetails({ onBack }: LowStockDetailsProps) {
+  const { t } = useTranslation();
   const [currency] = useSettings('settings.businessCurrency', { code: 'PKR', symbol: 'Rs' });
   const [currencyDisplay] = useSettings<'abbreviation' | 'icon'>('settings.currencyDisplay', 'abbreviation');
   const currencyStr = currencyDisplay === 'icon' ? currency.symbol : currency.code;
@@ -223,7 +225,7 @@ export function LowStockDetails({ onBack }: LowStockDetailsProps) {
             <ArrowLeft className="w-5 h-5" />
           </button>
           
-          <h1 className="text-xl font-semibold text-gray-800">Low Stock Details</h1>
+          <h1 className="text-xl font-semibold text-gray-800">{t("reports.names.lowStockDetails", "Low Stock Details")}</h1>
         </div>
 
         <div className="flex items-center gap-6 pr-4">
@@ -234,11 +236,11 @@ export function LowStockDetails({ onBack }: LowStockDetailsProps) {
             <span className="bg-[#1D6F42] text-white text-[10px] font-bold px-1 py-0.5 rounded-sm leading-none flex items-center justify-center h-5">
               xls
             </span>
-            <span className="text-[11px] font-medium leading-none">Excel Report</span>
+            <span className="text-[11px] font-medium leading-none">{t("reports.excelReport", "Excel Report")}</span>
           </button>
           <button className="flex flex-col items-center justify-center gap-1 text-gray-700 hover:text-gray-900" onClick={handlePrint}>
             <Printer className="w-5 h-5" />
-            <span className="text-[11px] font-medium leading-none">Print</span>
+            <span className="text-[11px] font-medium leading-none">{t("reports.print", "Print")}</span>
           </button>
         </div>
       </div>
@@ -256,19 +258,19 @@ export function LowStockDetails({ onBack }: LowStockDetailsProps) {
                     #
                   </th>
                   <th className="px-4 py-3 font-semibold text-gray-500 border-r border-gray-100 text-left">
-                    ITEM NAME
+                    {t("printThemes.itemName", "ITEM NAME").toUpperCase()}
                   </th>
                   <th className="px-4 py-3 font-semibold text-gray-500 border-r border-gray-100 text-left">
-                    CATEGORY
+                    {t("reports.category", "CATEGORY").toUpperCase()}
                   </th>
                   <th className="px-4 py-3 font-semibold text-gray-500 border-r border-gray-100 text-right">
-                    PURCHASE PRICE
+                    {t("reports.purchasePrice", "PURCHASE PRICE").toUpperCase()}
                   </th>
                   <th className="px-4 py-3 font-semibold text-gray-500 border-r border-gray-100 text-right">
-                    LOW THRESHOLD
+                    {t("reports.lowThreshold", "LOW THRESHOLD").toUpperCase()}
                   </th>
                   <th className="px-4 py-3 font-semibold text-gray-500 border-r border-gray-100 text-right">
-                    CURRENT QUANTITY
+                    {t("reports.currentQuantity", "CURRENT QUANTITY").toUpperCase()}
                   </th>
                 </tr>
               </thead>
@@ -276,13 +278,13 @@ export function LowStockDetails({ onBack }: LowStockDetailsProps) {
                 {loading ? (
                   <tr>
                     <td colSpan={6} className="px-4 py-8 text-center text-gray-500">
-                      Loading data...
+                      {t("reports.loadingData", "Loading data...")}
                     </td>
                   </tr>
                 ) : displayData.length === 0 ? (
                   <tr>
                     <td colSpan={6} className="px-4 py-8 text-center text-gray-500">
-                      No low stock items found.
+                      {t("reports.noLowStock", "No low stock items found.")}
                     </td>
                   </tr>
                 ) : (

@@ -1,11 +1,13 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { AlignJustify, MoreVertical, Trash2, Pencil, Search, Calendar } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { useSettings } from "@/hooks/useSettings";
 
 import { ConfirmDeleteModal } from "@/components/common/ConfirmDeleteModal";
 import { AdjustCashModal } from "./AdjustCashModal";
 import { DetailsModal } from "./DetailsModal";
 import { getMonthKeyFromDate, formatDateDisplay } from "../saleinvoices/utils";
+import { formatTransactionType } from "@/utils/transactionTranslations";
 
 interface CashInHandViewProps {
   totalCash: number;
@@ -40,6 +42,7 @@ export function CashInHandView({
   handleEdit,
   isDeleting
 }: CashInHandViewProps) {
+  const { t } = useTranslation();
   const [currency] = useSettings('settings.businessCurrency', { code: 'PKR', symbol: 'Rs' });
   const [currencyDisplay] = useSettings<'abbreviation' | 'icon'>('settings.currencyDisplay', 'abbreviation');
   const currencyStr = currencyDisplay === 'icon' ? currency.symbol : currency.code;
@@ -56,7 +59,7 @@ export function CashInHandView({
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const searchContainerRef = useRef<HTMLDivElement | null>(null);
 
-  const placeholders = ["Type", "Name", "Date", "Amount"];
+  const placeholders = [t("common.type"), t("common.name"), t("common.date"), t("common.amount")];
   const [placeholderIndex, setPlaceholderIndex] = useState(0);
 
   useEffect(() => {
@@ -131,7 +134,7 @@ export function CashInHandView({
       <div className="bg-white shadow-sm px-6 h-[72px] flex items-center justify-between mx-1 mt-1 rounded-md">
         <div className="flex items-center gap-8">
           <h2 className="text-xl font-bold text-gray-900 tracking-tight uppercase">
-            Cash In Hand
+            {t("cashBank.cashInHand")}
           </h2>
           <span className={`text-xl font-bold tracking-tight ${totalCash >= 0 ? 'text-green-600' : 'text-red-500'}`}>
             {totalCash < 0 ? '−' : ''}{currencyStr} {Math.abs(totalCash).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
@@ -142,7 +145,7 @@ export function CashInHandView({
           className="bg-[#E53935] hover:bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2"
         >
           <AlignJustify className="w-4 h-4" />
-          Adjust Cash
+          {t("cashBank.adjustCash")}
         </button>
       </div>
 
@@ -152,7 +155,7 @@ export function CashInHandView({
         <div className="bg-white rounded-md shadow-sm min-h-full">
           <div className="flex items-center justify-between px-6 pt-4 pb-2 border-b border-gray-200">
             <h3 className="text-base font-bold text-[#222B45] tracking-wide uppercase">
-              Transactions
+              {t("parties.transactions")}
             </h3>
             <div className="flex gap-2 items-center h-10" ref={searchContainerRef}>
               {/* Search bar */}
@@ -185,7 +188,7 @@ export function CashInHandView({
                   />
                   {!searchQuery && (
                     <div className="absolute left-0 pointer-events-none flex items-center h-full w-full overflow-hidden text-gray-400 text-sm">
-                      <span className="whitespace-pre">Search </span>
+                      <span className="whitespace-pre">{t("common.search")} </span>
                       <div className="relative h-full flex-1 overflow-hidden">
                         {placeholders.map((ph, idx) => (
                           <span
@@ -224,13 +227,18 @@ export function CashInHandView({
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-gray-100">
-                {["Type", "Name", "Date", "Amount"].map((col) => (
+                {[
+                  { key: "type", label: t("common.type") },
+                  { key: "name", label: t("common.name") },
+                  { key: "date", label: t("common.date") },
+                  { key: "amount", label: t("common.amount") }
+                ].map((col) => (
                   <th
-                    key={col}
+                    key={col.key}
                     className="px-6 py-2.5 text-left text-xs font-medium text-gray-500"
                   >
                     <div className="flex items-center gap-1">
-                      {col}
+                      {col.label}
                     </div>
                   </th>
                 ))}
@@ -248,7 +256,7 @@ export function CashInHandView({
                       }`}
                   >
                     <td className="px-6 py-3 font-medium text-gray-800">
-                      {tx.type}
+                      {formatTransactionType(tx.type, t)}
                     </td>
                     <td className="px-6 py-3 text-gray-700">{tx.name.replace(' (Payment In)', '').replace(' (Payment Out)', '').replace(' (Received)', '')}</td>
                     <td className="px-6 py-3 text-gray-600">{tx.date}</td>
@@ -279,7 +287,7 @@ export function CashInHandView({
           </table>
           {!filteredTransactions.length && (
             <div className="px-4 py-10 text-center text-sm text-gray-500">
-              No transactions found for the selected month.
+              {t("cashBank.noTransactions")}
             </div>
           )}
         </div>
@@ -305,11 +313,11 @@ export function CashInHandView({
       {editingTransaction && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
           <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-sm">
-            <h2 className="text-base font-semibold text-gray-900 mb-1">Edit Transaction</h2>
+            <h2 className="text-base font-semibold text-gray-900 mb-1">{t("cashBank.editTransaction")}</h2>
             <p className="text-xs text-gray-500 mb-4">
-              {editingTransaction.type} — {editingTransaction.name}
+              {formatTransactionType(editingTransaction.type, t)} — {editingTransaction.name}
               {isTransfer(editingTransaction) && (
-                <span className="ml-1 text-blue-500 font-medium">(Syncs with bank account)</span>
+                <span className="ml-1 text-blue-500 font-medium">{t("cashBank.syncsWithBankAccount")}</span>
               )}
               {String(editingTransaction.id).startsWith('cash_payment_in_') && (
                 <span className="ml-1 text-blue-500 font-medium">(Syncs with Payment In & Party)</span>
@@ -318,7 +326,7 @@ export function CashInHandView({
                 <span className="ml-1 text-blue-500 font-medium">(Syncs with Payment Out & Party)</span>
               )}
             </p>
-            <label className="block text-sm text-gray-600 mb-1">Amount</label>
+            <label className="block text-sm text-gray-600 mb-1">{t("common.amount")}</label>
             <input
               type="number"
               className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm mb-4 focus:outline-none focus:border-blue-400"
@@ -330,13 +338,13 @@ export function CashInHandView({
                 onClick={() => setEditingTransaction(null)}
                 className="px-4 py-2 text-sm rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50"
               >
-                Cancel
+                {t("common.cancel")}
               </button>
               <button
                 onClick={() => handleEdit(editingTransaction, Number(editAmount))}
                 className="px-4 py-2 text-sm rounded-lg bg-[#E53935] text-white hover:bg-red-600"
               >
-                Save
+                {t("common.save")}
               </button>
             </div>
           </div>
@@ -363,7 +371,7 @@ export function CashInHandView({
               className="w-full text-left px-4 py-2 text-sm text-blue-600 hover:bg-blue-50 flex items-center gap-2"
             >
               <Pencil className="w-4 h-4" />
-              Edit
+              {t("common.edit")}
             </button>
           )}
           <button
@@ -375,7 +383,7 @@ export function CashInHandView({
             className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
           >
             <Trash2 className="w-4 h-4" />
-            Delete
+            {t("common.delete")}
           </button>
         </div>
       )}
@@ -385,8 +393,8 @@ export function CashInHandView({
         isOpen={!!deleteConfirmationId}
         onClose={() => setDeleteConfirmationId(null)}
         onConfirm={confirmDelete}
-        title="Delete Transaction"
-        message="Are you sure you want to permanently delete this transaction? This action cannot be undone and will affect your cash balance."
+        title={t("cashBank.deleteTransaction")}
+        message={t("cashBank.confirmDeleteTransaction")}
         isDeleting={isDeleting}
       />
     </div>

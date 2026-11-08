@@ -1,0 +1,3 @@
+module.exports=[37064,a=>{"use strict";var b=a.i(7997),c=a.i(57082);async function d(){let a=await (0,c.h)("/contact");return{title:a.title,description:a.description,alternates:{canonical:a.canonicalUrl||"https://laimsoft.site/contact"},openGraph:{title:a.title,description:a.description,images:a.ogImage?[{url:a.ogImage}]:void 0},robots:{index:!a.noIndex,follow:!a.noFollow}}}a.s(["default",0,function({children:a}){return(0,b.jsx)(b.Fragment,{children:a})},"generateMetadata",0,d])},70944,function(a){a.n(a.i(37064))}];
+
+//# sourceMappingURL=src_app_contact_layout_tsx_1t-fho7e3yunk._.js.map

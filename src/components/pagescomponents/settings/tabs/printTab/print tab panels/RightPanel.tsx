@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { getPrintTotalsSettings, setPrintTotalsSettings } from "@/hooks/usePrintSettings";
 import { PhoneInput } from "@/components/ui/phone-input";
 import type { PrinterType } from "./LeftPanel";
+import { useTranslation } from "react-i18next";
 
 /* ─────────────────────────── Shared primitives ──────────────────────── */
 
@@ -52,13 +53,26 @@ function SettingsSection({ title, children }: { title: string; children: React.R
   );
 }
 
-function ToggleRow({ label, checked, onChange }: { label: string; checked: boolean; onChange: (v: boolean) => void }) {
+function ToggleRow({
+  label,
+  subtitle,
+  checked,
+  onChange,
+}: {
+  label: string;
+  subtitle?: string;
+  checked: boolean;
+  onChange: (v: boolean) => void;
+}) {
   return (
     <div
       style={{ display: "flex", alignItems: "center", justifyContent: "space-between", minHeight: 28, cursor: "pointer" }}
       onClick={() => onChange(!checked)}
     >
-      <span style={{ fontSize: 12, color: "#374151", userSelect: "none" }}>{label}</span>
+      <div style={{ display: "flex", flexDirection: "column" }}>
+        <span style={{ fontSize: 12, color: "#374151", userSelect: "none" }}>{label}</span>
+        {subtitle && <span style={{ fontSize: 10, color: "#9ca3af", userSelect: "none", marginTop: 1 }}>{subtitle}</span>}
+      </div>
       <div
         style={{
           width: 34,
@@ -142,6 +156,7 @@ function LogoUploadRow({
   logoUrl: string;
   onLogoChange: (dataUrl: string) => void;
 }) {
+  const { t } = useTranslation();
   const fileRef = useRef<HTMLInputElement>(null);
   const [hovered, setHovered] = useState(false);
 
@@ -157,7 +172,7 @@ function LogoUploadRow({
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
-      <span style={{ fontSize: 11, color: "#6b7280", fontWeight: 500 }}>Company Logo</span>
+      <span style={{ fontSize: 11, color: "#6b7280", fontWeight: 500 }}>{t("settings.print.companyLogo")}</span>
       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
         {/* Preview */}
         <div
@@ -182,7 +197,7 @@ function LogoUploadRow({
             />
           ) : (
             <span style={{ fontSize: 9, color: "#9ca3af", textAlign: "center", lineHeight: 1.3 }}>
-              No<br />Logo
+              {t("settings.print.noLogo")}
             </span>
           )}
         </div>
@@ -204,7 +219,7 @@ function LogoUploadRow({
               transition: "all 0.15s",
             }}
           >
-            {logoUrl ? "Change Logo" : "Upload Logo"}
+            {logoUrl ? t("settings.print.changeLogo") : t("settings.print.uploadLogo")}
           </button>
           {logoUrl && (
             <button
@@ -219,7 +234,7 @@ function LogoUploadRow({
                 cursor: "pointer",
               }}
             >
-              Remove
+              {t("settings.print.remove")}
             </button>
           )}
         </div>
@@ -245,6 +260,7 @@ function SignatureUploadRow({
   signatureUrl: string;
   onSignatureChange: (dataUrl: string) => void;
 }) {
+  const { t } = useTranslation();
   const fileRef = useRef<HTMLInputElement>(null);
   const [hovered, setHovered] = useState(false);
 
@@ -260,7 +276,7 @@ function SignatureUploadRow({
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
-      <span style={{ fontSize: 11, color: "#6b7280", fontWeight: 500 }}>Print Signature</span>
+      <span style={{ fontSize: 11, color: "#6b7280", fontWeight: 500 }}>{t("settings.print.signature")}</span>
       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
         {/* Preview */}
         <div
@@ -285,7 +301,7 @@ function SignatureUploadRow({
             />
           ) : (
             <span style={{ fontSize: 9, color: "#9ca3af", textAlign: "center", lineHeight: 1.3 }}>
-              No<br />Sig
+              {t("settings.print.noLogo")}
             </span>
           )}
         </div>
@@ -307,7 +323,7 @@ function SignatureUploadRow({
               transition: "all 0.15s",
             }}
           >
-            {signatureUrl ? "Change Signature" : "Upload Signature"}
+            {signatureUrl ? t("settings.print.changeSignature") : t("settings.print.uploadSignature")}
           </button>
           {signatureUrl && (
             <button
@@ -322,7 +338,7 @@ function SignatureUploadRow({
                 cursor: "pointer",
               }}
             >
-              Remove
+              {t("settings.print.remove")}
             </button>
           )}
         </div>
@@ -391,6 +407,7 @@ interface PrintSettings {
   printTermsAndConditions: boolean;
   printSignatureText: string;
   paymentMode: boolean;
+  thermalAutoCut: boolean;
   // Internal removal flags (not persisted directly — handled via DELETE API)
   logoRemoved: boolean;
   signatureRemoved: boolean;
@@ -421,6 +438,7 @@ const DEFAULT_SETTINGS: PrintSettings = {
   printTermsAndConditions: false,
   printSignatureText: "Authorized Signatory",
   paymentMode: false,
+  thermalAutoCut: false,
   logoRemoved: false,
   signatureRemoved: false,
 };
@@ -446,6 +464,7 @@ export function RightPanel({
   selectedColor,
   onRevertThemes,
 }: RightPanelProps = {}) {
+  const { t } = useTranslation();
   const [initialSettings, setInitialSettings] = useState<PrintSettings>(() => {
     // Merge persisted Totals & Taxes settings with the rest of the defaults
     const saved = getPrintTotalsSettings();
@@ -465,6 +484,7 @@ export function RightPanel({
       printTermsAndConditions: saved.printTermsAndConditions,
       printSignatureText: saved.printSignatureText,
       paymentMode: saved.paymentMode,
+      thermalAutoCut: saved.thermalAutoCut ?? false,
     };
   });
   const [settings, setSettings] = useState<PrintSettings>(initialSettings);
@@ -587,6 +607,7 @@ export function RightPanel({
           printTermsAndConditions: settings.printTermsAndConditions,
           printSignatureText: settings.printSignatureText,
           paymentMode: settings.paymentMode,
+          thermalAutoCut: settings.thermalAutoCut,
         });
 
         // Persist default printer and selected theme based on active printer
@@ -614,7 +635,7 @@ export function RightPanel({
         setInitialSettings(committed);
         setSettings(committed);
         setIsSaving(false);
-        setLocalToast({ message: "Settings saved successfully", type: "success" });
+        setLocalToast({ message: t("settings.print.savedSuccess"), type: "success" });
         setTimeout(() => setLocalToast(null), 3000);
         // Notify App.tsx so it can re-fetch the profile and refresh the sidebar logo
         window.dispatchEvent(new CustomEvent("profile-saved"));
@@ -628,12 +649,12 @@ export function RightPanel({
         if (onSave) onSave();
       } else {
         setIsSaving(false);
-        setLocalToast({ message: "Failed to save settings", type: "error" });
+        setLocalToast({ message: t("settings.print.savedFailed"), type: "error" });
         setTimeout(() => setLocalToast(null), 3000);
       }
     } catch {
       setIsSaving(false);
-      setLocalToast({ message: "An error occurred while saving", type: "error" });
+      setLocalToast({ message: t("settings.print.savedFailed"), type: "error" });
       setTimeout(() => setLocalToast(null), 3000);
     }
   };
@@ -681,21 +702,19 @@ export function RightPanel({
           flexShrink: 0,
         }}
       >
-        Preview Settings
+        {t("settings.print.previewSettings")}
       </div>
 
       {/* ── Scrollable Sections ── */}
       <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column" }}>
         {/* ── Print Company Info / Header ── */}
-        <SettingsSection title="Print Company Info / Header">
-          {/* Company Name — synced to profile */}
-
+        <SettingsSection title={t("settings.print.companyInfoHeader")}>
           {/* Company Name — synced to profile */}
           <InputRow
-            label="Company Name"
+            label={t("settings.print.companyName")}
             value={settings.companyName}
             onChange={handleCompanyName}
-            placeholder="Enter company name"
+            placeholder={t("settings.print.enterCompanyName")}
           />
 
           {/* Logo upload with preview */}
@@ -703,52 +722,62 @@ export function RightPanel({
 
           {/* Address */}
           <InputRow
-            label="Address"
+            label={t("settings.print.address")}
             value={settings.address}
             onChange={handleAddress}
-            placeholder="Enter address"
+            placeholder={t("settings.print.enterAddress")}
           />
 
           {/* Email */}
           <InputRow
-            label="Email"
+            label={t("settings.print.email")}
             value={settings.email}
             onChange={handleEmail}
             type="email"
-            placeholder="Enter email"
+            placeholder={t("settings.print.enterEmail")}
           />
 
           {/* Phone with country code — same PhoneInput as EditProfile */}
           <PhoneRow
-            label="Phone Number"
+            label={t("settings.print.phoneNumber")}
             value={settings.phoneNumber}
             onChange={handlePhone}
           />
         </SettingsSection>
 
         {/* ── Totals & Taxes ── */}
-        <SettingsSection title="Totals & Taxes">
-          <ToggleRow label="Total Item Quantity" checked={settings.totalItemQuantity} onChange={(v) => set("totalItemQuantity", v)} />
-          <ToggleRow label="Amount with Decimal e.g. 0.00" checked={settings.amountWithDecimal} onChange={(v) => set("amountWithDecimal", v)} />
-          <ToggleRow label="Received Amount" checked={settings.receivedAmount} onChange={(v) => set("receivedAmount", v)} />
-          <ToggleRow label="Balance Amount" checked={settings.balanceAmount} onChange={(v) => set("balanceAmount", v)} />
-          <ToggleRow label="Previous Balance" checked={settings.previousBalance} onChange={(v) => set("previousBalance", v)} />
-          <ToggleRow label="Current Balance of Party" checked={settings.currentBalanceOfParty} onChange={(v) => set("currentBalanceOfParty", v)} />
-          <ToggleRow label="Tax Details" checked={settings.taxDetails} onChange={(v) => set("taxDetails", v)} />
-          <ToggleRow label="Discount" checked={settings.discount} onChange={(v) => set("discount", v)} />
-          <ToggleRow label="You Saved" checked={settings.youSaved} onChange={(v) => set("youSaved", v)} />
+        <SettingsSection title={t("settings.print.totalsAndTaxes")}>
+          <ToggleRow label={t("settings.print.totalItemQuantity")} checked={settings.totalItemQuantity} onChange={(v) => set("totalItemQuantity", v)} />
+          <ToggleRow label={t("settings.print.amountWithDecimal")} checked={settings.amountWithDecimal} onChange={(v) => set("amountWithDecimal", v)} />
+          <ToggleRow label={t("settings.print.receivedAmount")} checked={settings.receivedAmount} onChange={(v) => set("receivedAmount", v)} />
+          <ToggleRow label={t("settings.print.balanceAmount")} checked={settings.balanceAmount} onChange={(v) => set("balanceAmount", v)} />
+          <ToggleRow label={t("settings.print.previousBalance")} checked={settings.previousBalance} onChange={(v) => set("previousBalance", v)} />
+          <ToggleRow label={t("settings.print.currentBalanceOfParty")} checked={settings.currentBalanceOfParty} onChange={(v) => set("currentBalanceOfParty", v)} />
+          <ToggleRow label={t("settings.print.taxDetails")} checked={settings.taxDetails} onChange={(v) => set("taxDetails", v)} />
+          <ToggleRow label={t("settings.print.discount")} checked={settings.discount} onChange={(v) => set("discount", v)} />
+          <ToggleRow label={t("settings.print.youSaved")} checked={settings.youSaved} onChange={(v) => set("youSaved", v)} />
         </SettingsSection>
 
         {/* ── Footer ── */}
-        <SettingsSection title="Footer">
-          <ToggleRow label="Invoice Amount in Words" checked={settings.amountInWords} onChange={(v) => set("amountInWords", v)} />
-          <ToggleRow label="Print Description" checked={settings.printDescription} onChange={(v) => set("printDescription", v)} />
-          <ToggleRow label="Print Terms and Conditions" checked={settings.printTermsAndConditions} onChange={(v) => set("printTermsAndConditions", v)} />
-          <ToggleRow label="Payment Mode" checked={settings.paymentMode} onChange={(v) => set("paymentMode", v)} />
-          <InputRow label="Print Signature Text" value={settings.printSignatureText} onChange={(v) => set("printSignatureText", v)} />
+        <SettingsSection title={t("settings.print.footer")}>
+          <ToggleRow label={t("settings.print.amountInWords")} checked={settings.amountInWords} onChange={(v) => set("amountInWords", v)} />
+          <ToggleRow label={t("settings.print.printDescription")} checked={settings.printDescription} onChange={(v) => set("printDescription", v)} />
+          <ToggleRow label={t("settings.print.printTermsAndConditions")} checked={settings.printTermsAndConditions} onChange={(v) => set("printTermsAndConditions", v)} />
+          <ToggleRow label={t("settings.print.paymentMode")} checked={settings.paymentMode} onChange={(v) => set("paymentMode", v)} />
+          <InputRow label={t("settings.print.printSignatureText")} value={settings.printSignatureText} onChange={(v) => set("printSignatureText", v)} />
           <SignatureUploadRow 
             signatureUrl={settings.signatureUrl} 
             onSignatureChange={handleSignature} 
+          />
+        </SettingsSection>
+
+        {/* ── Thermal Printer Options ── */}
+        <SettingsSection title={t("settings.print.thermalPrinterSettings", "Thermal Printer Options")}>
+          <ToggleRow
+            label={t("settings.print.thermalAutoCut", "Separate Auto-Cut Command")}
+            subtitle={t("settings.print.thermalAutoCutDesc", "Enable only if your printer does not cut automatically")}
+            checked={settings.thermalAutoCut}
+            onChange={(v) => set("thermalAutoCut", v)}
           />
         </SettingsSection>
       </div>
@@ -769,7 +798,7 @@ export function RightPanel({
       >
         {(hasUnsavedChanges || isDirty) && (
           <span
-            title="You have unsaved changes"
+            title={t("settings.unsavedChanges")}
             style={{
               width: 7,
               height: 7,
@@ -810,7 +839,7 @@ export function RightPanel({
             e.currentTarget.style.color = "#374151";
           }}
         >
-          Cancel
+          {t("settings.print.cancel")}
         </button>
 
         <button
@@ -847,7 +876,7 @@ export function RightPanel({
             }
           }}
         >
-          {isSaving ? "Saving..." : "Save Changes"}
+          {isSaving ? t("settings.print.saving") : t("settings.print.saveChanges")}
         </button>
       </div>
 

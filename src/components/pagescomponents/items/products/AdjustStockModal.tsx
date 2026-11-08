@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { X } from "lucide-react";
 import { Dialog, DialogContent } from "./ui";
+import { useTranslation } from "react-i18next";
 import type { Item, AdjustStockForm } from "./types";
 
 type AdjustStockModalProps = {
@@ -22,6 +23,7 @@ export function AdjustStockModal({
   isSavingAdjustment,
   onSave,
 }: AdjustStockModalProps) {
+  const { t } = useTranslation();
   const [stockErrorPopup, setStockErrorPopup] = useState<string | null>(null);
 
   const isReduce = adjustStockForm.type === "Reduce";
@@ -97,13 +99,13 @@ export function AdjustStockModal({
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-8">
             <h2 className="text-[20px] font-semibold text-[#1A202C]">
-              Stock Adjustment
+              {t("items.stockAdjustment")}
             </h2>
             <div className="flex items-center gap-3">
               <span
                 className={`text-sm font-medium ${adjustStockForm.type === "Add" ? "text-[#1976D2]" : "text-gray-400"}`}
               >
-                Add Stock
+                {t("items.addStock")}
               </span>
               <button
                 onClick={() =>
@@ -122,7 +124,7 @@ export function AdjustStockModal({
                 />
               </button>
               <span className="text-sm font-medium text-gray-400">
-                Reduce Stock
+                {t("items.reduceStock")}
               </span>
             </div>
           </div>
@@ -138,7 +140,7 @@ export function AdjustStockModal({
         <div className="flex justify-between items-end pb-4 border-b border-[#E5E7EB] mb-6">
           <div>
             <p className="text-[13px] text-gray-500 mb-1 font-medium">
-              Item Name
+              {t("items.itemName")}
             </p>
             <p className="text-[14px] font-bold text-[#1A202C]">
               {selectedItem?.name}
@@ -147,7 +149,7 @@ export function AdjustStockModal({
           <div>
             <div className="relative border border-[#D1D5DB] rounded-[4px] px-3 py-[6px] flex items-center bg-white w-[200px]">
               <span className="text-[11px] text-gray-500 absolute -top-[8px] left-3 bg-white px-1 leading-none">
-                Adjustment Date
+                {t("items.adjustmentDate")}
               </span>
               <input
                 type="date"
@@ -165,7 +167,7 @@ export function AdjustStockModal({
             <input
               type="number"
               min="1"
-              placeholder="Total Qty"
+              placeholder={t("items.totalQty")}
               value={adjustStockForm.qty}
               onKeyDown={(e) => {
                 if (e.key === "-") e.preventDefault();
@@ -181,7 +183,7 @@ export function AdjustStockModal({
             />
             {isExceedingStock && (
               <p className="text-[11px] text-red-500 mt-1 font-medium leading-tight">
-                Exceeds stock ({availableStockInChosenUnit} {displayUnit})
+                {t("items.exceedsStock", { stock: availableStockInChosenUnit, unit: displayUnit })}
               </p>
             )}
           </div>
@@ -211,7 +213,7 @@ export function AdjustStockModal({
             <input
               type="number"
               min="1"
-              placeholder="At Price"
+              placeholder={t("items.atPrice")}
               value={adjustStockForm.atPrice}
               onKeyDown={(e) => {
                 if (e.key === "-") e.preventDefault();
@@ -227,7 +229,7 @@ export function AdjustStockModal({
           <div className="flex-1">
             <input
               type="text"
-              placeholder="Details"
+              placeholder={t("items.details")}
               value={adjustStockForm.details}
               onChange={(e) => onFormChange({ details: e.target.value })}
               className="w-full border border-[#D1D5DB] rounded-[4px] px-3 py-[8px] text-[14px] outline-none placeholder:text-[#9CA3AF] text-[#1A202C]"
@@ -247,7 +249,7 @@ export function AdjustStockModal({
             }
             className="bg-[#1A73E8] hover:bg-[#1557B0] text-white px-8 py-[8px] rounded-[4px] font-semibold text-[14px] transition-colors disabled:opacity-60"
           >
-            Save
+            {t("common.save")}
           </button>
         </div>
 
@@ -260,7 +262,7 @@ export function AdjustStockModal({
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
                 </svg>
               </div>
-              <h3 className="text-lg font-bold text-gray-900 mb-2">Insufficient Stock</h3>
+              <h3 className="text-lg font-bold text-gray-900 mb-2">{t("items.insufficientStock")}</h3>
               <p className="text-sm text-gray-600 mb-6 leading-relaxed">
                 {stockErrorPopup}
               </p>
@@ -269,7 +271,7 @@ export function AdjustStockModal({
                 onClick={() => setStockErrorPopup(null)}
                 className="w-full py-2.5 bg-[#1A73E8] hover:bg-[#1557B0] text-white font-semibold rounded-lg text-sm transition-colors"
               >
-                OK
+                {t("common.ok")}
               </button>
             </div>
           </div>

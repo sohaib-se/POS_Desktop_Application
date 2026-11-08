@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import type { SaleRow, SaleTab } from "./types";
 import { Trash2 } from "lucide-react";
 
@@ -10,6 +11,7 @@ interface ItemSearchCellProps {
 }
 
 function ItemSearchCell({ row, items, updateRow, handleItemSelect }: ItemSearchCellProps) {
+  const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState(row.item);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -50,7 +52,7 @@ function ItemSearchCell({ row, items, updateRow, handleItemSelect }: ItemSearchC
           background: "transparent", padding: "0 4px",
           borderRadius: 4
         }}
-        placeholder="Select Item"
+        placeholder={t("common.selectItem")}
       />
       {isOpen && (
         <div style={{
@@ -63,10 +65,10 @@ function ItemSearchCell({ row, items, updateRow, handleItemSelect }: ItemSearchC
           borderRadius: 4
         }}>
           <div style={{ display: "flex", padding: "8px 12px", borderBottom: "1px solid #e5e7eb", fontSize: 11, color: "#9ca3af", fontWeight: 600 }}>
-            <div style={{ flex: 2 }}>ITEM</div>
-            <div style={{ flex: 1, textAlign: "right" }}>SALE PRICE</div>
-            <div style={{ flex: 1, textAlign: "right" }}>PURCHASE PRICE</div>
-            <div style={{ flex: 1, textAlign: "right" }}>STOCK</div>
+            <div style={{ flex: 2 }}>{t("items.item")}</div>
+            <div style={{ flex: 1, textAlign: "right" }}>{t("items.salePrice")}</div>
+            <div style={{ flex: 1, textAlign: "right" }}>{t("items.purchasePrice")}</div>
+            <div style={{ flex: 1, textAlign: "right" }}>{t("items.stock")}</div>
           </div>
           {filteredItems.map((item: any) => {
             const salePrice = item.salePrice ?? item.sale_price ?? 0;
@@ -167,6 +169,8 @@ export function EstimateTable({
   fmt,
   items = []
 }: EstimateTableProps) {
+  const { t } = useTranslation();
+
   const handleItemSelect = (rowId: number, itemName: string) => {
     const selectedItem = items.find(i => i.name === itemName);
     if (selectedItem) {
@@ -214,19 +218,19 @@ export function EstimateTable({
               #
             </th>
             <th style={{ position: "relative", padding: "8px 10px", textAlign: "left", fontSize: 12, fontWeight: 600, color: "#6b7280", borderRight: "1px solid #e5e7eb", letterSpacing: "0.04em" }}>
-              ITEM
+              {t("items.item")}
             </th>
             <th style={{ position: "relative", padding: "8px 10px", textAlign: "right", fontSize: 12, fontWeight: 600, color: "#6b7280", borderRight: "1px solid #e5e7eb", letterSpacing: "0.04em" }}>
-              QTY
+              {t("common.qty")}
             </th>
             <th style={{ position: "relative", padding: "8px 10px", textAlign: "left", fontSize: 12, fontWeight: 600, color: "#6b7280", borderRight: "1px solid #e5e7eb", letterSpacing: "0.04em" }}>
-              UNIT
+              {t("common.unit")}
             </th>
             <th style={{ position: "relative", padding: "8px 10px", textAlign: "right", fontSize: 12, fontWeight: 600, color: "#6b7280", borderRight: "1px solid #e5e7eb", letterSpacing: "0.04em" }}>
-              PRICE/UNIT
+              {t("common.priceUnit")}
             </th>
             <th style={{ position: "relative", padding: "8px 10px", textAlign: "right", fontSize: 12, fontWeight: 600, color: "#6b7280", borderRight: "1px solid #e5e7eb", letterSpacing: "0.04em" }}>
-              AMOUNT
+              {t("common.amount")}
             </th>
           </tr>
         </thead>
@@ -318,11 +322,11 @@ export function EstimateTable({
                 onClick={addRow}
                 style={{ fontSize: 11, fontWeight: 700, color: "#3b82f6", border: "1px solid #93c5fd", borderRadius: 4, padding: "3px 10px", background: "#fff", cursor: "pointer", letterSpacing: "0.05em" }}
               >
-                ADD ROW
+                {t("common.addRow")}
               </button>
             </td>
             <td colSpan={2} style={{ padding: "8px 10px", fontSize: 12, fontWeight: 700, color: "#6b7280", borderRight: "1px solid #e5e7eb", letterSpacing: "0.04em" }}>
-              <span style={{ float: "left" }}>TOTAL</span>
+              <span style={{ float: "left" }}>{t("common.total")}</span>
               <span style={{ float: "right" }}>{totalQty > 0 ? totalQty : 0}</span>
             </td>
             <td style={{ borderRight: "1px solid #e5e7eb" }} />

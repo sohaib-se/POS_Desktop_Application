@@ -2,6 +2,7 @@ import { useState } from "react";
 import { createPortal } from "react-dom";
 import { useSettings } from "@/hooks/useSettings";
 import { toast } from "@/components/ui/Toast";
+import { useTranslation } from "react-i18next";
 import {
   X,
   Check,
@@ -33,6 +34,7 @@ export function CustomizeDashboardModal({
 }
 
 function CustomizeModalContent({ onClose }: { onClose: () => void }) {
+  const { t } = useTranslation();
   const [showTodaySales, setShowTodaySales] = useSettings("show_card_today_sales", true);
   const [showTodayProfit, setShowTodayProfit] = useSettings("show_card_today_profit", true);
   const [showReceivable, setShowReceivable] = useSettings("show_card_total_receivable", true);
@@ -54,36 +56,36 @@ function CustomizeModalContent({ onClose }: { onClose: () => void }) {
 
   const cardsList = [
     {
-      group: "Stat Cards",
+      group: t("dashboard.statCardsGroup", "Stat Cards"),
       items: [
         {
           key: "show_card_today_sales",
-          label: "Today's Sales",
-          description: "Monitor total sales generated during today's operations",
+          label: t("dashboard.todaySales", "Today's Sales"),
+          description: t("dashboard.todaySalesDesc", "Monitor total sales generated during today's operations"),
           icon: TrendingUp,
           color: "text-blue-600",
           bgColor: "bg-blue-50 border-blue-100",
         },
         {
           key: "show_card_today_profit",
-          label: "Today's Profit",
-          description: "Real-time calculation of today's gross profit margin",
+          label: t("dashboard.todayProfit", "Today's Profit"),
+          description: t("dashboard.todayProfitDesc", "Real-time calculation of today's gross profit margin"),
           icon: ArrowUpRight,
           color: "text-indigo-600",
           bgColor: "bg-indigo-50 border-indigo-100",
         },
         {
           key: "show_card_total_receivable",
-          label: "Total Receivable",
-          description: "Outstanding balances owed to your business by customers",
+          label: t("dashboard.totalReceivable", "Total Receivable"),
+          description: t("dashboard.totalReceivableDesc", "Outstanding balances owed to your business by customers"),
           icon: ArrowDownLeft,
           color: "text-emerald-600",
           bgColor: "bg-emerald-50 border-emerald-100",
         },
         {
           key: "show_card_total_payable",
-          label: "Total Payable",
-          description: "Pending payments your business owes to suppliers",
+          label: t("dashboard.totalPayable", "Total Payable"),
+          description: t("dashboard.totalPayableDesc", "Pending payments your business owes to suppliers"),
           icon: ArrowUpRight,
           color: "text-rose-600",
           bgColor: "bg-rose-50 border-rose-100",
@@ -91,28 +93,28 @@ function CustomizeModalContent({ onClose }: { onClose: () => void }) {
       ],
     },
     {
-      group: "Analytics & Overview Cards",
+      group: t("dashboard.analyticsGroup", "Analytics & Overview Cards"),
       items: [
         {
           key: "show_card_total_sales_chart",
-          label: "Total Sales Chart",
-          description: "Visual sales trend graph and daily revenue analytics",
+          label: t("dashboard.totalSalesChart", "Total Sales Chart"),
+          description: t("dashboard.totalSalesChartDesc", "Visual sales trend graph and daily revenue analytics"),
           icon: BarChart3,
           color: "text-sky-600",
           bgColor: "bg-sky-50 border-sky-100",
         },
         {
           key: "show_card_most_used_reports",
-          label: "Most Used Reports",
-          description: "Fast shortcuts to your 5 most frequently used reports",
+          label: t("dashboard.mostUsedReports", "Most Used Reports"),
+          description: t("dashboard.mostUsedReportsDesc", "Fast shortcuts to your 5 most frequently used reports"),
           icon: FileText,
           color: "text-purple-600",
           bgColor: "bg-purple-50 border-purple-100",
         },
         {
           key: "show_card_low_stock",
-          label: "Low Stock Items",
-          description: "Real-time warnings for items near or below stock thresholds",
+          label: t("dashboard.lowStockItems", "Low Stock Items"),
+          description: t("dashboard.lowStockItemsDesc", "Real-time warnings for items near or below stock thresholds"),
           icon: AlertTriangle,
           color: "text-amber-600",
           bgColor: "bg-amber-50 border-amber-100",
@@ -175,7 +177,7 @@ function CustomizeModalContent({ onClose }: { onClose: () => void }) {
     setShowSalesChart(tempSelection.show_card_total_sales_chart);
     setShowMostUsed(tempSelection.show_card_most_used_reports);
     setShowLowStock(tempSelection.show_card_low_stock);
-    toast.success("Dashboard cards updated successfully!");
+    toast.success(t("dashboard.cardsUpdatedSuccess", "Dashboard cards updated successfully!"));
     onClose();
   };
 
@@ -196,13 +198,13 @@ function CustomizeModalContent({ onClose }: { onClose: () => void }) {
             </div>
             <div>
               <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
-                Add Dashboard Cards
+                {t("dashboard.modalTitle", "Add Dashboard Cards")}
                 <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">
-                  {activeCount} of {totalCount} Selected
+                  {t("dashboard.selectedCount", { active: activeCount, total: totalCount, defaultValue: `${activeCount} of ${totalCount} Selected` })}
                 </span>
               </h3>
               <p className="text-xs text-gray-500 mt-0.5">
-                Select cards and click Save to update your dashboard
+                {t("dashboard.modalSubtitle", "Select cards and click Save to update your dashboard")}
               </p>
             </div>
           </div>
@@ -217,7 +219,7 @@ function CustomizeModalContent({ onClose }: { onClose: () => void }) {
 
         {/* Quick action bar */}
         <div className="flex items-center justify-between px-6 py-2.5 bg-gray-50/60 border-b border-gray-100 text-xs">
-          <span className="text-gray-500 font-medium">Quick Selection:</span>
+          <span className="text-gray-500 font-medium">{t("dashboard.quickSelection", "Quick Selection:")}</span>
           <div className="flex items-center gap-2">
             <button
               type="button"
@@ -225,7 +227,7 @@ function CustomizeModalContent({ onClose }: { onClose: () => void }) {
               className="text-blue-600 hover:text-blue-700 font-medium hover:underline flex items-center gap-1"
             >
               <Check className="w-3.5 h-3.5" />
-              Select All
+              {t("common.selectAll", "Select All")}
             </button>
             <span className="text-gray-300">|</span>
             <button
@@ -233,7 +235,7 @@ function CustomizeModalContent({ onClose }: { onClose: () => void }) {
               onClick={handleClearAll}
               className="text-gray-500 hover:text-gray-700 font-medium hover:underline"
             >
-              Clear All
+              {t("common.clearAll", "Clear All")}
             </button>
           </div>
         </div>
@@ -298,7 +300,7 @@ function CustomizeModalContent({ onClose }: { onClose: () => void }) {
         {/* Modal Footer */}
         <div className="flex items-center justify-between px-6 py-4 border-t border-gray-100 bg-gray-50/50">
           <p className="text-xs text-gray-500">
-            Click Save to apply your selection
+            {t("dashboard.clickSaveToApply", "Click Save to apply your selection")}
           </p>
           <div className="flex items-center gap-2.5">
             <button
@@ -306,7 +308,7 @@ function CustomizeModalContent({ onClose }: { onClose: () => void }) {
               onClick={onClose}
               className="px-4 py-2 rounded-lg border border-gray-200 hover:bg-gray-100 text-gray-700 text-sm font-medium transition-colors"
             >
-              Cancel
+              {t("common.cancel", "Cancel")}
             </button>
             <button
               type="button"
@@ -314,7 +316,7 @@ function CustomizeModalContent({ onClose }: { onClose: () => void }) {
               className="px-5 py-2 rounded-lg bg-[#1976D2] hover:bg-blue-600 active:scale-95 text-white text-sm font-medium shadow-sm hover:shadow transition-colors flex items-center gap-1.5"
             >
               <Check className="w-4 h-4" />
-              <span>Save</span>
+              <span>{t("common.save", "Save")}</span>
             </button>
           </div>
         </div>

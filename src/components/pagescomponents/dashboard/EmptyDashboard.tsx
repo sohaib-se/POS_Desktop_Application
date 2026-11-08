@@ -9,19 +9,22 @@ import {
   ArrowUpRight,
   ArrowDownLeft,
 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 interface EmptyDashboardProps {
   onAddWidget: () => void;
 }
 
 export function EmptyDashboard({ onAddWidget }: EmptyDashboardProps) {
+  const { t } = useTranslation();
+
   const PREVIEW_CARDS = [
-    { label: "Today's Sales", icon: TrendingUp, color: "text-blue-500", bg: "bg-blue-50" },
-    { label: "Today's Profit", icon: ArrowUpRight, color: "text-indigo-500", bg: "bg-indigo-50" },
-    { label: "Receivables", icon: ArrowDownLeft, color: "text-emerald-500", bg: "bg-emerald-50" },
-    { label: "Sales Chart", icon: BarChart3, color: "text-sky-500", bg: "bg-sky-50" },
-    { label: "Most Used Reports", icon: FileText, color: "text-purple-500", bg: "bg-purple-50" },
-    { label: "Low Stock Items", icon: AlertTriangle, color: "text-amber-500", bg: "bg-amber-50" },
+    { label: t("dashboard.todaySales", "Today's Sales"), icon: TrendingUp, color: "text-blue-500", bg: "bg-blue-50" },
+    { label: t("dashboard.todayProfit", "Today's Profit"), icon: ArrowUpRight, color: "text-indigo-500", bg: "bg-indigo-50" },
+    { label: t("dashboard.receivables", "Receivables"), icon: ArrowDownLeft, color: "text-emerald-500", bg: "bg-emerald-50" },
+    { label: t("dashboard.salesChart", "Sales Chart"), icon: BarChart3, color: "text-sky-500", bg: "bg-sky-50" },
+    { label: t("dashboard.mostUsedReports", "Most Used Reports"), icon: FileText, color: "text-purple-500", bg: "bg-purple-50" },
+    { label: t("dashboard.lowStockItems", "Low Stock Items"), icon: AlertTriangle, color: "text-amber-500", bg: "bg-amber-50" },
   ];
 
   return (
@@ -39,10 +42,10 @@ export function EmptyDashboard({ onAddWidget }: EmptyDashboardProps) {
 
         {/* Headline & Description */}
         <h2 className="text-2xl font-bold text-gray-800 tracking-tight">
-          Your Dashboard is Empty
+          {t("dashboard.emptyTitle", "Your Dashboard is Empty")}
         </h2>
         <p className="text-sm text-gray-500 mt-2 max-w-md leading-relaxed">
-          No cards or widgets are currently enabled. Add widgets to monitor sales, profits, cash balances, reports, and stock alerts in real-time.
+          {t("dashboard.emptyDescription", "No cards or widgets are currently enabled. Add widgets to monitor sales, profits, cash balances, reports, and stock alerts in real-time.")}
         </p>
 
         {/* ── Prominent "+ Add Widget" Entrance Card ── */}
@@ -58,10 +61,10 @@ export function EmptyDashboard({ onAddWidget }: EmptyDashboardProps) {
             </div>
 
             <span className="text-base font-bold text-gray-900 group-hover:text-[#1976D2] transition-colors">
-              Add Widget
+              {t("dashboard.addWidget", "Add Widget")}
             </span>
             <span className="text-xs text-gray-400 mt-1">
-              Click to choose and configure cards from settings
+              {t("dashboard.addWidgetSub", "Click to choose and configure cards from settings")}
             </span>
           </button>
         </div>
@@ -69,7 +72,7 @@ export function EmptyDashboard({ onAddWidget }: EmptyDashboardProps) {
         {/* Quick preview badges */}
         <div className="mt-8 pt-6 border-t border-gray-100 w-full max-w-lg">
           <p className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-3">
-            Available Widgets from Settings
+            {t("dashboard.availableWidgets", "Available Widgets from Settings")}
           </p>
           <div className="flex flex-wrap items-center justify-center gap-2">
             {PREVIEW_CARDS.map(({ label, icon: Icon, color, bg }) => (

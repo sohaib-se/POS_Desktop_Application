@@ -1,8 +1,10 @@
 import { Search, MoreVertical } from "lucide-react";
 import { useSettings } from "@/hooks/useSettings";
+import { useTranslation } from "react-i18next";
 import { useEffect, useRef, useState } from "react";
 import type { SaleInvoiceViewRow } from "./types";
 import type { MutableRefObject, Dispatch, SetStateAction } from "react";
+import { formatTransactionType, formatPaymentType } from "@/utils/transactionTranslations";
 
 interface SaleInvoiceTableProps {
   showSearchInput: boolean;
@@ -31,12 +33,13 @@ export function SaleInvoiceTable({
   visibleRows,
   statusMessage
 }: SaleInvoiceTableProps) {
+  const { t } = useTranslation();
   const [currency] = useSettings('settings.businessCurrency', { code: 'PKR', symbol: 'Rs' });
   const [currencyDisplay] = useSettings<'abbreviation' | 'icon'>('settings.currencyDisplay', 'abbreviation');
   const currencyStr = currencyDisplay === 'icon' ? currency.symbol : currency.code;
 
   const searchContainerRef = useRef<HTMLDivElement>(null);
-  const placeholders = ["Customer Name", "Invoice No.", "Amount"];
+  const placeholders = [t("sales.customerName", "Customer Name"), t("sales.invoiceNo", "Invoice No."), t("sales.amount", "Amount")];
   const [placeholderIndex, setPlaceholderIndex] = useState(0);
 
   useEffect(() => {
@@ -70,7 +73,7 @@ export function SaleInvoiceTable({
     >
       <div className="flex items-center justify-between px-6 pt-4 pb-2 border-b border-gray-200">
         <h3 className="text-base font-bold text-[#222B45] tracking-wide">
-          TRANSACTIONS
+          {t("parties.transactions", "Transactions").toUpperCase()}
         </h3>
         <div className="flex gap-2 items-center h-10" ref={searchContainerRef}>
           <div 
@@ -102,7 +105,7 @@ export function SaleInvoiceTable({
               />
               {!searchQuery && (
                 <div className="absolute left-0 pointer-events-none flex items-center h-full w-full overflow-hidden text-gray-400 text-sm">
-                  <span className="whitespace-pre">Search </span>
+                  <span className="whitespace-pre">{t("common.search", "Search")} </span>
                   <div className="relative h-full flex-1 overflow-hidden">
                     {placeholders.map((ph, idx) => (
                       <span
@@ -125,7 +128,7 @@ export function SaleInvoiceTable({
               handleDownloadCsv();
             }}
             className="p-1.5 hover:bg-[#F7F9FB] rounded relative ml-2"
-            title="Download Excel/CSV"
+            title={t("sales.downloadExcel", "Download Excel/CSV")}
           >
             <span className="bg-green-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
               xls
@@ -139,28 +142,28 @@ export function SaleInvoiceTable({
           <thead className="bg-gray-50 sticky top-0 z-10">
             <tr>
               <th className="px-4 py-3 text-left font-medium text-gray-600">
-                Date
+                {t("sales.date", "Date")}
               </th>
               <th className="px-4 py-3 text-left font-medium text-gray-600">
-                Invoice no
+                {t("sales.invoiceNo", "Invoice no")}
               </th>
               <th className="px-4 py-3 text-left font-medium text-gray-600">
-                Party Name
+                {t("sales.partyName", "Party Name")}
               </th>
               <th className="px-4 py-3 text-left font-medium text-gray-600">
-                Transaction
+                {t("sales.transaction", "Transaction")}
               </th>
               <th className="px-4 py-3 text-left font-medium text-gray-600">
-                Payment Type
+                {t("sales.paymentType", "Payment Type")}
               </th>
               <th className="px-4 py-3 text-right font-medium text-gray-600">
-                Amount
+                {t("sales.amount", "Amount")}
               </th>
               <th className="px-4 py-3 text-right font-medium text-gray-600">
-                Balance
+                {t("sales.balance", "Balance")}
               </th>
               <th className="px-4 py-3 text-center font-medium text-gray-600">
-                Actions
+                {t("common.actions", "Actions")}
               </th>
             </tr>
           </thead>
@@ -176,10 +179,10 @@ export function SaleInvoiceTable({
                 <td className="px-4 py-3">
                   <span className={`inline-flex items-center gap-1.5 ${invoice.transaction?.includes('Returned') ? 'text-amber-600' : 'text-green-600'}`}>
                     <span className={`w-2 h-2 rounded-full ${invoice.transaction?.includes('Returned') ? 'bg-amber-500' : 'bg-green-500'}`}></span>
-                    {invoice.transaction}
+                    {formatTransactionType(invoice.transaction, t)}
                   </span>
                 </td>
-                <td className="px-4 py-3">{invoice.paymentType}</td>
+                <td className="px-4 py-3">{formatPaymentType(invoice.paymentType, t)}</td>
                 <td className="px-4 py-3 text-right">{currencyStr} {invoice.amount}</td>
                 <td className="px-4 py-3 text-right">{currencyStr} {invoice.balance}</td>
                 <td className="px-4 py-3 relative">
@@ -218,7 +221,7 @@ export function SaleInvoiceTable({
 
         {!visibleRows.length && (
           <div className="px-4 py-10 text-center text-sm text-gray-500">
-            No transactions found for the selected month.
+            {t("sales.noTransactions", "No transactions found for the selected month.")}
           </div>
         )}
       </div>

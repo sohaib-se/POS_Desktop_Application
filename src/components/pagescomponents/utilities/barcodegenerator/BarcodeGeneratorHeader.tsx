@@ -1,4 +1,5 @@
 import { Settings } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
@@ -25,8 +26,11 @@ export function BarcodeGeneratorHeader({
   activeFields,
   setActiveFields,
 }: BarcodeGeneratorHeaderProps) {
+  const { t } = useTranslation();
   const currentSize = getLabelSize(printerSettings);
-  const printerLabel = printerSettings.category === "label" ? "Label Printer" : "Regular Printer";
+  const printerLabel = printerSettings.category === "label" 
+    ? t("utilities.labelPrinter") 
+    : t("utilities.regularPrinter");
 
   const handleCategoryChange = (val: string) => {
     const category = val as "label" | "regular";
@@ -51,15 +55,15 @@ export function BarcodeGeneratorHeader({
   return (
     <div className="flex justify-between items-center mb-6 pb-4 border-b border-gray-200">
       <div className="flex items-center gap-2">
-        <h3 className="text-xl font-bold text-[#3B4256]">Barcode Generator</h3>
+        <h3 className="text-xl font-bold text-[#3B4256]">{t("utilities.barcodeGeneratorTitle")}</h3>
       </div>
 
       <div className="flex items-center gap-4 text-sm text-gray-500">
         <span>
-          Printer: <span className="text-gray-700 font-medium">{printerLabel}</span>
+          {t("utilities.printer")}: <span className="text-gray-700 font-medium">{printerLabel}</span>
         </span>
         <span>
-          Size: <span className="text-gray-700 font-medium">{getSizeDisplayName(printerSettings)}</span>
+          {t("utilities.size", "Size")}: <span className="text-gray-700 font-medium">{getSizeDisplayName(printerSettings)}</span>
         </span>
         <div className="h-6 w-px bg-gray-300"></div>
 
@@ -74,7 +78,7 @@ export function BarcodeGeneratorHeader({
           >
             <SheetHeader className="px-6 py-4 border-b border-gray-200">
               <SheetTitle className="text-[#4B5563] text-lg font-semibold">
-                Barcode Settings
+                {t("utilities.barcodeSettings", "Barcode Settings")}
               </SheetTitle>
             </SheetHeader>
 
@@ -84,8 +88,8 @@ export function BarcodeGeneratorHeader({
                 {/* ── Printer Category ──────────────────────────── */}
                 <div>
                   <div className="flex justify-between items-center bg-gray-50 px-3 py-2 rounded-md mb-4">
-                    <span className="font-semibold text-gray-700">Printer</span>
-                    <span className="text-gray-500 text-sm italic">Select any 1 option</span>
+                    <span className="font-semibold text-gray-700">{t("utilities.printer", "Printer")}</span>
+                    <span className="text-gray-500 text-sm italic">{t("utilities.selectOneOption", "Select any 1 option")}</span>
                   </div>
                   <RadioGroup
                     value={printerSettings.category}
@@ -99,7 +103,7 @@ export function BarcodeGeneratorHeader({
                         className="border-gray-300 text-blue-500 fill-blue-500"
                       />
                       <Label htmlFor="cat-label" className="text-gray-600 font-normal cursor-pointer">
-                        Label Printer
+                        {t("utilities.labelPrinter", "Label Printer")}
                       </Label>
                     </div>
                     <div className="flex items-center space-x-3">
@@ -109,7 +113,7 @@ export function BarcodeGeneratorHeader({
                         className="border-gray-300 text-blue-500 fill-blue-500"
                       />
                       <Label htmlFor="cat-regular" className="text-gray-600 font-normal cursor-pointer">
-                        Regular Printer
+                        {t("utilities.regularPrinter", "Regular Printer")}
                       </Label>
                     </div>
                   </RadioGroup>
@@ -118,23 +122,23 @@ export function BarcodeGeneratorHeader({
                 {/* ── Printer Type (Brand) ──────────────────────── */}
                 <div>
                   <div className="flex justify-between items-center bg-gray-50 px-3 py-2 rounded-md mb-4">
-                    <span className="font-semibold text-gray-700">Printer Type</span>
-                    <span className="text-gray-500 text-sm italic">Select any 1 option</span>
+                    <span className="font-semibold text-gray-700">{t("utilities.printerType", "Printer Type")}</span>
+                    <span className="text-gray-500 text-sm italic">{t("utilities.selectOneOption", "Select any 1 option")}</span>
                   </div>
                   <RadioGroup
                     value={printerSettings.type}
                     onValueChange={handleTypeChange}
                     className="space-y-3 pl-1"
                   >
-                    {(["generic", "tvs_tsc", "kores"] as const).map((t) => (
-                      <div key={t} className="flex items-center space-x-3">
+                    {(["generic", "tvs_tsc", "kores"] as const).map((tVal) => (
+                      <div key={tVal} className="flex items-center space-x-3">
                         <RadioGroupItem
-                          value={t}
-                          id={`type-${t}`}
+                          value={tVal}
+                          id={`type-${tVal}`}
                           className="border-gray-300 text-blue-500 fill-blue-500"
                         />
-                        <Label htmlFor={`type-${t}`} className="text-gray-600 font-normal cursor-pointer">
-                          {t === "generic" ? "GENERIC" : t === "tvs_tsc" ? "TVS/TSC" : "KORES"}
+                        <Label htmlFor={`type-${tVal}`} className="text-gray-600 font-normal cursor-pointer">
+                          {tVal === "generic" ? "GENERIC" : tVal === "tvs_tsc" ? "TVS/TSC" : "KORES"}
                         </Label>
                       </div>
                     ))}
@@ -144,8 +148,8 @@ export function BarcodeGeneratorHeader({
                 {/* ── Label Size ────────────────────────────────── */}
                 <div>
                   <div className="flex justify-between items-center bg-gray-50 px-3 py-2 rounded-md mb-4">
-                    <span className="font-semibold text-gray-700">Size</span>
-                    <span className="text-gray-500 text-sm italic">Select any 1 option</span>
+                    <span className="font-semibold text-gray-700">{t("utilities.size", "Size")}</span>
+                    <span className="text-gray-500 text-sm italic">{t("utilities.selectOneOption", "Select any 1 option")}</span>
                   </div>
                   <RadioGroup
                     value={printerSettings.sizeId}
@@ -175,15 +179,15 @@ export function BarcodeGeneratorHeader({
                 {/* ── Additional Fields ─────────────────────────── */}
                 <div>
                   <div className="flex justify-between items-center bg-gray-50 px-3 py-2 rounded-md mb-4">
-                    <span className="font-semibold text-gray-700">Additional Fields</span>
+                    <span className="font-semibold text-gray-700">{t("utilities.additionalFields", "Additional Fields")}</span>
                   </div>
                   <div className="space-y-4 pl-1">
                     {(
                       [
-                        { key: "companyName", label: "Company Name" },
-                        { key: "itemName",    label: "Item Name"    },
-                        { key: "salePrice",   label: "Sale Price"   },
-                        { key: "discount",    label: "Discount"     },
+                        { key: "companyName", label: t("utilities.companyName", "Company Name") },
+                        { key: "itemName",    label: t("utilities.itemName", "Item Name")    },
+                        { key: "salePrice",   label: t("utilities.salePrice", "Sale Price")   },
+                        { key: "discount",    label: t("utilities.discount", "Discount")     },
                       ] as const
                     ).map(({ key, label }) => (
                       <div key={key} className="flex items-center space-x-3">

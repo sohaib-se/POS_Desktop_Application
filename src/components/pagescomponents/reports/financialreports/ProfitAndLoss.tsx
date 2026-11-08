@@ -1,6 +1,7 @@
 import { useSettings } from "@/hooks/useSettings";
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { ArrowLeft } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { parseLineItems } from '../../saleinvoices/utils';
 
 interface ProfitAndLossProps {
@@ -8,6 +9,7 @@ interface ProfitAndLossProps {
 }
 
 export function ProfitAndLoss({ onBack }: ProfitAndLossProps) {
+  const { t } = useTranslation();
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
 
@@ -147,9 +149,9 @@ export function ProfitAndLoss({ onBack }: ProfitAndLossProps) {
 
   // Rows shown in the statement table, in the order they should appear.
   const rows: { label: string; amount: number; positive: boolean }[] = [
-    { label: 'Sale (+)', amount: stats.totalSalesAmount, positive: true },
-    { label: 'Purchase (-)', amount: stats.totalPurchasesAmount, positive: false },
-    { label: 'Expenses (-)', amount: stats.totalExpensesAmount, positive: false },
+    { label: t("reports.salePlus", "Sale (+)"), amount: stats.totalSalesAmount, positive: true },
+    { label: t("reports.purchaseMinus", "Purchase (-)"), amount: stats.totalPurchasesAmount, positive: false },
+    { label: t("reports.expensesMinus", "Expenses (-)"), amount: stats.totalExpensesAmount, positive: false },
   ];
 
   return (
@@ -159,12 +161,12 @@ export function ProfitAndLoss({ onBack }: ProfitAndLossProps) {
           <button onClick={onBack} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
             <ArrowLeft className="w-5 h-5 text-gray-600" />
           </button>
-          <h1 className="text-xl font-semibold text-gray-900">Profit & Loss Report</h1>
+          <h1 className="text-xl font-semibold text-gray-900">{t("reports.names.profitAndLoss", "Profit And Loss")}</h1>
         </div>
 
         <div className="flex items-center gap-4 flex-wrap">
           <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5">
-            <span className="text-sm text-gray-500">From</span>
+            <span className="text-sm text-gray-500">{t("reports.from", "From")}</span>
             <input
               type="date"
               value={dateFrom}
@@ -173,7 +175,7 @@ export function ProfitAndLoss({ onBack }: ProfitAndLossProps) {
             />
           </div>
           <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5">
-            <span className="text-sm text-gray-500">To</span>
+            <span className="text-sm text-gray-500">{t("reports.to", "To")}</span>
             <input
               type="date"
               value={dateTo}
@@ -194,8 +196,8 @@ export function ProfitAndLoss({ onBack }: ProfitAndLossProps) {
             <table className="w-full border-collapse">
               <thead>
                 <tr className="bg-gray-50 border-b border-gray-200 text-gray-600 text-sm">
-                  <th className="text-left font-medium px-[40px] py-3">Particulars</th>
-                  <th className="text-right font-medium px-[40px] py-3">Amount</th>
+                  <th className="text-left font-medium px-[40px] py-3">{t("reports.particulars", "Particulars")}</th>
+                  <th className="text-right font-medium px-[40px] py-3">{t("reports.amount", "Amount")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -213,7 +215,7 @@ export function ProfitAndLoss({ onBack }: ProfitAndLossProps) {
 
                 <tr className="bg-gray-50/50 border-b border-gray-200">
                   <td className="px-[40px] py-4 text-gray-900 font-semibold">
-                    {stats.grossProfit >= 0 ? 'Gross Profit' : 'Gross Loss'}
+                    {stats.grossProfit >= 0 ? t("reports.grossProfit", "Gross Profit") : t("reports.grossLoss", "Gross Loss")}
                   </td>
                   <td className={`px-[40px] py-4 text-right font-semibold ${stats.grossProfit >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>
                     {formatAmount(stats.grossProfit)}
@@ -222,7 +224,7 @@ export function ProfitAndLoss({ onBack }: ProfitAndLossProps) {
 
                 <tr className="bg-white">
                   <td className="px-[40px] py-4 text-gray-900 font-bold text-lg">
-                    {stats.netProfit >= 0 ? 'Net Profit' : 'Net Loss'}
+                    {stats.netProfit >= 0 ? t("reports.netProfit", "Net Profit") : t("reports.netLoss", "Net Loss")}
                   </td>
                   <td className={`px-[40px] py-4 text-right font-bold text-lg ${stats.netProfit >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>
                     {formatAmount(stats.netProfit)}

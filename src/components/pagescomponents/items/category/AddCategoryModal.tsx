@@ -1,6 +1,7 @@
 import { X } from "lucide-react";
 import type { CategoryRecord } from "@/components/pagescomponents/items/products/types";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui";
+import { useTranslation } from "react-i18next";
 
 type Props = {
   open: boolean;
@@ -19,6 +20,8 @@ export function AddCategoryModal({
   onClose,
   onSave,
 }: Props) {
+  const { t } = useTranslation();
+
   return (
     <Dialog
       open={open}
@@ -30,7 +33,7 @@ export function AddCategoryModal({
         <DialogHeader>
           <DialogTitle className="flex items-center justify-between">
             <span>
-              {categoryBeingEdited ? "Edit Category" : "Add Category"}
+              {categoryBeingEdited ? t("items.editCategory") : t("items.addCategory")}
             </span>
             <button
               type="button"
@@ -45,7 +48,7 @@ export function AddCategoryModal({
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Category Name
+              {t("items.categoryName")}
             </label>
             <input
               type="text"
@@ -65,7 +68,7 @@ export function AddCategoryModal({
             onClick={onSave}
             className="w-full bg-[#E53935] text-white py-2 rounded-lg text-sm font-medium"
           >
-            {categoryBeingEdited ? "Update" : "Create"}
+            {categoryBeingEdited ? t("common.update") : t("items.create")}
           </button>
         </div>
       </DialogContent>

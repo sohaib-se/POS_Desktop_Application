@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { Download, Check, Printer } from "lucide-react";
 import html2pdf from "html2pdf.js";
+import { useTranslation } from "react-i18next";
+import { getPrintTotalsSettings } from "@/hooks/usePrintSettings";
 
 
 
@@ -256,6 +258,7 @@ export function PrintPreviewRightPanel({
   autoPrint,
   activePrinter = "regular",
 }: PrintPreviewRightPanelProps) {
+  const { t } = useTranslation();
   const [isPdfBusy, setIsPdfBusy] = useState(false);
   const [pdfStatus, setPdfStatus] = useState<"idle" | "generating" | "ready">("idle");
 
@@ -376,7 +379,8 @@ export function PrintPreviewRightPanel({
       isHandled = true;
       cleanup();
       window.removeEventListener("afterprint", onAfterPrint);
-      if (activePrinter === "thermal" && window.electronAPI?.cutReceipt) {
+      const printSettings = getPrintTotalsSettings();
+      if (activePrinter === "thermal" && printSettings.thermalAutoCut && window.electronAPI?.cutReceipt) {
         window.electronAPI.cutReceipt();
       }
     };
@@ -406,9 +410,9 @@ export function PrintPreviewRightPanel({
   /* ── Status label ─────────────────────────────────────────────────── */
   const statusLabel =
     pdfStatus === "generating"
-      ? "Generating PDF…"
+      ? t("settings.print.generatingPdf")
       : pdfStatus === "ready"
-      ? "Done ✓"
+      ? t("settings.print.pdfReady")
       : null;
 
   /* ── Shared button style factory ─────────────────────────────────── */
@@ -451,10 +455,10 @@ export function PrintPreviewRightPanel({
       {/* ── Header ── */}
       <div>
         <h3 style={{ fontSize: "14px", fontWeight: 700, color: "#111827", margin: 0 }}>
-          Invoice Actions
+          {t("settings.print.invoiceActions")}
         </h3>
         <p style={{ fontSize: "12px", color: "#6b7280", margin: "4px 0 0 0" }}>
-          Print or download this invoice.
+          {t("settings.print.invoiceActionsSubtitle")}
         </p>
       </div>
 
@@ -481,7 +485,7 @@ export function PrintPreviewRightPanel({
       {/* ── Print / Download ── */}
       <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
         <span style={{ fontSize: "11px", fontWeight: 700, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.5px" }}>
-          Print &amp; Download
+          {t("settings.print.printDownload")}
         </span>
 
         {/* Print */}
@@ -492,7 +496,7 @@ export function PrintPreviewRightPanel({
           onMouseLeave={printBtn.leave}
         >
           <Printer size={16} />
-          Print Invoice
+          {t("settings.print.printInvoice")}
         </button>
 
         {/* Download PDF — real file download, no print dialog */}
@@ -504,7 +508,7 @@ export function PrintPreviewRightPanel({
           onMouseLeave={dlBtn.leave}
         >
           <Download size={16} />
-          {pdfStatus === "generating" ? "Generating…" : "Download PDF"}
+          {pdfStatus === "generating" ? t("settings.print.generating") : t("settings.print.downloadPdf")}
         </button>
       </div>
 
@@ -526,7 +530,7 @@ export function PrintPreviewRightPanel({
             onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "#fff")}
           >
             <Check size={16} />
-            Done / Close Preview
+            {t("settings.print.doneClose")}
           </button>
         </div>
       )}

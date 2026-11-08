@@ -1,11 +1,13 @@
 import { useEffect, useState } from "react";
 import { AlertTriangle } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 export function LowStockItemsCard({ 
   onOpenReport 
 }: { 
   onOpenReport?: (category: string, name: string) => void;
 }) {
+  const { t } = useTranslation();
   const [lowStockItems, setLowStockItems] = useState<any[]>([]);
 
   useEffect(() => {
@@ -34,29 +36,29 @@ export function LowStockItemsCard({
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <AlertTriangle className="w-5 h-5 text-amber-500" />
-          <p className="text-sm font-medium text-gray-900">Low Stock Items</p>
+          <p className="text-sm font-medium text-gray-900">{t("dashboard.lowStockItems", "Low Stock Items")}</p>
         </div>
         <button 
           className="text-sm text-blue-600 hover:text-blue-700"
           onClick={() => onOpenReport?.("Item/Stock Reports", "Low stock details")}
         >
-          View All
+          {t("dashboard.viewAll", "View All")}
         </button>
       </div>
       
       {lowStockItems.length === 0 ? (
-        <div className="text-sm text-gray-500 py-4 text-center">No low stock items</div>
+        <div className="text-sm text-gray-500 py-4 text-center">{t("dashboard.noLowStock", "No low stock items")}</div>
       ) : (
         <div className="space-y-3">
           {lowStockItems.map((item, idx) => (
             <div key={idx} className="flex justify-between items-center p-3 bg-red-50 border border-red-100 rounded-lg">
               <div>
                 <p className="text-sm font-medium text-gray-900">{item.name}</p>
-                <p className="text-xs text-gray-500">Threshold: {item.low_stock} {item.unit}</p>
+                <p className="text-xs text-gray-500">{t("dashboard.threshold", "Threshold")}: {item.low_stock} {item.unit}</p>
               </div>
               <div className="text-right">
                 <p className="text-sm font-bold text-red-600">{item.stock_quantity}</p>
-                <p className="text-xs text-red-500">In Stock</p>
+                <p className="text-xs text-red-500">{t("dashboard.inStock", "In Stock")}</p>
               </div>
             </div>
           ))}

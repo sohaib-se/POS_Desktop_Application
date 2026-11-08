@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { expenseCategories } from "@/data/mockData";
 import type { ExpenseCategory } from "@/types";
 
@@ -53,6 +54,7 @@ function createDefaultTab(id: number): ExpenseTab {
 }
 
 export function AddExpense({ onSave, onShare, onClose, initialExpense }: AddExpenseProps) {
+  const { t } = useTranslation();
   const [tabs, setTabs] = useState<ExpenseTab[]>(() => {
     if (initialExpense) {
       let parsedItems: any[] = [];
@@ -581,10 +583,10 @@ export function AddExpense({ onSave, onShare, onClose, initialExpense }: AddExpe
 
       <ConfirmDialog
         open={tabToClose !== null}
-        title="Close Tab"
-        message="Are you sure you want to close this tab? Any unsaved data will be lost."
-        confirmLabel="Close Tab"
-        cancelLabel="Cancel"
+        title={t("expenses.closeTabTitle", "Close Tab")}
+        message={t("expenses.closeTabMsg", "Are you sure you want to close this tab? Any unsaved data will be lost.")}
+        confirmLabel={t("expenses.closeTabConfirm", "Close Tab")}
+        cancelLabel={t("common.cancel", "Cancel")}
         onConfirm={() => {
           if (tabToClose !== null) {
             closeTab(tabToClose, undefined, true);
@@ -596,10 +598,10 @@ export function AddExpense({ onSave, onShare, onClose, initialExpense }: AddExpe
 
       <ConfirmDialog
         open={showCloseAllDialog}
-        title="Close Add Expense"
-        message="Are you sure you want to close? Any unsaved data across all tabs will be lost."
-        confirmLabel="Close"
-        cancelLabel="Cancel"
+        title={t("expenses.closeAddExpenseTitle", "Close Add Expense")}
+        message={t("expenses.closeAddExpenseMsg", "Are you sure you want to close? Any unsaved data across all tabs will be lost.")}
+        confirmLabel={t("common.close", "Close")}
+        cancelLabel={t("common.cancel", "Cancel")}
         onConfirm={() => {
           setShowCloseAllDialog(false);
           onClose?.();

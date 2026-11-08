@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import type { SaleTab } from "@/pages/AddSale";
 
 interface AddSaleTabBarProps {
@@ -17,6 +18,17 @@ export function AddSaleTabBar({
   closeTab,
   onClose,
 }: AddSaleTabBarProps) {
+  const { t } = useTranslation();
+
+  const getTabLabel = (label: string, invoiceNo?: string) => {
+    if (label === "New Sale") return t("common.newSale");
+    if (label.startsWith("Sale #")) {
+      const num = invoiceNo || label.replace("Sale #", "");
+      return `${t("sales.sale")} #${num}`;
+    }
+    return label;
+  };
+
   return (
     <div style={{ background: "#c4d3de", display: "flex", alignItems: "flex-end", padding: "2px 10px 0 10px", gap: 4, flexShrink: 0 }}>
       {tabs.map((tab) => {
@@ -73,7 +85,7 @@ export function AddSaleTabBar({
                 />
               </>
             )}
-            <span>{tab.label}</span>
+            <span>{getTabLabel(tab.label, tab.invoiceNo)}</span>
             {tabs.length > 1 && (
               <button
                 onClick={(e) => closeTab(tab.id, e)}
@@ -94,7 +106,7 @@ export function AddSaleTabBar({
       })}
       <button
         onClick={addTab}
-        title="New Sale"
+        title={t("common.newSale")}
         style={{
           marginBottom: 0, marginLeft: 4, width: 26, height: 26, borderRadius: "50%",
           background: "#3b82f6", color: "#fff", border: "none", cursor: "pointer",

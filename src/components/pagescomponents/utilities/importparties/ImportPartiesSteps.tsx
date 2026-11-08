@@ -1,6 +1,8 @@
 import * as xlsx from "xlsx-js-style";
+import { useTranslation } from "react-i18next";
 
 export function ImportPartiesSteps() {
+  const { t } = useTranslation();
   const downloadSample = () => {
     const headers = [
       "Party Name",
@@ -72,38 +74,38 @@ export function ImportPartiesSteps() {
       <div>
         <h3 className="text-[#E53935] font-semibold text-sm mb-2">STEP 1</h3>
         <p className="text-gray-600 text-sm mb-3">
-          Create an Excel file with the following format.
+          {t("utilities.createExcelFormat")}
         </p>
         <button 
           onClick={downloadSample}
           className="border border-[#4382FF] text-[#4382FF] px-4 py-1.5 rounded bg-white hover:bg-blue-50 transition-colors text-sm font-medium"
         >
-          Download Sample
+          {t("utilities.downloadSample")}
         </button>
       </div>
 
       <div>
-        <h3 className="text-[#E53935] font-semibold text-sm mb-2">STEP 2</h3>
+        <h3 className="text-[#E53935] font-semibold text-sm mb-2">{t("utilities.step2")}</h3>
         <p className="text-gray-600 text-sm">
-          Upload the file (.xlsx or .xls) by clicking on the Upload File button below.
+          {t("utilities.uploadExcelPrompt")}
         </p>
       </div>
 
       <div>
-        <h3 className="text-[#E53935] font-semibold text-sm mb-2">STEP 3</h3>
+        <h3 className="text-[#E53935] font-semibold text-sm mb-2">{t("utilities.step3")}</h3>
         <p className="text-gray-600 text-sm mb-4">
-          Verify the items from the file & complete the import.
+          {t("utilities.verifyAndComplete")}
         </p>
 
         <div className="overflow-x-auto border border-gray-200 rounded-lg max-w-full">
           <table className="w-full text-sm text-left">
             <thead className="bg-[#4382FF] text-white">
               <tr>
-                <th className="px-4 py-3 font-medium whitespace-nowrap">Party Name</th>
-                <th className="px-4 py-3 font-medium whitespace-nowrap">Email</th>
-                <th className="px-4 py-3 font-medium whitespace-nowrap">Phone Number</th>
-                <th className="px-4 py-3 font-medium whitespace-nowrap">Address</th>
-                <th className="px-4 py-3 font-medium whitespace-nowrap">Opening Balance</th>
+                <th className="px-4 py-3 font-medium whitespace-nowrap">{t("parties.partyName")}</th>
+                <th className="px-4 py-3 font-medium whitespace-nowrap">{t("parties.email")}</th>
+                <th className="px-4 py-3 font-medium whitespace-nowrap">{t("parties.phoneNumber")}</th>
+                <th className="px-4 py-3 font-medium whitespace-nowrap">{t("parties.address")}</th>
+                <th className="px-4 py-3 font-medium whitespace-nowrap">{t("parties.openingBalance")}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 bg-white">

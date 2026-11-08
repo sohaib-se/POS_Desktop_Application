@@ -1,6 +1,7 @@
 import type React from "react";
 import { useSettings } from "@/hooks/useSettings";
 import { Search, Check } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import type { PosTab, ItemOption } from "./types";
 
 interface SearchInputProps {
@@ -32,6 +33,7 @@ export function SearchInput({
   isScanSuccess = false,
   onSearchFocus,
 }: SearchInputProps) {
+  const { t } = useTranslation();
   const [currency] = useSettings('settings.businessCurrency', { code: 'PKR', symbol: 'Rs' });
   const [currencyDisplay] = useSettings<'abbreviation' | 'icon'>('settings.currencyDisplay', 'abbreviation');
   const currencyStr = currencyDisplay === 'icon' ? currency.symbol : currency.code;
@@ -58,7 +60,7 @@ export function SearchInput({
               setSearchFocused(true);
             }
           }}
-          placeholder="Scan or search by item code, model no or item name"
+          placeholder={t("pos.searchPlaceholder", "Scan or search by item code, model no or item name")}
           className={`w-full rounded border pl-3 pr-10 py-2 text-sm outline-none transition-all duration-200 ${
             isScanSuccess
               ? "bg-green-100 border-green-500 ring-2 ring-green-400/50 text-green-900 font-medium"

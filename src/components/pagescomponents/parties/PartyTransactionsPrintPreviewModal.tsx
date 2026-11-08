@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { X, RefreshCw } from "lucide-react";
 import html2pdf from "html2pdf.js";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
@@ -196,6 +197,7 @@ export function PartyTransactionsPrintPreviewModal({
   selectedMonth,
   businessProfile,
 }: PartyTransactionsPrintPreviewModalProps) {
+  const { t } = useTranslation();
   const [isBusy, setIsBusy] = useState<"idle" | "opening" | "saving">("idle");
 
   const safePartyName = (partyName || "Party").replace(/[^a-zA-Z0-9_\-]/g, "_");
@@ -284,7 +286,7 @@ export function PartyTransactionsPrintPreviewModal({
           throw new Error(result.failureReason || "Failed to save PDF");
         }
 
-        toast.success("PDF saved successfully.");
+        toast.success(t("common.pdfSavedSuccess", "PDF saved successfully."));
       } else {
         // Fallback for browser outside Electron
         const blob = await generateFallbackPdfBlob(pdfFilename, reportEl);
@@ -322,7 +324,7 @@ export function PartyTransactionsPrintPreviewModal({
         a.click();
         document.body.removeChild(a);
         setTimeout(() => URL.revokeObjectURL(url), 5000);
-        toast.success("PDF downloaded.");
+        toast.success(t("common.pdfDownloaded", "PDF downloaded."));
       }
     } catch (err: any) {
       console.error("Save PDF error:", err);
@@ -364,7 +366,7 @@ export function PartyTransactionsPrintPreviewModal({
       >
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b">
-          <h2 className="text-xl font-bold text-gray-900">Preview</h2>
+          <h2 className="text-xl font-bold text-gray-900">{t("common.preview", "Preview")}</h2>
           <button onClick={() => onOpenChange(false)} className="text-gray-500 hover:text-gray-700">
             <X className="w-5 h-5" />
           </button>
@@ -388,14 +390,14 @@ export function PartyTransactionsPrintPreviewModal({
             className="rounded-full px-6 py-2 border border-red-500 text-red-500 font-medium text-sm hover:bg-red-50 transition-colors flex items-center gap-2 disabled:opacity-60"
           >
             {isBusy === "opening" && <RefreshCw size={14} className="animate-spin" />}
-            {isBusy === "opening" ? "Opening PDF..." : "Open PDF"}
+            {isBusy === "opening" ? t("common.openingPdf", "Opening PDF...") : t("common.openPdf", "Open PDF")}
           </button>
           <button
             onClick={handlePrint}
             disabled={isBusy !== "idle"}
             className="rounded-full px-6 py-2 border border-red-500 text-red-500 font-medium text-sm hover:bg-red-50 transition-colors disabled:opacity-60"
           >
-            Print
+            {t("common.print", "Print")}
           </button>
           <button
             onClick={handleSavePDF}
@@ -403,14 +405,14 @@ export function PartyTransactionsPrintPreviewModal({
             className="rounded-full px-6 py-2 border border-red-500 text-red-500 font-medium text-sm hover:bg-red-50 transition-colors flex items-center gap-2 disabled:opacity-60"
           >
             {isBusy === "saving" && <RefreshCw size={14} className="animate-spin" />}
-            {isBusy === "saving" ? "Saving PDF..." : "Save PDF"}
+            {isBusy === "saving" ? t("common.savingPdf", "Saving PDF...") : t("common.savePdf", "Save PDF")}
           </button>
           <button
             onClick={() => onOpenChange(false)}
             disabled={isBusy !== "idle"}
             className="rounded-full px-6 py-2 bg-red-500 text-white font-medium text-sm hover:bg-red-600 transition-colors disabled:opacity-60"
           >
-            Close
+            {t("common.close", "Close")}
           </button>
         </div>
       </DialogContent>

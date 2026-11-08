@@ -13,6 +13,8 @@ const STORAGE_KEY = "print_totals_settings";
 export interface PrintTotalsSettings {
   /** Make thermal printer default across print previews and POS */
   makeThermalDefault?: boolean;
+  /** Send explicit raw ESC/POS cut command after print (useful only if driver doesn't auto-cut) */
+  thermalAutoCut?: boolean;
   /** Show the total item quantity row in the invoice */
   totalItemQuantity: boolean;
   /** Show amounts with decimal places (.00) */
@@ -54,6 +56,7 @@ export interface PrintTotalsSettings {
 
 export const DEFAULT_PRINT_TOTALS: PrintTotalsSettings = {
   makeThermalDefault: false,
+  thermalAutoCut: false,
   totalItemQuantity: true,
   amountWithDecimal: true,
   receivedAmount: true,
@@ -84,6 +87,9 @@ export function getPrintTotalsSettings(): PrintTotalsSettings {
       if (parsed.makeThermalDefault === undefined) {
         parsed.makeThermalDefault = localStorage.getItem("print_makeThermalDefault") === "true";
       }
+      if (parsed.thermalAutoCut === undefined) {
+        parsed.thermalAutoCut = localStorage.getItem("print_thermalAutoCut") === "true";
+      }
       return { ...DEFAULT_PRINT_TOTALS, ...parsed };
     }
   } catch {
@@ -92,6 +98,7 @@ export function getPrintTotalsSettings(): PrintTotalsSettings {
   return {
     ...DEFAULT_PRINT_TOTALS,
     makeThermalDefault: localStorage.getItem("print_makeThermalDefault") === "true",
+    thermalAutoCut: localStorage.getItem("print_thermalAutoCut") === "true",
   };
 }
 
@@ -101,6 +108,9 @@ export function setPrintTotalsSettings(settings: PrintTotalsSettings): void {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
     if (settings.makeThermalDefault !== undefined) {
       localStorage.setItem("print_makeThermalDefault", String(settings.makeThermalDefault));
+    }
+    if (settings.thermalAutoCut !== undefined) {
+      localStorage.setItem("print_thermalAutoCut", String(settings.thermalAutoCut));
     }
     // Dispatch a custom event so any mounted theme component can re-render
     window.dispatchEvent(new CustomEvent("print-settings-changed", { detail: settings }));

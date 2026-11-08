@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { useSettings } from "@/hooks/useSettings";
 import { userProfile } from "@/data/mockData";
 import { usePrintTotalsSettings } from "@/hooks/usePrintSettings";
@@ -26,6 +27,7 @@ interface ThermalTheme3Props {
     received?: number;
     discount?: number;
     discountPercent?: number;
+    taxPercent?: number;
     paymentMode?: string;
     previousBalance?: number;
     documentTitle?: string;
@@ -65,10 +67,12 @@ export function ThermalSaleInvoiceImpact({
     received = 0,
     discount = 0,
     discountPercent,
+    taxPercent = 0,
     paymentMode,
     previousBalance,
     documentTitle = "Invoice",
 }: ThermalTheme3Props) {
+    const { t } = useTranslation();
     const [currency] = useSettings("settings.businessCurrency", { code: "PKR", symbol: "Rs" });
     const [currencyDisplay] = useSettings<"abbreviation" | "icon">(
         "settings.currencyDisplay",
@@ -81,14 +85,16 @@ export function ThermalSaleInvoiceImpact({
 
     const totalQuantity = records.reduce((s, r) => s + Number(r.quantity || 0), 0);
     const subTotal = records.reduce((s, r) => s + Number(r.amount || 0), 0);
-    const total = subTotal - Number(discount);
-    const balance = total - Number(received);
-    const youSaved = Number(discount);
+    const discountAmount = Number(discount || 0) > 0 ? Number(discount) : (discountPercent != null && Number(discountPercent) > 0 ? (subTotal * Number(discountPercent)) / 100 : 0);
+    const taxAmount = Number(taxPercent || 0) > 0 ? (subTotal - discountAmount) * (Number(taxPercent) / 100) : 0;
+    const total = subTotal - discountAmount + taxAmount;
+    const balance = total - Number(received || 0);
+    const youSaved = discountAmount;
     const prevBalance = Number(previousBalance ?? 0);
     const currentBalance = (documentTitle === "Purchase Invoice" || documentTitle === "Purchase Bill") ? prevBalance - balance : prevBalance + balance;
 
     const fmt = (n: number) => ps.amountWithDecimal ? n.toFixed(2) : Math.round(n).toString();
-    const businessName = (businessProfile?.business_name || "My Company").toUpperCase();
+    const businessName = (businessProfile?.business_name || "Laimsoft").toUpperCase();
 
     /* Shared row style — flex space-between, monospace font */
     const row: React.CSSProperties = {
@@ -125,7 +131,7 @@ export function ThermalSaleInvoiceImpact({
                         style={{ width: 52, height: 52, objectFit: "contain", display: "block", margin: "0 auto 4px" }}
                     />
                 )}
-                <div style={{ fontSize: 15, fontWeight: 800, letterSpacing: 1 }}>{businessName}</div>
+                {businessName ? <div style={{ fontSize: 15, fontWeight: 800, letterSpacing: 1 }}>{businessName}</div> : null}
                 {businessProfile?.address && (
                     <div style={{ fontSize: 11 }}>{businessProfile.address}</div>
                 )}
@@ -133,17 +139,17 @@ export function ThermalSaleInvoiceImpact({
                     <div style={{ fontSize: 11 }}>TEL: {businessProfile.phone}</div>
                 )}
                 {businessProfile?.email && (
-                    <div style={{ fontSize: 11 }}>Email: {businessProfile.email}</div>
+                    <div style={{ fontSize: 11 }}>{t("printThemes.email", "Email")}: {businessProfile.email}</div>
                 )}
             </div>
 
             {rule("=")}
 
             {/* ── META ── */}
-            <div style={row}><span>{documentTitle && documentTitle !== "Invoice" ? `${documentTitle.toUpperCase()} #` : "RECEIPT #"}</span><span>{invoiceNo}</span></div>
-            <div style={row}><span>DATE</span><span>{formatDate(invoiceDate)}</span></div>
-            <div style={row}><span>CUSTOMER</span><span>{customerName}</span></div>
-            {customerPhone && <div style={row}><span>PHONE</span><span>{customerPhone}</span></div>}
+            <div style={row}><span>{documentTitle && documentTitle !== "Invoice" ? `${documentTitle.toUpperCase()} #` : `${t("printThemes.invoice", "Receipt").toUpperCase()} #`}</span><span>{invoiceNo}</span></div>
+            <div style={row}><span>{t("printThemes.date", "DATE").toUpperCase()}</span><span>{formatDate(invoiceDate)}</span></div>
+            <div style={row}><span>{t("common.customer", "CUSTOMER").toUpperCase()}</span><span>{customerName || ""}</span></div>
+            {customerPhone && <div style={row}><span>{t("printThemes.phoneNo", "PHONE").toUpperCase()}</span><span>{customerPhone}</span></div>}
 
             {rule("-")}
 
@@ -151,10 +157,10 @@ export function ThermalSaleInvoiceImpact({
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12, fontFamily: "inherit" }}>
                 <thead>
                     <tr>
-                        <th style={{ textAlign: "left", fontWeight: 700, padding: "2px 0" }}>ITEM</th>
-                        {ps.showQuantity && <th style={{ textAlign: "center", fontWeight: 700, padding: "2px 0" }}>QTY</th>}
-                        {ps.showPricePerUnit && <th style={{ textAlign: "right", fontWeight: 700, padding: "2px 0" }}>PRICE</th>}
-                        <th style={{ textAlign: "right", fontWeight: 700, padding: "2px 0" }}>TOTAL</th>
+                        <th style={{ textAlign: "left", fontWeight: 700, padding: "2px 0" }}>{t("printThemes.itemName", "ITEM").toUpperCase()}</th>
+                        {ps.showQuantity && <th style={{ textAlign: "center", fontWeight: 700, padding: "2px 0" }}>{t("printThemes.quantity", "QTY").toUpperCase()}</th>}
+                        {ps.showPricePerUnit && <th style={{ textAlign: "right", fontWeight: 700, padding: "2px 0" }}>{t("printThemes.priceUnit", "PRICE").toUpperCase()}</th>}
+                        <th style={{ textAlign: "right", fontWeight: 700, padding: "2px 0" }}>{t("printThemes.total", "TOTAL").toUpperCase()}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -174,39 +180,46 @@ export function ThermalSaleInvoiceImpact({
 
             {rule("-")}
 
-            {ps.totalItemQuantity && <div style={row}><span>TOTAL ITEMS</span><span>{totalQuantity}</span></div>}
-            <div style={row}><span>SUBTOTAL</span><span>{fmt(subTotal)}</span></div>
+            {ps.totalItemQuantity && <div style={row}><span>{t("printThemes.quantity", "TOTAL ITEMS").toUpperCase()}</span><span>{totalQuantity}</span></div>}
+            <div style={row}><span>{t("printThemes.subTotal", "SUBTOTAL").toUpperCase()}</span><span>{fmt(subTotal)}</span></div>
 
-            {ps.discount && discount > 0 && (
+            {ps.discount && discountAmount > 0 && (
                 <div style={row}>
-                    <span>DISCOUNT{discountPercent != null ? `(${discountPercent}%)` : ""}</span>
-                    <span>-{fmt(Number(discount))}</span>
+                    <span>{t("printThemes.discount", "DISCOUNT").toUpperCase()}{discountPercent != null ? `(${discountPercent}%)` : ""}</span>
+                    <span>-{fmt(discountAmount)}</span>
+                </div>
+            )}
+
+            {ps.taxDetails && taxAmount > 0 && (
+                <div style={row}>
+                    <span>{t("printThemes.tax", "TAX").toUpperCase()} ({taxPercent}%)</span>
+                    <span>{fmt(taxAmount)}</span>
                 </div>
             )}
 
             {rule("=")}
 
             <div style={{ ...row, fontSize: 15, fontWeight: 800, margin: "2px 0" }}>
-                <span>TOTAL</span>
+                <span>{t("printThemes.total", "TOTAL").toUpperCase()}</span>
                 <span>{fmt(total)}</span>
             </div>
 
             {rule("=")}
 
-            {ps.receivedAmount && <div style={row}><span>RECEIVED</span><span>{fmt(Number(received))}</span></div>}
-            {ps.balanceAmount && <div style={row}><span>BALANCE</span><span>{fmt(balance)}</span></div>}
+            {ps.receivedAmount && documentTitle !== "Estimate" && <div style={row}><span>{t("printThemes.received", "RECEIVED").toUpperCase()}</span><span>{fmt(Number(received))}</span></div>}
+            {ps.balanceAmount && documentTitle !== "Estimate" && <div style={row}><span>{t("printThemes.balance", "BALANCE").toUpperCase()}</span><span>{fmt(balance)}</span></div>}
             {ps.previousBalance && documentTitle !== "Estimate" && (
-            <div style={row}><span>PREV. BALANCE</span><span>{fmt(prevBalance)}</span></div>
-          )}
-            {ps.currentBalanceOfParty && <div style={{ ...row, fontWeight: 700 }}><span>CURR. BALANCE</span><span>{fmt(currentBalance)}</span></div>}
+                <div style={row}><span>{t("printThemes.prevBalance", "PREV. BALANCE").toUpperCase()}</span><span>{fmt(prevBalance)}</span></div>
+            )}
+            {ps.currentBalanceOfParty && documentTitle !== "Estimate" && <div style={{ ...row, fontWeight: 700 }}><span>{t("printThemes.currBalance", "CURR. BALANCE").toUpperCase()}</span><span>{fmt(currentBalance)}</span></div>}
             {ps.paymentMode && paymentMode && (
-                <div style={row}><span>PAY. MODE</span><span>{paymentMode}</span></div>
+                <div style={row}><span>{t("printThemes.payMode", "PAY. MODE").toUpperCase()}</span><span>{paymentMode}</span></div>
             )}
 
             {youSaved > 0 && ps.youSaved && (
                 <>
                     {rule("-")}
-                    <div style={row}><span>YOU SAVED</span><span>{fmt(youSaved)}</span></div>
+                    <div style={row}><span>{t("printThemes.youSaved", "YOU SAVED").toUpperCase()}</span><span>{fmt(youSaved)}</span></div>
                 </>
             )}
 
@@ -214,7 +227,7 @@ export function ThermalSaleInvoiceImpact({
                 <>
                     {rule("-")}
                     <div style={{ textAlign: "center", marginTop: 4 }}>
-                        <div style={{ fontSize: 11, fontWeight: 700 }}>Terms &amp; Conditions</div>
+                        <div style={{ fontSize: 11, fontWeight: 700 }}>{t("printThemes.termsAndConditions", "Terms & Conditions")}</div>
                         <div style={{ fontSize: 10, marginTop: 2, whiteSpace: "pre-wrap" }}>
                             {businessProfile?.terms_conditions}
                         </div>
@@ -229,7 +242,7 @@ export function ThermalSaleInvoiceImpact({
 
 function useCompanyInfo() {
     const [info, setInfo] = useState({
-        business_name: userProfile.businessName,
+        business_name: userProfile.businessName || "Laimsoft",
         phone: userProfile.phone,
         logo_url: userProfile.logo as string | undefined,
         address: (userProfile as any).address as string | undefined,
@@ -243,8 +256,8 @@ function useCompanyInfo() {
             .then((d) => {
                 if (d) {
                     setInfo({
-                        business_name: d.business_name || userProfile.businessName,
-                        phone: d.phone || userProfile.phone,
+                        business_name: d.business_name || userProfile.businessName || "Laimsoft",
+                        phone: d.phone || "",
                         logo_url: d.logo_url || d.logo || userProfile.logo,
                         address: d.address || (userProfile as any).address,
                         email: d.email || (userProfile as any).email,
@@ -296,11 +309,12 @@ export function ThermalTheme3Preview() {
                     records={DUMMY_RECORDS}
                     invoiceNo={6}
                     invoiceDate="2026-09-04"
-                    customerName="Zeeshan"
-                    customerPhone="03129955494"
+                    customerName=""
+                    customerPhone=""
                     businessProfile={company}
                     received={0}
                     discount={0}
+                    taxPercent={0}
                     paymentMode="Credit"
                     previousBalance={800}
                 />

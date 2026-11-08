@@ -10,6 +10,8 @@ import { Modals } from "../components/pagescomponents/laimsoftpos/Modals";
 import { ConfirmActionModal } from "@/components/common/ConfirmActionModal";
 import { AddPartyDialog } from "../components/pagescomponents/parties/AddPartyDialog";
 import { useSettings } from "@/hooks/useSettings";
+import { getPrintTotalsSettings } from "@/hooks/usePrintSettings";
+import { useTranslation } from "react-i18next";
 import {
   type SalePrintData,
   useCompanyInfo,
@@ -111,6 +113,10 @@ function createEmptyTab(invoiceNo: string): PosTab {
 }
 
 export function LaimsoftPos({ onClose, initialInvoice }: LaimsoftPosProps) {
+  const { t } = useTranslation();
+  const [currency] = useSettings('settings.businessCurrency', { code: 'PKR', symbol: 'Rs' });
+  const [currencyDisplay] = useSettings<'abbreviation' | 'icon'>('settings.currencyDisplay', 'abbreviation');
+  const currencyStr = currencyDisplay === 'icon' ? currency.symbol : currency.code;
   const [parties, setParties] = useState<PartyOption[]>([]);
   const [items, setItems] = useState<ItemOption[]>([]);
   const [banks, setBanks] = useState<BankOption[]>([]);
@@ -423,7 +429,8 @@ export function LaimsoftPos({ onClose, initialInvoice }: LaimsoftPosProps) {
           document.head.removeChild(styleEl);
         }
         window.removeEventListener("afterprint", cleanup);
-        if (isThermal && window.electronAPI?.cutReceipt) {
+        const printSettings = getPrintTotalsSettings();
+        if (isThermal && printSettings.thermalAutoCut && window.electronAPI?.cutReceipt) {
           window.electronAPI.cutReceipt();
         }
         setDirectPrintSale(null);
@@ -1566,12 +1573,12 @@ export function LaimsoftPos({ onClose, initialInvoice }: LaimsoftPosProps) {
 
   const columns = [
     { key: "no", label: "#", width: "w-12" },
-    { key: "code", label: "ITEM CODE", width: "w-[120px]" },
-    { key: "name", label: "ITEM NAME", width: "flex-1" },
-    { key: "qty", label: "QTY", width: "w-[80px]" },
-    { key: "unit", label: "UNIT", width: "w-[80px]" },
-    { key: "price", label: "PRICE/UNIT", width: "w-[120px]" },
-    { key: "total", label: "TOTAL(Rs)", width: "w-[120px]" },
+    { key: "code", label: t("pos.itemCode", "ITEM CODE"), width: "w-[120px]" },
+    { key: "name", label: t("pos.itemName", "ITEM NAME"), width: "flex-1" },
+    { key: "qty", label: t("pos.qty", "QTY"), width: "w-[80px]" },
+    { key: "unit", label: t("pos.unit", "UNIT"), width: "w-[80px]" },
+    { key: "price", label: t("pos.priceUnit", "PRICE/UNIT"), width: "w-[120px]" },
+    { key: "total", label: `${t("pos.total", "TOTAL")}(${currencyStr})`, width: "w-[120px]" },
   ];
 
   return (
@@ -1662,7 +1669,7 @@ export function LaimsoftPos({ onClose, initialInvoice }: LaimsoftPosProps) {
         onConfirm={() => setAlertState({ isOpen: false, title: "", message: "" })}
         title={alertState.title}
         message={alertState.message}
-        confirmText="OK"
+        confirmText={t("common.ok", "OK")}
         hideCancel={true}
       />
 
@@ -1670,10 +1677,10 @@ export function LaimsoftPos({ onClose, initialInvoice }: LaimsoftPosProps) {
         isOpen={confirmCloseState.isOpen}
         onClose={() => setConfirmCloseState({ isOpen: false, type: 'tab' })}
         onConfirm={confirmCloseAction}
-        title="Unsaved Changes"
-        message="You have unsaved changes. Are you sure you want to discard them and close?"
-        confirmText="Discard & Close"
-        cancelText="Cancel"
+        title={t("common.discardChangesTitle")}
+        message={t("common.discardChangesMsg")}
+        confirmText={t("common.discard")}
+        cancelText={t("common.cancel")}
       />
 
       <Modals

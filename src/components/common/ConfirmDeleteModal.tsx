@@ -1,4 +1,5 @@
 import { AlertTriangle, X } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 interface ConfirmDeleteModalProps {
   isOpen: boolean;
@@ -18,9 +19,13 @@ export function ConfirmDeleteModal({
   title,
   message,
   isDeleting = false,
-  confirmText = "Delete",
-  confirmLoadingText = "Deleting...",
+  confirmText,
+  confirmLoadingText,
 }: ConfirmDeleteModalProps) {
+  const { t } = useTranslation();
+  const effectiveConfirmText = confirmText ?? t("common.delete");
+  const effectiveLoadingText = confirmLoadingText ?? t("parties.deleting");
+
   if (!isOpen) return null;
 
   return (
@@ -53,7 +58,7 @@ export function ConfirmDeleteModal({
             disabled={isDeleting}
             className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-200 transition-colors disabled:opacity-50"
           >
-            Cancel
+            {t("common.cancel")}
           </button>
           <button
             type="button"
@@ -62,7 +67,7 @@ export function ConfirmDeleteModal({
             className="px-4 py-2 text-sm font-medium text-white bg-red-600 border border-transparent rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors disabled:opacity-50 flex items-center gap-2"
           >
             {isDeleting && <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />}
-            {isDeleting ? confirmLoadingText : confirmText}
+            {isDeleting ? effectiveLoadingText : effectiveConfirmText}
           </button>
         </div>
       </div>

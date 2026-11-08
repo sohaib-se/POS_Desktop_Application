@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { Plus, ArrowLeft } from "lucide-react";
 
 interface PartiesHeaderProps {
@@ -8,6 +9,8 @@ interface PartiesHeaderProps {
 }
 
 export function PartiesHeader({ isLoading, onAddParty, isReportView, onBack }: PartiesHeaderProps) {
+  const { t } = useTranslation();
+
   return (
     <div className="p-4 bg-white rounded-none flex items-center justify-between shrink-0 w-full">
       <div className="flex items-center gap-2">
@@ -16,7 +19,7 @@ export function PartiesHeader({ isLoading, onAddParty, isReportView, onBack }: P
             <ArrowLeft className="w-5 h-5" />
           </button>
         )}
-        <h2 className="text-xl font-bold text-gray-900">{isReportView ? 'All Parties' : 'Parties'}</h2>
+        <h2 className="text-xl font-bold text-gray-900">{isReportView ? t('parties.allParties') : t('parties.title')}</h2>
       </div>
       <div className="flex items-center gap-3">
         {!isReportView && (
@@ -26,7 +29,7 @@ export function PartiesHeader({ isLoading, onAddParty, isReportView, onBack }: P
             className="bg-[#E53935] hover:bg-red-600 text-white px-4 py-2 rounded-full text-sm font-medium flex items-center gap-1.5 disabled:opacity-50"
           >
             <Plus className="w-4 h-4" />
-            Add Party
+            {t("parties.addParty")}
           </button>
         )}
       </div>

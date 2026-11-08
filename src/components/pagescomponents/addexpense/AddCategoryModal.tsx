@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import type { ExpenseCategory } from "@/types";
 import { toast } from "@/components/ui/Toast";
 
@@ -8,13 +9,14 @@ interface AddCategoryModalProps {
 }
 
 export function AddCategoryModal({ onClose, onSuccess }: AddCategoryModalProps) {
+  const { t } = useTranslation();
   const [newCategoryName, setNewCategoryName] = useState("");
   const [focusedField, setFocusedField] = useState<"name" | null>("name");
 
   const handleSave = async () => {
     const normalizedName = newCategoryName.trim();
     if (!normalizedName) {
-      toast.error("Category name is required");
+      toast.error(t("parties.nameRequired", "Name is required"));
       return;
     }
     try {
@@ -39,7 +41,7 @@ export function AddCategoryModal({ onClose, onSuccess }: AddCategoryModalProps) 
       <div style={{ position: "absolute", inset: 0 }} onClick={onClose}></div>
       <div style={{ position: "relative", zIndex: 10, background: "#fff", borderRadius: 8, padding: 24, width: "100%", maxWidth: 400, boxShadow: "0 20px 25px -5px rgba(0,0,0,0.1)" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", margin: "0 0 20px 0" }}>
-          <h2 style={{ fontSize: 18, fontWeight: 600, color: "#1f2937", margin: 0 }}>Add Expense Category</h2>
+          <h2 style={{ fontSize: 18, fontWeight: 600, color: "#1f2937", margin: 0 }}>{t("expenses.addCategory")}</h2>
           <button
             onClick={onClose}
             style={{ background: "none", border: "none", cursor: "pointer", color: "#9ca3af", padding: 0 }}
@@ -53,7 +55,7 @@ export function AddCategoryModal({ onClose, onSuccess }: AddCategoryModalProps) 
         <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
           <div style={{ position: "relative" }}>
             <label style={{ position: "absolute", top: -8, left: 10, background: "#fff", padding: "0 4px", color: focusedField === "name" ? "#007bff" : "#9ca3af", fontSize: 12, transition: "color 0.2s" }}>
-              Expense Category
+              {t("expenses.category")}
             </label>
             <input
               autoFocus
@@ -66,20 +68,18 @@ export function AddCategoryModal({ onClose, onSuccess }: AddCategoryModalProps) 
             />
           </div>
 
-
-
           <div style={{ display: "flex", justifyContent: "flex-end", gap: 12, marginTop: 4 }}>
             <button
               onClick={onClose}
               style={{ padding: "8px 24px", border: "1px solid #d1d5db", borderRadius: 4, background: "#fff", color: "#007bff", fontWeight: 500, cursor: "pointer" }}
             >
-              Cancel
+              {t("common.cancel")}
             </button>
             <button
               onClick={handleSave}
               style={{ padding: "8px 32px", border: "none", borderRadius: 4, background: "#007bff", color: "#fff", fontWeight: 500, cursor: "pointer" }}
             >
-              Save
+              {t("common.save")}
             </button>
           </div>
         </div>
@@ -87,3 +87,4 @@ export function AddCategoryModal({ onClose, onSuccess }: AddCategoryModalProps) 
     </div>
   );
 }
+

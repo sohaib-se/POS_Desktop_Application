@@ -1,4 +1,5 @@
 import { useState, useMemo, useRef, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import type { PurchaseTab, PartyOption } from "./types";
 import { Plus, ArrowUpRight, ArrowDownRight, ChevronDown } from "lucide-react";
 
@@ -21,6 +22,7 @@ export function CustomerSearchAndInvoice({
   setShowAddParty,
   updateTab,
 }: CustomerSearchAndInvoiceProps) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -80,7 +82,7 @@ export function CustomerSearchAndInvoice({
         <div style={{ display: "flex", gap: 12 }}>
           <div style={{ position: "relative", width: 280 }} ref={dropdownRef}>
             <label style={{ position: "absolute", top: -8, left: 12, background: "#fff", padding: "0 4px", fontSize: 12, color: "#3b82f6", fontWeight: 500, zIndex: 1 }}>
-              Party <span style={{ color: "#ef4444" }}>*</span>
+              {t("parties.party")} <span style={{ color: "#ef4444" }}>*</span>
             </label>
             <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
               <input
@@ -89,7 +91,7 @@ export function CustomerSearchAndInvoice({
                 onChange={(e) => { setSearch(e.target.value); setOpen(true); }}
                 onFocus={() => { setSearch(selectedParty ? selectedParty.name : ""); }}
                 onClick={() => { setOpen(true); setSearch(selectedParty ? selectedParty.name : ""); }}
-                placeholder="Search by Name/Phone"
+                placeholder={t("parties.searchByNamePhone")}
                 style={{ border: "1.5px solid #3b82f6", borderRadius: 4, padding: "8px 30px 8px 12px", width: "100%", height: 38, fontSize: 13, color: "#1f2937", outline: "none" }}
               />
               <ChevronDown size={16} color="#1f2937" style={{ position: "absolute", right: 10, pointerEvents: "none" }} />
@@ -110,9 +112,9 @@ export function CustomerSearchAndInvoice({
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 18, height: 18, borderRadius: "50%", border: "1.5px solid #3b82f6" }}>
                       <Plus size={12} strokeWidth={3} />
                     </div>
-                    Add Party
+                    {t("parties.addParty")}
                   </div>
-                  <span style={{ fontSize: 12, color: "#9ca3af" }}>Party Balance</span>
+                  <span style={{ fontSize: 12, color: "#9ca3af" }}>{t("parties.partyBalance")}</span>
                 </div>
                 {/* Party list */}
                 <div style={{ maxHeight: 300, overflowY: "auto" }}>
@@ -155,7 +157,7 @@ export function CustomerSearchAndInvoice({
         {/* Right: Invoice details */}
         <div style={{ fontSize: 13, textAlign: "right", flexShrink: 0 }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 12, marginBottom: 8 }}>
-            <span style={{ color: "#6b7280" }}>Bill Number</span>
+            <span style={{ color: "#6b7280" }}>{t("purchases.billNumber")}</span>
             <input
               type="text"
               value={displayedInvoiceNo}
@@ -164,7 +166,7 @@ export function CustomerSearchAndInvoice({
             />
           </div>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 12 }}>
-            <span style={{ color: "#6b7280" }}>Bill Date</span>
+            <span style={{ color: "#6b7280" }}>{t("purchases.billDate")}</span>
             <input
               type="date"
               value={dateInputValue}

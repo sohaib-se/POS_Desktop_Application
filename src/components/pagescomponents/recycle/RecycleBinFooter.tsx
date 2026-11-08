@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { ConfirmActionModal } from "@/components/common/ConfirmActionModal";
 import type { RecycleBinItem } from "@/pages/recyclebin";
@@ -10,6 +11,7 @@ interface RecycleBinFooterProps {
 }
 
 export function RecycleBinFooter({ items, selectedIds, onActionComplete }: RecycleBinFooterProps) {
+  const { t } = useTranslation();
   const [isRestoring, setIsRestoring] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -108,7 +110,7 @@ export function RecycleBinFooter({ items, selectedIds, onActionComplete }: Recyc
           disabled={!hasSelection || isRestoring || isDeleting}
           onClick={handleDeletePermanently}
         >
-          {isDeleting ? 'Deleting...' : 'Delete Permanently'}
+          {isDeleting ? t("parties.deleting") : t("utilities.deletePermanently")}
         </Button>
         <Button 
           className={`font-medium px-10 text-white ${
@@ -119,7 +121,7 @@ export function RecycleBinFooter({ items, selectedIds, onActionComplete }: Recyc
           disabled={!hasSelection || isRestoring || isDeleting}
           onClick={handleRestore}
         >
-          {isRestoring ? 'Restoring...' : 'Restore'}
+          {isRestoring ? t("utilities.restoring") : t("utilities.restoreBtn")}
         </Button>
       </div>
 
@@ -129,7 +131,7 @@ export function RecycleBinFooter({ items, selectedIds, onActionComplete }: Recyc
         onConfirm={() => setWarningModal((prev) => ({ ...prev, isOpen: false }))}
         title={warningModal.title}
         message={warningModal.message}
-        confirmText="OK"
+        confirmText={t("common.ok", "OK")}
         hideCancel={true}
       />
     </>

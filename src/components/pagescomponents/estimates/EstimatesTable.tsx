@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type RefObject, type Dispatch, type SetStateAction } from "react";
+import { useTranslation } from "react-i18next";
 import { useSettings } from "@/hooks/useSettings";
 import { Search, MoreVertical } from "lucide-react";
 import type { EstimateRecord } from "./types";
@@ -26,12 +27,13 @@ export function EstimatesTable({
   setOpenRowMenuId,
   setOpenRowMenuPosition,
 }: EstimatesTableProps) {
+  const { t } = useTranslation();
   const [currency] = useSettings('settings.businessCurrency', { code: 'PKR', symbol: 'Rs' });
   const [currencyDisplay] = useSettings<'abbreviation' | 'icon'>('settings.currencyDisplay', 'abbreviation');
   const currencyStr = currencyDisplay === 'icon' ? currency.symbol : currency.code;
 
   const searchContainerRef = useRef<HTMLDivElement>(null);
-  const placeholders = ["Party Name", "Invoice No.", "Date", "Amount"];
+  const placeholders = [t("parties.partyName"), t("sales.invoiceNo"), t("common.date"), t("common.amount")];
   const [placeholderIndex, setPlaceholderIndex] = useState(0);
 
   useEffect(() => {
@@ -65,7 +67,7 @@ export function EstimatesTable({
     >
       <div className="flex items-center justify-between px-6 pt-4 pb-2 border-b border-gray-200">
         <h3 className="text-base font-bold text-[#222B45] tracking-wide">
-          TRANSACTIONS
+          {t("parties.transactions")}
         </h3>
         <div className="flex gap-2 items-center h-10" ref={searchContainerRef}>
           <div 
@@ -97,7 +99,7 @@ export function EstimatesTable({
               />
               {!searchQuery && (
                 <div className="absolute left-0 pointer-events-none flex items-center h-full w-full overflow-hidden text-gray-400 text-sm">
-                  <span className="whitespace-pre">Search </span>
+                  <span className="whitespace-pre">{t("common.search")} </span>
                   <div className="relative h-full flex-1 overflow-hidden">
                     {placeholders.map((ph, idx) => (
                       <span
@@ -122,25 +124,25 @@ export function EstimatesTable({
           <thead className="bg-gray-50 sticky top-0 z-10">
             <tr>
               <th className="w-[12%] px-4 py-3 text-left font-medium text-gray-600">
-                Date
+                {t("common.date")}
               </th>
               <th className="w-[12%] px-4 py-3 text-left font-medium text-gray-600">
-                Reference no
+                {t("estimates.referenceNo")}
               </th>
               <th className="w-[26%] px-4 py-3 text-left font-medium text-gray-600">
-                Party Name
+                {t("parties.partyName")}
               </th>
               <th className="w-[14%] px-4 py-3 text-right font-medium text-gray-600">
-                Amount
+                {t("common.amount")}
               </th>
               <th className="w-[14%] px-4 py-3 text-right font-medium text-gray-600">
-                Balance
+                {t("common.balance")}
               </th>
               <th className="w-[14%] px-4 py-3 text-left font-medium text-gray-600">
-                Status
+                {t("common.status")}
               </th>
               <th className="w-[8%] px-4 py-3 text-center font-medium text-gray-600">
-                Actions
+                {t("common.actions")}
               </th>
             </tr>
           </thead>
@@ -150,7 +152,7 @@ export function EstimatesTable({
                 <td colSpan={7} className="px-4 py-20 text-center">
                   <div className="flex flex-col items-center justify-center space-y-3 text-gray-400">
                     <svg className="w-16 h-16 text-gray-300" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m3.75 9v6m3-3H9m1.5-12H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" /></svg>
-                    <p className="text-gray-500 text-sm font-medium">No estimate records found</p>
+                    <p className="text-gray-500 text-sm font-medium">{t("estimates.noRecords")}</p>
                   </div>
                 </td>
               </tr>
@@ -171,10 +173,10 @@ export function EstimatesTable({
                   </td>
                   <td className="px-4 py-3">
                     {estimate.status === "Open" ? (
-                      <span className="text-orange-500">{estimate.status}</span>
+                      <span className="text-orange-500">{t("estimates.open")}</span>
                     ) : estimate.status === "Converted" ? (
                       <span className="text-blue-600">
-                        {estimate.convertedSaleNo ? `Sale Invoice no. ${estimate.convertedSaleNo}` : "Converted"}
+                        {estimate.convertedSaleNo ? `${t("sales.invoiceNo")} ${estimate.convertedSaleNo}` : t("estimates.converted")}
                       </span>
                     ) : (
                       <span className="text-gray-500">{estimate.status}</span>

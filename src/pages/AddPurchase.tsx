@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import type { PurchaseBillEditData } from "@/types";
 import { PurchaseTabBar } from "@/components/pagescomponents/addpurchase/PurchaseTabBar";
 import { PurchaseTopBar } from "@/components/pagescomponents/addpurchase/PurchaseTopBar";
@@ -42,7 +43,7 @@ function createDefaultTab(id: number): PurchaseTab {
     ],
     discountPercent: "",
     discountRs: "",
-    tax: "NONE",
+    tax: "",
     roundOff: true,
     description: "",
     showDescriptionInput: false,
@@ -61,11 +62,12 @@ function createEmptyRow(): PurchaseRow {
 }
 
 function parseTaxRate(tax: string) {
-  if (tax === "NONE") {
+  if (!tax || tax === "NONE") {
     return 0;
   }
 
-  return parseFloat(tax.replace(/[^0-9.]/g, "")) / 100;
+  const parsed = parseFloat(tax.replace(/[^0-9.]/g, ""));
+  return isNaN(parsed) ? 0 : parsed / 100;
 }
 
 function parseLineItems(lineItemsJson?: string | null) {
@@ -125,6 +127,7 @@ function formatDateForDisplay(date: Date) {
 
 
 export function AddPurchase({ onSave, onClose, initialInvoice }: AddPurchaseProps) {
+  const { t } = useTranslation();
   const [tabs, setTabs] = useState<PurchaseTab[]>([createDefaultTab(1)]);
   const [activeTabId, setActiveTabId] = useState(1);
   const [isOpenAnimated, setIsOpenAnimated] = useState(false);
@@ -270,7 +273,7 @@ export function AddPurchase({ onSave, onClose, initialInvoice }: AddPurchaseProp
           : [createEmptyRow(), createEmptyRow()],
         discountPercent: String(initialInvoice.discountPercent ?? ""),
         discountRs: String(initialInvoice.discountAmount ?? ""),
-        tax: initialInvoice.taxLabel ?? "NONE",
+        tax: initialInvoice.taxLabel ? (initialInvoice.taxLabel === "NONE" ? "" : initialInvoice.taxLabel.replace(/[^0-9.]/g, "")) : "",
         roundOff: Boolean(initialInvoice.roundOff),
         description: initialInvoice.description ?? "",
         showDescriptionInput: Boolean(initialInvoice.description),
@@ -610,7 +613,7 @@ export function AddPurchase({ onSave, onClose, initialInvoice }: AddPurchaseProp
           subtotal,
           discountPercent: Number(activeTab.discountPercent || 0),
           discountAmount: discountAmountValue,
-          taxLabel: activeTab.tax,
+          taxLabel: activeTab.tax && Number(activeTab.tax) > 0 ? (activeTab.tax.includes("%") ? activeTab.tax : `${activeTab.tax}%`) : "NONE",
           taxRate: taxRateValue,
           taxAmount: taxAmountValue,
           roundOff: activeTab.roundOff,
@@ -994,10 +997,10 @@ export function AddPurchase({ onSave, onClose, initialInvoice }: AddPurchaseProp
 
       <ConfirmDialog
         open={showDiscardDialog}
-        title="Discard Changes?"
-        message="You have unsaved changes. Are you sure you want to discard them? All unsaved changes will be lost."
-        confirmLabel="Discard"
-        cancelLabel="Cancel"
+        title={t("common.discardChangesTitle")}
+        message={t("common.discardChangesMsg")}
+        confirmLabel={t("common.discard")}
+        cancelLabel={t("common.cancel")}
         confirmColor="#e53935"
         icon="warning"
         onConfirm={() => { setShowDiscardDialog(false); if (onClose) onClose(); }}
@@ -1006,10 +1009,10 @@ export function AddPurchase({ onSave, onClose, initialInvoice }: AddPurchaseProp
 
       <ConfirmDialog
         open={tabClosePendingId !== null}
-        title="Discard Changes?"
-        message="This tab has unsaved changes. Are you sure you want to close it?"
-        confirmLabel="Discard"
-        cancelLabel="Cancel"
+        title={t("common.discardChangesTitle")}
+        message={t("common.discardTabMsg")}
+        confirmLabel={t("common.discard")}
+        cancelLabel={t("common.cancel")}
         confirmColor="#e53935"
         icon="warning"
         onConfirm={() => { const id = tabClosePendingId!; setTabClosePendingId(null); doCloseTab(id); }}
@@ -1018,10 +1021,10 @@ export function AddPurchase({ onSave, onClose, initialInvoice }: AddPurchaseProp
 
       <ConfirmDialog
         open={blockedEditModal}
-        title="Cannot Edit This Purchase Bill"
-        message="Sales have already been made from this purchase bill (the remaining stock and the stock quantity are not equal). You cannot edit this purchase bill."
-        confirmLabel="OK"
-        cancelLabel="Close"
+        title={t("common.cannotEditPurchaseTitle")}
+        message={t("common.cannotEditPurchaseMsg")}
+        confirmLabel={t("common.ok")}
+        cancelLabel={t("common.close")}
         confirmColor="#1976d2"
         icon="warning"
         onConfirm={() => { setBlockedEditModal(false); if (onClose) onClose(); }}

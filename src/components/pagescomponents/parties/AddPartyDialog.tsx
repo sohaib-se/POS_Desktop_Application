@@ -17,6 +17,7 @@ import {
 import type { Party } from "@/types";
 import { useSettings } from "@/hooks/useSettings";
 import { PhoneInput } from "@/components/ui/phone-input";
+import { useTranslation } from "react-i18next";
 
 interface AddPartyDialogProps {
   showAddParty: boolean;
@@ -69,6 +70,7 @@ export function AddPartyDialog({
   setShowCreditLimitError,
   creditLimitErrorMessage,
 }: AddPartyDialogProps) {
+  const { t } = useTranslation();
   const [isShippingAddressEnabled] = useSettings('settings.isShippingAddressEnabled', true);
 
   return (
@@ -86,14 +88,14 @@ export function AddPartyDialog({
       >
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader className="flex items-center justify-between">
-            <DialogTitle>{partyBeingEdited ? "Edit Party" : "Add Party"}</DialogTitle>
+            <DialogTitle>{partyBeingEdited ? t("parties.editParty") : t("parties.addParty")}</DialogTitle>
           </DialogHeader>
 
           {/* Top Fields */}
           <div className="grid grid-cols-2 gap-4 mb-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Party Name *
+                {t("parties.partyNameRequired")}
               </label>
               <input
                 type="text"
@@ -102,19 +104,19 @@ export function AddPartyDialog({
                   setPartyForm({ ...partyForm, name: e.target.value })
                 }
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#E53935]"
-                placeholder="Party Name *"
+                placeholder={t("parties.partyNameRequired")}
               />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Phone Number
+                {t("parties.phone")}
               </label>
               <PhoneInput
                 value={partyForm.phoneNumber}
                 onChange={(val) =>
                   setPartyForm({ ...partyForm, phoneNumber: val })
                 }
-                placeholder="Phone Number"
+                placeholder={t("parties.phone")}
               />
             </div>
           </div>
@@ -129,7 +131,7 @@ export function AddPartyDialog({
                   : "border-transparent text-gray-500 hover:text-gray-700"
               }`}
             >
-              Address
+              {t("parties.address")}
             </button>
             <button
               onClick={() => setActiveTab("credit")}
@@ -139,7 +141,7 @@ export function AddPartyDialog({
                   : "border-transparent text-gray-500 hover:text-gray-700"
               }`}
             >
-              Credit & Balance
+              {t("parties.creditAndBalance")}
             </button>
           </div>
 
@@ -148,7 +150,7 @@ export function AddPartyDialog({
             <div className="space-y-4 mb-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Email ID
+                  {t("parties.emailId")}
                 </label>
                 <input
                   type="email"
@@ -157,12 +159,12 @@ export function AddPartyDialog({
                     setPartyForm({ ...partyForm, email: e.target.value })
                   }
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#E53935]"
-                  placeholder="Email ID"
+                  placeholder={t("parties.emailId")}
                 />
               </div>
               <div>
                 <h3 className="text-sm font-medium text-gray-900 mb-3">
-                  Billing Address
+                  {t("parties.billingAddress")}
                 </h3>
                 <textarea
                   value={partyForm.billingAddress}
@@ -172,7 +174,7 @@ export function AddPartyDialog({
                       billingAddress: e.target.value,
                     })
                   }
-                  placeholder="Billing Address"
+                  placeholder={t("parties.billingAddress")}
                   rows={4}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#E53935]"
                 />
@@ -184,12 +186,12 @@ export function AddPartyDialog({
                       onClick={() => setShowShippingAddress(true)}
                       className="text-blue-500 text-sm font-medium hover:text-blue-600"
                     >
-                      + Enable Shipping Address
+                      {t("parties.enableShippingAddress")}
                     </button>
                   ) : (
                     <>
                       <h3 className="text-sm font-medium text-gray-900 mb-3">
-                        Shipping Address
+                        {t("parties.shippingAddress")}
                       </h3>
                       <textarea
                         value={partyForm.shippingAddress}
@@ -199,7 +201,7 @@ export function AddPartyDialog({
                             shippingAddress: e.target.value,
                           })
                         }
-                        placeholder="Shipping Address"
+                        placeholder={t("parties.shippingAddress")}
                         rows={4}
                         className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#E53935]"
                       />
@@ -215,7 +217,7 @@ export function AddPartyDialog({
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs text-gray-500 mb-1">
-                    Opening Balance
+                    {t("parties.openingBalance")}
                   </label>
                   <input
                     type="text"
@@ -242,7 +244,7 @@ export function AddPartyDialog({
                 </div>
                 <div>
                   <label className="block text-xs text-gray-500 mb-1">
-                    As Of Date
+                    {t("parties.asOfDate")}
                   </label>
                   <input
                     type="text"
@@ -268,7 +270,7 @@ export function AddPartyDialog({
                     disabled={!!partyBeingEdited}
                     className="w-4 h-4"
                   />
-                  <span className="text-sm text-gray-700">To Pay</span>
+                  <span className="text-sm text-gray-700">{t("parties.toPay")}</span>
                 </label>
                 <label className={`flex items-center gap-2 ${partyBeingEdited ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}>
                   <input
@@ -280,13 +282,13 @@ export function AddPartyDialog({
                     disabled={!!partyBeingEdited}
                     className="w-4 h-4"
                   />
-                  <span className="text-sm text-gray-700">To Receive</span>
+                  <span className="text-sm text-gray-700">{t("parties.toReceive")}</span>
                 </label>
               </div>
 
               <div className="border-t pt-4">
                 <h3 className="text-sm font-medium text-gray-900 mb-3">
-                  Credit Limit
+                  {t("parties.creditLimit")}
                 </h3>
                 <div className="flex gap-4">
                   <label className="flex items-center gap-2 cursor-pointer">
@@ -299,7 +301,7 @@ export function AddPartyDialog({
                       className="w-4 h-4"
                     />
                     <span className="text-sm text-blue-500 font-medium">
-                      No Limit
+                      {t("common.noLimit")}
                     </span>
                   </label>
                   <label className="flex items-center gap-2 cursor-pointer">
@@ -311,7 +313,7 @@ export function AddPartyDialog({
                       }
                       className="w-4 h-4"
                     />
-                    <span className="text-sm text-gray-700">Custom Limit</span>
+                    <span className="text-sm text-gray-700">{t("parties.customLimit")}</span>
                   </label>
                 </div>
                 {partyForm.creditLimit === "custom" && (
@@ -334,7 +336,7 @@ export function AddPartyDialog({
                           });
                         }
                       }}
-                      placeholder="Enter amount"
+                      placeholder={t("parties.enterAmount")}
                       className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#E53935]"
                     />
                   </div>
@@ -352,7 +354,7 @@ export function AddPartyDialog({
               }}
               className="px-6 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50"
             >
-              Cancel
+              {t("common.cancel")}
             </button>
             {!partyBeingEdited && (
               <button
@@ -362,7 +364,7 @@ export function AddPartyDialog({
                 disabled={isSavingParty || !partyForm.name.trim()}
                 className="px-6 py-2 border border-blue-500 rounded-lg text-sm font-medium text-blue-500 hover:bg-blue-50"
               >
-                Save & New
+                {t("parties.saveAndNew")}
               </button>
             )}
             <button
@@ -374,11 +376,11 @@ export function AddPartyDialog({
             >
               {isSavingParty
                 ? partyBeingEdited
-                  ? "Updating..."
-                  : "Saving..."
+                  ? t("parties.updating")
+                  : t("common.saving")
                 : partyBeingEdited
-                ? "Update"
-                : "Save"}
+                ? t("common.update")
+                : t("common.save")}
             </button>
           </div>
         </DialogContent>
@@ -395,15 +397,15 @@ export function AddPartyDialog({
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Party</AlertDialogTitle>
+            <AlertDialogTitle>{t("parties.deleteParty")}</AlertDialogTitle>
             <AlertDialogDescription>
               {partyPendingDelete
-                ? `Are you sure you want to delete ${partyPendingDelete.name}? This action cannot be undone.`
-                : "Are you sure you want to delete this party?"}
+                ? t("parties.deletePartyConfirm", { name: partyPendingDelete.name })
+                : t("parties.deletePartyGeneric")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeletingParty}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={isDeletingParty}>{t("common.cancel")}</AlertDialogCancel>
             <AlertDialogAction
               asChild
               className="bg-red-600 hover:bg-red-700 focus-visible:ring-red-500"
@@ -418,7 +420,7 @@ export function AddPartyDialog({
                   void handleDeleteParty(partyPendingDelete);
                 }}
               >
-                {isDeletingParty ? "Deleting..." : "Delete"}
+                {isDeletingParty ? t("parties.deleting") : t("common.delete")}
               </button>
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -429,17 +431,17 @@ export function AddPartyDialog({
       <Dialog open={showCreditLimitError} onOpenChange={setShowCreditLimitError}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle className="text-red-600">Validation Error</DialogTitle>
+            <DialogTitle className="text-red-600">{t("parties.validationError")}</DialogTitle>
           </DialogHeader>
           <div className="py-2 text-sm text-gray-700">
-            {creditLimitErrorMessage || "Credit amount cannot be greater than the credit limit."}
+            {creditLimitErrorMessage || t("parties.creditLimitErrorDefault")}
           </div>
           <div className="flex justify-end pt-4">
             <button
               onClick={() => setShowCreditLimitError(false)}
               className="px-4 py-2 bg-[#E53935] text-white rounded-lg hover:bg-red-700 font-medium text-sm"
             >
-              OK
+              {t("common.ok")}
             </button>
           </div>
         </DialogContent>

@@ -1,4 +1,5 @@
 import type React from "react";
+import { useTranslation } from "react-i18next";
 import type { ExpenseTab } from "./types";
 
 interface ExpenseTabsProps {
@@ -18,6 +19,14 @@ export function ExpenseTabs({
   addTab,
   onClose,
 }: ExpenseTabsProps) {
+  const { t } = useTranslation();
+
+  const getTabLabel = (label: string) => {
+    if (label.startsWith("Expense #")) {
+      return `${t("transactions.types.expense", "Expense")} #${label.replace("Expense #", "")}`;
+    }
+    return label;
+  };
   return (
     <div style={{ background: "#c4d3de", display: "flex", alignItems: "flex-end", padding: "2px 10px 0 10px", gap: 4, flexShrink: 0 }}>
       {tabs.map((tab) => {
@@ -52,7 +61,7 @@ export function ExpenseTabs({
                 <span style={{ position: "absolute", right: -10, bottom: 0, width: 10, height: 10, borderBottomLeftRadius: 10, boxShadow: "-5px 5px 0 5px #fff", pointerEvents: "none" }} />
               </>
             )}
-            <span>{tab.label}</span>
+            <span>{getTabLabel(tab.label)}</span>
             {tabs.length > 1 && (
               <button
                 onClick={(event) => closeTab(tab.id, event)}
@@ -79,7 +88,7 @@ export function ExpenseTabs({
       })}
       <button
         onClick={addTab}
-        title="New Expense"
+        title={t("common.newExpense")}
         style={{
           marginBottom: 0,
           marginLeft: 4,

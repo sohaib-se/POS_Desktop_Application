@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { Dispatch, SetStateAction } from "react";
+import { useTranslation } from "react-i18next";
 import { Upload, Trash2 } from "lucide-react";
 import { ConfirmDeleteModal } from "../../common/ConfirmDeleteModal";
 
@@ -9,6 +10,7 @@ interface LogoSectionProps {
 }
 
 export function LogoSection({ logo, setLogo }: LogoSectionProps) {
+  const { t } = useTranslation();
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -44,7 +46,7 @@ export function LogoSection({ logo, setLogo }: LogoSectionProps) {
             <label
               htmlFor="logo-upload"
               className="cursor-pointer text-white hover:text-blue-300 transition-colors"
-              title="Change logo"
+              title={t("profile.changeLogo")}
             >
               <Upload className="w-6 h-6" />
             </label>
@@ -55,7 +57,7 @@ export function LogoSection({ logo, setLogo }: LogoSectionProps) {
                 e.stopPropagation();
                 setIsConfirmOpen(true);
               }}
-              title="Delete logo"
+              title={t("profile.removeLogo")}
               className="text-white hover:text-red-400 transition-colors"
             >
               <Trash2 className="w-6 h-6" />
@@ -68,8 +70,8 @@ export function LogoSection({ logo, setLogo }: LogoSectionProps) {
           className="block w-full h-full bg-gradient-to-br from-blue-100 to-blue-50 flex flex-col items-center justify-center relative cursor-pointer hover:opacity-90 transition-opacity group/empty"
         >
           <div className="text-center">
-            <p className="text-2xl font-semibold text-blue-300">Add</p>
-            <p className="text-sm text-blue-300">Logo</p>
+            <p className="text-2xl font-semibold text-blue-300">{t("profile.add")}</p>
+            <p className="text-sm text-blue-300">{t("profile.logo")}</p>
           </div>
           <div className="absolute bottom-2 right-2 w-8 h-8 bg-white rounded-lg flex items-center justify-center shadow-sm hover:shadow-md transition-shadow group-hover/empty:scale-110">
             <Upload className="w-4 h-4 text-gray-600" />
@@ -81,8 +83,8 @@ export function LogoSection({ logo, setLogo }: LogoSectionProps) {
         isOpen={isConfirmOpen}
         onClose={() => setIsConfirmOpen(false)}
         onConfirm={handleDelete}
-        title="Remove Logo"
-        message="Are you sure you want to remove the business logo? Remember to save changes."
+        title={t("profile.removeLogo")}
+        message={t("profile.confirmRemoveLogo")}
         isDeleting={false}
       />
     </div>

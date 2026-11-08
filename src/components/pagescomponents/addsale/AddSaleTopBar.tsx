@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import type { SaleTab } from "@/pages/AddSale";
 
 interface AddSaleTopBarProps {
@@ -6,9 +7,11 @@ interface AddSaleTopBarProps {
 }
 
 export function AddSaleTopBar({ activeTab, updateTab }: AddSaleTopBarProps) {
+  const { t } = useTranslation();
+
   return (
     <div style={{ background: "#fff", flexShrink: 0, padding: "8px 20px", display: "flex", alignItems: "center", gap: 20, borderBottom: "1px solid #e5e7eb" }}>
-      <span style={{ fontSize: 15, fontWeight: 600, color: "#1f2937" }}>Sale</span>
+      <span style={{ fontSize: 15, fontWeight: 600, color: "#1f2937" }}>{t("sidebar.sale")}</span>
 
       {/* Credit ← toggle → Cash */}
       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -16,7 +19,7 @@ export function AddSaleTopBar({ activeTab, updateTab }: AddSaleTopBarProps) {
           onClick={() => updateTab({ paymentMode: "credit" })}
           style={{ fontSize: 13, fontWeight: 500, cursor: "pointer", userSelect: "none", color: activeTab.paymentMode === "credit" ? "#2563eb" : "#9ca3af" }}
         >
-          Credit
+          {t("common.credit")}
         </span>
         <button
           onClick={() => updateTab({ paymentMode: activeTab.paymentMode === "credit" ? "cash" : "credit" })}
@@ -36,7 +39,7 @@ export function AddSaleTopBar({ activeTab, updateTab }: AddSaleTopBarProps) {
           onClick={() => updateTab({ paymentMode: "cash" })}
           style={{ fontSize: 13, fontWeight: 500, cursor: "pointer", userSelect: "none", color: activeTab.paymentMode === "cash" ? "#2563eb" : "#9ca3af" }}
         >
-          Cash
+          {t("common.cash")}
         </span>
       </div>
     </div>

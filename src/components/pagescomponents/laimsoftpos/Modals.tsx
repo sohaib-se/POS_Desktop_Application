@@ -1,5 +1,6 @@
 import { X, ChevronDown } from "lucide-react";
 import { useSettings } from "@/hooks/useSettings";
+import { useTranslation } from "react-i18next";
 import type { PosRow } from "./types";
 
 interface ModalsProps {
@@ -47,6 +48,7 @@ export function Modals({
   saveModal,
   items,
 }: ModalsProps) {
+  const { t } = useTranslation();
   const [currency] = useSettings('settings.businessCurrency', { code: 'PKR', symbol: 'Rs' });
   const [currencyDisplay] = useSettings<'abbreviation' | 'icon'>('settings.currencyDisplay', 'abbreviation');
   const currencyStr = currencyDisplay === 'icon' ? currency.symbol : currency.code;
@@ -62,11 +64,11 @@ export function Modals({
         {/* Modal Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
           <h3 className="font-bold text-gray-800">
-            {activeModal === "quantity" && "Change Quantity"}
-            {activeModal === "unit" && "Change Unit"}
-            {activeModal === "discount" && "Bill Discount"}
-            {activeModal === "description" && "Description"}
-            {activeModal === "no_selection" && "No Items Added"}
+            {activeModal === "quantity" && t("pos.modalQuantityTitle", "Change Quantity")}
+            {activeModal === "unit" && t("pos.modalUnitTitle", "Change Unit")}
+            {activeModal === "discount" && t("pos.modalDiscountTitle", "Bill Discount")}
+            {activeModal === "description" && t("pos.modalDescriptionTitle", "Description")}
+            {activeModal === "no_selection" && t("pos.noItemsAdded", "No Items Added")}
           </h3>
           <div className="flex items-center gap-1">
             <button
@@ -84,7 +86,7 @@ export function Modals({
           {(activeModal === "quantity" || activeModal === "unit") &&
             selectedRow && (
               <div className="text-sm">
-                <span className="text-gray-600">Item Name: </span>
+                <span className="text-gray-600">{t("pos.itemName", "Item Name")}: </span>
                 <span className="font-bold text-gray-900">
                   {selectedRow.itemName}
                 </span>
@@ -94,7 +96,7 @@ export function Modals({
           {activeModal === "quantity" && (
             <div className="space-y-1.5">
               <label className="text-xs text-gray-500">
-                Enter New Quantity
+                {t("pos.enterNewQuantity", "Enter New Quantity")}
               </label>
               <input
                 type="text"
@@ -113,7 +115,7 @@ export function Modals({
 
           {activeModal === "unit" && (
             <div className="space-y-1.5">
-              <label className="text-xs text-gray-500">Select Unit</label>
+              <label className="text-xs text-gray-500">{t("pos.selectUnit", "Select Unit")}</label>
               <div className="relative">
                 <select
                   value={modalUnit}
@@ -139,14 +141,14 @@ export function Modals({
           {activeModal === "discount" && (
             <>
               <div className="text-sm">
-                <span className="text-gray-600">Total: </span>
+                <span className="text-gray-600">{t("common.total")}: </span>
                 <span className="font-bold text-gray-900">
                   {currencyStr} {subTotalAmount.toFixed(2)}
                 </span>
               </div>
               <div className="flex items-center gap-2">
                 <div className="flex-1 space-y-1">
-                  <label className="text-xs text-gray-500">Discount in %</label>
+                  <label className="text-xs text-gray-500">{t("pos.discountPercent", "Discount in %")}</label>
                   <div className="flex items-center border border-blue-400 rounded px-2 py-1.5 ring-1 ring-blue-400/20">
                     <span className="text-blue-500 text-xs mr-1">%</span>
                     <input
@@ -161,12 +163,12 @@ export function Modals({
                   </div>
                 </div>
                 <span className="text-xs font-medium text-gray-400 mt-5">
-                  OR
+                  {t("common.or", "OR")}
                 </span>
                 <div className="flex-1 space-y-1">
-                  <label className="text-xs text-gray-500">Discount in Rs</label>
+                  <label className="text-xs text-gray-500">{t("pos.discountIn", "Discount in")} {currencyStr}</label>
                   <div className="flex items-center border border-gray-300 rounded px-2 py-1.5 focus-within:border-blue-400">
-                    <span className="text-gray-500 text-xs mr-1">Rs</span>
+                    <span className="text-gray-500 text-xs mr-1">{currencyStr}</span>
                     <input
                       type="text"
                       value={modalDiscountAmount}
@@ -183,7 +185,7 @@ export function Modals({
 
           {activeModal === "description" && (
             <div className="space-y-1.5">
-              <label className="text-xs text-gray-500">Description</label>
+              <label className="text-xs text-gray-500">{t("common.description")}</label>
               <textarea
                 autoFocus
                 rows={3}
@@ -196,7 +198,7 @@ export function Modals({
 
           {activeModal === "no_selection" && (
             <div className="text-sm text-gray-700 py-2">
-              <p>Please add at-least one item to perform this action.</p>
+              <p>{t("pos.pleaseAddItem", "Please add at least one item to perform this action.")}</p>
             </div>
           )}
 
@@ -207,7 +209,7 @@ export function Modals({
                 onClick={() => setActiveModal(null)}
                 className="w-full bg-[#a7f3d0] hover:bg-[#86efac] text-[#065f46] font-medium py-1.5 rounded text-sm transition-colors border border-[#a7f3d0]"
               >
-                Okay
+                {t("common.close", "Okay")}
               </button>
             </div>
           ) : (
@@ -216,13 +218,13 @@ export function Modals({
                 onClick={saveModal}
                 className="flex-1 bg-[#a7f3d0] hover:bg-[#86efac] text-[#065f46] font-medium py-1.5 rounded text-sm transition-colors"
               >
-                Save
+                {t("common.save", "Save")}
               </button>
               <button
                 onClick={() => setActiveModal(null)}
                 className="flex-1 bg-white hover:bg-gray-50 text-gray-600 font-medium py-1.5 rounded border border-gray-300 text-sm transition-colors"
               >
-                Cancel
+                {t("common.cancel", "Cancel")}
               </button>
             </div>
           )}

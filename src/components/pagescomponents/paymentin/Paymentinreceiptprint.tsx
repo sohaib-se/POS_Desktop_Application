@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { useSettings } from "@/hooks/useSettings";
 
 interface PaymentInReceiptPrintProps {
@@ -62,6 +63,7 @@ function amountInWords(amount: number, currencyName = "Rupees"): string {
 }
 
 export function PaymentInReceiptPrint({ record, businessProfile }: PaymentInReceiptPrintProps) {
+    const { t } = useTranslation();
     const [currency] = useSettings('settings.businessCurrency', { code: 'PKR', symbol: 'Rs', name: 'Rupees' });
     const [currencyDisplay] = useSettings<'abbreviation' | 'icon'>('settings.currencyDisplay', 'abbreviation');
     const currencyStr = currencyDisplay === 'icon' ? currency.symbol : currency.code;
@@ -98,14 +100,14 @@ export function PaymentInReceiptPrint({ record, businessProfile }: PaymentInRece
         <div className="print-area bg-white text-black font-sans w-full max-w-[794px] mx-auto px-8 py-8">
             {/* Title */}
             <div className="text-center mb-4">
-                <h1 className="text-xl font-bold text-gray-800">Payment Receipt</h1>
+                <h1 className="text-xl font-bold text-gray-800">{t("paymentIn.receiptTitle", "Payment Receipt")}</h1>
             </div>
 
             {/* Business Info Box */}
             <div className="border border-gray-400 px-4 py-3">
                 <h2 className="text-lg font-bold text-gray-900">{businessName}</h2>
                 <p className="text-xs text-gray-600">
-                    Phone: <span className="font-semibold text-gray-800">{phoneNumber}</span>
+                    {t("profile.phone", "Phone")}: <span className="font-semibold text-gray-800">{phoneNumber}</span>
                 </p>
             </div>
 
@@ -113,7 +115,7 @@ export function PaymentInReceiptPrint({ record, businessProfile }: PaymentInRece
             <div className="border border-t-0 border-gray-400 grid grid-cols-2">
                 <div className="border-r border-gray-400">
                     <div className="bg-gray-100 border-b border-gray-400 px-3 py-1">
-                        <p className="text-xs font-bold text-gray-800">Received From:</p>
+                        <p className="text-xs font-bold text-gray-800">{t("paymentIn.receivedFrom", "Received From:")}</p>
                     </div>
                     <div className="px-3 py-2">
                         <p className="text-sm font-bold text-gray-900">{partyName}</p>
@@ -121,14 +123,14 @@ export function PaymentInReceiptPrint({ record, businessProfile }: PaymentInRece
                 </div>
                 <div>
                     <div className="bg-gray-100 border-b border-gray-400 px-3 py-1">
-                        <p className="text-xs font-bold text-gray-800">Receipt Details:</p>
+                        <p className="text-xs font-bold text-gray-800">{t("paymentIn.receiptDetails", "Receipt Details:")}</p>
                     </div>
                     <div className="px-3 py-2">
                         <p className="text-xs text-gray-800">
-                            Receipt No.: <span className="font-bold">{receiptNo}</span>
+                            {t("paymentIn.receiptNo", "Receipt No.")}: <span className="font-bold">{receiptNo}</span>
                         </p>
                         <p className="text-xs text-gray-800">
-                            Date: <span className="font-bold">{date}</span>
+                            {t("common.date", "Date")}: <span className="font-bold">{date}</span>
                         </p>
                     </div>
                 </div>
@@ -136,7 +138,7 @@ export function PaymentInReceiptPrint({ record, businessProfile }: PaymentInRece
 
             {/* Received Amount Box */}
             <div className="border border-t-0 border-gray-400 px-3 py-2 flex items-center text-xs text-gray-800">
-                <span className="flex-none">Received</span>
+                <span className="flex-none">{t("paymentIn.received", "Received")}</span>
                 <span className="flex-1 text-center">:</span>
                 <span className="flex-none font-semibold">
                     {currencyStr} {amount.toFixed(2)}
@@ -146,7 +148,7 @@ export function PaymentInReceiptPrint({ record, businessProfile }: PaymentInRece
             {/* Amount in Words Box */}
             <div className="border border-t-0 border-gray-400">
                 <div className="bg-gray-100 border-b border-gray-400 px-3 py-1">
-                    <p className="text-xs font-bold text-gray-800">Amount in Words:</p>
+                    <p className="text-xs font-bold text-gray-800">{t("paymentIn.amountInWords", "Amount in Words:")}</p>
                 </div>
                 <div className="px-3 py-2">
                     <p className="text-xs text-gray-800">
@@ -159,7 +161,7 @@ export function PaymentInReceiptPrint({ record, businessProfile }: PaymentInRece
             <div className="flex justify-end mt-6">
                 <div className="border border-gray-400 w-1/2">
                     <div className="bg-gray-100 border-b border-gray-400 px-3 py-1">
-                        <p className="text-xs font-bold text-gray-800">For {businessName}:</p>
+                        <p className="text-xs font-bold text-gray-800">{t("paymentIn.forBusiness", "For {{businessName}}:", { businessName })}</p>
                     </div>
                     <div className="h-24 flex items-end justify-center pb-2 relative">
                         {signatureSrc && (
@@ -169,7 +171,7 @@ export function PaymentInReceiptPrint({ record, businessProfile }: PaymentInRece
                                 className="absolute inset-0 w-full h-full object-contain p-2"
                             />
                         )}
-                        <p className="text-xs text-gray-800 relative z-10">Authorized Signatory</p>
+                        <p className="text-xs text-gray-800 relative z-10">{t("paymentIn.authorizedSignatory", "Authorized Signatory")}</p>
                     </div>
                 </div>
             </div>

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Plus } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { StatsCards } from "../components/pagescomponents/dashboard/StatsCards";
 import { SalesChart } from "../components/pagescomponents/dashboard/SalesChart";
 import { MostUsedReports } from "../components/pagescomponents/dashboard/MostUsedReports";
@@ -16,6 +17,7 @@ export function Dashboard({
   onViewChange?: (view: ViewType) => void;
   onOpenReport?: (category: string, name: string) => void;
 }) {
+  const { t } = useTranslation();
   const [showTodaySales] = useSettings("show_card_today_sales", true);
   const [showTodayProfit] = useSettings("show_card_today_profit", true);
   const [showReceivable] = useSettings("show_card_total_receivable", true);
@@ -52,7 +54,7 @@ export function Dashboard({
     <div className="p-6 space-y-6 overflow-y-auto h-full">
       <div className="flex items-center justify-between pb-1">
         <div>
-          <h1 className="text-xl font-bold text-gray-800">Dashboard</h1>
+          <h1 className="text-xl font-bold text-gray-800">{t("dashboard.title", "Dashboard")}</h1>
         </div>
         <button
           type="button"
@@ -60,7 +62,7 @@ export function Dashboard({
           className="bg-[#1976D2] hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 shadow-sm hover:shadow transition-colors"
         >
           <Plus className="w-4 h-4" />
-          <span>Customize Cards</span>
+          <span>{t("dashboard.customizeCards", "Customize Cards")}</span>
         </button>
       </div>
 

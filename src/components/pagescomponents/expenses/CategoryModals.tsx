@@ -1,4 +1,5 @@
 import { X, AlertTriangle } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import type { ExpenseCategory } from "@/types";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./Dialog";
 import type { ExpenseRecord } from "./types";
@@ -33,6 +34,7 @@ export function CategoryModals({
   handleDeleteCategory,
   expenseRecordList,
 }: CategoryModalsProps) {
+  const { t } = useTranslation();
   const linkedTransactionCount = categoryPendingDelete
     ? expenseRecordList.filter(
         (r) => r.category_id === categoryPendingDelete.id && Number(r.amount) > 0
@@ -55,7 +57,7 @@ export function CategoryModals({
           <DialogHeader>
             <DialogTitle className="flex items-center justify-between">
               <span>
-                {categoryBeingEdited ? "Edit Category" : "Add Category"}
+                {categoryBeingEdited ? t("items.editCategory", "Edit Category") : t("expenses.addCategory", "Add Category")}
               </span>
               <button
                 type="button"
@@ -74,14 +76,14 @@ export function CategoryModals({
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Category Name
+                {t("items.categoryName")}
               </label>
               <input
                 type="text"
                 value={newCategoryName}
                 onChange={(event) => setNewCategoryName(event.target.value)}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
-                placeholder="e.g. Grocery"
+                placeholder={t("expenses.egGrocery")}
               />
             </div>
             <button
@@ -89,7 +91,7 @@ export function CategoryModals({
               disabled={!newCategoryName.trim()}
               className="w-full bg-[#E53935] text-white py-2 rounded-lg text-sm font-medium"
             >
-              {categoryBeingEdited ? "Update" : "Create"}
+              {categoryBeingEdited ? t("common.update") : t("common.save")}
             </button>
           </div>
         </DialogContent>
@@ -105,7 +107,7 @@ export function CategoryModals({
       >
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle>Delete Category</DialogTitle>
+            <DialogTitle>{t("items.deleteCategory")}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             {hasLinkedTransactions ? (
@@ -131,7 +133,7 @@ export function CategoryModals({
                     onClick={() => setCategoryPendingDelete(null)}
                     className="px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50"
                   >
-                    Close
+                    {t("common.close")}
                   </button>
                 </div>
               </>
@@ -149,7 +151,7 @@ export function CategoryModals({
                     onClick={() => setCategoryPendingDelete(null)}
                     className="px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50"
                   >
-                    Cancel
+                    {t("common.cancel")}
                   </button>
                   <button
                     type="button"
@@ -160,7 +162,7 @@ export function CategoryModals({
                     }}
                     className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 disabled:opacity-60"
                   >
-                    {isDeletingCategory ? "Deleting..." : "Delete"}
+                    {isDeletingCategory ? t("parties.deleting") : t("common.delete")}
                   </button>
                 </div>
               </>

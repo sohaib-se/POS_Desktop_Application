@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import type React from "react";
+import { useTranslation } from "react-i18next";
 import type { ExpenseTab } from "./types";
 import { useSettings } from "@/hooks/useSettings";
 import { Trash2 } from "lucide-react";
@@ -20,6 +21,7 @@ export function ExpenseSummary({
   totalAmount,
   handleAttachmentSelection,
 }: ExpenseSummaryProps) {
+  const { t } = useTranslation();
   const [paymentOptions, setPaymentOptions] = useState<string[]>(["Cash"]);
   const [isRoundOffTotalEnabled] = useSettings('settings.isRoundOffTotalEnabled', true);
 
@@ -61,7 +63,7 @@ export function ExpenseSummary({
             <textarea
               autoFocus
               rows={3}
-              placeholder="Add description..."
+              placeholder={t("common.addDescriptionEllipsis")}
               style={{ border: "1px solid #d1d5db", borderRadius: 4, fontSize: 13, padding: "8px 10px", resize: "none", width: "100%", outline: "none" }}
               value={activeTab.description}
               onChange={(event) => updateTab({ description: event.target.value })}
@@ -82,7 +84,7 @@ export function ExpenseSummary({
                 <line x1="16" y1="13" x2="8" y2="13" />
                 <line x1="16" y1="17" x2="8" y2="17" />
               </svg>
-              ADD DESCRIPTION
+              {t("common.addDescription")}
             </button>
           )}
 
@@ -100,8 +102,8 @@ export function ExpenseSummary({
                   opacity: 0, transition: "opacity 0.2s ease-in-out", color: "#fff", fontSize: 12, fontWeight: 600, letterSpacing: "0.02em"
                 }}
               >
-                <div style={{ cursor: "pointer" }} onClick={() => imageRef.current?.click()}>CHANGE</div>
-                <div style={{ cursor: "pointer" }} onClick={() => updateTab({ imageDataUrl: "", imageFileName: "" })}>DELETE</div>
+                <div style={{ cursor: "pointer" }} onClick={() => imageRef.current?.click()}>{t("common.change").toUpperCase()}</div>
+                <div style={{ cursor: "pointer" }} onClick={() => updateTab({ imageDataUrl: "", imageFileName: "" })}>{t("common.delete").toUpperCase()}</div>
               </div>
             </div>
           ) : (
@@ -110,7 +112,7 @@ export function ExpenseSummary({
               style={{ background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 8, color: "#9ca3af", fontSize: 12, fontWeight: 600, letterSpacing: "0.05em", padding: 0 }}
             >
               <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" /><circle cx="12" cy="13" r="4" /></svg>
-              ADD IMAGE
+              {t("common.addImage")}
             </button>
           )}
 
@@ -120,7 +122,7 @@ export function ExpenseSummary({
                 <div style={{ background: "#f8fafc", padding: "8px 10px", display: "flex", alignItems: "center", gap: 6, borderRadius: 2, width: "100%", overflow: "hidden" }}>
                   <svg width="14" height="14" fill="none" stroke="#059669" strokeWidth="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /></svg>
                   <span style={{ color: "#059669", fontSize: 11, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                    {activeTab.documentFileName} added successfully
+                    {activeTab.documentFileName}
                   </span>
                 </div>
               </div>
@@ -138,7 +140,7 @@ export function ExpenseSummary({
                   }}
                 >
                   <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></svg>
-                  Download
+                  {t("common.download")}
                 </div>
               </div>
             </div>
@@ -148,7 +150,7 @@ export function ExpenseSummary({
               style={{ background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 8, color: "#9ca3af", fontSize: 12, fontWeight: 600, letterSpacing: "0.05em", padding: 0 }}
             >
               <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /></svg>
-              ADD DOCUMENT
+              {t("common.addDocument")}
             </button>
           )}
 
@@ -173,7 +175,7 @@ export function ExpenseSummary({
           <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 8 }}>
             <div style={{ position: "relative", width: 160 }}>
               <label style={{ position: "absolute", top: -11, left: 10, background: "#fff", padding: "0 4px", color: "#94a3b8", fontSize: 12 }}>
-                Payment Type
+                {t("common.paymentType")}
               </label>
               <select
                 value={activeTab.paymentType}
@@ -182,7 +184,7 @@ export function ExpenseSummary({
               >
                 {paymentOptions.map((option) => (
                   <option key={option} value={option}>
-                    {option}
+                    {option === "Cash" ? t("common.cash") : option}
                   </option>
                 ))}
               </select>
@@ -198,7 +200,7 @@ export function ExpenseSummary({
                   onChange={(event) => updateTab({ roundOff: event.target.checked })}
                   style={{ width: 15, height: 15, accentColor: "#3b82f6", cursor: "pointer" }}
                 />
-                <span style={{ color: "#6b7280" }}>Round Off</span>
+                <span style={{ color: "#6b7280" }}>{t("common.roundOff")}</span>
               </label>
               <input
                 type="text"
@@ -210,7 +212,7 @@ export function ExpenseSummary({
           )}
 
           <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 8 }}>
-            <span style={{ color: "#374151", fontWeight: 600, width: 68, textAlign: "right" }}>Total</span>
+            <span style={{ color: "#374151", fontWeight: 600, width: 68, textAlign: "right" }}>{t("common.total")}</span>
             <input
               type="text"
               readOnly
@@ -219,6 +221,7 @@ export function ExpenseSummary({
             />
           </div>
         </div>
+
       </div>
     </div>
   );

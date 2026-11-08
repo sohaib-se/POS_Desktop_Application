@@ -1,6 +1,7 @@
 import { ChevronDown, FileText, AlertCircle, Plus, ArrowUpRight, ArrowDownRight, ArrowLeft, ArrowRight } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { useSettings } from "@/hooks/useSettings";
+import { useTranslation } from "react-i18next";
 import type { PosTab, PartyOption, BankOption } from "./types";
 
 interface RightPanelProps {
@@ -44,6 +45,7 @@ export function RightPanel({
   nextInvoiceNo,
   isEditing = false,
 }: RightPanelProps) {
+  const { t } = useTranslation();
   const [currency] = useSettings('settings.businessCurrency', { code: 'PKR', symbol: 'Rs' });
   const [currencyDisplay] = useSettings<'abbreviation' | 'icon'>('settings.currencyDisplay', 'abbreviation');
   const [isDisablePrintEnabled] = useSettings('settings.isDisablePrintEnabled', false);
@@ -93,16 +95,16 @@ export function RightPanel({
 
         <div style={{ position: "relative", width: "100%" }} ref={dropdownRef}>
           <label style={{ position: "absolute", top: -8, left: 12, background: "#fff", padding: "0 4px", fontSize: 12, color: "#3b82f6", fontWeight: 500, zIndex: 1 }}>
-            Party <span style={{ color: "#ef4444" }}>*</span>
+            {t("pos.party", "Party")} <span style={{ color: "#ef4444" }}>*</span>
           </label>
           <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
             <input
               type="text"
-              value={dropdownOpen ? searchQuery : (activeTab.customerSelectedId ? (selectedPartyObj ? selectedPartyObj.name : "") : "Cash Sale")}
+              value={dropdownOpen ? searchQuery : (activeTab.customerSelectedId ? (selectedPartyObj ? selectedPartyObj.name : "") : t("pos.cashSale", "Cash Sale"))}
               onChange={(e) => { setSearchQuery(e.target.value); setDropdownOpen(true); }}
               onFocus={() => { setSearchQuery(activeTab.customerSelectedId ? (selectedPartyObj ? selectedPartyObj.name : "") : ""); setDropdownOpen(true); }}
               onClick={() => { setDropdownOpen(true); setSearchQuery(activeTab.customerSelectedId ? (selectedPartyObj ? selectedPartyObj.name : "") : ""); }}
-              placeholder="Search by Name/Phone"
+              placeholder={t("common.search", "Search...")}
               style={{
                 border: "1.5px solid #3b82f6", borderRadius: 4,
                 padding: "8px 30px 8px 12px", width: "100%", height: 38,
@@ -212,10 +214,10 @@ export function RightPanel({
             </div>
             <div>
               <p className="text-base font-bold text-gray-800">
-                Total {currencyStr} {totalAmount.toFixed(2)}
+                {t("pos.total", "Total")} {currencyStr} {totalAmount.toFixed(2)}
               </p>
               <p className="text-xs text-gray-500 mt-0.5">
-                Items: {activeTab.rows.filter((r) => r.itemId).length}, Quantity:{" "}
+                {t("pos.items", "Items")}: {activeTab.rows.filter((r) => r.itemId).length}, {t("pos.quantity", "Quantity")}:{" "}
                 {activeTab.rows.reduce((acc, r) => acc + (Number(r.qty) || 0), 0)}
               </p>
             </div>
@@ -226,7 +228,7 @@ export function RightPanel({
         <div className="px-3 pb-3 grid grid-cols-2 gap-3">
           <div className="space-y-1">
             <label className="text-xs font-medium text-gray-500">
-              Payment Type
+              {t("pos.paymentType", "Payment Type")}
             </label>
             <div className="relative">
               <select
@@ -234,7 +236,7 @@ export function RightPanel({
                 onChange={(e) => updateTab({ paymentMode: e.target.value })}
                 className="w-full appearance-none rounded border border-gray-300 px-3 py-2 text-sm text-gray-800 outline-none focus:ring-1 focus:ring-blue-500 bg-white"
               >
-                <option value="Cash">Cash</option>
+                <option value="Cash">{t("pos.cash", "Cash")}</option>
                 {banks.map((b) => (
                   <option key={b.id} value={b.name}>
                     {b.name}
@@ -246,7 +248,7 @@ export function RightPanel({
           </div>
           <div className="space-y-1">
             <label className="text-xs font-medium text-gray-500">
-              Amount Received
+              {t("pos.amountReceived", "Amount Received")}
             </label>
             <div
               className={`flex items-center rounded border px-3 py-2 bg-white ${
@@ -274,7 +276,7 @@ export function RightPanel({
             {receivedLessThanTotal && (
               <p className="text-[10px] text-red-500 flex items-center gap-1 mt-0.5">
                 <AlertCircle className="w-3 h-3" />
-                Received cannot be less than total
+                {t("pos.receivedLessThanTotal", "Received cannot be less than total")}
               </p>
             )}
           </div>
@@ -285,7 +287,7 @@ export function RightPanel({
         {/* Change to Return / Remaining */}
         <div className="px-4 py-3 flex items-center justify-between border-t border-gray-200 bg-gray-50/50">
           <span className="text-sm font-bold text-gray-700">
-            {isRemaining ? "Remaining:" : "Change to Return:"}
+            {isRemaining ? `${t("pos.remaining", "Remaining")}:` : `${t("pos.changeToReturn", "Change to Return")}:`}
           </span>
           <span className={`text-lg font-bold ${isRemaining ? "text-red-600" : "text-gray-800"}`}>
             {currencyStr} {isRemaining ? remainingAmount.toFixed(2) : changeToReturn.toFixed(2)}
@@ -301,10 +303,10 @@ export function RightPanel({
           className="w-full rounded border border-green-400/60 bg-green-200/50 py-3.5 text-sm font-bold text-green-800 hover:bg-green-300/50 transition-colors shadow-sm disabled:opacity-50"
         >
           {isSaving
-            ? "Saving..."
+            ? t("pos.saving", "Saving...")
             : isDisablePrintEnabled
-            ? (isEditing ? "Update" : "Save")
-            : (isEditing ? "Print & Update" : "Print & Save")}{" "}
+            ? (isEditing ? t("pos.update", "Update") : t("pos.save", "Save"))
+            : (isEditing ? t("pos.printUpdate", "Print & Update") : t("pos.printSave", "Print & Save"))}{" "}
           <span className="font-normal text-green-700 ml-1">
             {isDisablePrintEnabled ? "[Ctrl+S]" : "[Ctrl+P]"}
           </span>

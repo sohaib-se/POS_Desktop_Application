@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import type { ConversionRateRecord } from "@/components/pagescomponents/items/products/types";
 import type { ConversionContextMenuState } from "./types";
 
@@ -16,6 +17,7 @@ export function ConversionContextMenu({
   onDelete,
   onClose,
 }: Props) {
+  const { t } = useTranslation();
   if (!conversionContextMenu) return null;
 
   return (
@@ -31,7 +33,7 @@ export function ConversionContextMenu({
         }}
         className="w-full rounded-sm px-2 py-1.5 text-left text-sm hover:bg-gray-100"
       >
-        Edit
+        {t("common.edit")}
       </button>
       <button
         onClick={() => {
@@ -40,7 +42,7 @@ export function ConversionContextMenu({
         }}
         className="w-full rounded-sm px-2 py-1.5 text-left text-sm text-red-600 hover:bg-red-50"
       >
-        Delete
+        {t("common.delete")}
       </button>
     </div>
   );

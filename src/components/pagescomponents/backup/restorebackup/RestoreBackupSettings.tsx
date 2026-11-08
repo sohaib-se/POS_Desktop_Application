@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Upload,
   FileArchive,
@@ -25,11 +26,11 @@ function formatBytes(bytes?: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
 }
 
-function formatDate(iso?: string): string {
+function formatDate(iso?: string, locale = "en-US"): string {
   if (!iso) return "Unknown Date";
   try {
     const d = new Date(iso);
-    return d.toLocaleString("en-US", {
+    return d.toLocaleString(locale, {
       year: "numeric",
       month: "short",
       day: "numeric",
@@ -42,6 +43,8 @@ function formatDate(iso?: string): string {
 }
 
 export function RestoreBackupSettings() {
+  const { t, i18n } = useTranslation();
+  const dateLocale = i18n.language === "de" ? "de-DE" : "en-US";
   const [backupInfo, setBackupInfo] = useState<InspectBackupResult | null>(null);
   const [isInspecting, setIsInspecting] = useState<boolean>(false);
   const [isRestoring, setIsRestoring] = useState<boolean>(false);
@@ -185,10 +188,10 @@ export function RestoreBackupSettings() {
       <div className="p-6 border border-gray-200 rounded-xl bg-white shadow-sm space-y-5">
         <div>
           <h3 className="text-base font-semibold text-gray-900">
-            Select Backup File (.lsb)
+            {t("backup.restoreBackupTitle")} (.lsb)
           </h3>
           <p className="text-xs text-gray-500 mt-1">
-            Choose a Laimsoft POS backup archive from your computer or external USB drive.
+            {t("backup.restoreBackupSubtitle")}
           </p>
         </div>
 
@@ -211,7 +214,7 @@ export function RestoreBackupSettings() {
             <div className="flex flex-col items-center justify-center gap-3 py-4">
               <RefreshCw size={32} className="animate-spin text-[#1976D2]" />
               <p className="text-sm font-semibold text-gray-700">
-                Verifying backup archive integrity...
+                {t("backup.verifiedBackupDesc")}
               </p>
             </div>
           ) : backupInfo ? (
@@ -225,7 +228,7 @@ export function RestoreBackupSettings() {
               <div className="flex items-center gap-2 text-xs text-gray-500">
                 <span>{formatBytes(backupInfo.fileSize)}</span>
                 <span>•</span>
-                <span>Click to choose a different file</span>
+                <span>{t("backup.browseFile")}</span>
               </div>
             </div>
           ) : (
@@ -235,7 +238,7 @@ export function RestoreBackupSettings() {
               </div>
               <div>
                 <p className="text-sm font-semibold text-gray-800">
-                  Click to browse or drag and drop your .lsb backup file
+                  {t("backup.dragDropBackup")}
                 </p>
                 <p className="text-xs text-gray-500 mt-1">
                   Supported format: Laimsoft POS Backup (.lsb)
@@ -249,7 +252,7 @@ export function RestoreBackupSettings() {
                 }}
                 className="mt-2 px-4 py-2 bg-white border border-gray-300 hover:bg-gray-100 rounded-lg text-xs font-semibold text-gray-700 shadow-sm transition-colors"
               >
-                Browse File
+                {t("backup.browseFile")}
               </button>
             </div>
           )}
@@ -288,10 +291,10 @@ export function RestoreBackupSettings() {
               </div>
               <div>
                 <h4 className="text-base font-semibold text-gray-900">
-                  Verified Backup Archive
+                  {t("backup.verifiedBackup")}
                 </h4>
                 <p className="text-xs text-gray-500">
-                  Archive validated and ready for full restoration.
+                  {t("backup.verifiedBackupDesc")}
                 </p>
               </div>
             </div>
@@ -306,7 +309,7 @@ export function RestoreBackupSettings() {
             <div className="p-3.5 bg-gray-50 rounded-lg border border-gray-200 flex items-start gap-3">
               <Building size={18} className="text-[#1976D2] mt-0.5" />
               <div>
-                <p className="text-xs text-gray-500 font-medium">Business / Company</p>
+                <p className="text-xs text-gray-500 font-medium">{t("backup.businessCompany")}</p>
                 <p className="text-sm font-semibold text-gray-900 mt-0.5">
                   {backupInfo.businessName || "Laimsoft POS"}
                 </p>
@@ -319,12 +322,12 @@ export function RestoreBackupSettings() {
             <div className="p-3.5 bg-gray-50 rounded-lg border border-gray-200 flex items-start gap-3">
               <Calendar size={18} className="text-[#1976D2] mt-0.5" />
               <div>
-                <p className="text-xs text-gray-500 font-medium">Backup Timestamp</p>
+                <p className="text-xs text-gray-500 font-medium">{t("backup.backupTimestamp")}</p>
                 <p className="text-sm font-semibold text-gray-900 mt-0.5">
-                  {formatDate(backupInfo.createdAt)}
+                  {formatDate(backupInfo.createdAt, dateLocale)}
                 </p>
                 <p className="text-xs text-gray-500 mt-0.5">
-                  Size: {formatBytes(backupInfo.fileSize)}
+                  {t("backup.fileSize")}: {formatBytes(backupInfo.fileSize)}
                 </p>
               </div>
             </div>
@@ -334,13 +337,13 @@ export function RestoreBackupSettings() {
           {backupInfo.stats && (
             <div>
               <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-3">
-                Contents Summary
+                {t("backup.contentsSummary")}
               </p>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 <div className="p-3 bg-blue-50/50 border border-blue-100 rounded-lg text-center">
                   <div className="flex items-center justify-center gap-1.5 text-blue-700 text-xs font-medium">
                     <Receipt size={14} />
-                    <span>Sale Invoices</span>
+                    <span>{t("backup.saleInvoices")}</span>
                   </div>
                   <p className="text-lg font-bold text-blue-950 mt-1">
                     {backupInfo.stats.saleInvoicesCount}
@@ -350,7 +353,7 @@ export function RestoreBackupSettings() {
                 <div className="p-3 bg-purple-50/50 border border-purple-100 rounded-lg text-center">
                   <div className="flex items-center justify-center gap-1.5 text-purple-700 text-xs font-medium">
                     <ShoppingCart size={14} />
-                    <span>Inventory Items</span>
+                    <span>{t("backup.inventoryItems")}</span>
                   </div>
                   <p className="text-lg font-bold text-purple-950 mt-1">
                     {backupInfo.stats.itemsCount}
@@ -360,7 +363,7 @@ export function RestoreBackupSettings() {
                 <div className="p-3 bg-emerald-50/50 border border-emerald-100 rounded-lg text-center">
                   <div className="flex items-center justify-center gap-1.5 text-emerald-700 text-xs font-medium">
                     <Users size={14} />
-                    <span>Parties / Customers</span>
+                    <span>{t("backup.partiesCustomers")}</span>
                   </div>
                   <p className="text-lg font-bold text-emerald-950 mt-1">
                     {backupInfo.stats.partiesCount}
@@ -370,7 +373,7 @@ export function RestoreBackupSettings() {
                 <div className="p-3 bg-amber-50/50 border border-amber-100 rounded-lg text-center">
                   <div className="flex items-center justify-center gap-1.5 text-amber-700 text-xs font-medium">
                     <Layers size={14} />
-                    <span>Transactions</span>
+                    <span>{t("backup.transactions")}</span>
                   </div>
                   <p className="text-lg font-bold text-amber-950 mt-1">
                     {backupInfo.stats.transactionsCount}
@@ -391,11 +394,10 @@ export function RestoreBackupSettings() {
             />
             <label htmlFor="safetyBackupToggle" className="cursor-pointer">
               <span className="text-xs font-semibold text-amber-950">
-                Create a safety backup of current data before restoring (Recommended)
+                {t("backup.createSafetyBackup")}
               </span>
               <p className="text-xs text-amber-800 mt-0.5">
-                Automatically saves an instant snapshot of your current database into your backups
-                folder, so you can always revert back if needed.
+                {t("backup.safetyBackupDesc")}
               </p>
             </label>
           </div>
@@ -406,7 +408,7 @@ export function RestoreBackupSettings() {
               onClick={clearSelection}
               className="px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50 font-medium transition-colors"
             >
-              Cancel
+              {t("common.cancel")}
             </button>
 
             <button
@@ -415,7 +417,7 @@ export function RestoreBackupSettings() {
               className="flex items-center gap-2 px-6 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-semibold transition-all shadow-sm disabled:opacity-60"
             >
               <HardDrive size={16} />
-              <span>Restore Backup Now</span>
+              <span>{t("backup.restoreBackupNow")}</span>
             </button>
           </div>
         </div>
@@ -431,28 +433,22 @@ export function RestoreBackupSettings() {
               </div>
               <div>
                 <h4 className="text-base font-bold text-gray-900">
-                  Confirm Data Restoration
+                  {t("backup.confirmDataRestoration")}
                 </h4>
-                <p className="text-xs text-gray-500">This action will replace active data</p>
+                <p className="text-xs text-gray-500">{t("backup.confirmDataRestorationSub")}</p>
               </div>
             </div>
 
             <div className="text-sm text-gray-600 space-y-2">
               <p>
-                Are you sure you want to restore the backup from{" "}
-                <span className="font-semibold text-gray-900">
-                  {formatDate(backupInfo?.createdAt)}
-                </span>
-                ?
+                {t("backup.confirmRestoreMsg", { date: formatDate(backupInfo?.createdAt, dateLocale) })}
               </p>
               <p className="text-xs text-red-600 font-medium">
-                ⚠️ All current sales invoices, inventory levels, and customer ledger entries will be
-                replaced with the data inside this backup archive.
+                {t("backup.restoreWarningMsg")}
               </p>
               {createSafetyBackup && (
                 <p className="text-xs text-emerald-700 bg-emerald-50 p-2.5 rounded-md border border-emerald-200">
-                  ✓ A safety backup of your current database will be generated automatically before
-                  proceeding.
+                  {t("backup.safetyBackupNotice")}
                 </p>
               )}
             </div>
@@ -462,13 +458,13 @@ export function RestoreBackupSettings() {
                 onClick={() => setShowConfirmModal(false)}
                 className="px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50 font-medium"
               >
-                Cancel
+                {t("common.cancel")}
               </button>
               <button
                 onClick={handleConfirmRestore}
                 className="px-5 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-bold shadow-sm"
               >
-                Yes, Restore Now
+                {t("backup.yesRestoreNow")}
               </button>
             </div>
           </div>
@@ -480,10 +476,9 @@ export function RestoreBackupSettings() {
         <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/60 backdrop-blur-md p-4 text-white">
           <div className="bg-white text-gray-900 rounded-2xl p-8 max-w-sm w-full text-center space-y-4 shadow-2xl">
             <RefreshCw size={44} className="animate-spin text-[#1976D2] mx-auto" />
-            <h4 className="text-lg font-bold">Restoring Business Data...</h4>
+            <h4 className="text-lg font-bold">{t("backup.restoringData")}</h4>
             <p className="text-xs text-gray-500 leading-relaxed">
-              Replacing SQLite database and synchronizing attachments. Please do not close the
-              application.
+              {t("backup.restoringDataDesc")}
             </p>
             <div className="w-full bg-gray-100 rounded-full h-1.5 overflow-hidden">
               <div className="bg-[#1976D2] h-full w-2/3 animate-pulse rounded-full" />

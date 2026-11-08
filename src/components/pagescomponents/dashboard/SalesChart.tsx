@@ -11,8 +11,10 @@ import {
 } from "recharts";
 import { getMonthKeyFromDate, formatDateDisplay } from "../saleinvoices/utils";
 import { useSettings } from "@/hooks/useSettings";
+import { useTranslation } from "react-i18next";
 
 export function SalesChart() {
+  const { t, i18n } = useTranslation();
   const [currency] = useSettings('settings.businessCurrency', { code: 'PKR', symbol: 'Rs' });
   const [currencyDisplay] = useSettings<'abbreviation' | 'icon'>('settings.currencyDisplay', 'abbreviation');
   const currencyStr = currencyDisplay === 'icon' ? currency.symbol : currency.code;
@@ -63,7 +65,7 @@ export function SalesChart() {
 
       let dateStr = invoice.date;
       if (!isNaN(dateObj.getTime())) {
-        dateStr = dateObj.toLocaleDateString("en-US", { day: 'numeric', month: 'short' });
+        dateStr = dateObj.toLocaleDateString(i18n.language === 'de' ? 'de-DE' : 'en-US', { day: 'numeric', month: 'short' });
       }
       
       if (!salesByDate[dateStr]) {
@@ -81,21 +83,21 @@ export function SalesChart() {
 
     return {
       totalSale: total,
-      chartData: sortedData.length > 0 ? sortedData : [{ date: "No Data", value: 0 }]
+      chartData: sortedData.length > 0 ? sortedData : [{ date: t("common.noData", "No Data"), value: 0 }]
     };
-  }, [invoices, selectedMonthKey]);
+  }, [invoices, selectedMonthKey, i18n.language, t]);
 
   return (
     <div className="col-span-2 stat-card">
       <div className="flex items-center justify-between mb-4">
         <div>
-          <p className="text-sm text-gray-500">Total Sale</p>
+          <p className="text-sm text-gray-500">{t("dashboard.totalSale", "Total Sale")}</p>
           <div className="flex items-center gap-3 mt-1">
             <p className="text-2xl font-bold text-gray-900">{currencyStr} {totalSale.toLocaleString()}</p>
             {totalSale > 0 && (
               <span className="flex items-center gap-1 text-sm text-green-600 bg-green-50 px-2 py-0.5 rounded-full">
                 <TrendingUp className="w-3 h-3" />
-                Updated
+                {t("dashboard.updated", "Updated")}
               </span>
             )}
           </div>
@@ -139,7 +141,7 @@ export function SalesChart() {
                 border: "none",
                 boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
               }}
-              formatter={(value: any) => [`${currencyStr} ${value}`, "Amount"]}
+              formatter={(value: any) => [`${currencyStr} ${value}`, t("common.amount", "Amount")]}
             />
             <Area
               type="monotone"

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Folder,
   FolderOpen,
@@ -23,11 +24,11 @@ function formatBytes(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
 }
 
-function formatDate(iso?: string | null): string {
+function formatDate(iso: string | null | undefined, locale = "en-US"): string {
   if (!iso) return "Never";
   try {
     const d = new Date(iso);
-    return d.toLocaleString("en-US", {
+    return d.toLocaleString(locale, {
       year: "numeric",
       month: "short",
       day: "numeric",
@@ -40,6 +41,8 @@ function formatDate(iso?: string | null): string {
 }
 
 export function AutoBackupSettings() {
+  const { t, i18n } = useTranslation();
+  const dateLocale = i18n.language === "de" ? "de-DE" : "en-US";
   const [config, setConfig] = useState<AutoBackupConfig>({
     enabled: true,
     backupOnClose: true,
@@ -213,7 +216,7 @@ export function AutoBackupSettings() {
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="text-base font-semibold text-gray-900">
-                  Automatic Backup on Close
+                  {t("backup.autoBackupOnClose", "Automatic Backup on Close")}
                 </h3>
                 <span
                   className={`text-xs px-2.5 py-0.5 rounded-full font-medium ${
@@ -222,11 +225,11 @@ export function AutoBackupSettings() {
                       : "bg-gray-100 text-gray-600"
                   }`}
                 >
-                  {config.enabled ? "Active" : "Disabled"}
+                  {config.enabled ? t("backup.active", "Active") : t("backup.disabled", "Disabled")}
                 </span>
               </div>
               <p className="text-xs text-gray-500 mt-1 max-w-xl">
-                Automatically creates a complete <code className="font-semibold text-gray-700">.lsb</code> backup archive whenever you close the POS software, ensuring you never lose transactions.
+                {t("backup.autoBackupDesc", "Automatically creates a complete .lsb backup archive whenever you close the POS software, ensuring you never lose transactions.")}
               </p>
             </div>
           </div>
@@ -256,17 +259,17 @@ export function AutoBackupSettings() {
             <div className="flex-1">
               <div className="flex items-center justify-between">
                 <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-                  Trigger Event
+                  {t("backup.triggerEvent", "Trigger Event")}
                 </p>
                 <span className="text-[11px] font-medium px-2 py-0.5 bg-blue-50 text-blue-700 rounded-full">
-                  On Application Close
+                  {t("backup.onAppClose", "On Application Close")}
                 </span>
               </div>
               <p className="text-sm font-medium text-slate-800 mt-1">
-                Every time POS is closed
+                {t("backup.everyTimeClosed", "Every time POS is closed")}
               </p>
               <p className="text-xs text-slate-500 mt-0.5">
-                Runs automatically before shutdown with an exit safeguard screen.
+                {t("backup.everyTimeClosedDesc", "Runs automatically before shutdown with an exit safeguard screen.")}
               </p>
             </div>
           </div>
@@ -279,17 +282,17 @@ export function AutoBackupSettings() {
             <div className="flex-1">
               <div className="flex items-center justify-between">
                 <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-                  Retention Policy
+                  {t("backup.retentionPolicy", "Retention Policy")}
                 </p>
                 <span className="text-[11px] font-medium px-2 py-0.5 bg-purple-50 text-purple-700 rounded-full font-mono">
-                  Limit: 10 Files
+                  {t("backup.retentionLimit", "Limit: 10 Files")}
                 </span>
               </div>
               <p className="text-sm font-medium text-slate-800 mt-1">
-                Keep Only 10 Auto Backups
+                {t("backup.keepOnly10", "Keep Only 10 Auto Backups")}
               </p>
               <p className="text-xs text-slate-500 mt-0.5">
-                When the 11th backup is created, the oldest archive is automatically pruned.
+                {t("backup.keepOnly10Desc", "When the 11th backup is created, the oldest archive is automatically pruned.")}
               </p>
             </div>
           </div>
@@ -303,13 +306,13 @@ export function AutoBackupSettings() {
             </div>
             <div className="min-w-0">
               <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">
-                Auto Backup Folder Location
+                {t("backup.folderLocation", "Auto Backup Folder Location")}
               </p>
               <p className="text-sm font-mono text-gray-800 break-all select-all mt-0.5 font-medium">
-                {isLoading ? "Loading directory..." : config.destinationFolder || "Documents\\LaimsoftPOS_Backups\\Auto_Backups"}
+                {isLoading ? t("common.loading", "Loading...") : config.destinationFolder || "Documents\\LaimsoftPOS_Backups\\Auto_Backups"}
               </p>
               <p className="text-xs text-gray-500 mt-1">
-                Auto-backup archives are safely stored inside this folder on your computer.
+                {t("backup.folderDesc", "Auto-backup archives are safely stored inside this folder on your computer.")}
               </p>
             </div>
           </div>
@@ -319,14 +322,14 @@ export function AutoBackupSettings() {
               onClick={handleChangeFolder}
               className="px-3 py-1.5 border border-gray-300 rounded-lg text-xs font-medium text-gray-700 hover:bg-white transition-colors"
             >
-              Change Folder
+              {t("backup.changeFolder", "Change Folder")}
             </button>
             <button
               onClick={handleOpenFolder}
               className="px-3 py-1.5 border border-gray-300 rounded-lg text-xs font-medium text-gray-700 hover:bg-white flex items-center gap-1.5 transition-colors"
             >
               <FolderOpen size={14} />
-              Open Folder
+              {t("backup.openFolder", "Open Folder")}
             </button>
           </div>
         </div>
@@ -337,9 +340,9 @@ export function AutoBackupSettings() {
             <div className="flex items-center gap-1.5">
               <Clock size={14} className="text-gray-400" />
               <span>
-                Last Auto Backup:{" "}
+                {t("backup.lastAutoBackup", "Last Auto Backup")}:{" "}
                 <span className="font-semibold text-gray-800">
-                  {formatDate(config.lastBackupTime)}
+                  {formatDate(config.lastBackupTime, dateLocale)}
                 </span>
               </span>
             </div>
@@ -359,7 +362,7 @@ export function AutoBackupSettings() {
             className="px-4 py-2 bg-[#1976D2] hover:bg-[#1565C0] text-white rounded-lg text-xs font-medium flex items-center gap-2 transition-colors shadow-sm disabled:opacity-60"
           >
             <RefreshCw size={14} className={isTriggering ? "animate-spin" : ""} />
-            {isTriggering ? "Creating Auto Backup..." : "Create Auto Backup Now"}
+            {isTriggering ? t("backup.creatingAutoBackup", "Creating Auto Backup...") : t("backup.createAutoBackupNow", "Create Auto Backup Now")}
           </button>
         </div>
       </div>
@@ -370,14 +373,14 @@ export function AutoBackupSettings() {
           <div>
             <div className="flex items-center gap-2">
               <h3 className="text-sm font-semibold text-gray-900">
-                Stored Auto Backups
+                {t("backup.storedAutoBackups", "Stored Auto Backups")}
               </h3>
               <span className="text-xs font-mono font-medium px-2 py-0.5 rounded-full bg-slate-100 text-slate-700">
-                {backupCount} / {maxLimit} Max
+                {backupCount} / {maxLimit} {t("backup.maxFiles", "Max")}
               </span>
             </div>
             <p className="text-xs text-gray-500 mt-0.5">
-              Archives are automatically sorted newest to oldest. Oldest file is pruned once capacity reaches 10.
+              {t("backup.keepOnly10Desc", "When the 11th backup is created, the oldest archive is automatically pruned.")}
             </p>
           </div>
 
@@ -385,7 +388,7 @@ export function AutoBackupSettings() {
             {/* Visual capacity progress bar */}
             <div className="w-28 hidden sm:block">
               <div className="flex justify-between text-[10px] text-gray-500 mb-1">
-                <span>Storage</span>
+                <span>{t("backup.storage", "Storage")}</span>
                 <span>{capacityPercent}%</span>
               </div>
               <div className="w-full bg-gray-100 rounded-full h-1.5 overflow-hidden">
@@ -401,7 +404,7 @@ export function AutoBackupSettings() {
             <button
               onClick={loadConfigAndFiles}
               className="p-1.5 text-gray-500 hover:text-gray-700 rounded-lg hover:bg-gray-100 transition-colors"
-              title="Refresh Auto Backups"
+              title={t("backup.refreshAutoBackups", "Refresh Auto Backups")}
             >
               <RefreshCw size={15} />
             </button>
@@ -414,17 +417,17 @@ export function AutoBackupSettings() {
               <FileArchive size={24} />
             </div>
             <h4 className="text-sm font-semibold text-gray-800">
-              No auto backups created yet
+              {t("backup.noAutoBackupsYet", "No auto backups created yet")}
             </h4>
             <p className="text-xs text-gray-500 max-w-sm mx-auto mt-1 mb-4">
-              An automatic backup will be created whenever you close the application, or you can click "Create Auto Backup Now" to make the first snapshot.
+              {t("backup.noAutoBackupsDesc", "An automatic backup will be created whenever you close the application, or you can click \"Create Auto Backup Now\" to make the first snapshot.")}
             </p>
             <button
               onClick={handleTriggerNow}
               disabled={isTriggering}
               className="px-4 py-2 bg-[#1976D2] text-white rounded-lg text-xs font-medium hover:bg-[#1565C0] transition-colors"
             >
-              Create Auto Backup Now
+              {t("backup.createAutoBackupNow", "Create Auto Backup Now")}
             </button>
           </div>
         ) : (
@@ -432,11 +435,11 @@ export function AutoBackupSettings() {
             <table className="w-full text-left text-xs">
               <thead>
                 <tr className="border-b border-gray-200 text-gray-500">
-                  <th className="pb-2.5 font-medium">Backup Archive</th>
-                  <th className="pb-2.5 font-medium">Created Date</th>
-                  <th className="pb-2.5 font-medium">File Size</th>
-                  <th className="pb-2.5 font-medium">Status</th>
-                  <th className="pb-2.5 font-medium text-right">Actions</th>
+                  <th className="pb-2.5 font-medium">{t("backup.backupArchive", "Backup Archive")}</th>
+                  <th className="pb-2.5 font-medium">{t("backup.createdDate", "Created Date")}</th>
+                  <th className="pb-2.5 font-medium">{t("backup.fileSize", "File Size")}</th>
+                  <th className="pb-2.5 font-medium">{t("common.status", "Status")}</th>
+                  <th className="pb-2.5 font-medium text-right">{t("common.actions", "Actions")}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -460,7 +463,7 @@ export function AutoBackupSettings() {
                         </div>
                       </td>
                       <td className="py-3 text-gray-600 whitespace-nowrap">
-                        {formatDate(item.createdAt || item.modifiedAt)}
+                        {formatDate(item.createdAt || item.modifiedAt, dateLocale)}
                       </td>
                       <td className="py-3 font-mono text-gray-600 whitespace-nowrap">
                         {formatBytes(item.size)}
@@ -469,7 +472,7 @@ export function AutoBackupSettings() {
                         {isNewest ? (
                           <span className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 bg-emerald-50 text-emerald-700 rounded-full">
                             <Sparkles size={11} />
-                            Latest
+                            {t("backup.latest", "Latest")}
                           </span>
                         ) : (
                           <span className="text-[11px] font-medium px-2 py-0.5 bg-gray-100 text-gray-600 rounded-full">
@@ -482,15 +485,15 @@ export function AutoBackupSettings() {
                           <button
                             onClick={() => handleRestoreFromHere(item)}
                             className="px-2.5 py-1 text-xs font-medium text-[#1976D2] bg-blue-50 hover:bg-blue-100 rounded-md transition-colors flex items-center gap-1"
-                            title="Restore database from this auto backup"
+                            title={t("backup.restore", "Restore")}
                           >
-                            Restore
+                            {t("backup.restore", "Restore")}
                             <ArrowRight size={12} />
                           </button>
                           <button
                             onClick={() => setBackupToDelete(item)}
                             className="p-1.5 text-gray-400 hover:text-red-600 rounded-md hover:bg-red-50 transition-colors"
-                            title="Delete this backup"
+                            title={t("common.delete", "Delete")}
                           >
                             <Trash2 size={14} />
                           </button>
@@ -514,11 +517,11 @@ export function AutoBackupSettings() {
                 <AlertCircle size={22} />
               </div>
               <h3 className="text-base font-semibold text-gray-900">
-                Delete Auto Backup?
+                {t("backup.deleteAutoBackupTitle", "Delete Auto Backup?")}
               </h3>
             </div>
             <p className="text-xs text-gray-600">
-              Are you sure you want to permanently delete this auto-backup archive from disk?
+              {t("backup.deleteAutoBackupConfirm", "Are you sure you want to permanently delete this auto-backup archive from disk?")}
             </p>
             <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg text-xs font-mono text-gray-700 break-all">
               {backupToDelete.fileName}
@@ -529,14 +532,14 @@ export function AutoBackupSettings() {
                 onClick={() => setBackupToDelete(null)}
                 className="px-4 py-2 border border-gray-300 rounded-lg text-xs font-medium text-gray-700 hover:bg-gray-50 transition-colors"
               >
-                Cancel
+                {t("common.cancel", "Cancel")}
               </button>
               <button
                 type="button"
                 onClick={() => handleDeleteBackup(backupToDelete)}
                 className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-medium transition-colors"
               >
-                Delete Backup
+                {t("backup.deleteBackupBtn", "Delete Backup")}
               </button>
             </div>
           </div>

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Folder,
   FolderOpen,
@@ -23,10 +24,10 @@ function formatBytes(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
 }
 
-function formatDate(iso: string): string {
+function formatDate(iso: string, locale = "en-US"): string {
   try {
     const d = new Date(iso);
-    return d.toLocaleString("en-US", {
+    return d.toLocaleString(locale, {
       year: "numeric",
       month: "short",
       day: "numeric",
@@ -39,6 +40,8 @@ function formatDate(iso: string): string {
 }
 
 export function BackupToComputerSettings() {
+  const { t, i18n } = useTranslation();
+  const dateLocale = i18n.language === "de" ? "de-DE" : "en-US";
   const [destinationFolder, setDestinationFolder] = useState<string>("");
   const [isInitializing, setIsInitializing] = useState<boolean>(true);
   const [isCreatingBackup, setIsCreatingBackup] = useState<boolean>(false);
@@ -236,17 +239,16 @@ export function BackupToComputerSettings() {
             </div>
             <div>
               <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">
-                Default Backup Destination
+                {t("backup.backupLocation")}
               </p>
               <p
                 className="text-sm font-medium text-gray-900 mt-0.5 break-all font-mono"
                 title={destinationFolder}
               >
-                {isInitializing ? "Loading..." : destinationFolder || "Not configured"}
+                {isInitializing ? t("common.loading") : destinationFolder || t("backup.disabled")}
               </p>
               <p className="text-xs text-gray-500 mt-1">
-                Backups are compressed securely with the proprietary{" "}
-                <span className="font-semibold text-gray-700">.lsb</span> format.
+                {t("backup.backupLocationDesc")}
               </p>
             </div>
           </div>
@@ -255,14 +257,14 @@ export function BackupToComputerSettings() {
             <button
               onClick={handleChangeFolder}
               className="px-3.5 py-1.5 border border-gray-300 bg-white hover:bg-gray-100 rounded-lg text-xs font-semibold text-gray-700 transition-colors shadow-sm"
-              title="Select a different folder on your computer"
+              title={t("backup.changeFolder")}
             >
-              Change Folder
+              {t("backup.changeFolder")}
             </button>
             <button
               onClick={handleOpenFolder}
               className="p-1.5 border border-gray-300 bg-white hover:bg-gray-100 rounded-lg text-gray-700 transition-colors shadow-sm"
-              title="Open this folder in Windows Explorer"
+              title={t("backup.openFolder")}
             >
               <FolderOpen size={16} />
             </button>
@@ -280,12 +282,12 @@ export function BackupToComputerSettings() {
             {isCreatingBackup ? (
               <>
                 <RefreshCw size={16} className="animate-spin" />
-                <span>Creating Backup...</span>
+                <span>{t("backup.creatingBackup")}</span>
               </>
             ) : (
               <>
                 <HardDrive size={16} />
-                <span>Create Backup to Folder</span>
+                <span>{t("backup.createBackupToFolder")}</span>
               </>
             )}
           </button>
@@ -295,17 +297,17 @@ export function BackupToComputerSettings() {
             onClick={handleSaveAsBackup}
             disabled={isCreatingBackup || isSavingAs}
             className="flex items-center gap-2 px-4 py-2.5 border border-gray-300 bg-white hover:bg-gray-50 text-gray-700 rounded-lg text-sm font-medium transition-colors shadow-sm disabled:opacity-60 disabled:cursor-not-allowed"
-            title="Choose a custom save location such as a USB flash drive or external disk"
+            title={t("backup.saveAsCustom")}
           >
             {isSavingAs ? (
               <>
                 <RefreshCw size={16} className="animate-spin" />
-                <span>Saving As...</span>
+                <span>{t("backup.savingAs")}</span>
               </>
             ) : (
               <>
                 <Download size={16} />
-                <span>Save As (USB / Custom)...</span>
+                <span>{t("backup.saveAsCustom")}</span>
               </>
             )}
           </button>
@@ -314,7 +316,7 @@ export function BackupToComputerSettings() {
             onClick={handleOpenFolder}
             className="px-4 py-2.5 border border-gray-300 bg-white hover:bg-gray-50 text-gray-700 rounded-lg text-sm font-medium transition-colors shadow-sm"
           >
-            Open Folder in Explorer
+            {t("backup.openInExplorer")}
           </button>
         </div>
 
@@ -322,10 +324,8 @@ export function BackupToComputerSettings() {
         <div className="flex items-start gap-3 p-3.5 bg-blue-50/70 border border-blue-200/80 rounded-lg">
           <ShieldCheck size={18} className="text-[#1976D2] shrink-0 mt-0.5" />
           <div className="text-xs text-blue-900 leading-relaxed">
-            <span className="font-semibold">Complete Business Protection:</span> Your{" "}
-            <span className="font-semibold">.lsb</span> backup file contains your full SQLite
-            database, sales &amp; purchase invoices, customer ledger, item catalog, product photos,
-            company profile, and system settings. Keep copies on an external USB drive for safety.
+            <span className="font-semibold">{t("backup.completeProtectionTitle")}</span>{" "}
+            {t("backup.completeProtectionDesc")}
           </div>
         </div>
       </div>
@@ -336,7 +336,7 @@ export function BackupToComputerSettings() {
           <div className="flex items-center gap-2">
             <Database size={18} className="text-gray-700" />
             <h3 className="text-base font-semibold text-gray-900">
-              Existing Backups in Destination Folder
+              {t("backup.existingBackups")}
             </h3>
             <span className="text-xs font-semibold px-2 py-0.5 bg-gray-100 text-gray-600 rounded-full">
               {recentBackups.length}
@@ -349,18 +349,18 @@ export function BackupToComputerSettings() {
             className="flex items-center gap-1.5 text-xs text-[#1976D2] hover:text-[#1565C0] font-medium"
           >
             <RefreshCw size={13} className={isLoadingBackups ? "animate-spin" : ""} />
-            <span>Refresh List</span>
+            <span>{t("backup.refreshList")}</span>
           </button>
         </div>
 
         {isLoadingBackups ? (
-          <div className="py-8 text-center text-sm text-gray-500">Loading backups...</div>
+          <div className="py-8 text-center text-sm text-gray-500">{t("backup.loadingBackups")}</div>
         ) : recentBackups.length === 0 ? (
           <div className="py-10 text-center space-y-2">
             <FileArchive size={36} className="mx-auto text-gray-300" />
-            <p className="text-sm font-medium text-gray-700">No backups found in this folder</p>
+            <p className="text-sm font-medium text-gray-700">{t("backup.noBackupsFound")}</p>
             <p className="text-xs text-gray-500 max-w-sm mx-auto">
-              Click &quot;Create Backup to Folder&quot; above to create your first backup file.
+              {t("backup.noBackupsFoundDesc")}
             </p>
           </div>
         ) : (
@@ -381,7 +381,7 @@ export function BackupToComputerSettings() {
                     <div className="flex items-center gap-3 text-xs text-gray-500 mt-0.5">
                       <span className="flex items-center gap-1">
                         <Clock size={12} />
-                        {formatDate(item.modifiedAt || item.createdAt)}
+                        {formatDate(item.modifiedAt || item.createdAt, dateLocale)}
                       </span>
                       <span>•</span>
                       <span className="font-medium text-gray-600">{formatBytes(item.size)}</span>
@@ -393,16 +393,16 @@ export function BackupToComputerSettings() {
                   <button
                     onClick={() => handleRestoreFromHere(item)}
                     className="flex items-center gap-1 px-3 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-md text-xs font-semibold transition-colors"
-                    title="Restore data from this backup"
+                    title={t("backup.restore")}
                   >
-                    <span>Restore</span>
+                    <span>{t("backup.restore")}</span>
                     <ArrowRight size={12} />
                   </button>
 
                   <button
                     onClick={() => setBackupToDelete(item)}
                     className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
-                    title="Delete this backup file"
+                    title={t("backup.delete")}
                   >
                     <Trash2 size={15} />
                   </button>
@@ -421,15 +421,11 @@ export function BackupToComputerSettings() {
               <div className="p-2 bg-red-100 rounded-full">
                 <AlertCircle size={22} />
               </div>
-              <h4 className="text-base font-semibold text-gray-900">Delete Backup File?</h4>
+              <h4 className="text-base font-semibold text-gray-900">{t("backup.deleteBackupFileTitle")}</h4>
             </div>
 
             <p className="text-sm text-gray-600">
-              Are you sure you want to permanently delete{" "}
-              <span className="font-semibold font-mono text-gray-900">
-                {backupToDelete.fileName}
-              </span>
-              ? This action cannot be undone.
+              {t("backup.deleteBackupFileConfirm", { fileName: backupToDelete.fileName })}
             </p>
 
             <div className="flex items-center justify-end gap-3 pt-2">
@@ -437,13 +433,13 @@ export function BackupToComputerSettings() {
                 onClick={() => setBackupToDelete(null)}
                 className="px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50 font-medium"
               >
-                Cancel
+                {t("common.cancel")}
               </button>
               <button
                 onClick={() => handleDeleteBackup(backupToDelete)}
                 className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-semibold"
               >
-                Yes, Delete
+                {t("backup.yesDelete")}
               </button>
             </div>
           </div>

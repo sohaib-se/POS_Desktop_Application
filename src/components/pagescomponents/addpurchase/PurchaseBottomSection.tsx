@@ -1,6 +1,6 @@
 import React from "react";
+import { useTranslation } from "react-i18next";
 import type { PurchaseTab, BankOption } from "./types";
-import { taxOptions } from "./constants";
 import { useSettings } from "@/hooks/useSettings";
 import { Trash2 } from "lucide-react";
 
@@ -37,6 +37,7 @@ export function PurchaseBottomSection({
   handleAttachmentSelection,
   selectedParty,
 }: PurchaseBottomSectionProps) {
+  const { t } = useTranslation();
   const [isTransactionTaxEnabled] = useSettings('settings.isTransactionTaxEnabled', true);
   const [isTransactionDiscountEnabled] = useSettings('settings.isTransactionDiscountEnabled', true);
   const [isRoundOffTotalEnabled] = useSettings('settings.isRoundOffTotalEnabled', true);
@@ -51,7 +52,7 @@ export function PurchaseBottomSection({
           {activeTab.showDescriptionInput ? (
             <textarea
               autoFocus rows={3}
-              placeholder="Add description..."
+              placeholder={t("common.description")}
               style={{ border: "1px solid #d1d5db", borderRadius: 4, fontSize: 13, padding: "8px 10px", resize: "none", width: "100%", outline: "none" }}
               value={activeTab.description}
               onChange={(e) => updateTab({ description: e.target.value })}
@@ -65,7 +66,7 @@ export function PurchaseBottomSection({
             <button onClick={() => updateTab({ showDescriptionInput: true })}
               style={{ background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 8, color: "#9ca3af", fontSize: 12, fontWeight: 600, letterSpacing: "0.05em", padding: 0 }}>
               <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /></svg>
-              ADD DESCRIPTION
+              {t("common.addDescription")}
             </button>
           )}
 
@@ -83,8 +84,8 @@ export function PurchaseBottomSection({
                   opacity: 0, transition: "opacity 0.2s ease-in-out", color: "#fff", fontSize: 12, fontWeight: 600, letterSpacing: "0.02em"
                 }}
               >
-                <div style={{ cursor: "pointer" }} onClick={() => imageInputRef.current?.click()}>CHANGE</div>
-                <div style={{ cursor: "pointer" }} onClick={() => updateTab({ imageDataUrl: "", imageFileName: "" })}>DELETE</div>
+                <div style={{ cursor: "pointer" }} onClick={() => imageInputRef.current?.click()}>{t("common.edit")}</div>
+                <div style={{ cursor: "pointer" }} onClick={() => updateTab({ imageDataUrl: "", imageFileName: "" })}>{t("common.delete")}</div>
               </div>
             </div>
           ) : (
@@ -92,7 +93,7 @@ export function PurchaseBottomSection({
               onClick={() => imageInputRef.current?.click()}
               style={{ background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 8, color: "#9ca3af", fontSize: 12, fontWeight: 600, letterSpacing: "0.05em", padding: 0 }}>
               <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" /><circle cx="12" cy="13" r="4" /></svg>
-              ADD IMAGE
+              {t("common.addImage")}
             </button>
           )}
           
@@ -102,7 +103,7 @@ export function PurchaseBottomSection({
                 <div style={{ background: "#f8fafc", padding: "8px 10px", display: "flex", alignItems: "center", gap: 6, borderRadius: 2, width: "100%", overflow: "hidden" }}>
                   <svg width="14" height="14" fill="none" stroke="#059669" strokeWidth="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /></svg>
                   <span style={{ color: "#059669", fontSize: 11, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                    {activeTab.documentFileName} added successfully
+                    {activeTab.documentFileName}
                   </span>
                 </div>
               </div>
@@ -120,7 +121,7 @@ export function PurchaseBottomSection({
                   }}
                 >
                   <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></svg>
-                  Download
+                  {t("common.download")}
                 </div>
               </div>
             </div>
@@ -129,7 +130,7 @@ export function PurchaseBottomSection({
               onClick={() => documentInputRef.current?.click()}
               style={{ background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 8, color: "#9ca3af", fontSize: 12, fontWeight: 600, letterSpacing: "0.05em", padding: 0 }}>
               <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /></svg>
-              ADD DOCUMENT
+              {t("common.addDocument")}
             </button>
           )}
 
@@ -153,7 +154,7 @@ export function PurchaseBottomSection({
         <div style={{ marginLeft: "auto", display: "flex", flexDirection: "column", gap: 12, fontSize: 13, minWidth: 370 }}>
           {isTransactionDiscountEnabled && (
             <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 8 }}>
-              <span style={{ color: "#6b7280", width: 68, textAlign: "right" }}>Discount</span>
+              <span style={{ color: "#6b7280", width: 68, textAlign: "right" }}>{t("common.discount")}</span>
               <input type="number"
                 min="0"
                 max="100"
@@ -190,17 +191,33 @@ export function PurchaseBottomSection({
 
           {isTransactionTaxEnabled && (
             <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 8 }}>
-              <span style={{ color: "#6b7280", width: 68, textAlign: "right" }}>Tax</span>
-              <select
-                style={{ border: "1px solid #d1d5db", borderRadius: 4, padding: "5px 8px", width: 170, fontSize: 13, color: "#374151", background: "#fff", outline: "none" }}
-                value={activeTab.tax}
+              <span style={{ color: "#6b7280", width: 68, textAlign: "right" }}>{t("common.tax")}</span>
+              <input
+                type="number"
+                min="0"
+                max="100"
+                step="any"
+                placeholder="0"
+                style={{ border: "1px solid #d1d5db", borderRadius: 4, padding: "5px 8px", width: 78, textAlign: "right", fontSize: 13, outline: "none" }}
+                value={activeTab.tax === "NONE" ? "" : activeTab.tax.replace(/[^0-9.]/g, "")}
                 onChange={(e) => updateTab({ tax: e.target.value })}
-              >
-                {taxOptions.map((t) => <option key={t} value={t}>{t}</option>)}
-              </select>
-              <span style={{ color: "#374151", width: 62, textAlign: "right" }}>
-                {taxAmount > 0 ? taxAmount.toFixed(2) : "0"}
+                onKeyDown={(e) => {
+                  if (e.key === "-" || e.key === "e") e.preventDefault();
+                }}
+                onBlur={(e) => {
+                  const num = parseFloat(e.target.value);
+                  if (!isNaN(num)) {
+                    if (num < 0) updateTab({ tax: "0" });
+                    else if (num > 100) updateTab({ tax: "100" });
+                  }
+                }}
+              />
+              <span style={{ color: "#9ca3af", fontSize: 12 }}>(%)</span>
+              <span style={{ color: "#d1d5db", margin: "0 2px" }}>–</span>
+              <span style={{ color: "#374151", width: 100, textAlign: "right", fontSize: 13, fontWeight: 500 }}>
+                {fmt(taxAmount)}
               </span>
+              <span style={{ color: "#9ca3af", fontSize: 12 }}>(Rs)</span>
             </div>
           )}
 
@@ -211,7 +228,7 @@ export function PurchaseBottomSection({
                   onChange={(e) => updateTab({ roundOff: e.target.checked })}
                   style={{ width: 15, height: 15, accentColor: "#3b82f6", cursor: "pointer" }}
                 />
-                <span style={{ color: "#6b7280" }}>Round Off</span>
+                <span style={{ color: "#6b7280" }}>{t("common.roundOff")}</span>
               </label>
               <input type="text" readOnly
                 style={{ border: "1px solid #e5e7eb", borderRadius: 4, padding: "5px 8px", width: 80, textAlign: "right", fontSize: 13, color: "#6b7280", background: "#f9fafb" }}
@@ -221,7 +238,7 @@ export function PurchaseBottomSection({
           )}
 
           <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 8 }}>
-            <span style={{ color: "#6b7280", width: 90, textAlign: "right" }}>Payment Type</span>
+            <span style={{ color: "#6b7280", width: 90, textAlign: "right" }}>{t("common.paymentType")}</span>
             <select
               style={{ border: "1px solid #d1d5db", borderRadius: 4, padding: "5px 8px", width: 210, fontSize: 13, color: "#374151", background: "#fff", outline: "none", cursor: "pointer" }}
               value={activeTab.paymentType}
@@ -238,7 +255,7 @@ export function PurchaseBottomSection({
                 }
               }}
             >
-              <option value="Cash">Cash</option>
+              <option value="Cash">{t("common.cash")}</option>
               {banks.map((b) => (
                 <option key={b.id} value={b.name}>{b.name}</option>
               ))}
@@ -246,7 +263,7 @@ export function PurchaseBottomSection({
           </div>
 
           <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 8 }}>
-            <span style={{ color: "#374151", fontWeight: 600, width: 68, textAlign: "right" }}>Total</span>
+            <span style={{ color: "#374151", fontWeight: 600, width: 68, textAlign: "right" }}>{t("common.total")}</span>
             <input type="text" readOnly
               style={{ border: "1px solid #d1d5db", borderRadius: 4, padding: "5px 10px", width: 210, textAlign: "right", fontSize: 13, fontWeight: 600, color: "#1f2937", background: "#f9fafb", outline: "none" }}
               value={roundedTotal > 0 ? fmt(roundedTotal) : ""}
@@ -262,9 +279,9 @@ export function PurchaseBottomSection({
                 }}
                 style={{ width: 15, height: 15, accentColor: "#3b82f6", cursor: "pointer" }}
               />
-              <span style={{ color: "#6b7280" }}>Paid All</span>
+              <span style={{ color: "#6b7280" }}>{t("common.paidAll")}</span>
             </label>
-            <span style={{ color: "#6b7280", width: 68, textAlign: "right" }}>Paid</span>
+            <span style={{ color: "#6b7280", width: 68, textAlign: "right" }}>{t("common.paid")}</span>
             <input type="number"
               min="0"
               style={{ border: "1px solid #d1d5db", borderRadius: 4, padding: "5px 10px", width: 210, textAlign: "right", fontSize: 13, color: "#1f2937", background: "#fff", outline: "none" }}
@@ -290,7 +307,7 @@ export function PurchaseBottomSection({
 
           <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 8 }}>
             <span style={{ color: computedBalance < 0 ? "#b91c1c" : "#374151", fontWeight: 600, width: 120, textAlign: "right" }}>
-              {computedBalance < 0 ? "Change To Return" : "Balance"}
+              {computedBalance < 0 ? t("common.changeToReturn") : t("common.balance")}
             </span>
             <input type="text" readOnly
               style={{ border: "1px solid #e5e7eb", borderRadius: 4, padding: "5px 10px", width: 210, textAlign: "right", fontSize: 13, fontWeight: 600, color: computedBalance < 0 ? "#b91c1c" : "#1f2937", background: "#f9fafb" }}
@@ -315,7 +332,7 @@ export function PurchaseBottomSection({
             <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
               <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
             </svg>
-            <span>Balance: Rs {fmt(Math.abs(selectedParty.balance || 0))} {selectedParty.balance < 0 ? "(Advance)" : selectedParty.balance > 0 ? "(Owes)" : ""}</span>
+            <span>{t("common.balance")}: Rs {fmt(Math.abs(selectedParty.balance || 0))} {selectedParty.balance < 0 ? `(${t("common.advance")})` : selectedParty.balance > 0 ? `(${t("common.owes")})` : ""}</span>
           </div>
           <div style={{ width: 1, height: 16, background: "#10b981", opacity: 0.3 }} />
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
@@ -323,7 +340,7 @@ export function PurchaseBottomSection({
               <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
               <polyline points="22 4 12 14.01 9 11.01" />
             </svg>
-            <span>Available Credit: {(selectedParty.creditLimit != null || selectedParty.credit_limit != null) ? `Rs ${fmt(Number(selectedParty.creditLimit ?? selectedParty.credit_limit ?? 0) - (selectedParty.balance || 0))}` : "No Limit"}</span>
+            <span>{t("common.availableCredit")}: {(selectedParty.creditLimit != null || selectedParty.credit_limit != null) ? `Rs ${fmt(Number(selectedParty.creditLimit ?? selectedParty.credit_limit ?? 0) - (selectedParty.balance || 0))}` : t("common.noLimit")}</span>
           </div>
         </div>
       </div>

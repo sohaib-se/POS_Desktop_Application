@@ -1,4 +1,5 @@
 import type { MouseEvent } from "react";
+import { useTranslation } from "react-i18next";
 import type { SaleTab } from "./types";
 
 interface TabBarProps {
@@ -11,6 +12,17 @@ interface TabBarProps {
 }
 
 export function TabBar({ tabs, activeTabId, setActiveTabId, closeTab, addTab, onClose }: TabBarProps) {
+  const { t } = useTranslation();
+
+  const getTabLabel = (label: string, estimateNo?: string) => {
+    if (label === "New Estimate") return t("common.newEstimate");
+    if (label.startsWith("Estimate #")) {
+      const num = estimateNo || label.replace("Estimate #", "");
+      return `${t("transactions.types.estimate", "Estimate")} #${num}`;
+    }
+    return label;
+  };
+
   return (
     <div style={{ background: "#c4d3de", display: "flex", alignItems: "flex-end", padding: "2px 10px 0 10px", gap: 4, flexShrink: 0 }}>
       {tabs.map((tab) => {
@@ -67,7 +79,7 @@ export function TabBar({ tabs, activeTabId, setActiveTabId, closeTab, addTab, on
                 />
               </>
             )}
-            <span>{tab.label}</span>
+            <span>{getTabLabel(tab.label, tab.estimateNo)}</span>
             <button
               onClick={(e) => closeTab(tab.id, e)}
               style={{
@@ -86,7 +98,7 @@ export function TabBar({ tabs, activeTabId, setActiveTabId, closeTab, addTab, on
       })}
       <button
         onClick={addTab}
-        title="New Estimate"
+        title={t("common.newEstimate")}
         style={{
           marginBottom: 0, marginLeft: 4, width: 26, height: 26, borderRadius: "50%",
           background: "#3b82f6", color: "#fff", border: "none", cursor: "pointer",

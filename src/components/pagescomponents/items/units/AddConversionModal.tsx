@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { X } from "lucide-react";
 import type { UnitRecord, ConversionRateRecord } from "@/components/pagescomponents/items/products/types";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui";
@@ -33,6 +34,8 @@ export function AddConversionModal({
   onClose,
   onSave,
 }: Props) {
+  const { t } = useTranslation();
+
   return (
     <Dialog
       open={open}
@@ -43,7 +46,7 @@ export function AddConversionModal({
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center justify-between">
-            <span>{conversionBeingEdited ? "Edit Conversion" : "Add Conversion"}</span>
+            <span>{conversionBeingEdited ? t("items.editConversion") : t("items.addConversion")}</span>
             <button
               type="button"
               onClick={onClose}
@@ -58,14 +61,14 @@ export function AddConversionModal({
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Base Unit
+                {t("items.baseUnit")}
               </label>
               <select
                 value={conversionBaseUnit}
                 onChange={(event) => onSetConversionBaseUnit(event.target.value)}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
               >
-                <option value="">None</option>
+                <option value="">{t("common.none")}</option>
                 {units.map((unit) => (
                   <option key={unit.id} value={unit.shortName}>
                     {unit.fullName}
@@ -75,7 +78,7 @@ export function AddConversionModal({
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Secondary Unit
+                {t("items.secondaryUnit")}
               </label>
               <select
                 value={conversionSecondaryUnit}
@@ -84,7 +87,7 @@ export function AddConversionModal({
                 }
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
               >
-                <option value="">None</option>
+                <option value="">{t("common.none")}</option>
                 {units.map((unit) => (
                   <option key={unit.id} value={unit.shortName}>
                     {unit.fullName}
@@ -95,7 +98,7 @@ export function AddConversionModal({
           </div>
           <div className="flex items-center gap-2">
             <span className="text-sm text-gray-600">
-              1 {conversionBaseUnit || "BASE UNIT"} =
+              1 {conversionBaseUnit || t("items.baseUnit").toUpperCase()} =
             </span>
             <input
               type="number"
@@ -113,7 +116,7 @@ export function AddConversionModal({
               className="w-24 border border-gray-300 rounded-lg px-3 py-2 text-sm"
             />
             <span className="text-sm text-gray-600">
-              {conversionSecondaryUnit || "SECONDARY UNIT"}
+              {conversionSecondaryUnit || t("items.secondaryUnit").toUpperCase()}
             </span>
           </div>
           {conversionError ? (
@@ -123,9 +126,9 @@ export function AddConversionModal({
             type="button"
             onClick={onSave}
             disabled={conversionSaving || conversionRateValue === "" || conversionRateValue < 1}
-            className="w-full bg-[#1976D2] text-white py-2 rounded-lg text-sm font-medium hover:bg-[#1251A3] disabled:opacity-60"
+            className="w-full bg-[#1976D2] text-white py-2 rounded-lg text-sm font-medium hover:bg-[#1251A3] disabled:opacity-60 uppercase"
           >
-            {conversionSaving ? "Saving..." : "SAVE"}
+            {conversionSaving ? t("common.saving") : t("common.save")}
           </button>
         </div>
       </DialogContent>

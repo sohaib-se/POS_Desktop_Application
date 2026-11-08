@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { Search, X } from "lucide-react";
 import type { CategoryRecord } from "@/components/pagescomponents/items/products/types";
 import type { ItemRecord } from "./types";
@@ -36,14 +37,15 @@ export function MoveItemsDialog({
   onToggleMoveItemSelection,
   onConfirmMove,
 }: Props) {
+  const { t } = useTranslation();
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center justify-between">
             <span>
-              Move Items To{" "}
-              {moveTargetCategoryName ?? "Items Not In Any Category"}
+              {t("items.moveItemsToCategory", { name: moveTargetCategoryName ?? t("items.uncategorized") })}
             </span>
             <button
               type="button"
@@ -60,7 +62,7 @@ export function MoveItemsDialog({
             {/* Search */}
             <div>
               <label className="mb-1 block text-sm font-medium text-gray-700">
-                Search Items
+                {t("items.searchItems")}
               </label>
               <div className="relative">
                 <input
@@ -69,7 +71,7 @@ export function MoveItemsDialog({
                   onChange={(event) =>
                     onSetMoveItemsSearchTerm(event.target.value)
                   }
-                  placeholder="Search by item name, code, or category"
+                  placeholder={t("items.searchItemsPlaceholder")}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 pl-9 text-sm"
                 />
                 <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#AEB8C4]" />
@@ -78,7 +80,7 @@ export function MoveItemsDialog({
             {/* Filter */}
             <div>
               <label className="mb-1 block text-sm font-medium text-gray-700">
-                Filter By Category
+                {t("items.filterByCategory")}
               </label>
               <select
                 value={moveItemsFilterCategoryId}
@@ -87,9 +89,9 @@ export function MoveItemsDialog({
                 }
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
               >
-                <option value="all">All Items</option>
+                <option value="all">{t("items.allItems")}</option>
                 <option value="uncategorized">
-                  Items not in any Category
+                  {t("items.uncategorized")}
                 </option>
                 {categoryList.map((category) => (
                   <option key={category.id} value={category.id}>
@@ -107,10 +109,10 @@ export function MoveItemsDialog({
                 <tr>
                   <th className="w-12 px-4 py-3 text-left"></th>
                   <th className="px-4 py-3 text-left font-semibold text-[#7B8A9A] text-xs tracking-wide">
-                    ITEM
+                    {t("items.item")}
                   </th>
                   <th className="px-4 py-3 text-left font-semibold text-[#7B8A9A] text-xs tracking-wide">
-                    CURRENT CATEGORY
+                    {t("items.currentCategory")}
                   </th>
                 </tr>
               </thead>
@@ -119,7 +121,7 @@ export function MoveItemsDialog({
                   moveItemsFilteredList.map((item) => {
                     const isSelected = selectedMoveItemIds.includes(item.id);
                     const isAlreadyInTargetCategory =
-                      item.category === moveTargetCategoryName;
+                       item.category === moveTargetCategoryName;
                     return (
                       <tr
                         key={item.id}
@@ -149,7 +151,7 @@ export function MoveItemsDialog({
                           {item.name}
                         </td>
                         <td className="px-4 py-3 text-[#4B5563]">
-                          {item.category ?? "Items not in any Category"}
+                          {item.category ?? t("items.uncategorized")}
                         </td>
                       </tr>
                     );
@@ -160,7 +162,7 @@ export function MoveItemsDialog({
                       colSpan={3}
                       className="px-4 py-6 text-center text-sm text-[#7B8A9A]"
                     >
-                      There are no items to show.
+                      {t("items.noItemsToShow")}
                     </td>
                   </tr>
                 )}
@@ -175,7 +177,7 @@ export function MoveItemsDialog({
               onClick={onClose}
               className="px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50"
             >
-              Cancel
+              {t("common.cancel")}
             </button>
             <button
               type="button"
@@ -183,7 +185,7 @@ export function MoveItemsDialog({
               disabled={isMovingItems || !selectedMoveItemIds.length}
               className="px-4 py-2 bg-[#1976D2] text-white rounded-lg text-sm font-medium hover:bg-blue-600 disabled:opacity-60"
             >
-              {isMovingItems ? "Moving..." : "Move Selected Items"}
+              {isMovingItems ? t("items.moving") : t("items.moveSelectedItems")}
             </button>
           </div>
         </div>

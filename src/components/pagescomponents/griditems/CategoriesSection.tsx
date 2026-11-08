@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import type { CategoryRecord } from "@/components/pagescomponents/items/products/types";
 
 interface CategoriesSectionProps {
@@ -7,6 +8,7 @@ interface CategoriesSectionProps {
 }
 
 export function CategoriesSection({ selectedCategory, onSelectCategory }: CategoriesSectionProps) {
+  const { t } = useTranslation();
   const [categories, setCategories] = useState<CategoryRecord[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -39,7 +41,7 @@ export function CategoriesSection({ selectedCategory, onSelectCategory }: Catego
               : "bg-gray-100 text-gray-700 hover:bg-gray-200"
           }`}
         >
-          All Items
+          {t("items.allItems", "All Items")}
         </button>
         {categories.map((cat) => (
           <button

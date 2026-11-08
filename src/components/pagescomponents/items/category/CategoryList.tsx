@@ -1,4 +1,5 @@
 import { useRef } from "react";
+import { useTranslation } from "react-i18next";
 import { Plus, Search } from "lucide-react";
 import type { CategoryRecord } from "@/components/pagescomponents/items/products/types";
 import type { CategoryContextMenuState } from "./types";
@@ -28,6 +29,7 @@ export function CategoryList({
   onOpenAddCategory,
   onSetCategoryContextMenu,
 }: Props) {
+  const { t } = useTranslation();
   const categorySearchInputRef = useRef<HTMLInputElement | null>(null);
 
   return (
@@ -54,7 +56,7 @@ export function CategoryList({
                     onSetIsCategorySearchActive(false);
                   }
                 }}
-                placeholder="Search categories"
+                placeholder={t("items.searchCategories")}
                 className="w-full border border-[#D1D5DB] rounded-lg px-3 py-2 text-sm"
                 autoFocus
               />
@@ -64,7 +66,7 @@ export function CategoryList({
               type="button"
               onClick={() => onSetIsCategorySearchActive(true)}
               className="w-10 h-10 rounded-full bg-[#E5E7EB] flex items-center justify-center text-[#4B5563] hover:bg-[#D1D5DB] transition-colors mr-3"
-              aria-label="Search categories"
+              aria-label={t("items.searchCategories")}
             >
               <Search className="w-5 h-5" />
             </button>
@@ -74,7 +76,7 @@ export function CategoryList({
             className="flex items-center gap-2 bg-[#FFA726] hover:bg-[#FB8C00] text-white font-semibold rounded-lg px-5 py-2 shadow transition-all text-base relative"
           >
             <Plus className="w-5 h-5" />
-            Add Category
+            {t("items.addCategory")}
           </button>
         </div>
       </div>
@@ -84,10 +86,10 @@ export function CategoryList({
           <thead className="bg-[#F7F9FB] sticky top-0 z-10">
             <tr>
               <th className="px-4 py-2 text-left font-semibold text-[#7B8A9A] text-xs tracking-wide align-middle">
-                CATEGORY
+                {t("items.category")}
               </th>
               <th className="px-4 py-2 text-right font-semibold text-[#7B8A9A] text-xs tracking-wide align-middle">
-                ITEM
+                {t("items.item")}
               </th>
             </tr>
           </thead>
@@ -99,7 +101,7 @@ export function CategoryList({
               }`}
             >
               <td className="px-4 py-3 text-[#222B45] font-medium">
-                Items not in any Category
+                {t("items.uncategorized")}
               </td>
               <td className="px-4 py-3 text-right font-semibold text-[#7B8A9A]">
                 {uncategorizedItemCount}

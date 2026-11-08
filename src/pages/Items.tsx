@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { ProductsTab } from "@/components/pagescomponents/items/products/ProductsTab";
 import type { CategoryRecord, UnitRecord, ConversionRateRecord } from "@/components/pagescomponents/items/products/types";
 import { CategoryTab } from "@/components/pagescomponents/items/category/CategoryTab";
@@ -14,6 +15,7 @@ interface ItemsProps {
 }
 
 export function Items({ onViewChange }: ItemsProps) {
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<"products" | "category" | "units">(
     "products"
   );
@@ -73,17 +75,21 @@ export function Items({ onViewChange }: ItemsProps) {
         style={{ minHeight: "56px" }}
       >
         <div className="flex w-full">
-          {(["products", "category", "units"] as const).map((tab) => (
+          {([
+            { id: "products", label: t("items.products") },
+            { id: "category", label: t("items.category") },
+            { id: "units", label: t("items.units") },
+          ] as const).map(({ id, label }) => (
             <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
+              key={id}
+              onClick={() => setActiveTab(id)}
               className={`flex-1 text-sm font-medium pb-2 border-b-2 transition-colors ${
-                activeTab === tab
+                activeTab === id
                   ? "text-[#E53935] border-[#E53935]"
                   : "text-gray-500 border-transparent hover:text-gray-700"
               }`}
             >
-              {tab.toUpperCase()}
+              {label}
             </button>
           ))}
         </div>

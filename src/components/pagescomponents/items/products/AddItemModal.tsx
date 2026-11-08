@@ -1,6 +1,7 @@
 import { X, ScanBarcode } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui";
 import { useSettings } from "@/hooks/useSettings";
+import { useTranslation } from "react-i18next";
 import type {
   AddItemFormState,
   CategoryRecord,
@@ -48,6 +49,7 @@ export function AddItemModal({
   onOpenAddCategory,
   onSaveItem,
 }: AddItemModalProps) {
+  const { t } = useTranslation();
   const [enableExpDate] = useSettings('enableExpDate', true);
   const [enableMfgDate] = useSettings('enableMfgDate', true);
 
@@ -56,7 +58,7 @@ export function AddItemModal({
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center justify-between gap-3">
-            <span>{itemBeingEdited ? "Edit Item" : "Add Item"}</span>
+            <span>{itemBeingEdited ? t("items.editItem") : t("items.addItem")}</span>
             <div className="flex items-center gap-1">
               <button
                 type="button"
@@ -73,7 +75,7 @@ export function AddItemModal({
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Item Name *
+                {t("items.itemName")} *
               </label>
               <input
                 type="text"
@@ -81,13 +83,13 @@ export function AddItemModal({
                 onChange={(event) =>
                   onFormChange("itemName", event.target.value)
                 }
-                placeholder="Enter item name"
+                placeholder={t("items.enterItemName")}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
               />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Category
+                {t("common.category")}
               </label>
               <select
                 value={addItemForm.categoryId}
@@ -101,12 +103,12 @@ export function AddItemModal({
                 }}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
               >
-                <option value="">Select Category</option>
+                <option value="">{t("items.selectCategory")}</option>
                 <option
                   value="add_new_category"
                   className="text-[#E53935] font-medium"
                 >
-                  + Create New Category
+                  {t("items.createNewCategory")}
                 </option>
                 {categoryList.map((c) => (
                   <option key={c.id} value={c.id}>
@@ -119,7 +121,7 @@ export function AddItemModal({
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Item Code
+                {t("items.itemCode")}
               </label>
               <div className="relative">
                 <input
@@ -128,7 +130,7 @@ export function AddItemModal({
                   onChange={(event) =>
                     onFormChange("itemCode", event.target.value)
                   }
-                  placeholder="Enter item code"
+                  placeholder={t("items.enterItemCode")}
                   className="w-full border border-gray-300 rounded-lg pl-3 pr-10 py-2 text-sm"
                 />
                 <button
@@ -138,8 +140,8 @@ export function AddItemModal({
                     onFormChange("itemCode", randomCode);
                   }}
                   className="absolute right-1 top-1 bottom-1 px-2 flex items-center justify-center text-white bg-[#E53935] hover:bg-[#d32f2f] rounded transition-colors"
-                  aria-label="Assign Random Code"
-                  title="Assign Random Code"
+                  aria-label={t("items.assignRandomCode")}
+                  title={t("items.assignRandomCode")}
                 >
                   <ScanBarcode className="w-4 h-4" />
                 </button>
@@ -147,7 +149,7 @@ export function AddItemModal({
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Unit *
+                {t("common.unit")} *
               </label>
               <button
                 onClick={onOpenUnitSelector}
@@ -155,13 +157,13 @@ export function AddItemModal({
               >
                 {selectedUnit
                   ? `${selectedUnit.fullName} (${selectedUnit.shortName})`
-                  : "Select Unit"}
+                  : t("items.selectUnit")}
               </button>
             </div>
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Item Image
+              {t("items.itemImage")}
             </label>
             {!addItemImageDataUrl && !addItemExistingImagePath ? (
               <input
@@ -184,10 +186,10 @@ export function AddItemModal({
                       onClick={onRemoveImage}
                       className="px-3 py-1 text-sm font-medium text-red-600 bg-red-50 border border-red-200 rounded hover:bg-red-100"
                     >
-                      Remove
+                      {t("items.remove")}
                     </button>
                     <label className="px-3 py-1 text-sm font-medium text-blue-600 bg-blue-50 border border-blue-200 rounded hover:bg-blue-100 cursor-pointer">
-                      Change
+                      {t("items.change")}
                       <input
                         type="file"
                         accept="image/*"
@@ -204,8 +206,8 @@ export function AddItemModal({
           <div className="flex gap-4 border-b border-gray-200">
             {(
               [
-                { key: "pricing", label: "Pricing" },
-                { key: "stock", label: "Stock" },
+                { key: "pricing", label: t("items.pricing") },
+                { key: "stock", label: t("items.stock") },
               ] as const
             ).map((tab) => (
               <button
@@ -227,7 +229,7 @@ export function AddItemModal({
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Sale Price
+                    {t("items.salePrice")}
                   </label>
                   <input
                     type="number"
@@ -241,12 +243,12 @@ export function AddItemModal({
                       onFormChange("salePrice", event.target.value)
                     }
                     className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                    placeholder="Sale Price"
+                    placeholder={t("items.salePrice")}
                   />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Wholesale Price
+                    {t("items.wholesalePrice")}
                   </label>
                   <input
                     type="number"
@@ -260,14 +262,14 @@ export function AddItemModal({
                       onFormChange("wholesalePrice", event.target.value)
                     }
                     className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                    placeholder="Wholesale Price"
+                    placeholder={t("items.wholesalePrice")}
                   />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Purchase Price
+                    {t("items.purchasePrice")}
                   </label>
                   <input
                     type="number"
@@ -281,12 +283,12 @@ export function AddItemModal({
                       onFormChange("purchasePrice", event.target.value)
                     }
                     className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                    placeholder="Purchase Price"
+                    placeholder={t("items.purchasePrice")}
                   />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Minimum Wholesale Qty
+                    {t("items.minWholesaleQty")}
                   </label>
                   <input
                     type="number"
@@ -314,7 +316,7 @@ export function AddItemModal({
                   <div>
                     <div className="mb-1 flex items-center justify-between gap-3">
                       <label className="block text-sm font-medium text-gray-700">
-                        Opening Stock
+                        {t("items.openingStock")}
                       </label>
                     </div>
                     <input
@@ -337,7 +339,7 @@ export function AddItemModal({
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      At Price
+                      {t("items.atPrice")}
                     </label>
                     <input
                       type="number"
@@ -362,7 +364,7 @@ export function AddItemModal({
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    As Of Date
+                    {t("items.asOfDate")}
                   </label>
                   <input
                     type="date"
@@ -376,7 +378,7 @@ export function AddItemModal({
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Low Stock Threshold
+                    {t("items.lowStockThreshold")}
                   </label>
                   <input
                     type="number"
@@ -399,7 +401,7 @@ export function AddItemModal({
                   {enableMfgDate && (
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Manufacturing Date (Optional)
+                        {t("items.mfgDateOptional")}
                       </label>
                       <input
                         type="date"
@@ -415,7 +417,7 @@ export function AddItemModal({
                   {enableExpDate && (
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Expiry Date (Optional)
+                        {t("items.expDateOptional")}
                       </label>
                       <input
                         type="date"
@@ -438,7 +440,7 @@ export function AddItemModal({
               onClick={() => onOpenChange(false)}
               className="px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50"
             >
-              Cancel
+              {t("common.cancel")}
             </button>
             <button
               onClick={() => onSaveItem(false)}
@@ -450,7 +452,7 @@ export function AddItemModal({
               }
               className="px-4 py-2 bg-[#E53935] text-white rounded-lg text-sm hover:bg-red-600 disabled:opacity-60"
             >
-              Save &amp; New
+              {t("parties.saveAndNew")}
             </button>
             <button
               onClick={() => onSaveItem(true)}
@@ -462,10 +464,10 @@ export function AddItemModal({
               className="px-4 py-2 bg-[#1976D2] text-white rounded-lg text-sm hover:bg-blue-600 disabled:opacity-60"
             >
               {isSavingItem
-                ? "Saving..."
+                ? t("common.saving")
                 : itemBeingEdited
-                  ? "Update"
-                  : "Save"}
+                  ? t("common.update")
+                  : t("common.save")}
             </button>
           </div>
         </div>

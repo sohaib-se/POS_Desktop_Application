@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ScanBarcode, Search, ChevronDown, Package } from "lucide-react";
@@ -34,26 +35,34 @@ const ACTIVE_FIELD_MAP = [
   {
     key: "companyName" as const,
     formKey: "header" as const,
-    label: "Company Name",
-    placeholder: "Enter company name",
+    labelKey: "utilities.companyName",
+    defaultLabel: "Company Name",
+    placeholderKey: "utilities.enterCompanyName",
+    defaultPlaceholder: "Enter company name",
   },
   {
     key: "itemName" as const,
     formKey: "line1" as const,
-    label: "Item Name",
-    placeholder: "Enter item name",
+    labelKey: "utilities.itemName",
+    defaultLabel: "Item Name",
+    placeholderKey: "items.enterItemName",
+    defaultPlaceholder: "Enter item name",
   },
   {
     key: "salePrice" as const,
     formKey: "line2" as const,
-    label: "Sale Price",
-    placeholder: "Enter sale price",
+    labelKey: "utilities.salePrice",
+    defaultLabel: "Sale Price",
+    placeholderKey: "items.enterSalePrice",
+    defaultPlaceholder: "Enter sale price",
   },
   {
     key: "discount" as const,
     formKey: "line3" as const,
-    label: "Discount",
-    placeholder: "Enter discount text",
+    labelKey: "utilities.discount",
+    defaultLabel: "Discount",
+    placeholderKey: "utilities.enterDiscountText",
+    defaultPlaceholder: "Enter discount text",
   },
 ];
 
@@ -66,6 +75,7 @@ interface ItemDropdownProps {
 }
 
 function ItemDropdown({ value, items, onSelect }: ItemDropdownProps) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const ref = useRef<HTMLDivElement>(null);
@@ -111,7 +121,7 @@ function ItemDropdown({ value, items, onSelect }: ItemDropdownProps) {
           }
           ${!value ? "text-gray-400" : ""}`}
       >
-        <span className="truncate">{value || "Select Item"}</span>
+        <span className="truncate">{value || t("common.selectItem", "Select Item")}</span>
         <ChevronDown
           className={`w-4 h-4 text-gray-400 flex-shrink-0 transition-transform duration-200 ${open ? "rotate-180" : ""}`}
         />
@@ -136,7 +146,7 @@ function ItemDropdown({ value, items, onSelect }: ItemDropdownProps) {
                     setQuery("");
                   }
                 }}
-                placeholder="Search by name or code…"
+                placeholder={t("utilities.searchByNameOrCode")}
                 className="flex-1 text-sm bg-transparent outline-none border-none focus:ring-0 p-0 placeholder-gray-400 text-gray-700"
               />
               {query && (
@@ -156,7 +166,7 @@ function ItemDropdown({ value, items, onSelect }: ItemDropdownProps) {
             {filtered.length === 0 && (
               <li className="flex flex-col items-center justify-center py-6 text-gray-400 text-sm gap-2">
                 <Package className="w-8 h-8 text-gray-300" />
-                <span>No items found</span>
+                <span>{t("common.noItemsFound", "No items found")}</span>
               </li>
             )}
             {filtered.map((item) => {
@@ -202,7 +212,7 @@ function ItemDropdown({ value, items, onSelect }: ItemDropdownProps) {
           {/* Footer count */}
           {filtered.length > 0 && (
             <div className="px-3.5 py-2 border-t border-gray-100 text-xs text-gray-400 bg-gray-50">
-              {filtered.length} item{filtered.length !== 1 ? "s" : ""} found
+              {t("common.itemsFound", "{{count}} items found", { count: filtered.length })}
             </div>
           )}
         </div>
@@ -221,6 +231,7 @@ export function BarcodeGeneratorForm({
   items,
   activeFields,
 }: BarcodeGeneratorFormProps) {
+  const { t } = useTranslation();
   const handleChange = (field: keyof BarcodeFormData, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
@@ -250,7 +261,7 @@ export function BarcodeGeneratorForm({
   return (
     <div className="flex-1 pr-8">
       <h4 className="font-semibold text-gray-700 mb-6">
-        Enter item details to add for barcode
+        {t("utilities.enterItemDetailsBarcode")}
       </h4>
 
       {/* ── Required fields ─────────────────────────────────────────── */}
@@ -258,7 +269,7 @@ export function BarcodeGeneratorForm({
         {/* Item Name — custom professional dropdown */}
         <div>
           <label className="block text-xs font-semibold text-gray-500 mb-1.5">
-            Item Name<span className="text-red-500">*</span>
+            {t("items.itemName")}<span className="text-red-500">*</span>
           </label>
           <ItemDropdown
             value={formData.itemName}
@@ -270,19 +281,19 @@ export function BarcodeGeneratorForm({
         {/* Item Code */}
         <div>
           <label className="block text-xs font-semibold text-gray-500 mb-1.5">
-            Item Code<span className="text-red-500">*</span>
+            {t("items.itemCode")}<span className="text-red-500">*</span>
           </label>
           <div className="relative">
             <Input
               type="text"
-              placeholder="Enter Item Code"
+              placeholder={t("utilities.enterItemCode")}
               className="text-sm placeholder:text-gray-400 border-gray-300 pr-10"
               value={formData.itemCode}
               onChange={(e) => handleChange("itemCode", e.target.value)}
             />
             <button
               className="absolute right-1 top-1 bottom-1 px-2 flex items-center justify-center text-white bg-[#E53935] hover:bg-[#d32f2f] rounded transition-colors"
-              title="Assign Random Code"
+              title={t("utilities.assignRandomCode")}
               onClick={() => {
                 const randomCode = Math.floor(
                   100000000000 + Math.random() * 900000000000
@@ -298,12 +309,12 @@ export function BarcodeGeneratorForm({
         {/* No of Labels */}
         <div>
           <label className="block text-xs font-semibold text-gray-500 mb-1.5">
-            No of Labels<span className="text-red-500">*</span>
+            {t("utilities.noOfLabels")}<span className="text-red-500">*</span>
           </label>
           <Input
             type="number"
             min="1"
-            placeholder="Enter No of Labels"
+            placeholder={t("utilities.enterNoOfLabels")}
             className="text-sm placeholder:text-gray-400 border-gray-300"
             value={formData.noOfLabels}
             onChange={(e) => {
@@ -337,14 +348,14 @@ export function BarcodeGeneratorForm({
               : "grid-cols-3"
           }`}
         >
-          {visibleFields.map(({ formKey, label, placeholder }) => (
+          {visibleFields.map(({ formKey, labelKey, defaultLabel, placeholderKey, defaultPlaceholder }) => (
             <div key={formKey}>
               <label className="block text-xs font-semibold text-gray-500 mb-1.5">
-                {label}
+                {t(labelKey, defaultLabel)}
               </label>
               <Input
                 type="text"
-                placeholder={placeholder}
+                placeholder={t(placeholderKey, defaultPlaceholder)}
                 className="text-sm placeholder:text-gray-400 border-gray-300"
                 value={formData[formKey] as string}
                 onChange={(e) => handleChange(formKey, e.target.value)}
@@ -358,11 +369,11 @@ export function BarcodeGeneratorForm({
       <div className="grid grid-cols-3 gap-6">
         <div className="col-span-2">
           <label className="block text-xs font-semibold text-gray-500 mb-1.5">
-            Line 4
+            {t("utilities.line4", "Line 4")}
           </label>
           <Input
             type="text"
-            placeholder="Enter custom text for Line 4"
+            placeholder={t("utilities.enterCustomLine4")}
             className="text-sm placeholder:text-gray-400 border-gray-300"
             value={formData.line4}
             onChange={(e) => handleChange("line4", e.target.value)}
@@ -379,7 +390,7 @@ export function BarcodeGeneratorForm({
               !formData.noOfLabels
             }
           >
-            {isLoading ? "Adding..." : "Add for Barcode"}
+            {isLoading ? t("utilities.adding", "Adding...") : t("utilities.addForBarcode", "Add for Barcode")}
           </Button>
         </div>
       </div>

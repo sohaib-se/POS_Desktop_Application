@@ -327,7 +327,15 @@ function registerApiRoutes(middlewares, customAppDataRoot) {
             res.end(JSON.stringify({ success: false, message: "Invalid old passcode." }));
             return;
           }
-          repository.setPasscode(payload.newPasscode, payload.email ?? current?.recovery_email, payload.phone ?? current?.recovery_phone);
+          const finalEmail = (typeof payload.email === "string" && payload.email.trim()) ? payload.email.trim() : (current?.recovery_email || null);
+          const finalPhone = (typeof payload.phone === "string" && payload.phone.trim()) ? payload.phone.trim() : (current?.recovery_phone || null);
+          if (!finalEmail && !finalPhone) {
+            res.statusCode = 400;
+            res.setHeader("Content-Type", "application/json");
+            res.end(JSON.stringify({ success: false, message: "Please provide at least one recovery method (Email or Phone)." }));
+            return;
+          }
+          repository.setPasscode(payload.newPasscode, finalEmail, finalPhone);
           res.statusCode = 200;
           res.setHeader("Content-Type", "application/json");
           res.end(JSON.stringify({ success: true }));
@@ -354,7 +362,15 @@ function registerApiRoutes(middlewares, customAppDataRoot) {
           }
         }
         if (pathName === "/recovery/update") {
-          repository.setPasscode(current?.code, payload.email, payload.phone);
+          const finalEmail = (typeof payload.email === "string" && payload.email.trim()) ? payload.email.trim() : null;
+          const finalPhone = (typeof payload.phone === "string" && payload.phone.trim()) ? payload.phone.trim() : null;
+          if (!finalEmail && !finalPhone) {
+            res.statusCode = 400;
+            res.setHeader("Content-Type", "application/json");
+            res.end(JSON.stringify({ success: false, message: "Please provide at least one recovery method (Email or Phone)." }));
+            return;
+          }
+          repository.setPasscode(current?.code, finalEmail, finalPhone);
           res.statusCode = 200;
           res.setHeader("Content-Type", "application/json");
           res.end(JSON.stringify({ success: true }));

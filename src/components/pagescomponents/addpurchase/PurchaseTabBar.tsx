@@ -1,4 +1,5 @@
 import React from "react";
+import { useTranslation } from "react-i18next";
 import type { PurchaseTab, PartyOption } from "./types";
 
 interface PurchaseTabBarProps {
@@ -22,6 +23,7 @@ export function PurchaseTabBar({
   parties = [],
   displayedInvoiceNo = "1",
 }: PurchaseTabBarProps) {
+  const { t } = useTranslation();
   return (
     <div
       style={{
@@ -91,8 +93,8 @@ export function PurchaseTabBar({
             )}
             <span>
               {tab.customerSearch
-                ? parties.find((p) => String(p.id) === tab.customerSearch)?.name || "New Purchase"
-                : `Bill #${displayedInvoiceNo}`}
+                ? parties.find((p) => String(p.id) === tab.customerSearch)?.name || t("common.newPurchase")
+                : `${t("purchases.bill")} #${displayedInvoiceNo}`}
             </span>
             {tabs.length > 1 && (
               <button
@@ -120,7 +122,7 @@ export function PurchaseTabBar({
       })}
       <button
         onClick={addTab}
-        title="New Purchase"
+        title={t("common.newPurchase")}
         style={{
           marginBottom: 0,
           marginLeft: 4,

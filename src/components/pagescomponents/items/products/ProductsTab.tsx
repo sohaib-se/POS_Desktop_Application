@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { exportItemTransactionsToExcel } from "@/utils/exportItemTransactionsExcel";
 import { useSettings } from "@/hooks/useSettings";
 
@@ -199,6 +200,7 @@ export function ProductsTab({
   onOpenAddCategory,
   onOpenUnitSelector,
 }: ProductsTabProps) {
+  const { t } = useTranslation();
   // ---- State ----
 
 
@@ -1615,9 +1617,10 @@ export function ProductsTab({
       {transactionToDelete && (
         <ConfirmDialog
           open={true}
-          title={`Delete ${transactionToDelete.type}`}
-          message={`Are you sure you want to delete this ${transactionToDelete.type}?`}
-          confirmLabel="Delete"
+          title={t("common.deleteTransactionTitle")}
+          message={t("common.deleteTransactionMsg")}
+          confirmLabel={t("common.delete")}
+          cancelLabel={t("common.cancel")}
           onConfirm={executeDeleteTransaction}
           onCancel={() => setTransactionToDelete(null)}
         />

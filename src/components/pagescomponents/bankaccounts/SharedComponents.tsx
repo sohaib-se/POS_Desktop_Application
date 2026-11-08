@@ -1,4 +1,5 @@
 import React from "react";
+import { useTranslation } from "react-i18next";
 import { ChevronDown, X, Camera } from "lucide-react";
 
 export interface ModalProps {
@@ -100,6 +101,7 @@ export interface ImageUploadProps {
 }
 
 export function ImageUpload({ imageDataUrl, setImageDataUrl, fileInputRef }: ImageUploadProps) {
+  const { t } = useTranslation();
   return (
     <div>
       {!imageDataUrl ? (
@@ -125,9 +127,9 @@ export function ImageUpload({ imageDataUrl, setImageDataUrl, fileInputRef }: Ima
             <button 
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              className="text-[11px] font-bold text-white tracking-wide hover:text-gray-200"
+              className="text-[11px] font-bold text-white tracking-wide hover:text-gray-200 uppercase"
             >
-              CHANGE
+              {t("common.change")}
             </button>
             <button 
               type="button"
@@ -135,9 +137,9 @@ export function ImageUpload({ imageDataUrl, setImageDataUrl, fileInputRef }: Ima
                 setImageDataUrl("");
                 if (fileInputRef.current) fileInputRef.current.value = "";
               }}
-              className="text-[11px] font-bold text-white tracking-wide hover:text-gray-200"
+              className="text-[11px] font-bold text-white tracking-wide hover:text-gray-200 uppercase"
             >
-              DELETE
+              {t("common.delete")}
             </button>
           </div>
         </div>
@@ -167,21 +169,22 @@ export interface ModalFooterProps {
   disabled?: boolean;
 }
 
-export function ModalFooter({ onCancel, onSave, saveLabel = "Save", disabled }: ModalFooterProps) {
+export function ModalFooter({ onCancel, onSave, saveLabel, disabled }: ModalFooterProps) {
+  const { t } = useTranslation();
   return (
     <div className="flex justify-end gap-3 pt-4 mt-2">
       <button
         onClick={onCancel}
         className="px-5 py-2 border border-gray-300 rounded-full text-sm text-gray-700 hover:bg-gray-50"
       >
-        Cancel
+        {t("common.cancel")}
       </button>
       <button
         onClick={onSave}
         disabled={disabled}
         className="px-6 py-2 bg-[#E53935] text-white rounded-full text-sm font-medium hover:bg-red-600 disabled:opacity-50"
       >
-        {saveLabel}
+        {saveLabel || t("common.save")}
       </button>
     </div>
   );

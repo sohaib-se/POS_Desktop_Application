@@ -1,4 +1,5 @@
 import { Calendar } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 export function SaleInvoiceFilters({
   selectedMonthKey,
@@ -7,13 +8,14 @@ export function SaleInvoiceFilters({
   selectedMonthKey: string;
   setSelectedMonthKey: (key: string) => void;
 }) {
+  const { t } = useTranslation();
   return (
     <div
       className="p-4 bg-white rounded-md shadow-sm flex items-center gap-4 shrink-0"
       style={{ marginLeft: "4px", marginRight: "4px" }}
     >
       <div className="flex items-center gap-2">
-        <span className="text-sm text-gray-500">Filter by Month :</span>
+        <span className="text-sm text-gray-500">{t("sales.filterByMonth", "Filter by Month :")}</span>
         <div className="relative flex items-center">
           <Calendar className="w-4 h-4 text-gray-500 absolute left-3 pointer-events-none" />
           <input

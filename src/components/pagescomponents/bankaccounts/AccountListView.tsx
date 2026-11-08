@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Search, ArrowUpDown } from "lucide-react";
 import type { BankAccount } from "./types";
 
@@ -10,6 +11,7 @@ interface AccountListViewProps {
 }
 
 export function AccountListView({ accounts, selectedId, onSelect, onContextMenu }: AccountListViewProps) {
+  const { t } = useTranslation();
   const [search, setSearch] = useState("");
   const filtered = accounts.filter((a) =>
     a.name.toLowerCase().includes(search.toLowerCase()),
@@ -25,7 +27,7 @@ export function AccountListView({ accounts, selectedId, onSelect, onContextMenu 
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search by Account/Amount"
+            placeholder={t("cashBank.searchByAccountAmount")}
             className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-full text-sm text-gray-700 placeholder-gray-400 focus:outline-none focus:border-blue-300"
           />
         </div>
@@ -34,10 +36,10 @@ export function AccountListView({ accounts, selectedId, onSelect, onContextMenu 
       {/* Column headers */}
       <div className="flex items-center px-4 py-2 border-b border-gray-100 text-xs text-gray-500 font-medium">
         <div className="flex-1 flex items-center gap-1">
-          Account Name
+          {t("cashBank.accountName")}
           <ArrowUpDown className="w-3 h-3" />
         </div>
-        <div className="text-right">Amount</div>
+        <div className="text-right">{t("common.amount")}</div>
       </div>
 
       {/* Rows */}

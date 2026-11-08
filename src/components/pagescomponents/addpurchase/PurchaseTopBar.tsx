@@ -1,4 +1,8 @@
+import { useTranslation } from "react-i18next";
+
 export function PurchaseTopBar() {
+  const { t } = useTranslation();
+
   return (
     <div
       style={{
@@ -12,7 +16,7 @@ export function PurchaseTopBar() {
       }}
     >
       <span style={{ fontSize: 15, fontWeight: 600, color: "#1f2937" }}>
-        Purchase
+        {t("purchases.purchase")}
       </span>
     </div>
   );

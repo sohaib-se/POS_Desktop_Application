@@ -174,7 +174,7 @@ export const chartData = [
 
 export const userProfile = {
   businessName: 'Laimsoft',
-  phone: '3198224949',
+  phone: '',
   email: '',
   address: '',
   businessType: 'Retail',

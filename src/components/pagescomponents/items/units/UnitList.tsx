@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { Plus, Search } from "lucide-react";
 import type { UnitRecord } from "@/components/pagescomponents/items/products/types";
 import type { UnitContextMenuState } from "./types";
@@ -28,6 +29,7 @@ export function UnitList({
   onOpenAddUnit,
   onSetUnitContextMenu,
 }: Props) {
+  const { t } = useTranslation();
   return (
     <Card
       className="w-80 bg-white rounded-md flex flex-col shrink-0 overflow-hidden shadow-sm"
@@ -51,7 +53,7 @@ export function UnitList({
                   onSetIsUnitSearchActive(false);
                 }
               }}
-              placeholder="Search units"
+              placeholder={t("items.searchUnits")}
               className="w-full border border-[#D1D5DB] rounded-lg px-3 py-2 text-sm"
             />
           </div>
@@ -60,7 +62,7 @@ export function UnitList({
             type="button"
             onClick={() => onSetIsUnitSearchActive(true)}
             className="w-10 h-10 rounded-full bg-[#E5E7EB] flex items-center justify-center text-[#4B5563] hover:bg-[#D1D5DB] transition-colors"
-            aria-label="Search units"
+            aria-label={t("items.searchUnits")}
           >
             <Search className="w-5 h-5" />
           </button>
@@ -70,7 +72,7 @@ export function UnitList({
           className="flex items-center gap-1 bg-[#FFA726] hover:bg-[#FB8C00] text-white font-semibold rounded-lg px-4 py-2 shadow transition-all text-sm"
         >
           <Plus className="w-5 h-5" />
-          Add Units
+          {t("items.addUnits")}
         </button>
       </div>
 
@@ -79,10 +81,10 @@ export function UnitList({
           <thead className="bg-white sticky top-0 z-10 border-b border-[#E3EAF2]">
             <tr>
               <th className="px-4 py-3 text-left font-semibold text-[#7B8A9A] text-xs tracking-wide">
-                FULLNAME
+                {t("items.fullName")}
               </th>
               <th className="px-4 py-3 text-right font-semibold text-[#7B8A9A] text-xs tracking-wide pr-8">
-                SHORTNAME
+                {t("items.shortName")}
               </th>
             </tr>
           </thead>
@@ -90,7 +92,7 @@ export function UnitList({
             {filteredUnitList.length === 0 ? (
               <tr>
                 <td colSpan={2} className="px-4 py-8 text-center text-[#7B8A9A]">
-                  No units found
+                  {t("items.noUnitsFound")}
                 </td>
               </tr>
             ) : (

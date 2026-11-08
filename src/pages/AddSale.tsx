@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import type { SaleInvoiceEditData } from "@/types";
 import { AddSaleTabBar } from "@/components/pagescomponents/addsale/AddSaleTabBar";
 import { AddSaleTopBar } from "@/components/pagescomponents/addsale/AddSaleTopBar";
@@ -105,7 +106,7 @@ function createDefaultTab(id: number, invoiceNo = "1"): SaleTab {
     ],
     discountPercent: "",
     discountRs: "",
-    tax: "NONE",
+    tax: "",
     roundOff: true,
     description: "",
     showDescriptionInput: false,
@@ -124,11 +125,12 @@ function createEmptyRow(): SaleRow {
 
 
 function parseTaxRate(tax: string) {
-  if (tax === "NONE") {
+  if (!tax || tax === "NONE") {
     return 0;
   }
 
-  return parseFloat(tax.replace(/[^0-9.]/g, "")) / 100;
+  const parsed = parseFloat(tax.replace(/[^0-9.]/g, ""));
+  return isNaN(parsed) ? 0 : parsed / 100;
 }
 
 function parseLineItems(lineItemsJson?: string | null) {
@@ -189,6 +191,7 @@ function formatDateForDisplay(date: Date) {
 }
 
 export function AddSale({ onSave, onClose, initialInvoice, isConversion }: AddSaleProps) {
+  const { t } = useTranslation();
   const [tabs, setTabs] = useState<SaleTab[]>([createDefaultTab(1)]);
   const [activeTabId, setActiveTabId] = useState(1);
   const [isOpenAnimated, setIsOpenAnimated] = useState(false);
@@ -349,7 +352,7 @@ export function AddSale({ onSave, onClose, initialInvoice, isConversion }: AddSa
           : [createEmptyRow(), createEmptyRow()],
         discountPercent: String(initialInvoice.discountPercent ?? ""),
         discountRs: String(initialInvoice.discountAmount ?? ""),
-        tax: initialInvoice.taxLabel ?? "NONE",
+        tax: initialInvoice.taxLabel ? (initialInvoice.taxLabel === "NONE" ? "" : initialInvoice.taxLabel.replace(/[^0-9.]/g, "")) : "",
         roundOff: Boolean(initialInvoice.roundOff),
         description: initialInvoice.description ?? "",
         showDescriptionInput: Boolean(initialInvoice.description),
@@ -787,7 +790,7 @@ export function AddSale({ onSave, onClose, initialInvoice, isConversion }: AddSa
           subtotal,
           discountPercent: discountPercentValue,
           discountAmount: discountAmountValue,
-          taxLabel: activeTab.tax,
+          taxLabel: activeTab.tax && Number(activeTab.tax) > 0 ? (activeTab.tax.includes("%") ? activeTab.tax : `${activeTab.tax}%`) : "NONE",
           taxRate: taxRateValue,
           taxAmount: taxAmountValue,
           roundOff: activeTab.roundOff,
@@ -1230,20 +1233,20 @@ export function AddSale({ onSave, onClose, initialInvoice, isConversion }: AddSa
         isOpen={tabToClose !== null}
         onClose={() => setTabToClose(null)}
         onConfirm={confirmCloseTab}
-        title="Discard Sale Tab"
-        message="Are you sure you want to close this tab? Any unsaved changes will be lost."
-        confirmText="Discard"
-        confirmLoadingText="Discarding..."
+        title={t("common.discardSaleTabTitle")}
+        message={t("common.discardSaleTabMsg")}
+        confirmText={t("common.discard")}
+        confirmLoadingText={t("common.discarding")}
       />
 
       <ConfirmDeleteModal
         isOpen={isClosingPage}
         onClose={() => setIsClosingPage(false)}
         onConfirm={confirmClosePage}
-        title="Discard Sale"
-        message="Are you sure you want to close? Any unsaved changes will be lost."
-        confirmText="Discard"
-        confirmLoadingText="Discarding..."
+        title={t("common.discardSaleTitle")}
+        message={t("common.discardSaleMsg")}
+        confirmText={t("common.discard")}
+        confirmLoadingText={t("common.discarding")}
       />
     </div>
   );

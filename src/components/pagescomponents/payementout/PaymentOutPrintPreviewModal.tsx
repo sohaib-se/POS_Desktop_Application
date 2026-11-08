@@ -1,4 +1,5 @@
 import { useState, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import { X, RefreshCw } from "lucide-react";
 import html2pdf from "html2pdf.js";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
@@ -179,6 +180,7 @@ export function PaymentOutPrintPreviewModal({
   selectedMonth,
   businessProfile,
 }: PaymentOutPrintPreviewModalProps) {
+  const { t } = useTranslation();
   const [isBusy, setIsBusy] = useState<"idle" | "opening" | "saving">("idle");
   const isMountedRef = useRef(true);
 
@@ -351,7 +353,7 @@ export function PaymentOutPrintPreviewModal({
         style={{ width: "750px", maxWidth: "96vw" }}
       >
         <div className="flex items-center justify-between p-4 border-b">
-          <h2 className="text-xl font-bold text-gray-900">Preview</h2>
+          <h2 className="text-xl font-bold text-gray-900">{t("common.preview", "Preview")}</h2>
           <button onClick={() => setShowPrintPreview(false)} className="text-gray-500 hover:text-gray-700">
             <X className="w-5 h-5" />
           </button>
@@ -371,14 +373,14 @@ export function PaymentOutPrintPreviewModal({
             className="rounded-full px-6 py-2 border border-red-500 text-red-500 font-medium text-sm hover:bg-red-50 transition-colors flex items-center gap-2 disabled:opacity-60"
           >
             {isBusy === "opening" && <RefreshCw size={14} className="animate-spin" />}
-            {isBusy === "opening" ? "Opening PDF..." : "Open PDF"}
+            {isBusy === "opening" ? t("common.openingPdf", "Opening PDF...") : t("common.openPdf", "Open PDF")}
           </button>
           <button
             onClick={handlePrint}
             disabled={isBusy !== "idle"}
             className="rounded-full px-6 py-2 border border-red-500 text-red-500 font-medium text-sm hover:bg-red-50 transition-colors disabled:opacity-60"
           >
-            Print
+            {t("common.print", "Print")}
           </button>
           <button
             onClick={handleSavePDF}
@@ -386,14 +388,14 @@ export function PaymentOutPrintPreviewModal({
             className="rounded-full px-6 py-2 border border-red-500 text-red-500 font-medium text-sm hover:bg-red-50 transition-colors flex items-center gap-2 disabled:opacity-60"
           >
             {isBusy === "saving" && <RefreshCw size={14} className="animate-spin" />}
-            {isBusy === "saving" ? "Saving PDF..." : "Save PDF"}
+            {isBusy === "saving" ? t("common.savingPdf", "Saving PDF...") : t("common.savePdf", "Save PDF")}
           </button>
           <button
             onClick={() => setShowPrintPreview(false)}
             disabled={isBusy !== "idle"}
             className="rounded-full px-6 py-2 bg-red-500 text-white font-medium text-sm hover:bg-red-600 transition-colors disabled:opacity-60"
           >
-            Close
+            {t("common.close", "Close")}
           </button>
         </div>
       </DialogContent>

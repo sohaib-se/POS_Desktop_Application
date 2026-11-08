@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { List } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { GridContainer } from "@/components/pagescomponents/griditems/GridContainer";
 import { CategoriesSection } from "@/components/pagescomponents/griditems/CategoriesSection";
 import type { ViewType } from "@/types";
@@ -9,6 +10,7 @@ interface GridItemsProps {
 }
 
 export function GridItems({ onViewChange }: GridItemsProps) {
+  const { t } = useTranslation();
   const [selectedCategory, setSelectedCategory] = useState<string>("All Items");
 
   return (
@@ -28,7 +30,7 @@ export function GridItems({ onViewChange }: GridItemsProps) {
       <button
         onClick={() => onViewChange?.('items')}
         className="absolute bottom-6 right-6 w-14 h-14 bg-blue-600 text-white rounded-full flex items-center justify-center shadow-lg hover:bg-blue-700 transition-colors z-50"
-        title="List View"
+        title={t("items.listView", "List View")}
       >
         <List size={24} />
       </button>

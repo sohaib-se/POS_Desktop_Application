@@ -1,5 +1,6 @@
 import type { CategoryRecord } from "@/components/pagescomponents/items/products/types";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui";
+import { useTranslation } from "react-i18next";
 
 type Props = {
   categoryPendingDelete: CategoryRecord | null;
@@ -14,6 +15,8 @@ export function DeleteCategoryModal({
   onCancel,
   onConfirm,
 }: Props) {
+  const { t } = useTranslation();
+
   return (
     <Dialog
       open={Boolean(categoryPendingDelete)}
@@ -23,13 +26,13 @@ export function DeleteCategoryModal({
     >
       <DialogContent className="max-w-sm">
         <DialogHeader>
-          <DialogTitle>Delete Category</DialogTitle>
+          <DialogTitle>{t("items.deleteCategory")}</DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
           <p className="text-sm text-gray-600">
             {categoryPendingDelete
-              ? `Are you sure you want to delete ${categoryPendingDelete.name}? This action cannot be undone.`
-              : "Are you sure you want to delete this category?"}
+              ? t("items.deleteCategoryConfirm", { name: categoryPendingDelete.name })
+              : t("items.deleteCategoryGeneric")}
           </p>
           <div className="flex justify-end gap-2">
             <button
@@ -38,7 +41,7 @@ export function DeleteCategoryModal({
               onClick={onCancel}
               className="px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50"
             >
-              Cancel
+              {t("common.cancel")}
             </button>
             <button
               type="button"
@@ -49,7 +52,7 @@ export function DeleteCategoryModal({
               }}
               className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 disabled:opacity-60"
             >
-              {isDeletingCategory ? "Deleting..." : "Delete"}
+              {isDeletingCategory ? t("parties.deleting") : t("common.delete")}
             </button>
           </div>
         </div>

@@ -1,7 +1,9 @@
 import { useState, useEffect, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import { useSettings } from "@/hooks/useSettings";
 import { ChevronDown, MoreVertical, Search, Calendar } from "lucide-react";
 import type { BankAccount } from "./types";
+import { formatTransactionType } from "@/utils/transactionTranslations";
 
 interface AccountDetailProps {
   account: BankAccount;
@@ -23,6 +25,7 @@ const parseLocalDate = (dStr: string) => {
 };
 
 export function AccountDetail({ account, onDeposit, onEditTransaction, onDeleteTransaction }: AccountDetailProps) {
+  const { t } = useTranslation();
   const [txContextMenu, setTxContextMenu] = useState<{ x: number, y: number, txId: string } | null>(null);
   const [currency] = useSettings('settings.businessCurrency', { code: 'PKR', symbol: 'Rs' });
   const [currencyDisplay] = useSettings<'abbreviation' | 'icon'>('settings.currencyDisplay', 'abbreviation');
@@ -40,7 +43,7 @@ export function AccountDetail({ account, onDeposit, onEditTransaction, onDeleteT
   const searchContainerRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  const placeholders = ["Payment Type", "Name", "Date", "Amount"];
+  const placeholders = [t("cashBank.paymentType"), t("common.name"), t("common.date"), t("common.amount")];
   const [placeholderIndex, setPlaceholderIndex] = useState(0);
 
   useEffect(() => {
@@ -48,7 +51,7 @@ export function AccountDetail({ account, onDeposit, onEditTransaction, onDeleteT
       setPlaceholderIndex((prev) => (prev + 1) % placeholders.length);
     }, 3000);
     return () => clearInterval(interval);
-  }, []);
+  }, [placeholders.length]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -87,9 +90,9 @@ export function AccountDetail({ account, onDeposit, onEditTransaction, onDeleteT
   });
 
   const dropdownItems = [
-    "Bank to Cash Transfer",
-    "Cash to Bank Transfer",
-    "Bank to Bank Transfer",
+    { label: t("cashBank.bankToCash"), action: "Bank to Cash Transfer" },
+    { label: t("cashBank.cashToBank"), action: "Cash to Bank Transfer" },
+    { label: t("cashBank.bankToBank"), action: "Bank to Bank Transfer" },
   ];
 
   return (
@@ -105,7 +108,7 @@ export function AccountDetail({ account, onDeposit, onEditTransaction, onDeleteT
               onClick={() => onDeposit("deposit")}
               className="border border-[#E53935] text-[#E53935] text-sm font-medium px-4 py-1.5 rounded-l-full hover:bg-red-50 transition-colors"
             >
-              Deposit / Withdraw
+              {t("cashBank.depositWithdraw")}
             </button>
             <button
               onClick={() => setDropdownOpen((v) => !v)}
@@ -118,14 +121,14 @@ export function AccountDetail({ account, onDeposit, onEditTransaction, onDeleteT
             <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-20 min-w-48">
               {dropdownItems.map((item) => (
                 <button
-                  key={item}
+                  key={item.action}
                   onClick={() => {
                     setDropdownOpen(false);
-                    onDeposit(item);
+                    onDeposit(item.action);
                   }}
                   className="block w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
                 >
-                  {item}
+                  {item.label}
                 </button>
               ))}
             </div>
@@ -137,7 +140,7 @@ export function AccountDetail({ account, onDeposit, onEditTransaction, onDeleteT
       {/* Transactions */}
       <div className="flex-1 overflow-auto">
         <div className="flex items-center justify-between px-6 py-3">
-          <h4 className="text-sm font-semibold text-gray-800">Transactions</h4>
+          <h4 className="text-sm font-semibold text-gray-800">{t("parties.transactions")}</h4>
           <div className="flex gap-2 items-center h-10" ref={searchContainerRef}>
             {/* Search bar */}
             <div 
@@ -169,7 +172,7 @@ export function AccountDetail({ account, onDeposit, onEditTransaction, onDeleteT
                 />
                 {!searchQuery && (
                   <div className="absolute left-0 pointer-events-none flex items-center h-full w-full overflow-hidden text-gray-400 text-sm">
-                    <span className="whitespace-pre">Search </span>
+                    <span className="whitespace-pre">{t("common.search")} </span>
                     <div className="relative h-full flex-1 overflow-hidden">
                       {placeholders.map((ph, idx) => (
                         <span
@@ -208,7 +211,7 @@ export function AccountDetail({ account, onDeposit, onEditTransaction, onDeleteT
 
         {/* Table header */}
         <div className="grid grid-cols-4 px-6 py-2 border-b border-gray-100 text-xs text-gray-500 font-medium">
-          {["Payment Type", "Name", "Date", "Amount"].map((col) => (
+          {[t("cashBank.paymentType"), t("common.name"), t("common.date"), t("common.amount")].map((col) => (
             <div key={col} className="flex items-center gap-1">
               {col}
             </div>
@@ -221,7 +224,7 @@ export function AccountDetail({ account, onDeposit, onEditTransaction, onDeleteT
             className={`grid grid-cols-4 px-6 py-3 border-b border-gray-50 items-center text-sm hover:bg-gray-50 ${i % 2 === 0 ? "bg-blue-50/30" : ""
               }`}
           >
-            <div className="font-medium text-gray-800">{tx.type}</div>
+            <div className="font-medium text-gray-800">{formatTransactionType(tx.type, t)}</div>
             <div className="text-gray-700">{tx.name.replace(' (Payment In)', '').replace(' (Payment Out)', '').replace(' (Received)', '')}</div>
             <div className="text-gray-600">{tx.date}</div>
             <div className="flex items-center justify-between">
@@ -245,7 +248,7 @@ export function AccountDetail({ account, onDeposit, onEditTransaction, onDeleteT
         ))}
         {!visibleTransactions.length && (
           <div className="px-4 py-10 text-center text-sm text-gray-500">
-            No transactions found for the selected month.
+            {t("cashBank.noTransactions")}
           </div>
         )}
       </div>
@@ -285,7 +288,7 @@ export function AccountDetail({ account, onDeposit, onEditTransaction, onDeleteT
                 setTxContextMenu(null);
               }}
             >
-              Edit
+              {t("common.edit")}
             </button>
           )}
           <button
@@ -295,7 +298,7 @@ export function AccountDetail({ account, onDeposit, onEditTransaction, onDeleteT
               setTxContextMenu(null);
             }}
           >
-            Delete
+            {t("common.delete")}
           </button>
         </div>
       )}

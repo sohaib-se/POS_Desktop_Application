@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { Plus } from "lucide-react";
 import type { BankAccount } from "../components/pagescomponents/bankaccounts/types";
 import { AddBankModal } from "../components/pagescomponents/bankaccounts/AddBankModal";
@@ -12,6 +13,7 @@ import { DepositWithdrawModal } from "../components/pagescomponents/bankaccounts
 import { ConfirmDeleteModal } from "@/components/common/ConfirmDeleteModal";
 
 export function BankAccounts() {
+  const { t } = useTranslation();
   const [accounts, setAccounts] = useState<BankAccount[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [showAdd, setShowAdd] = useState(false);
@@ -132,7 +134,7 @@ export function BankAccounts() {
       {/* Top bar */}
       {!showEmptyState && (
         <div className="bg-white rounded-md shadow-sm px-6 py-3 flex items-center justify-between mx-1">
-          <h1 className="text-base font-semibold text-gray-900">Banks</h1>
+          <h1 className="text-base font-semibold text-gray-900">{t("cashBank.banks")}</h1>
           <div className="flex items-center gap-2">
             <button
               onClick={() => setShowAdd(true)}
@@ -140,7 +142,7 @@ export function BankAccounts() {
               className="bg-[#E53935] hover:bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 disabled:opacity-50"
             >
               <Plus className="w-4 h-4" />
-              Add Bank
+              {t("cashBank.addBank")}
             </button>
           </div>
         </div>
@@ -260,7 +262,7 @@ export function BankAccounts() {
               setContextMenu(null);
             }}
           >
-            Edit
+            {t("common.edit")}
           </button>
           <button
             className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50"
@@ -269,7 +271,7 @@ export function BankAccounts() {
               setContextMenu(null);
             }}
           >
-            Delete
+            {t("common.delete")}
           </button>
         </div>
       )}
@@ -278,10 +280,10 @@ export function BankAccounts() {
         isOpen={deleteModalState.isOpen}
         onClose={() => setDeleteModalState({ isOpen: false, type: 'account', id: null })}
         onConfirm={confirmDelete}
-        title={deleteModalState.type === 'account' ? "Delete Bank Account" : "Delete Transaction"}
+        title={deleteModalState.type === 'account' ? t("cashBank.deleteBankAccount") : t("cashBank.deleteTransaction")}
         message={deleteModalState.type === 'account' 
-          ? "Are you sure you want to delete this bank account? This action cannot be undone."
-          : "Are you sure you want to delete this transaction? This action cannot be undone."}
+          ? t("cashBank.confirmDeleteAccount")
+          : t("cashBank.confirmDeleteTransaction")}
         isDeleting={isDeleting}
       />
     </div>

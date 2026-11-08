@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { X } from "lucide-react";
 import type { UnitRecord, ConversionRateRecord } from "@/components/pagescomponents/items/products/types";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui";
@@ -30,6 +31,7 @@ export function UnitSelectorModal({
   onClose,
   onSave,
 }: Props) {
+  const { t } = useTranslation();
   const baseUnit = units.find((u) => u.id === unitSelectorBaseUnitId);
   const baseConversions = baseUnit
     ? conversionRates.filter((c) => c.base_unit === baseUnit.shortName)
@@ -40,7 +42,7 @@ export function UnitSelectorModal({
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center justify-between">
-            <span>Select Unit</span>
+            <span>{t("items.selectUnitTitle")}</span>
             <button
               type="button"
               onClick={onClose}
@@ -55,7 +57,7 @@ export function UnitSelectorModal({
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Base Unit
+                {t("items.baseUnit")}
               </label>
               <select
                 value={unitSelectorBaseUnitId}
@@ -64,7 +66,7 @@ export function UnitSelectorModal({
                 }
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
               >
-                <option value="">None</option>
+                <option value="">{t("common.none")}</option>
                 {units.map((u) => (
                   <option key={u.id} value={u.id}>
                     {u.fullName} ({u.shortName})
@@ -74,7 +76,7 @@ export function UnitSelectorModal({
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Secondary Unit
+                {t("items.secondaryUnit")}
               </label>
               <select
                 value={unitSelectorSecondaryUnitId}
@@ -83,7 +85,7 @@ export function UnitSelectorModal({
                 }
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
               >
-                <option value="">None</option>
+                <option value="">{t("common.none")}</option>
                 {units.map((u) => (
                   <option key={u.id} value={u.id}>
                     {u.fullName} ({u.shortName})
@@ -96,7 +98,7 @@ export function UnitSelectorModal({
           {baseUnit && baseConversions.length > 0 && (
             <div className="mt-2 pt-3 border-t border-gray-100">
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Existing Conversions for {baseUnit.fullName}
+                {t("items.existingConversionsFor", { name: baseUnit.fullName })}
               </label>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {baseConversions.map((conv) => {
@@ -118,7 +120,7 @@ export function UnitSelectorModal({
                         {secUnit?.shortName || conv.secondary_unit}
                       </span>
                       <span className="text-xs text-gray-500 mt-0.5">
-                        Click to select
+                        {t("items.clickToSelect")}
                       </span>
                     </button>
                   );
@@ -131,7 +133,7 @@ export function UnitSelectorModal({
             <div className="flex items-center gap-2 mt-4 pt-3 border-t border-gray-100">
               <span className="text-sm text-gray-600">
                 1{" "}
-                {baseUnit?.fullName ?? "BASE UNIT"}{" "}
+                {baseUnit?.fullName ?? t("items.baseUnit").toUpperCase()}{" "}
                 =
               </span>
               <input
@@ -152,15 +154,15 @@ export function UnitSelectorModal({
               <span className="text-sm text-gray-600">
                 {units.find((u) => u.id === unitSelectorSecondaryUnitId)
                   ? `${units.find((u) => u.id === unitSelectorSecondaryUnitId)!.fullName} (${units.find((u) => u.id === unitSelectorSecondaryUnitId)!.shortName})`
-                  : "SECONDARY UNIT"}
+                  : t("items.secondaryUnit").toUpperCase()}
               </span>
             </div>
           )}
           <button
             onClick={onSave}
-            className="w-full bg-[#1976D2] text-white py-2 rounded-lg text-sm font-medium"
+            className="w-full bg-[#1976D2] text-white py-2 rounded-lg text-sm font-medium uppercase"
           >
-            SAVE
+            {t("common.save")}
           </button>
         </div>
       </DialogContent>

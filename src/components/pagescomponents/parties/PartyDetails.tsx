@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { useSettings } from "@/hooks/useSettings";
 import { Edit2, Mail, Search, Printer, MoreVertical, Pencil as PencilIcon, Trash2 as TrashIcon, Calendar } from "lucide-react";
 import type { Party, Transaction, SaleInvoiceEditData, PurchaseBillEditData } from "@/types";
@@ -14,6 +15,7 @@ import { AddEstimate } from "@/pages/AddEstimate";
 import type { SaleInvoiceViewRow } from "@/components/pagescomponents/saleinvoices/types";
 import type { PurchaseBillViewRow } from "@/components/pagescomponents/purchasebills/types";
 import { PartyTransactionsPrintPreviewModal } from "./PartyTransactionsPrintPreviewModal";
+import { formatTransactionType } from "@/utils/transactionTranslations";
 
 export type PartyTransactionRow = {
   id: string;
@@ -65,6 +67,7 @@ export function PartyDetails({
   loadPartiesAndTransactions,
   onEditSaleInvoice,
 }: PartyDetailsProps) {
+  const { t } = useTranslation();
   const [currency] = useSettings('settings.businessCurrency', { code: 'PKR', symbol: 'Rs' });
   const [currencyDisplay] = useSettings<'abbreviation' | 'icon'>('settings.currencyDisplay', 'abbreviation');
   const currencyStr = currencyDisplay === 'icon' ? currency.symbol : currency.code;
@@ -77,7 +80,7 @@ export function PartyDetails({
 
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const searchContainerRef = useRef<HTMLDivElement>(null);
-  const placeholders = ["Type", "Invoice No.", "Amount"];
+  const placeholders = [t("common.type"), t("purchases.billNo"), t("common.amount")];
   const [placeholderIndex, setPlaceholderIndex] = useState(0);
 
   useEffect(() => {
@@ -204,10 +207,10 @@ export function PartyDetails({
 
   const selectedPartyBalanceLabel =
     selectedParty && selectedParty.balance > 0
-      ? "Amount to Receive"
+      ? t("parties.amountToReceive", "Amount to Receive")
       : selectedParty && selectedParty.balance < 0
-      ? "Amount to Pay"
-      : "Balance Settled";
+      ? t("parties.amountToPay", "Amount to Pay")
+      : t("parties.balanceSettled", "Balance Settled");
 
   const selectedPartyBalanceAmount = selectedParty
     ? Math.abs(selectedParty.balance).toFixed(2)
@@ -271,15 +274,15 @@ export function PartyDetails({
               {/* Party Info */}
               <div className="flex gap-10">
                 <div>
-                  <p className="text-xs text-gray-500 mb-0.5">Phone Number</p>
+                  <p className="text-xs text-gray-500 mb-0.5">{t("parties.phone")}</p>
                   <p className="text-sm text-gray-900">{selectedParty.phone}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-gray-500 mb-0.5">Email</p>
+                  <p className="text-xs text-gray-500 mb-0.5">{t("parties.email")}</p>
                   <p className="text-sm text-gray-900">{selectedParty.email || "-"}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-gray-500 mb-0.5">Credit / Balance</p>
+                  <p className="text-xs text-gray-500 mb-0.5">{t("parties.creditBalance")}</p>
                   <p className="text-sm text-gray-900">{selectedPartyBalanceLabel}</p>
                   <p
                     className={`text-sm font-semibold ${
@@ -300,7 +303,7 @@ export function PartyDetails({
           {/* Transactions */}
           <div className="flex-1 bg-white rounded-md flex flex-col overflow-hidden">
             <div className="flex items-center justify-between px-5 py-3 border-b border-gray-200 shrink-0">
-              <h3 className="text-base font-semibold text-gray-900">Transactions</h3>
+              <h3 className="text-base font-semibold text-gray-900">{t("parties.transactions")}</h3>
               <div className="flex gap-2 items-center">
                 <div className="flex gap-2 items-center h-10" ref={searchContainerRef}>
                   <div 
@@ -332,7 +335,7 @@ export function PartyDetails({
                       />
                       {!transactionSearchTerm && (
                         <div className="absolute left-0 pointer-events-none flex items-center h-full w-full overflow-hidden text-gray-400 text-sm">
-                          <span className="whitespace-pre">Search </span>
+                          <span className="whitespace-pre">{t("common.search")} </span>
                           <div className="relative h-full flex-1 overflow-hidden">
                             {placeholders.map((ph, idx) => (
                               <span
@@ -389,27 +392,27 @@ export function PartyDetails({
                   <tr>
                     <th className="px-4 py-3 text-left font-medium text-gray-500">
                       <div className="flex items-center gap-2">
-                        <span>Type</span>
+                        <span>{t("common.type")}</span>
                       </div>
                     </th>
                     <th className="px-4 py-3 text-left font-medium text-gray-500">
                       <div className="flex items-center gap-2">
-                        <span>Number</span>
+                        <span>{t("parties.number")}</span>
                       </div>
                     </th>
                     <th className="px-4 py-3 text-left font-medium text-gray-500">
                       <div className="flex items-center gap-2">
-                        <span>Date</span>
+                        <span>{t("common.date")}</span>
                       </div>
                     </th>
                     <th className="px-4 py-3 text-right font-medium text-gray-500">
                       <div className="flex items-center justify-end gap-2">
-                        <span>Total</span>
+                        <span>{t("common.total")}</span>
                       </div>
                     </th>
                     <th className="px-4 py-3 text-right font-medium text-gray-500">
                       <div className="flex items-center justify-end gap-2">
-                        <span>Balance</span>
+                        <span>{t("common.balance")}</span>
                       </div>
                     </th>
                     <th className="px-2 py-3 w-8"></th>
@@ -417,33 +420,33 @@ export function PartyDetails({
                 </thead>
                 <tbody>
                   {filteredPartyTransactions.length > 0 ? (
-                    filteredPartyTransactions.map((t) => (
+                    filteredPartyTransactions.map((tx) => (
                       <tr
-                        key={t.id}
+                        key={tx.id}
                         className="border-b border-gray-100 hover:bg-gray-50"
                       >
                         <td className="px-4 py-3">
                           <span
                             className={`${
-                              t.type.includes("Returned")
+                              tx.type.includes("Returned")
                                 ? "text-amber-600 font-medium"
-                                : t.type.includes("Sale")
+                                : tx.type.includes("Sale")
                                 ? "text-green-600"
-                                : t.type.includes("Purchase")
+                                : tx.type.includes("Purchase")
                                 ? "text-red-600"
                                 : "text-blue-600"
                             }`}
                           >
-                            {t.type}
+                            {formatTransactionType(tx.type, t)}
                           </span>
                         </td>
-                        <td className="px-4 py-3 text-gray-700">{t.invoiceNo}</td>
-                        <td className="px-4 py-3 text-gray-700">{t.date}</td>
+                        <td className="px-4 py-3 text-gray-700">{tx.invoiceNo}</td>
+                        <td className="px-4 py-3 text-gray-700">{tx.date}</td>
                         <td className="px-4 py-3 text-right text-gray-700">
-                          {currencyStr} {t.amount.toFixed(2)}
+                          {currencyStr} {tx.amount.toFixed(2)}
                         </td>
                         <td className="px-4 py-3 text-right text-gray-700">
-                          {currencyStr} {t.balance.toFixed(2)}
+                          {currencyStr} {tx.balance.toFixed(2)}
                         </td>
                         <td className="px-2 py-3 text-center relative">
                           {!isReportView && (
@@ -458,11 +461,11 @@ export function PartyDetails({
                                   ? Math.max(8, rect.top - menuHeight - 8)
                                   : rect.bottom + 8;
                                 setOpenRowMenuPosition(
-                                  openRowMenuId === t.id && openRowMenuPosition
+                                  openRowMenuId === tx.id && openRowMenuPosition
                                     ? null
                                     : { left: nextLeft, top: nextTop }
                                 );
-                                setOpenRowMenuId((prev) => (prev === t.id ? null : t.id));
+                                setOpenRowMenuId((prev) => (prev === tx.id ? null : tx.id));
                               }}
                               className="p-1 hover:bg-gray-100 rounded"
                             >
@@ -475,7 +478,7 @@ export function PartyDetails({
                   ) : (
                     <tr>
                       <td colSpan={6} className="px-4 py-8 text-center text-gray-500">
-                        No transactions found
+                        {t("parties.noTransactions")}
                       </td>
                     </tr>
                   )}
@@ -486,7 +489,7 @@ export function PartyDetails({
         </>
       ) : (
         <div className="flex-1 flex items-center justify-center text-gray-500">
-          Select a party to view details
+          {t("parties.selectParty")}
         </div>
       )}
       
@@ -562,7 +565,7 @@ export function PartyDetails({
                     }}
                   >
                     <Search className="w-4 h-4 text-gray-500" />
-                    View
+                    {t("common.view")}
                   </button>
                   <button
                     className={`flex w-full items-center gap-2 px-3 py-2 text-left text-sm ${
@@ -582,7 +585,7 @@ export function PartyDetails({
                     }}
                   >
                     <PencilIcon className={`w-4 h-4 ${!canEdit ? 'text-gray-400' : 'text-gray-500'}`} />
-                    Edit
+                    {t("common.edit")}
                   </button>
                   <button
                     className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50"
@@ -595,7 +598,7 @@ export function PartyDetails({
                     }}
                   >
                     <TrashIcon className="w-4 h-4" />
-                    Delete
+                    {t("common.delete")}
                   </button>
                 </>
               );
@@ -613,10 +616,10 @@ export function PartyDetails({
 
       <ConfirmDialog
         open={!!deletePendingTransaction}
-        title={`Delete ${deletePendingTransaction?.type || 'Transaction'}?`}
-        message={`Are you sure you want to delete this ${deletePendingTransaction?.type || 'transaction'}? This action cannot be undone.`}
-        confirmLabel="Delete"
-        cancelLabel="Cancel"
+        title={t("common.deleteTransactionTitle")}
+        message={t("common.deleteTransactionMsg")}
+        confirmLabel={t("common.delete")}
+        cancelLabel={t("common.cancel")}
         onConfirm={() => {
           if (deletePendingTransaction) performDeleteTransaction(deletePendingTransaction);
           setDeletePendingTransaction(null);

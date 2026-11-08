@@ -1,7 +1,9 @@
+import { useTranslation } from "react-i18next";
 import { Search, MoreVertical } from "lucide-react";
 import { useSettings } from "@/hooks/useSettings";
 import type { PurchaseBillViewRow } from "./types";
 import { useEffect, useRef, useState, type MutableRefObject, type Dispatch, type SetStateAction } from "react";
+import { formatTransactionType, formatPaymentType } from "@/utils/transactionTranslations";
 
 interface PurchaseBillTableProps {
   showSearchInput: boolean;
@@ -30,12 +32,13 @@ export function PurchaseBillTable({
   visibleRows,
   statusMessage
 }: PurchaseBillTableProps) {
+  const { t } = useTranslation();
   const [currency] = useSettings('settings.businessCurrency', { code: 'PKR', symbol: 'Rs' });
   const [currencyDisplay] = useSettings<'abbreviation' | 'icon'>('settings.currencyDisplay', 'abbreviation');
   const currencyStr = currencyDisplay === 'icon' ? currency.symbol : currency.code;
 
   const searchContainerRef = useRef<HTMLDivElement>(null);
-  const placeholders = ["Party Name", "Invoice No.", "Date", "Amount"];
+  const placeholders = [t("purchases.partyName"), t("purchases.billNo"), t("purchases.date"), t("purchases.amount")];
   const [placeholderIndex, setPlaceholderIndex] = useState(0);
 
   useEffect(() => {
@@ -43,7 +46,7 @@ export function PurchaseBillTable({
       setPlaceholderIndex((prev) => (prev + 1) % placeholders.length);
     }, 3000);
     return () => clearInterval(interval);
-  }, []);
+  }, [placeholders.length]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -68,8 +71,8 @@ export function PurchaseBillTable({
       style={{ marginLeft: "4px", marginRight: "4px", height: "100%", flexShrink: 0 }}
     >
       <div className="flex items-center justify-between px-6 pt-4 pb-2 border-b border-gray-200">
-        <h3 className="text-base font-bold text-[#222B45] tracking-wide">
-          TRANSACTIONS
+        <h3 className="text-base font-bold text-[#222B45] tracking-wide uppercase">
+          {t("parties.transactions")}
         </h3>
         <div className="flex gap-2 items-center h-10" ref={searchContainerRef}>
           <div 
@@ -101,7 +104,7 @@ export function PurchaseBillTable({
               />
               {!searchQuery && (
                 <div className="absolute left-0 pointer-events-none flex items-center h-full w-full overflow-hidden text-gray-400 text-sm">
-                  <span className="whitespace-pre">Search </span>
+                  <span className="whitespace-pre">{t("common.search")} </span>
                   <div className="relative h-full flex-1 overflow-hidden">
                     {placeholders.map((ph, idx) => (
                       <span
@@ -125,7 +128,7 @@ export function PurchaseBillTable({
               handleDownloadCsv();
             }}
             className="p-1.5 hover:bg-[#F7F9FB] rounded relative ml-2"
-            title="Download Excel/CSV"
+            title={t("purchases.downloadExcel")}
           >
             <span className="bg-green-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
               xls
@@ -139,28 +142,28 @@ export function PurchaseBillTable({
           <thead className="bg-gray-50 sticky top-0 z-10">
             <tr>
               <th className="px-4 py-3 text-left font-medium text-gray-600">
-                Date
+                {t("purchases.date")}
               </th>
               <th className="px-4 py-3 text-left font-medium text-gray-600">
-                Invoice no
+                {t("purchases.billNo")}
               </th>
               <th className="px-4 py-3 text-left font-medium text-gray-600">
-                Party Name
+                {t("purchases.partyName")}
               </th>
               <th className="px-4 py-3 text-left font-medium text-gray-600">
-                Transaction
+                {t("purchases.transaction")}
               </th>
               <th className="px-4 py-3 text-left font-medium text-gray-600">
-                Payment Type
+                {t("purchases.paymentType")}
               </th>
               <th className="px-4 py-3 text-right font-medium text-gray-600">
-                Amount
+                {t("purchases.amount")}
               </th>
               <th className="px-4 py-3 text-right font-medium text-gray-600">
-                Balance
+                {t("purchases.balance")}
               </th>
               <th className="px-4 py-3 text-center font-medium text-gray-600">
-                Actions
+                {t("purchases.action")}
               </th>
             </tr>
           </thead>
@@ -176,10 +179,10 @@ export function PurchaseBillTable({
                 <td className="px-4 py-3">
                   <span className="inline-flex items-center gap-1.5 text-green-600">
                     <span className="w-2 h-2 rounded-full bg-green-500"></span>
-                    {invoice.transaction}
+                    {formatTransactionType(invoice.transaction, t)}
                   </span>
                 </td>
-                <td className="px-4 py-3">{invoice.paymentType}</td>
+                <td className="px-4 py-3">{formatPaymentType(invoice.paymentType, t)}</td>
                 <td className="px-4 py-3 text-right">{currencyStr} {invoice.amount}</td>
                 <td className="px-4 py-3 text-right">{currencyStr} {invoice.balance}</td>
                 <td className="px-4 py-3 relative">
@@ -219,7 +222,7 @@ export function PurchaseBillTable({
 
         {!visibleRows.length && (
           <div className="px-4 py-10 text-center text-sm text-gray-500">
-            No purchase transactions found for the selected month.
+            {t("purchases.noTransactions")}
           </div>
         )}
       </div>

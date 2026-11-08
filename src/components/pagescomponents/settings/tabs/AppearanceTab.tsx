@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useSettings } from "../../../../hooks/useSettings";
+import { useTranslation } from "react-i18next";
 
 // Modern Card Wrapper
 const Card = ({ title, children }: { title: string, children: React.ReactNode }) => {
@@ -95,6 +96,7 @@ const SettingToggleRow = ({
 };
 
 export function AppearanceTab() {
+  const { t } = useTranslation();
   const [showTodaySales, setShowTodaySales] = useSettings("show_card_today_sales", true);
   const [showTodayProfit, setShowTodayProfit] = useSettings("show_card_today_profit", true);
   const [showReceivable, setShowReceivable] = useSettings("show_card_total_receivable", true);
@@ -106,50 +108,50 @@ export function AppearanceTab() {
 
   return (
     <div className="p-6">
-      <h2 className="text-xl font-bold text-gray-900 mb-6">Appearance Settings</h2>
+      <h2 className="text-xl font-bold text-gray-900 mb-6">{t("settings.appearance.title")}</h2>
       
       <div className="grid grid-cols-2 gap-6 items-start">
-        <Card title="Dashboard Customization">
+        <Card title={t("settings.appearance.dashboardCustomization")}>
           <SettingToggleRow
-            label="Show Today's Sales Card"
+            label={t("settings.appearance.showTodaySales")}
             checked={showTodaySales}
             onChange={setShowTodaySales}
           />
           <SettingToggleRow
-            label="Show Today's Profit Card"
+            label={t("settings.appearance.showTodayProfit")}
             checked={showTodayProfit}
             onChange={setShowTodayProfit}
           />
           <SettingToggleRow
-            label="Show Total Receivable Card"
+            label={t("settings.appearance.showReceivable")}
             checked={showReceivable}
             onChange={setShowReceivable}
           />
           <SettingToggleRow
-            label="Show Total Payable Card"
+            label={t("settings.appearance.showPayable")}
             checked={showPayable}
             onChange={setShowPayable}
           />
           <SettingToggleRow
-            label="Show Total Sales (Chart) Card"
+            label={t("settings.appearance.showSalesChart")}
             checked={showSalesChart}
             onChange={setShowSalesChart}
           />
           <SettingToggleRow
-            label="Show Most Used Reports Card"
+            label={t("settings.appearance.showMostUsed")}
             checked={showMostUsed}
             onChange={setShowMostUsed}
           />
           <SettingToggleRow
-            label="Show Low Stock Items Card"
+            label={t("settings.appearance.showLowStock")}
             checked={showLowStock}
             onChange={setShowLowStock}
           />
         </Card>
 
-        <Card title="General">
+        <Card title={t("settings.appearance.general")}>
           <SettingToggleRow
-            label="Enable Grid (Items Page)"
+            label={t("settings.appearance.enableGrid")}
             checked={enableGrid}
             onChange={setEnableGrid}
           />

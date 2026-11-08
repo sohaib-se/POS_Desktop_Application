@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { toast } from "sonner";
 import { useState, useRef, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 
 interface RecycleBinFiltersProps {
   dateRange: DateRange | undefined;
@@ -20,6 +21,7 @@ interface RecycleBinFiltersProps {
 export function RecycleBinFilters({ 
   dateRange, setDateRange, searchQuery, setSearchQuery, showSearchInput, setShowSearchInput, searchInputRef
 }: RecycleBinFiltersProps) {
+  const { t } = useTranslation();
   const [isFromOpen, setIsFromOpen] = useState(false);
   const [isToOpen, setIsToOpen] = useState(false);
   const fromRef = useRef<HTMLDivElement>(null);
@@ -38,7 +40,7 @@ export function RecycleBinFilters({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
   const searchContainerRef = useRef<HTMLDivElement>(null);
-  const placeholders = ["Party Name", "Ref No.", "Txn Type"];
+  const placeholders = [t("parties.partyName"), t("sales.referenceNo", "Ref No."), t("sales.type", "Txn Type")];
   const [placeholderIndex, setPlaceholderIndex] = useState(0);
 
   useEffect(() => {
@@ -46,7 +48,7 @@ export function RecycleBinFilters({
       setPlaceholderIndex((prev) => (prev + 1) % placeholders.length);
     }, 3000);
     return () => clearInterval(interval);
-  }, []);
+  }, [placeholders.length]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {

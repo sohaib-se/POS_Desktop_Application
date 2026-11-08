@@ -1,5 +1,6 @@
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { useTranslation } from "react-i18next";
 import { X, Printer } from "lucide-react";
 import { BarcodeLabel } from "./BarcodeLabel";
 import type { BarcodeItem } from "./BarcodeGeneratorItemList";
@@ -115,6 +116,7 @@ export function BarcodeGenerateModal({
   companyName = "",
   labelSize,
 }: BarcodeGenerateModalProps) {
+  const { t } = useTranslation();
   const size = labelSize ?? DEFAULT_SIZE;
 
   // Expand each BarcodeItem N times
@@ -283,7 +285,7 @@ export function BarcodeGenerateModal({
                 onClick={() => onOpenChange(false)}
                 className="px-8 rounded-full border-gray-300 text-gray-600 font-semibold"
               >
-                Save &amp; Close
+                {t("common.save")}
               </Button>
               <Button
                 onClick={handlePrint}
@@ -291,7 +293,7 @@ export function BarcodeGenerateModal({
                 className="px-8 rounded-full bg-red-500 hover:bg-red-600 text-white font-semibold disabled:opacity-50"
               >
                 <Printer className="w-4 h-4 mr-2" />
-                Print
+                {t("common.print")}
               </Button>
             </div>
           </div>

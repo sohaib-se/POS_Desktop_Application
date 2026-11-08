@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { ImportPartiesHeader } from "@/components/pagescomponents/utilities/importparties/ImportPartiesHeader";
 import { ImportPartiesSteps } from "@/components/pagescomponents/utilities/importparties/ImportPartiesSteps";
 import { ImportPartiesUpload, type ImportedParty } from "@/components/pagescomponents/utilities/importparties/ImportPartiesUpload";
@@ -10,6 +11,7 @@ interface ImportPartiesProps {
 }
 
 export function ImportParties({ onViewChange }: ImportPartiesProps = {}) {
+  const { t } = useTranslation();
   const [importedParties, setImportedParties] = useState<ImportedParty[]>([]);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -108,14 +110,14 @@ export function ImportParties({ onViewChange }: ImportPartiesProps = {}) {
           <div className="mt-8 border-t border-gray-200 pt-8 min-w-0">
             <div className="flex items-center justify-between mb-4">
               <h4 className="text-lg font-semibold text-gray-800">
-                Imported Parties Preview ({importedParties.length})
+                {t("utilities.importedItemsPreview", { count: importedParties.length }).replace("Items", "Parties").replace("Artikel", "Partner")}
               </h4>
               <button 
                 onClick={handleSaveParties}
                 disabled={isSaving}
                 className="bg-[#1976D2] text-white px-6 py-2 rounded-lg text-sm font-medium hover:bg-blue-600 transition-colors disabled:opacity-50"
               >
-                {isSaving ? "Saving..." : "Complete Import"}
+                {isSaving ? t("common.saving") : t("utilities.verifyAndComplete")}
               </button>
             </div>
             
@@ -123,13 +125,13 @@ export function ImportParties({ onViewChange }: ImportPartiesProps = {}) {
               <table className="w-full text-sm text-left">
                 <thead className="bg-[#4382FF] text-white">
                   <tr>
-                    <th className="px-4 py-3 font-medium whitespace-nowrap">Party Name</th>
-                    <th className="px-4 py-3 font-medium whitespace-nowrap">Phone</th>
-                    <th className="px-4 py-3 font-medium whitespace-nowrap">Email</th>
-                    <th className="px-4 py-3 font-medium whitespace-nowrap">Billing Address</th>
-                    <th className="px-4 py-3 font-medium whitespace-nowrap">Shipping Address</th>
-                    <th className="px-4 py-3 font-medium whitespace-nowrap">Balance</th>
-                    <th className="px-4 py-3 font-medium whitespace-nowrap">Credit Limit</th>
+                    <th className="px-4 py-3 font-medium whitespace-nowrap">{t("parties.partyName")}</th>
+                    <th className="px-4 py-3 font-medium whitespace-nowrap">{t("parties.phoneNumber")}</th>
+                    <th className="px-4 py-3 font-medium whitespace-nowrap">{t("parties.email")}</th>
+                    <th className="px-4 py-3 font-medium whitespace-nowrap">{t("parties.billingAddress", "Billing Address")}</th>
+                    <th className="px-4 py-3 font-medium whitespace-nowrap">{t("parties.shippingAddress", "Shipping Address")}</th>
+                    <th className="px-4 py-3 font-medium whitespace-nowrap">{t("parties.openingBalance")}</th>
+                    <th className="px-4 py-3 font-medium whitespace-nowrap">{t("parties.creditLimit")}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200 bg-white">

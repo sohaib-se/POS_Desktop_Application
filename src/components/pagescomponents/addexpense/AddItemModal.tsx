@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import type { ExpenseItem } from "./types";
 
 interface AddItemModalProps {
@@ -7,6 +8,7 @@ interface AddItemModalProps {
 }
 
 export function AddItemModal({ onClose, onSuccess }: AddItemModalProps) {
+  const { t } = useTranslation();
   const [newItemName, setNewItemName] = useState("");
   const [newItemPrice, setNewItemPrice] = useState("");
   const [focusedField, setFocusedField] = useState<"name" | "price" | null>("name");
@@ -37,7 +39,7 @@ export function AddItemModal({ onClose, onSuccess }: AddItemModalProps) {
       <div style={{ position: "absolute", inset: 0 }} onClick={onClose}></div>
       <div style={{ position: "relative", zIndex: 10, background: "#fff", borderRadius: 8, padding: 24, width: "100%", maxWidth: 400, boxShadow: "0 20px 25px -5px rgba(0,0,0,0.1)" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", margin: "0 0 20px 0" }}>
-          <h2 style={{ fontSize: 18, fontWeight: 600, color: "#1f2937", margin: 0 }}>Add Expense Item</h2>
+          <h2 style={{ fontSize: 18, fontWeight: 600, color: "#1f2937", margin: 0 }}>{t("expenses.addItem")}</h2>
           <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: "#9ca3af", padding: 0 }}>
             <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -48,7 +50,7 @@ export function AddItemModal({ onClose, onSuccess }: AddItemModalProps) {
         <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
           <div style={{ position: "relative" }}>
             <label style={{ position: "absolute", top: -8, left: 10, background: "#fff", padding: "0 4px", color: focusedField === "name" ? "#007bff" : "#9ca3af", fontSize: 12, transition: "color 0.2s" }}>
-              Item Name *
+              {t("pos.itemName", "Item Name")} *
             </label>
             <input
               autoFocus
@@ -63,12 +65,12 @@ export function AddItemModal({ onClose, onSuccess }: AddItemModalProps) {
 
           <div>
             <div style={{ fontSize: 14, color: "#007bff", borderBottom: "2px solid #007bff", width: "max-content", paddingBottom: 4, marginBottom: 12 }}>
-              Pricing
+              {t("items.pricing")}
             </div>
             <div style={{ position: "relative" }}>
               <input
                 type="number"
-                placeholder="Price"
+                placeholder={t("expenses.price")}
                 min="1"
                 value={newItemPrice}
                 onChange={(e) => {
@@ -89,7 +91,7 @@ export function AddItemModal({ onClose, onSuccess }: AddItemModalProps) {
               onClick={handleSave}
               style={{ padding: "8px 32px", border: "none", borderRadius: 4, background: "#007bff", color: "#fff", fontWeight: 500, cursor: "pointer" }}
             >
-              Save
+              {t("common.save")}
             </button>
           </div>
         </div>
@@ -97,3 +99,4 @@ export function AddItemModal({ onClose, onSuccess }: AddItemModalProps) {
     </div>
   );
 }
+

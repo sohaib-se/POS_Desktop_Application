@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { useSettings } from "@/hooks/useSettings";
 import { userProfile } from "@/data/mockData";
 import { usePrintTotalsSettings } from "@/hooks/usePrintSettings";
@@ -26,6 +27,7 @@ interface ThermalTheme1Props {
   received?: number;
   discount?: number;
   discountPercent?: number;
+  taxPercent?: number;
   paymentMode?: string;
   previousBalance?: number;
   documentTitle?: string;
@@ -77,7 +79,7 @@ function ThermalLogo({
         color: "#111",
       }}
     >
-      {(businessName || "M").charAt(0).toUpperCase()}
+      {(businessName || "Laimsoft").charAt(0).toUpperCase()}
     </div>
   );
 }
@@ -121,10 +123,12 @@ export function ThermalSaleInvoice({
   received = 0,
   discount = 0,
   discountPercent,
+  taxPercent = 0,
   paymentMode,
   previousBalance,
   documentTitle = "Invoice",
 }: ThermalTheme1Props) {
+  const { t } = useTranslation();
   const [currency] = useSettings("settings.businessCurrency", { code: "PKR", symbol: "Rs" });
   const [currencyDisplay] = useSettings<"abbreviation" | "icon">(
     "settings.currencyDisplay",
@@ -137,9 +141,11 @@ export function ThermalSaleInvoice({
 
   const totalQuantity = records.reduce((s, r) => s + Number(r.quantity || 0), 0);
   const subTotal = records.reduce((s, r) => s + Number(r.amount || 0), 0);
-  const total = subTotal - Number(discount);
-  const balance = total - Number(received);
-  const youSaved = Number(discount);
+  const discountAmount = Number(discount || 0) > 0 ? Number(discount) : (discountPercent != null && Number(discountPercent) > 0 ? (subTotal * Number(discountPercent)) / 100 : 0);
+  const taxAmount = Number(taxPercent || 0) > 0 ? (subTotal - discountAmount) * (Number(taxPercent) / 100) : 0;
+  const total = subTotal - discountAmount + taxAmount;
+  const balance = total - Number(received || 0);
+  const youSaved = discountAmount;
   const prevBalance = Number(previousBalance ?? 0);
   const currentBalance = (documentTitle === "Purchase Invoice" || documentTitle === "Purchase Bill") ? prevBalance - balance : prevBalance + balance;
 
@@ -181,7 +187,7 @@ export function ThermalSaleInvoice({
             marginBottom: 1,
           }}
         >
-          {businessProfile?.business_name || "My Company"}
+          {businessProfile?.business_name || "Laimsoft"}
         </div>
 
         {/* Address */}
@@ -193,12 +199,12 @@ export function ThermalSaleInvoice({
         {/* Phone + Email */}
         {businessProfile?.phone && (
           <div style={{ fontSize: 11, color: "#111", fontWeight: 500 }}>
-            Ph.No.: {businessProfile.phone}
+            {t("printThemes.contactNo", "Ph.No.")}: {businessProfile.phone}
           </div>
         )}
         {businessProfile?.email && (
           <div style={{ fontSize: 11, color: "#111", fontWeight: 500 }}>
-            Email: {businessProfile.email}
+            {t("printThemes.email", "Email")}: {businessProfile.email}
           </div>
         )}
       </div>
@@ -214,7 +220,7 @@ export function ThermalSaleInvoice({
           marginBottom: 4,
         }}
       >
-        {documentTitle}
+        {documentTitle === "Invoice" ? t("printThemes.invoice", "Invoice") : (documentTitle === "Tax Invoice" ? t("printThemes.taxInvoice", "Tax Invoice") : documentTitle)}
       </div>
 
       {/* ────────── CUSTOMER ROW ────────── */}
@@ -222,18 +228,18 @@ export function ThermalSaleInvoice({
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
         {/* Left: customer info */}
         <div>
-          <div style={{ fontWeight: 700, fontSize: 13 }}>{customerName}</div>
+          <div style={{ fontWeight: 700, fontSize: 13 }}>{customerName || ""}</div>
           {customerPhone && (
             <div style={{ fontSize: 11, color: "#111", fontWeight: 500 }}>
-              Ph. No.: {customerPhone}
+              {t("printThemes.contactNo", "Ph. No.")}: {customerPhone}
             </div>
           )}
         </div>
 
         {/* Right: date + invoice no */}
         <div style={{ textAlign: "right", fontSize: 11, color: "#333", lineHeight: 1.7 }}>
-          <div>Date: {formatDate(invoiceDate)}</div>
-          <div>Invoice No.: {invoiceNo}</div>
+          <div>{t("printThemes.date", "Date")}: {formatDate(invoiceDate)}</div>
+          <div>{t("printThemes.invoiceNo", "Invoice No.")}: {invoiceNo}</div>
         </div>
       </div>
 
@@ -269,26 +275,26 @@ export function ThermalSaleInvoice({
             <th
               style={{ fontWeight: 700, textAlign: "left", padding: "2px 0", fontSize: 12 }}
             >
-              Name
+              {t("printThemes.itemName", "Name")}
             </th>
             {ps.showQuantity && (
               <th
                 style={{ fontWeight: 700, textAlign: "center", padding: "2px 0", fontSize: 12 }}
               >
-                Qty
+                {t("printThemes.quantity", "Qty")}
               </th>
             )}
             {ps.showPricePerUnit && (
               <th
                 style={{ fontWeight: 700, textAlign: "right", padding: "2px 0", fontSize: 12 }}
               >
-                Price
+                {t("printThemes.priceUnit", "Price")}
               </th>
             )}
             <th
               style={{ fontWeight: 700, textAlign: "right", padding: "2px 0", fontSize: 12 }}
             >
-              Amount
+              {t("printThemes.amount", "Amount")}
             </th>
           </tr>
         </thead>
@@ -353,7 +359,7 @@ export function ThermalSaleInvoice({
               colSpan={1 + (ps.showSno ? 1 : 0)}
               style={{ padding: "2px 0", textAlign: "left", fontSize: 12 }}
             >
-              Total
+              {discountAmount > 0 || taxAmount > 0 ? t("printThemes.subTotal", "Subtotal") : t("printThemes.total", "Total")}
             </td>
             {ps.showQuantity ? (
               <td style={{ padding: "2px 0", textAlign: "center", fontSize: 12 }}>
@@ -373,23 +379,38 @@ export function ThermalSaleInvoice({
       <div style={{ marginTop: 2, fontSize: 12 }}>
 
         {/* Discount row — only shown if discount > 0 AND discount toggle is on */}
-        {ps.discount && discount > 0 && (
+        {ps.discount && discountAmount > 0 && (
           <div style={{ display: "flex", justifyContent: "space-between", lineHeight: 1.9 }}>
             <span style={{ paddingLeft: 24, color: LABEL_COLOR, fontWeight: 600 }}>
-              Disc.{discountPercent != null ? `(${discountPercent}%)` : ""}
+              {t("printThemes.disc", "Disc.")}{discountPercent != null ? `(${discountPercent}%)` : ""}
             </span>
             <span style={{ display: "flex", gap: 6, alignItems: "center" }}>
               <span>:</span>
               <span style={{ minWidth: 60, textAlign: "right", fontWeight: 600 }}>
-                -{fmt(Number(discount))}
+                -{fmt(discountAmount)}
               </span>
             </span>
           </div>
         )}
 
-        {/* Total (after discount) */}
+        {/* Tax row — only shown if taxAmount > 0 AND taxDetails toggle is on */}
+        {ps.taxDetails && taxAmount > 0 && (
+          <div style={{ display: "flex", justifyContent: "space-between", lineHeight: 1.9 }}>
+            <span style={{ paddingLeft: 24, color: LABEL_COLOR, fontWeight: 600 }}>
+              {t("printThemes.tax", "Tax")} ({taxPercent}%)
+            </span>
+            <span style={{ display: "flex", gap: 6, alignItems: "center" }}>
+              <span>:</span>
+              <span style={{ minWidth: 60, textAlign: "right", fontWeight: 600 }}>
+                {fmt(taxAmount)}
+              </span>
+            </span>
+          </div>
+        )}
+
+        {/* Total (after discount and tax) */}
         <div style={{ display: "flex", justifyContent: "space-between", lineHeight: 1.9 }}>
-          <span style={{ paddingLeft: 24, color: LABEL_COLOR, fontWeight: 700 }}>Total</span>
+          <span style={{ paddingLeft: 24, color: LABEL_COLOR, fontWeight: 700 }}>{t("printThemes.total", "Total")}</span>
           <span style={{ display: "flex", gap: 6, alignItems: "center" }}>
             <span>:</span>
             <span style={{ minWidth: 60, textAlign: "right", fontWeight: 700 }}>
@@ -401,7 +422,7 @@ export function ThermalSaleInvoice({
         {/* Received */}
         {ps.receivedAmount && documentTitle !== "Estimate" && (
           <div style={{ display: "flex", justifyContent: "space-between", lineHeight: 1.9 }}>
-            <span style={{ paddingLeft: 24, color: LABEL_COLOR, fontWeight: 600 }}>Received</span>
+            <span style={{ paddingLeft: 24, color: LABEL_COLOR, fontWeight: 600 }}>{t("printThemes.received", "Received")}</span>
             <span style={{ display: "flex", gap: 6, alignItems: "center" }}>
               <span>:</span>
               <span style={{ minWidth: 60, textAlign: "right" }}>{fmt(Number(received))}</span>
@@ -412,7 +433,7 @@ export function ThermalSaleInvoice({
         {/* Balance */}
         {ps.balanceAmount && documentTitle !== "Estimate" && (
           <div style={{ display: "flex", justifyContent: "space-between", lineHeight: 1.9 }}>
-            <span style={{ paddingLeft: 24, color: LABEL_COLOR, fontWeight: 600 }}>Balance</span>
+            <span style={{ paddingLeft: 24, color: LABEL_COLOR, fontWeight: 600 }}>{t("printThemes.balance", "Balance")}</span>
             <span style={{ display: "flex", gap: 6, alignItems: "center" }}>
               <span>:</span>
               <span style={{ minWidth: 60, textAlign: "right" }}>{fmt(balance)}</span>
@@ -423,7 +444,7 @@ export function ThermalSaleInvoice({
         {/* Previous Balance */}
         {ps.previousBalance && documentTitle !== "Estimate" && (
           <div style={{ display: "flex", justifyContent: "space-between", lineHeight: 1.9 }}>
-            <span style={{ paddingLeft: 24, color: LABEL_COLOR, fontWeight: 600 }}>Prev. Balance</span>
+            <span style={{ paddingLeft: 24, color: LABEL_COLOR, fontWeight: 600 }}>{t("printThemes.prevBalance", "Prev. Balance")}</span>
             <span style={{ display: "flex", gap: 6, alignItems: "center" }}>
               <span>:</span>
               <span style={{ minWidth: 60, textAlign: "right" }}>{fmt(prevBalance)}</span>
@@ -434,7 +455,7 @@ export function ThermalSaleInvoice({
         {/* Current Balance */}
         {ps.currentBalanceOfParty && documentTitle !== "Estimate" && (
           <div style={{ display: "flex", justifyContent: "space-between", lineHeight: 1.9 }}>
-            <span style={{ paddingLeft: 24, color: LABEL_COLOR, fontWeight: 700 }}>Curr. Balance</span>
+            <span style={{ paddingLeft: 24, color: LABEL_COLOR, fontWeight: 700 }}>{t("printThemes.currBalance", "Curr. Balance")}</span>
             <span style={{ display: "flex", gap: 6, alignItems: "center" }}>
               <span>:</span>
               <span style={{ minWidth: 60, textAlign: "right", fontWeight: 700 }}>{fmt(currentBalance)}</span>
@@ -445,7 +466,7 @@ export function ThermalSaleInvoice({
         {/* Payment Mode */}
         {ps.paymentMode && paymentMode && (
           <div style={{ display: "flex", justifyContent: "space-between", lineHeight: 1.9 }}>
-            <span style={{ paddingLeft: 24, color: LABEL_COLOR, fontWeight: 600 }}>Pay. Mode</span>
+            <span style={{ paddingLeft: 24, color: LABEL_COLOR, fontWeight: 600 }}>{t("printThemes.payMode", "Pay. Mode")}</span>
             <span style={{ display: "flex", gap: 6, alignItems: "center" }}>
               <span>:</span>
               <span style={{ minWidth: 60, textAlign: "right" }}>{paymentMode}</span>
@@ -460,7 +481,7 @@ export function ThermalSaleInvoice({
           <DashDivider />
           <div style={{ display: "flex", justifyContent: "space-between", lineHeight: 1.9, fontSize: 12 }}>
             <span style={{ paddingLeft: 24, color: LABEL_COLOR, fontWeight: 600 }}>
-              You Saved
+              {t("printThemes.youSaved", "You Saved")}
             </span>
             <span style={{ display: "flex", gap: 6, alignItems: "center" }}>
               <span>:</span>
@@ -474,7 +495,7 @@ export function ThermalSaleInvoice({
 
       {ps.printTermsAndConditions && (
         <div style={{ marginTop: 8, textAlign: "center" }}>
-          <div style={{ fontSize: 11, fontWeight: 700 }}>Terms &amp; Conditions</div>
+          <div style={{ fontSize: 11, fontWeight: 700 }}>{t("printThemes.termsAndConditions", "Terms & Conditions")}</div>
           <div style={{ fontSize: 10, marginTop: 2, whiteSpace: "pre-wrap", color: "#666" }}>
             {businessProfile?.terms_conditions}
           </div>
@@ -488,7 +509,7 @@ export function ThermalSaleInvoice({
 
 function useCompanyInfo() {
   const [info, setInfo] = useState({
-    business_name: userProfile.businessName,
+    business_name: userProfile.businessName || "Laimsoft",
     phone: userProfile.phone,
     logo_url: userProfile.logo as string | undefined,
     address: (userProfile as any).address as string | undefined,
@@ -502,8 +523,8 @@ function useCompanyInfo() {
       .then((d) => {
         if (d) {
           setInfo({
-            business_name: d.business_name || userProfile.businessName,
-            phone: d.phone || userProfile.phone,
+            business_name: d.business_name || userProfile.businessName || "Laimsoft",
+            phone: d.phone || "",
             logo_url: d.logo_url || d.logo || userProfile.logo,
             address: d.address || (userProfile as any).address,
             email: d.email || (userProfile as any).email,
@@ -556,11 +577,12 @@ export function ThermalTheme1Preview() {
           records={DUMMY_RECORDS}
           invoiceNo={6}
           invoiceDate="2026-09-04"
-          customerName="Zeeshan"
-          customerPhone="03129955494"
+          customerName=""
+          customerPhone=""
           businessProfile={company}
           received={0}
           discount={0}
+          taxPercent={0}
           paymentMode="Credit"
           previousBalance={800}
         />

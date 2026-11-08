@@ -1,4 +1,5 @@
 import { X, AlertTriangle } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import type { ExpenseItem, ExpenseRecord } from "./types";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./Dialog";
 
@@ -36,6 +37,7 @@ export function ItemModals({
   handleDeleteItem,
   expenseRecordList,
 }: ItemModalsProps) {
+  const { t } = useTranslation();
   const linkedTransactionCount = itemPendingDelete
     ? expenseRecordList.filter((r) => {
         if (!r.line_items_json) return false;
@@ -72,7 +74,7 @@ export function ItemModals({
           <DialogHeader>
             <DialogTitle className="flex items-center justify-between">
               <span>
-                {itemBeingEdited ? "Edit Item" : "Add Item"}
+                {itemBeingEdited ? t("items.editItem", "Edit Item") : t("expenses.addItem", "Add Item")}
               </span>
               <button
                 type="button"
@@ -92,19 +94,19 @@ export function ItemModals({
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Item Name
+                {t("pos.itemName", "Item Name")}
               </label>
               <input
                 type="text"
                 value={newItemName}
                 onChange={(event) => setNewItemName(event.target.value)}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
-                placeholder="e.g. Printer Paper"
+                placeholder={t("expenses.egPrinterPaper")}
               />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Price
+                {t("expenses.price")}
               </label>
               <input
                 type="number"
@@ -119,7 +121,7 @@ export function ItemModals({
               disabled={!newItemName.trim() || !newItemPrice}
               className="w-full bg-[#E53935] text-white py-2 rounded-lg text-sm font-medium"
             >
-              {itemBeingEdited ? "Update" : "Create"}
+              {itemBeingEdited ? t("common.update") : t("common.save")}
             </button>
           </div>
         </DialogContent>
@@ -135,7 +137,7 @@ export function ItemModals({
       >
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle>Delete Item</DialogTitle>
+            <DialogTitle>{t("items.deleteItem")}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             {hasLinkedTransactions ? (
@@ -160,7 +162,7 @@ export function ItemModals({
                     onClick={() => setItemPendingDelete(null)}
                     className="px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50"
                   >
-                    Close
+                    {t("common.close")}
                   </button>
                 </div>
               </>
@@ -178,7 +180,7 @@ export function ItemModals({
                     onClick={() => setItemPendingDelete(null)}
                     className="px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50"
                   >
-                    Cancel
+                    {t("common.cancel")}
                   </button>
                   <button
                     type="button"
@@ -189,7 +191,7 @@ export function ItemModals({
                     }}
                     className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 disabled:opacity-60"
                   >
-                    {isDeletingItem ? "Deleting..." : "Delete"}
+                    {isDeletingItem ? t("parties.deleting") : t("common.delete")}
                   </button>
                 </div>
               </>

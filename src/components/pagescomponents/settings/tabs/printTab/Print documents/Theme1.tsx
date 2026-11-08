@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { useSettings } from "@/hooks/useSettings";
 import { userProfile } from "@/data/mockData";
 import { usePrintTotalsSettings } from "@/hooks/usePrintSettings";
@@ -90,7 +91,7 @@ function InvoiceLogo({ logoUrl, businessName, size = 72 }: { logoUrl?: string; b
         flexShrink: 0,
       }}
     >
-      {(businessName || "M").charAt(0).toUpperCase()}
+      {(businessName || "Laimsoft").charAt(0).toUpperCase()}
     </div>
   );
 }
@@ -112,6 +113,7 @@ export function Theme1InvoicePrintReport({
   description,
   documentTitle = "Invoice",
 }: Theme1InvoicePrintReportProps) {
+  const { t } = useTranslation();
   const [currency] = useSettings('settings.businessCurrency', { code: 'PKR', symbol: 'Rs' });
   const [currencyDisplay] = useSettings<'abbreviation' | 'icon'>('settings.currencyDisplay', 'abbreviation');
   const currencyStr = currencyDisplay === 'icon' ? currency.symbol : currency.code;
@@ -154,32 +156,36 @@ export function Theme1InvoicePrintReport({
         <div className="flex items-center justify-between mb-3">
           <InvoiceLogo logoUrl={businessProfile?.logo_url} businessName={businessProfile?.business_name} size={72} />
           <div className="text-right">
-            <h1 className="text-2xl font-bold">{businessProfile?.business_name || "My Company"}</h1>
-            <p className="text-sm text-gray-800 mt-0.5">{businessProfile?.address || "Jhagra peshawar"}</p>
+            <h1 className="text-2xl font-bold">{businessProfile?.business_name || "Laimsoft"}</h1>
+            <p className="text-sm text-gray-800 mt-0.5">{businessProfile?.address || ""}</p>
             <p className="text-sm text-gray-800 mt-0.5">
-              Phone no.: {businessProfile?.phone || ""} Email: {businessProfile?.email || "msoh@gmail.com"}
+              {businessProfile?.phone ? `${t("printThemes.phoneNo")}: ${businessProfile.phone}` : ""}
+              {businessProfile?.phone && businessProfile?.email ? " " : ""}
+              {businessProfile?.email ? `${t("printThemes.email")}: ${businessProfile.email}` : ""}
             </p>
           </div>
         </div>
 
         {/* Invoice title band */}
         <div className="border-t-2 border-b-2 py-2 mb-4" style={{ borderColor: ACCENT }}>
-          <h2 className="text-center text-xl font-bold" style={{ color: ACCENT }}>{documentTitle}</h2>
+          <h2 className="text-center text-xl font-bold" style={{ color: ACCENT }}>
+            {documentTitle === "Invoice" ? t("printThemes.invoice") : documentTitle === "Tax Invoice" ? t("printThemes.taxInvoice") : documentTitle}
+          </h2>
         </div>
 
         {/* Bill To / Invoice Details */}
         <div className="flex justify-between mb-1">
-          <p className="text-sm font-bold">Bill To</p>
-          <p className="text-sm font-bold">Invoice Details</p>
+          <p className="text-sm font-bold">{t("printThemes.billTo")}</p>
+          <p className="text-sm font-bold">{t("printThemes.invoiceDetails")}</p>
         </div>
         <div className="flex justify-between mb-4">
           <div>
-            <p className="text-sm font-bold">{customerName}</p>
-            <p className="text-sm">Contact No. : {customerContact || "03129955494"}</p>
+            <p className="text-sm font-bold">{customerName || ""}</p>
+            <p className="text-sm">{customerContact ? `${t("printThemes.contactNo")} : ${customerContact}` : ""}</p>
           </div>
           <div className="text-right text-sm">
-            <p>Invoice No. : {invoiceNo}</p>
-            <p>Date : {formatDate(invoiceDate)}</p>
+            <p>{t("printThemes.invoiceNo")} : {invoiceNo}</p>
+            <p>{t("printThemes.date")} : {formatDate(invoiceDate)}</p>
           </div>
         </div>
       </div>
@@ -188,12 +194,12 @@ export function Theme1InvoicePrintReport({
       <table className="w-full text-xs mb-0 border-collapse">
         <thead style={{ backgroundColor: ACCENT, WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact', display: 'table-header-group' }}>
           <tr className="text-white text-left" style={{ breakInside: "avoid", pageBreakInside: "avoid" }}>
-            {ps.showSno && <th className="py-1.5 px-2 font-bold w-8">#</th>}
-            <th className="py-1.5 px-2 font-bold">Item name</th>
-            {ps.showQuantity && <th className="py-1.5 px-2 font-bold text-right">Quantity</th>}
-            {ps.showUnit && <th className="py-1.5 px-2 font-bold text-right">Unit</th>}
-            {ps.showPricePerUnit && <th className="py-1.5 px-2 font-bold text-right">Price/ Unit</th>}
-            <th className="py-1.5 px-2 font-bold text-right">Amount</th>
+            {ps.showSno && <th className="py-1.5 px-2 font-bold w-8">{t("printThemes.sNo")}</th>}
+            <th className="py-1.5 px-2 font-bold">{t("printThemes.itemName")}</th>
+            {ps.showQuantity && <th className="py-1.5 px-2 font-bold text-right">{t("printThemes.quantity")}</th>}
+            {ps.showUnit && <th className="py-1.5 px-2 font-bold text-right">{t("printThemes.unit")}</th>}
+            {ps.showPricePerUnit && <th className="py-1.5 px-2 font-bold text-right">{t("printThemes.priceUnit")}</th>}
+            <th className="py-1.5 px-2 font-bold text-right">{t("printThemes.amount")}</th>
           </tr>
         </thead>
         <tbody>
@@ -228,7 +234,7 @@ export function Theme1InvoicePrintReport({
 
       {/* Total row */}
       <div className="flex justify-between items-center border-t border-b border-gray-400 py-1.5 mb-4" style={{ breakInside: "avoid", pageBreakInside: "avoid" }}>
-        <span className="text-sm font-bold pl-2">Total</span>
+        <span className="text-sm font-bold pl-2">{t("printThemes.total")}</span>
         {ps.totalItemQuantity && <span className="text-sm font-bold">{totalQuantity}</span>}
         <span className="text-sm font-bold pr-2 whitespace-nowrap">{fmt(total)}</span>
       </div>
@@ -243,10 +249,10 @@ export function Theme1InvoicePrintReport({
                   className="px-2 py-1 text-xs font-bold text-white"
                   style={{ backgroundColor: ACCENT, WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}
                 >
-                  Invoice Amount In Words
+                  {t("printThemes.invoiceAmountInWords")}
                 </div>
                 <p className="text-xs mt-1.5">
-                  {numberToWords(total)} {currency.code === 'PKR' ? 'Rupees' : ''} only
+                  {numberToWords(total)} {currency.code === 'PKR' ? t("printThemes.rupees") : ''} {t("printThemes.only")}
                 </p>
               </>
             )}
@@ -257,10 +263,10 @@ export function Theme1InvoicePrintReport({
                   className="px-2 py-1 text-xs font-bold text-white mt-4"
                   style={{ backgroundColor: ACCENT, WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}
                 >
-                  Description
+                  {t("printThemes.description")}
                 </div>
                 <p className="text-xs mt-1.5">
-                  {description || "No description provided."}
+                  {description || t("printThemes.noDescription")}
                 </p>
               </>
             )}
@@ -271,10 +277,10 @@ export function Theme1InvoicePrintReport({
                   className="px-2 py-1 text-xs font-bold text-white mt-4"
                   style={{ backgroundColor: ACCENT, WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}
                 >
-                  Payment mode
+                  {t("printThemes.paymentMode")}
                 </div>
                 <p className="text-xs mt-1.5">
-                  {paymentMode || "Credit"}
+                  {paymentMode || t("printThemes.credit")}
                 </p>
               </>
             )}
@@ -285,7 +291,7 @@ export function Theme1InvoicePrintReport({
                   className="px-2 py-1 text-xs font-bold text-white mt-4"
                   style={{ backgroundColor: ACCENT, WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}
                 >
-                  Terms &amp; Conditions
+                  {t("printThemes.termsAndConditions")}
                 </div>
                 <p className="text-xs mt-1.5 whitespace-pre-wrap">
                   {businessProfile?.terms_conditions}
@@ -298,55 +304,55 @@ export function Theme1InvoicePrintReport({
               className="px-2 py-1 text-xs font-bold text-white"
               style={{ backgroundColor: ACCENT, WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}
             >
-              Amounts
+              {t("printThemes.amounts")}
             </div>
             <div className="flex justify-between text-xs px-0 py-1 border-b border-gray-300">
-              <span>Sub Total</span>
+              <span>{t("printThemes.subTotal")}</span>
               <span className="whitespace-nowrap">{fmt(subTotal)}</span>
             </div>
             {ps.discount && discountAmount > 0 && (
               <div className="flex justify-between text-xs px-0 py-1 border-b border-gray-300 text-green-700">
-                <span>Discount {discountPercent > 0 ? `(${discountPercent}%)` : ""}</span>
+                <span>{t("printThemes.discount")} {discountPercent > 0 ? `(${discountPercent}%)` : ""}</span>
                 <span className="whitespace-nowrap">- {fmt(discountAmount)}</span>
               </div>
             )}
             {ps.taxDetails && taxAmount > 0 && (
               <div className="flex justify-between text-xs px-0 py-1 border-b border-gray-300">
-                <span>Tax ({taxPercent}%)</span>
+                <span>{t("printThemes.tax")} ({taxPercent}%)</span>
                 <span className="whitespace-nowrap">{fmt(taxAmount)}</span>
               </div>
             )}
             {ps.youSaved && discountAmount > 0 && (
               <div className="flex justify-between text-xs px-0 py-1 border-b border-gray-300 text-green-700 font-semibold">
-                <span>You Saved</span>
+                <span>{t("printThemes.youSaved")}</span>
                 <span className="whitespace-nowrap">{fmt(discountAmount)}</span>
               </div>
             )}
             <div className="flex justify-between text-xs px-0 py-1 border-b border-gray-300 font-bold">
-              <span>Total</span>
+              <span>{t("printThemes.total")}</span>
               <span className="whitespace-nowrap">{fmt(total)}</span>
             </div>
             {ps.receivedAmount && documentTitle !== "Estimate" && (
               <div className="flex justify-between text-xs px-0 py-1 border-b border-gray-300">
-                <span>Received</span>
+                <span>{t("printThemes.received")}</span>
                 <span className="whitespace-nowrap">{fmt(Number(received || 0))}</span>
               </div>
             )}
             {ps.balanceAmount && documentTitle !== "Estimate" && (
               <div className="flex justify-between text-xs px-0 py-1 border-b border-gray-300">
-                <span>Balance</span>
+                <span>{t("printThemes.balance")}</span>
                 <span className="whitespace-nowrap">{fmt(balance)}</span>
               </div>
             )}
             {ps.previousBalance && documentTitle !== "Estimate" && (
               <div className="flex justify-between text-xs px-0 py-1 mt-2">
-                <span>Previous Balance</span>
+                <span>{t("printThemes.previousBalance")}</span>
                 <span className="whitespace-nowrap">{fmt(prevBalance)}</span>
               </div>
             )}
             {ps.currentBalanceOfParty && documentTitle !== "Estimate" && (
               <div className="flex justify-between text-xs px-0 py-1 font-bold">
-                <span>Current Balance</span>
+                <span>{t("printThemes.currentBalance")}</span>
                 <span className="whitespace-nowrap">{fmt(currentBalance)}</span>
               </div>
             )}
@@ -356,12 +362,12 @@ export function Theme1InvoicePrintReport({
         {/* Signatory */}
         <div className="flex justify-end mt-8" style={{ breakInside: "avoid", pageBreakInside: "avoid" }}>
           <div className="text-center">
-            <p className="text-sm">For : {businessProfile?.business_name || "My Company"}</p>
+            <p className="text-sm">{t("printThemes.for")} : {businessProfile?.business_name || "Laimsoft"}</p>
             {businessProfile?.signature && (
               <img src={businessProfile.signature} alt="Signature" style={{ maxHeight: 60, objectFit: "contain", margin: "10px auto" }} />
             )}
             <p className={`text-sm font-bold ${businessProfile?.signature ? 'mt-2' : 'mt-16'}`}>
-              {ps.printSignatureText || "Authorized Signatory"}
+              {ps.printSignatureText || t("printThemes.authorizedSignatory")}
             </p>
           </div>
         </div>
@@ -378,7 +384,7 @@ const DUMMY_RECORDS = [
 
 function useCompanyInfo() {
   const [info, setInfo] = useState({
-    business_name: userProfile.businessName,
+    business_name: userProfile.businessName || "Laimsoft",
     phone: userProfile.phone,
     logo_url: userProfile.logo as string | undefined,
     address: (userProfile as any).address,
@@ -392,8 +398,8 @@ function useCompanyInfo() {
       .then((d) => {
         if (d) {
           setInfo({
-            business_name: d.business_name || userProfile.businessName,
-            phone: d.phone || userProfile.phone,
+            business_name: d.business_name || userProfile.businessName || "Laimsoft",
+            phone: d.phone || "",
             logo_url: d.logo_url || d.logo || userProfile.logo,
             address: d.address || (userProfile as any).address,
             email: d.email || (userProfile as any).email,
@@ -426,8 +432,8 @@ export function Theme1Preview({ accentColor }: { accentColor?: string } = {}) {
           records={DUMMY_RECORDS}
           invoiceNo={3}
           invoiceDate="2026-09-03"
-          customerName="zeeshan"
-          customerContact="03129955494"
+          customerName=""
+          customerContact=""
           businessProfile={company}
           received={0}
           accentColor={accentColor}

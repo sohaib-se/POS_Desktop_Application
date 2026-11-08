@@ -11,8 +11,10 @@ import { PaymentOutPrintPreviewModal } from "@/components/pagescomponents/payeme
 
 import { useSettings } from "@/hooks/useSettings";
 import { exportPaymentOutToExcel } from "@/utils/exportPaymentOutExcel";
+import { useTranslation } from "react-i18next";
 
 export function PaymentOut() {
+  const { t } = useTranslation();
   const [showAddPayment, setShowAddPayment] = useState(false);
   const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
@@ -464,22 +466,22 @@ export function PaymentOut() {
             <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center text-red-600 mb-2">
               <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
             </div>
-            <h3 className="text-xl font-bold text-gray-900">Discard Changes?</h3>
+            <h3 className="text-xl font-bold text-gray-900">{t("common.discardChangesTitle")}</h3>
             <p className="text-sm text-gray-500 mb-2">
-              You have unsaved changes. Are you sure you want to discard them? All unsaved changes will be lost.
+              {t("common.discardChangesMsg")}
             </p>
             <div className="flex items-center gap-3 w-full">
               <button
                 onClick={() => setShowDiscardConfirm(false)}
                 className="flex-1 rounded-lg border border-gray-300 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
               >
-                Cancel
+                {t("common.cancel")}
               </button>
               <button
                 onClick={confirmDiscard}
                 className="flex-1 rounded-lg bg-red-600 py-2.5 text-sm font-bold text-white hover:bg-red-700 transition-colors"
               >
-                Discard
+                {t("common.discard")}
               </button>
             </div>
           </DialogContent>
@@ -494,22 +496,22 @@ export function PaymentOut() {
             <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center text-red-600 mb-2">
               <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
             </div>
-            <h3 className="text-xl font-bold text-gray-900">Delete Transaction?</h3>
+            <h3 className="text-xl font-bold text-gray-900">{t("common.deleteTransactionTitle")}</h3>
             <p className="text-sm text-gray-500 mb-2">
-              Are you sure you want to delete this transaction? This action cannot be undone.
+              {t("common.deleteTransactionMsg")}
             </p>
             <div className="flex items-center gap-3 w-full">
               <button
                 onClick={() => setDeleteConfirmId(null)}
                 className="flex-1 rounded-lg border border-gray-300 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
               >
-                Cancel
+                {t("common.cancel")}
               </button>
               <button
                 onClick={confirmDelete}
                 className="flex-1 rounded-lg bg-red-600 py-2.5 text-sm font-bold text-white hover:bg-red-700 transition-colors"
               >
-                Delete
+                {t("common.delete")}
               </button>
             </div>
           </DialogContent>

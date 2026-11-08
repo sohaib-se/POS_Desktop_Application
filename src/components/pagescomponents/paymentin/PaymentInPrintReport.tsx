@@ -1,4 +1,6 @@
+import { useTranslation } from "react-i18next";
 import { useSettings } from "@/hooks/useSettings";
+import { formatTransactionType, formatPaymentType } from "@/utils/transactionTranslations";
 
 interface PaymentInPrintReportProps {
   records: any[];
@@ -12,16 +14,17 @@ export function PaymentInPrintReport({
   selectedMonth,
   businessProfile,
 }: PaymentInPrintReportProps) {
+  const { t, i18n } = useTranslation();
   const [currency] = useSettings('settings.businessCurrency', { code: 'PKR', symbol: 'Rs' });
   const [currencyDisplay] = useSettings<'abbreviation' | 'icon'>('settings.currencyDisplay', 'abbreviation');
   const currencyStr = currencyDisplay === 'icon' ? currency.symbol : currency.code;
 
-  let monthDisplay = "All Time";
+  let monthDisplay = t("common.allTime", "All Time");
   if (selectedMonth) {
     const [year, month] = selectedMonth.split('-');
     if (year && month) {
       const date = new Date(parseInt(year), parseInt(month) - 1);
-      monthDisplay = date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+      monthDisplay = date.toLocaleDateString(i18n.language || 'de-DE', { month: 'long', year: 'numeric' });
     }
   }
 
@@ -54,20 +57,20 @@ export function PaymentInPrintReport({
       {/* Business Header */}
       <div className="text-center mb-4">
         <h1 className="text-base font-bold">{businessProfile?.business_name || "Laimsoft"}</h1>
-        <p className="text-xs text-gray-600">Phone no.: {businessProfile?.phone || ""}</p>
+        <p className="text-xs text-gray-600">{t("profile.phone", "Phone no.")}: {businessProfile?.phone || ""}</p>
       </div>
 
       {/* Report Title */}
       <div className="text-center mb-5">
-        <h2 className="text-lg font-bold underline inline-block">All Transactions Report</h2>
+        <h2 className="text-lg font-bold underline inline-block">{t("common.allTransactionsReport", "All Transactions Report")}</h2>
       </div>
 
       {/* Meta Info */}
       <div className="mb-4 space-y-1.5">
-        <p className="text-sm font-bold">Party name: All Parties</p>
-        <p className="text-sm font-bold">Transaction type: Payment-In</p>
+        <p className="text-sm font-bold">{t("purchases.partyName", "Party name")}: {t("parties.allParties", "All Parties")}</p>
+        <p className="text-sm font-bold">{t("sales.transaction", "Transaction type")}: {t("transactions.types.paymentIn", "Payment-In")}</p>
         <p className="text-sm font-bold">
-          Month: {monthDisplay}
+          {t("common.month", "Month")}: {monthDisplay}
         </p>
       </div>
 
@@ -75,13 +78,13 @@ export function PaymentInPrintReport({
       <table className="w-full text-xs mb-4 border-collapse">
         <thead style={{ backgroundColor: '#D3D3D3', WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>
           <tr className="border border-gray-500 text-left">
-            <th className="py-1.5 px-2 font-bold border-r border-gray-500 whitespace-nowrap">DATE</th>
-            <th className="py-1.5 px-2 font-bold border-r border-gray-500 whitespace-nowrap">Receipt No.</th>
-            <th className="py-1.5 px-2 font-bold border-r border-gray-500">Party Name</th>
-            <th className="py-1.5 px-2 font-bold border-r border-gray-500">TYPE</th>
-            <th className="py-1.5 px-2 font-bold border-r border-gray-500 text-right">TOTAL</th>
-            <th className="py-1.5 px-2 font-bold border-r border-gray-500 text-center">PAYMENT<br />TYPE</th>
-            <th className="py-1.5 px-2 font-bold text-right">Received</th>
+            <th className="py-1.5 px-2 font-bold border-r border-gray-500 whitespace-nowrap">{t("common.date", "DATE").toUpperCase()}</th>
+            <th className="py-1.5 px-2 font-bold border-r border-gray-500 whitespace-nowrap">{t("paymentIn.receiptNo", "Receipt No.")}</th>
+            <th className="py-1.5 px-2 font-bold border-r border-gray-500">{t("purchases.partyName", "Party Name")}</th>
+            <th className="py-1.5 px-2 font-bold border-r border-gray-500">{t("sales.transaction", "TYPE").toUpperCase()}</th>
+            <th className="py-1.5 px-2 font-bold border-r border-gray-500 text-right">{t("sales.total", "TOTAL").toUpperCase()}</th>
+            <th className="py-1.5 px-2 font-bold border-r border-gray-500 text-center">{t("sales.paymentType", "PAYMENT TYPE").toUpperCase()}</th>
+            <th className="py-1.5 px-2 font-bold text-right">{t("paymentIn.received", "Received")}</th>
           </tr>
         </thead>
         <tbody>
@@ -90,9 +93,9 @@ export function PaymentInPrintReport({
               <td className="py-1 px-2 whitespace-nowrap border-r border-gray-300">{formatDate(record.date)}</td>
               <td className="py-1 px-2 border-r border-gray-300">{record.receiptNo || record.receipt_no || ""}</td>
               <td className="py-1 px-2 border-r border-gray-300">{record.partyName || record.party_name || ""}</td>
-              <td className="py-1 px-2 border-r border-gray-300">Payment-In</td>
+              <td className="py-1 px-2 border-r border-gray-300">{formatTransactionType("Payment-In", t)}</td>
               <td className="py-1 px-2 text-right whitespace-nowrap border-r border-gray-300">{currencyStr} {Number(record.amount || 0).toFixed(2)}</td>
-              <td className="py-1 px-2 text-center border-r border-gray-300">{record.paymentType || record.payment_type || ""}</td>
+              <td className="py-1 px-2 text-center border-r border-gray-300">{formatPaymentType(record.paymentType || record.payment_type, t)}</td>
               <td className="py-1 px-2 text-right whitespace-nowrap">{currencyStr} {Number(record.amount || 0).toFixed(2)}</td>
             </tr>
           ))}
@@ -101,7 +104,7 @@ export function PaymentInPrintReport({
 
       {/* Total */}
       <div className="flex justify-end">
-        <p className="text-sm font-bold">Total: {currencyStr} {totalAmount.toFixed(2)}</p>
+        <p className="text-sm font-bold">{t("common.total", "Total")}: {currencyStr} {totalAmount.toFixed(2)}</p>
       </div>
     </div>
   );

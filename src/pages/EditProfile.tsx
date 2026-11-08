@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import { EditProfileHeader } from "../components/pagescomponents/editprofile/EditProfileHeader";
 import { LogoSection } from "../components/pagescomponents/editprofile/LogoSection";
 import { BusinessDetails } from "../components/pagescomponents/editprofile/BusinessDetails";
@@ -12,6 +13,7 @@ interface EditProfileProps {
 }
 
 export function EditProfile({ onBack, onProfileSaved, setUnsavedChanges }: EditProfileProps) {
+  const { t } = useTranslation();
   const [businessName, setBusinessName] = useState("");
   const [businessType, setBusinessType] = useState("Retail");
   const [businessCategory, setBusinessCategory] = useState("Book / Stationary store");
@@ -150,14 +152,14 @@ export function EditProfile({ onBack, onProfileSaved, setUnsavedChanges }: EditP
           termsConditions
         }));
         setUnsavedChanges?.(false);
-        showToast("Profile saved successfully", "success");
+        showToast(t("profile.profileSavedSuccess"), "success");
         onProfileSaved?.();
       } else {
-        showToast("Failed to save profile", "error");
+        showToast(t("profile.profileSaveFailed"), "error");
       }
     } catch (e) {
       console.error(e);
-      showToast("Error saving profile", "error");
+      showToast(t("profile.profileSaveFailed"), "error");
     }
   };
 

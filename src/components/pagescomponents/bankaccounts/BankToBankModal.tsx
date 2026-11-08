@@ -1,9 +1,11 @@
 import { useState, useEffect, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import { Modal, Input, Select, ModalFooter, ImageUpload } from "./SharedComponents";
 import { toast } from "../../ui/Toast";
 import type { TransferModalProps } from "./types";
 
 export function BankToBankModal({ open, onClose, accounts, onSuccess, initialData }: TransferModalProps) {
+  const { t } = useTranslation();
   const [from, setFrom] = useState(accounts[0]?.name || "");
   const [to, setTo] = useState(accounts[1]?.name || accounts[0]?.name || "");
   const [amount, setAmount] = useState("");
@@ -130,18 +132,18 @@ export function BankToBankModal({ open, onClose, accounts, onSuccess, initialDat
   };
 
   return (
-    <Modal open={open} onClose={onClose} title={initialData ? "Edit Bank Transfer" : "Bank To Bank Transfer"}>
+    <Modal open={open} onClose={onClose} title={initialData ? t("cashBank.editBankTransfer") : t("cashBank.bankToBank")}>
       <div className="space-y-4">
         {!initialData && (
           <div className="grid grid-cols-2 gap-4">
             <Select
-              label="From:"
+              label={t("cashBank.fromLabel")}
               value={from}
               onChange={(e) => setFrom(e.target.value)}
               options={accounts.map((a) => ({ value: a.name, label: a.name }))}
             />
             <Select
-              label="To:"
+              label={t("cashBank.toLabel")}
               value={to}
               onChange={(e) => setTo(e.target.value)}
               options={accounts.map((a) => ({ value: a.name, label: a.name }))}
@@ -150,7 +152,7 @@ export function BankToBankModal({ open, onClose, accounts, onSuccess, initialDat
         )}
         <div className="grid grid-cols-2 gap-4">
           <Input 
-            label="Amount" 
+            label={t("common.amount")} 
             placeholder="0" 
             type="number" 
             value={amount}
@@ -162,7 +164,7 @@ export function BankToBankModal({ open, onClose, accounts, onSuccess, initialDat
             }}
           />
           <Input 
-            label="Date" 
+            label={t("common.date")} 
             type="date"
             value={toYMD(date)}
             onChange={(e) => setDate(toDMY(e.target.value))}
@@ -170,10 +172,10 @@ export function BankToBankModal({ open, onClose, accounts, onSuccess, initialDat
         </div>
         <div>
           <label className="block text-sm text-gray-600 mb-1">
-            Description (Optional)
+            {t("cashBank.descriptionOptional")}
           </label>
           <textarea
-            placeholder="Add description"
+            placeholder={t("cashBank.addDescription")}
             rows={3}
             value={description}
             onChange={(e) => setDescription(e.target.value)}

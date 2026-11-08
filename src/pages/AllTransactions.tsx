@@ -1,8 +1,11 @@
 import { useState, useEffect, useMemo } from "react";
 import { ChevronDown } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { useSettings } from "@/hooks/useSettings";
+import { formatTransactionType } from "@/utils/transactionTranslations";
 
 export function AllTransactions({ searchQuery = "" }: { searchQuery?: string }) {
+  const { t } = useTranslation();
   const [currency] = useSettings('settings.businessCurrency', { code: 'PKR', symbol: 'Rs' });
   const [currencyDisplay] = useSettings<'abbreviation' | 'icon'>('settings.currencyDisplay', 'abbreviation');
   const currencyStr = currencyDisplay === 'icon' ? currency.symbol : currency.code;
@@ -20,13 +23,13 @@ export function AllTransactions({ searchQuery = "" }: { searchQuery?: string }) 
   const [appliedDateTo, setAppliedDateTo] = useState("");
 
   const filterOptions = [
-    "All Transaction",
-    "Sale",
-    "Purchase",
-    "Payment-In",
-    "Payment-Out",
-    "Estimate",
-    "Expense"
+    { value: "All Transaction", label: t("allTransactions.allTransactions") },
+    { value: "Sale", label: t("sidebar.sale") },
+    { value: "Purchase", label: t("purchases.title") },
+    { value: "Payment-In", label: t("paymentIn.title") },
+    { value: "Payment-Out", label: t("paymentOut.title") },
+    { value: "Estimate", label: t("sidebar.estimates") },
+    { value: "Expense", label: t("expenses.title") }
   ];
 
   const parseDate = (dStr: string) => {
@@ -231,7 +234,7 @@ export function AllTransactions({ searchQuery = "" }: { searchQuery?: string }) 
       <div className="p-5 bg-white border-b border-gray-200 flex items-center gap-6">
         <div className="flex flex-wrap items-center gap-6">
           <div className="flex items-center gap-3">
-            <label className="text-sm font-semibold text-gray-600 uppercase tracking-wide">From</label>
+            <label className="text-sm font-semibold text-gray-600 uppercase tracking-wide">{t("allTransactions.from")}</label>
             <input 
               type="date"
               className="px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#008AC9] focus:border-transparent transition-all shadow-sm hover:border-gray-400 w-44"
@@ -240,7 +243,7 @@ export function AllTransactions({ searchQuery = "" }: { searchQuery?: string }) 
             />
           </div>
           <div className="flex items-center gap-3">
-            <label className="text-sm font-semibold text-gray-600 uppercase tracking-wide">To</label>
+            <label className="text-sm font-semibold text-gray-600 uppercase tracking-wide">{t("allTransactions.to")}</label>
             <input 
               type="date"
               className="px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#008AC9] focus:border-transparent transition-all shadow-sm hover:border-gray-400 w-44"
@@ -252,7 +255,7 @@ export function AllTransactions({ searchQuery = "" }: { searchQuery?: string }) 
             onClick={handleSearch}
             className="h-[38px] bg-[#008AC9] hover:bg-[#007AB3] text-white px-8 rounded-lg font-medium text-sm transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#008AC9]"
           >
-            SEARCH
+            {t("allTransactions.search")}
           </button>
         </div>
       </div>
@@ -262,19 +265,21 @@ export function AllTransactions({ searchQuery = "" }: { searchQuery?: string }) 
         <div className="bg-white rounded shadow-[0_2px_8px_rgba(0,0,0,0.05)] border border-gray-200 flex-1 flex flex-col overflow-hidden">
           {/* Header */}
           <div className="p-4 border-b border-gray-200">
-            <h2 className="text-sm font-bold text-gray-800 uppercase tracking-wide">TRANSACTIONS</h2>
+            <h2 className="text-sm font-bold text-gray-800 uppercase tracking-wide">{t("allTransactions.title")}</h2>
           </div>
 
           {/* Filters Bar */}
           <div className="px-4 py-3 flex items-center relative z-20">
-            <span className="text-[11px] text-gray-500 font-semibold uppercase tracking-wider mr-4 w-[160px]">FILTERS</span>
+            <span className="text-[11px] text-gray-500 font-semibold uppercase tracking-wider mr-4 w-[160px]">{t("allTransactions.filters")}</span>
             
             <div className="relative">
               <button 
                 onClick={() => setIsFilterOpen(!isFilterOpen)}
                 className="flex items-center justify-between w-64 px-3 py-1.5 text-sm border border-orange-400 rounded focus:outline-none focus:ring-1 focus:ring-orange-400 text-gray-700 bg-white"
               >
-                <span className="uppercase text-[#008AC9] font-medium text-xs">{filterType}</span>
+                <span className="uppercase text-[#008AC9] font-medium text-xs">
+                  {filterOptions.find(o => o.value === filterType)?.label || filterType}
+                </span>
                 <ChevronDown className="w-4 h-4 text-gray-500" />
               </button>
               
@@ -282,14 +287,14 @@ export function AllTransactions({ searchQuery = "" }: { searchQuery?: string }) 
                 <div className="absolute top-full left-0 mt-1 w-64 bg-white border border-gray-200 shadow-lg py-1 rounded max-h-80 overflow-y-auto">
                   {filterOptions.map(option => (
                     <div 
-                      key={option}
-                      className={`px-4 py-2 text-[13px] cursor-pointer hover:bg-gray-100 transition-colors ${filterType === option ? 'bg-[#1976D2] text-white hover:bg-blue-600' : 'text-gray-700'}`}
+                      key={option.value}
+                      className={`px-4 py-2 text-[13px] cursor-pointer hover:bg-gray-100 transition-colors ${filterType === option.value ? 'bg-[#1976D2] text-white hover:bg-blue-600' : 'text-gray-700'}`}
                       onClick={() => {
-                        setFilterType(option);
+                        setFilterType(option.value);
                         setIsFilterOpen(false);
                       }}
                     >
-                      {option}
+                      {option.label}
                     </div>
                   ))}
                 </div>
@@ -302,20 +307,20 @@ export function AllTransactions({ searchQuery = "" }: { searchQuery?: string }) 
             <table className="w-full text-left border-collapse">
               <thead className="bg-[#f9fafb] sticky top-0 z-10 shadow-sm border-y border-gray-200">
                 <tr>
-                  <th className="px-4 py-3 text-[11px] font-semibold text-gray-500 uppercase w-40">TYPE</th>
-                  <th className="px-4 py-3 text-[11px] font-semibold text-gray-500 uppercase border-l border-gray-200">REF NO</th>
-                  <th className="px-4 py-3 text-[11px] font-semibold text-gray-500 uppercase border-l border-gray-200">NAME</th>
-                  <th className="px-4 py-3 text-[11px] font-semibold text-gray-500 uppercase border-l border-gray-200">DATE</th>
-                  <th className="px-4 py-3 text-[11px] font-semibold text-gray-500 uppercase border-l border-gray-200 text-right">TOTAL</th>
-                  <th className="px-4 py-3 text-[11px] font-semibold text-gray-500 uppercase border-l border-gray-200 text-right">RECEIVE/PAID</th>
-                  <th className="px-4 py-3 text-[11px] font-semibold text-gray-500 uppercase border-l border-gray-200 text-right">BALANCE</th>
+                  <th className="px-4 py-3 text-[11px] font-semibold text-gray-500 uppercase w-40">{t("common.type").toUpperCase()}</th>
+                  <th className="px-4 py-3 text-[11px] font-semibold text-gray-500 uppercase border-l border-gray-200">{t("allTransactions.refNo")}</th>
+                  <th className="px-4 py-3 text-[11px] font-semibold text-gray-500 uppercase border-l border-gray-200">{t("common.name").toUpperCase()}</th>
+                  <th className="px-4 py-3 text-[11px] font-semibold text-gray-500 uppercase border-l border-gray-200">{t("common.date").toUpperCase()}</th>
+                  <th className="px-4 py-3 text-[11px] font-semibold text-gray-500 uppercase border-l border-gray-200 text-right">{t("common.total").toUpperCase()}</th>
+                  <th className="px-4 py-3 text-[11px] font-semibold text-gray-500 uppercase border-l border-gray-200 text-right">{t("allTransactions.receivePaid")}</th>
+                  <th className="px-4 py-3 text-[11px] font-semibold text-gray-500 uppercase border-l border-gray-200 text-right">{t("common.balance").toUpperCase()}</th>
                 </tr>
               </thead>
               <tbody>
                 {isLoading ? (
                   <tr>
                     <td colSpan={7} className="px-4 py-8 text-center text-gray-500 text-sm">
-                      Loading transactions...
+                      {t("allTransactions.loading")}
                     </td>
                   </tr>
                 ) : filteredTransactions.map((tx, i) => {
@@ -326,7 +331,7 @@ export function AllTransactions({ searchQuery = "" }: { searchQuery?: string }) 
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2">
                           <div className={`w-2 h-2 rounded-full ${getTypeColor(tx.type)}`}></div>
-                          <span className={`text-sm ${tx.type.includes('Returned') ? 'text-amber-600 font-medium' : 'text-gray-700'}`}>{tx.type}</span>
+                          <span className={`text-sm ${tx.type.includes('Returned') ? 'text-amber-600 font-medium' : 'text-gray-700'}`}>{formatTransactionType(tx.type, t)}</span>
                         </div>
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-700 border-l border-gray-100">{tx.invoiceNo || tx.id}</td>
@@ -347,7 +352,7 @@ export function AllTransactions({ searchQuery = "" }: { searchQuery?: string }) 
                 {!isLoading && filteredTransactions.length === 0 && (
                   <tr>
                     <td colSpan={7} className="px-4 py-8 text-center text-gray-500 text-sm">
-                      No transactions found for the selected filter.
+                      {t("allTransactions.noTransactions")}
                     </td>
                   </tr>
                 )}

@@ -1,6 +1,7 @@
 import type React from "react";
 import { Info, ChevronDown } from "lucide-react";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { inputStyle } from "./styles";
 
 export function Hint() {
@@ -262,6 +263,7 @@ export function RadioRow({ label, checked }: { label: string; checked: boolean }
 }
 
 export function PrefixField({ label }: { label: string }) {
+  const { t } = useTranslation();
   return (
     <div>
       <div style={{ fontSize: 10, color: "#2563eb", marginBottom: 3 }}>
@@ -288,7 +290,7 @@ export function PrefixField({ label }: { label: string }) {
             cursor: "pointer",
           }}
         >
-          <option>None</option>
+          <option>{t("common.none", "None")}</option>
         </select>
         <ChevronDown
           size={12}
@@ -301,6 +303,7 @@ export function PrefixField({ label }: { label: string }) {
 }
 
 export function ToggleField() {
+  const { t } = useTranslation();
   return (
     <div
       style={{ display: "flex", alignItems: "center", gap: 8, paddingLeft: 23 }}
@@ -328,7 +331,7 @@ export function ToggleField() {
           }}
         />
       </div>
-      <span style={{ fontSize: 12, color: "#6b7280" }}>Show In Print</span>
+      <span style={{ fontSize: 12, color: "#6b7280" }}>{t("settings.print.showInPrint", "Show In Print")}</span>
     </div>
   );
 }

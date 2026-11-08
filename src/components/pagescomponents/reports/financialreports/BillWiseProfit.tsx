@@ -1,6 +1,7 @@
 import { useSettings } from "@/hooks/useSettings";
 import { ArrowLeft, Search, Printer, Download, Eye, X, Pencil } from 'lucide-react';
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import * as XLSXStyle from "xlsx-js-style";
 import { getMonthKeyFromDate, parseLineItems, formatDateDisplay } from '../../saleinvoices/utils';
 import type { SaleInvoiceEditData } from '@/types';
@@ -50,6 +51,7 @@ function mapToSaleInvoiceEditData(s: any): SaleInvoiceEditData {
 }
 
 export function BillWiseProfit({ onBack, onEditInvoice }: BillWiseProfitProps) {
+  const { t } = useTranslation();
   const [currency] = useSettings('settings.businessCurrency', { code: 'PKR', symbol: 'Rs' });
   const [currencyDisplay] = useSettings<'abbreviation' | 'icon'>('settings.currencyDisplay', 'abbreviation');
   const currencyStr = currencyDisplay === 'icon' ? currency.symbol : currency.code;
@@ -68,7 +70,11 @@ export function BillWiseProfit({ onBack, onEditInvoice }: BillWiseProfitProps) {
   const [showSearchInput, setShowSearchInput] = useState(false);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const searchContainerRef = useRef<HTMLDivElement>(null);
-  const placeholders = ["Invoice No.", "Party Name", "Amount"];
+  const placeholders = [
+    t("printThemes.invoiceNo", "Invoice No."),
+    t("reports.partyName", "Party Name"),
+    t("reports.amount", "Amount"),
+  ];
   const [placeholderIndex, setPlaceholderIndex] = useState(0);
 
   useEffect(() => {
@@ -76,7 +82,7 @@ export function BillWiseProfit({ onBack, onEditInvoice }: BillWiseProfitProps) {
       setPlaceholderIndex((prev) => (prev + 1) % placeholders.length);
     }, 3000);
     return () => clearInterval(interval);
-  }, []);
+  }, [placeholders.length]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -445,7 +451,7 @@ export function BillWiseProfit({ onBack, onEditInvoice }: BillWiseProfitProps) {
           <button onClick={onBack} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
             <ArrowLeft className="w-5 h-5 text-gray-600" />
           </button>
-          <h1 className="text-xl font-semibold text-gray-900">Profit on sale invoices</h1>
+          <h1 className="text-xl font-semibold text-gray-900">{t("reports.names.billWiseProfit", "Profit on sale invoices")}</h1>
         </div>
         <div className="flex items-center gap-3">
           <div className="flex gap-2 items-center h-10" ref={searchContainerRef}>
@@ -478,7 +484,7 @@ export function BillWiseProfit({ onBack, onEditInvoice }: BillWiseProfitProps) {
                 />
                 {!searchQuery && (
                   <div className="absolute left-0 pointer-events-none flex items-center h-full w-full overflow-hidden text-gray-400 text-sm">
-                    <span className="whitespace-pre">Search </span>
+                    <span className="whitespace-pre">{t("reports.search", "Search")} </span>
                     <div className="relative h-full flex-1 overflow-hidden">
                       {placeholders.map((ph, idx) => (
                         <span
@@ -498,7 +504,7 @@ export function BillWiseProfit({ onBack, onEditInvoice }: BillWiseProfitProps) {
           </div>
           
           <div className="flex items-center gap-2">
-            <span className="text-sm font-medium text-gray-700">Filter by Month:</span>
+            <span className="text-sm font-medium text-gray-700">{t("reports.filterByMonth", "Filter by Month:")}</span>
             <input 
               type="month"
               value={selectedMonthKey}
@@ -518,21 +524,21 @@ export function BillWiseProfit({ onBack, onEditInvoice }: BillWiseProfitProps) {
       <div className="p-6 flex-1 overflow-hidden flex flex-col">
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex-1 flex flex-col">
           {loading ? (
-            <div className="p-8 text-center text-gray-500">Loading data...</div>
+            <div className="p-8 text-center text-gray-500">{t("reports.loadingData", "Loading data...")}</div>
           ) : displayData.length === 0 ? (
-            <div className="p-8 text-center text-gray-500">No sale invoices found.</div>
+            <div className="p-8 text-center text-gray-500">{t("reports.noSaleInvoices", "No sale invoices found.")}</div>
           ) : (
             <>
             <div className="flex-1 overflow-auto">
             <table className="w-full text-left text-sm text-gray-600">
               <thead className="text-xs text-gray-500 uppercase bg-gray-50 border-b border-gray-200 sticky top-0 z-10">
                 <tr>
-                  <th className="px-6 py-4 font-medium">Date</th>
-                  <th className="px-6 py-4 font-medium">Invoice No.</th>
-                  <th className="px-6 py-4 font-medium">Party Name</th>
-                  <th className="px-6 py-4 font-medium text-right">Sale Amount</th>
-                  <th className="px-6 py-4 font-medium text-right">Profit / Loss</th>
-                  <th className="px-6 py-4 font-medium text-center">Action</th>
+                  <th className="px-6 py-4 font-medium">{t("printThemes.date", "Date")}</th>
+                  <th className="px-6 py-4 font-medium">{t("printThemes.invoiceNo", "Invoice No.")}</th>
+                  <th className="px-6 py-4 font-medium">{t("reports.partyName", "Party Name")}</th>
+                  <th className="px-6 py-4 font-medium text-right">{t("reports.saleAmount", "Sale Amount")}</th>
+                  <th className="px-6 py-4 font-medium text-right">{t("reports.profitLoss", "Profit / Loss")}</th>
+                  <th className="px-6 py-4 font-medium text-center">{t("reports.action", "Action")}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
@@ -552,7 +558,7 @@ export function BillWiseProfit({ onBack, onEditInvoice }: BillWiseProfitProps) {
                         <button
                           onClick={() => setSelectedInvoiceForDetails(row.rawSale)}
                           className="text-blue-600 hover:text-blue-800 hover:bg-blue-50 p-2 rounded-lg transition-colors"
-                          title="View Details"
+                          title={t("reports.viewDetails", "View Details")}
                         >
                           <Eye className="w-4 h-4" />
                         </button>
@@ -560,7 +566,7 @@ export function BillWiseProfit({ onBack, onEditInvoice }: BillWiseProfitProps) {
                           <button
                             onClick={() => onEditInvoice(mapToSaleInvoiceEditData(row.rawSale))}
                             className="text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 p-2 rounded-lg transition-colors"
-                            title="Edit Sale Transaction"
+                            title={t("reports.editTransaction", "Edit Sale Transaction")}
                           >
                             <Pencil className="w-4 h-4" />
                           </button>
@@ -575,13 +581,13 @@ export function BillWiseProfit({ onBack, onEditInvoice }: BillWiseProfitProps) {
             
             {/* Sticky Footer */}
             <div className="bg-gray-50 border-t border-gray-200 p-4 px-6 flex justify-end items-center gap-12 font-semibold text-gray-900 sticky bottom-0 z-10 shadow-[0_-2px_4px_rgba(0,0,0,0.05)]">
-              <div className="uppercase text-xs text-gray-500 flex items-center h-full">Totals</div>
+              <div className="uppercase text-xs text-gray-500 flex items-center h-full">{t("reports.totals", "Totals")}</div>
               <div className="flex flex-col items-end">
-                <span className="text-xs text-gray-500 uppercase">Sale Amount</span>
+                <span className="text-xs text-gray-500 uppercase">{t("reports.saleAmount", "Sale Amount")}</span>
                 <span>{currencyStr} {totalSales.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
               </div>
               <div className="flex flex-col items-end">
-                <span className="text-xs text-gray-500 uppercase">Profit / Loss</span>
+                <span className="text-xs text-gray-500 uppercase">{t("reports.profitLoss", "Profit / Loss")}</span>
                 <span className={totalProfit >= 0 ? 'text-green-600' : 'text-red-600'}>
                   {currencyStr} {totalProfit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </span>
@@ -597,7 +603,7 @@ export function BillWiseProfit({ onBack, onEditInvoice }: BillWiseProfitProps) {
           <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col">
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
               <h2 className="text-xl font-semibold text-gray-900">
-                Invoice Details - {selectedInvoiceForDetails.invoice_no}
+                {t("reports.invoiceDetailsTitle", "Invoice Details")} - {selectedInvoiceForDetails.invoice_no}
               </h2>
               <button 
                 onClick={() => setSelectedInvoiceForDetails(null)}
@@ -609,43 +615,43 @@ export function BillWiseProfit({ onBack, onEditInvoice }: BillWiseProfitProps) {
             <div className="p-6 overflow-auto flex-1">
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-6 bg-gray-50 p-4 rounded-lg">
                 <div>
-                  <p className="text-xs text-gray-500 uppercase font-medium">Date</p>
+                  <p className="text-xs text-gray-500 uppercase font-medium">{t("printThemes.date", "Date")}</p>
                   <p className="font-semibold text-gray-800">{selectedInvoiceForDetails.date}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-gray-500 uppercase font-medium">Party</p>
+                  <p className="text-xs text-gray-500 uppercase font-medium">{t("reports.party", "Party")}</p>
                   <p className="font-semibold text-gray-800">{selectedInvoiceForDetails.party_name || 'Cash Sale'}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-gray-500 uppercase font-medium">Subtotal</p>
+                  <p className="text-xs text-gray-500 uppercase font-medium">{t("printThemes.subTotal", "Subtotal")}</p>
                   <p className="font-semibold text-gray-800">{currencyStr} {Number(selectedInvoiceForDetails.subtotal || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-gray-500 uppercase font-medium">Discount</p>
+                  <p className="text-xs text-gray-500 uppercase font-medium">{t("printThemes.discount", "Discount")}</p>
                   <p className="font-semibold text-gray-800">{currencyStr} {Number(selectedInvoiceForDetails.discount_amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-gray-500 uppercase font-medium">Total Cost</p>
+                  <p className="text-xs text-gray-500 uppercase font-medium">{t("reports.totalCost", "Total Cost")}</p>
                   <p className="font-semibold text-gray-800">{currencyStr} {Number(selectedInvoiceForDetails.computedCost ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-gray-500 uppercase font-medium">Profit / Loss</p>
+                  <p className="text-xs text-gray-500 uppercase font-medium">{t("reports.profitLoss", "Profit / Loss")}</p>
                   <p className={`font-semibold ${Number(selectedInvoiceForDetails.computedProfit ?? 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                     {currencyStr} {Number(selectedInvoiceForDetails.computedProfit ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                   </p>
                 </div>
               </div>
               
-              <h3 className="font-semibold text-gray-900 mb-3 border-b border-gray-200 pb-2">Line Items</h3>
+              <h3 className="font-semibold text-gray-900 mb-3 border-b border-gray-200 pb-2">{t("reports.lineItems", "Line Items")}</h3>
               <table className="w-full text-left text-sm">
                 <thead className="bg-gray-50 text-gray-500">
                   <tr>
-                    <th className="px-4 py-2 font-medium">Item</th>
-                    <th className="px-4 py-2 font-medium text-right">Qty</th>
-                    <th className="px-4 py-2 font-medium text-right">Price</th>
-                    <th className="px-4 py-2 font-medium text-right">Cost Price</th>
-                    <th className="px-4 py-2 font-medium text-right">Total</th>
-                    <th className="px-4 py-2 font-medium text-right">Profit</th>
+                    <th className="px-4 py-2 font-medium">{t("printThemes.itemName", "Item")}</th>
+                    <th className="px-4 py-2 font-medium text-right">{t("printThemes.quantity", "Qty")}</th>
+                    <th className="px-4 py-2 font-medium text-right">{t("printThemes.priceUnit", "Price")}</th>
+                    <th className="px-4 py-2 font-medium text-right">{t("reports.costPrice", "Cost Price")}</th>
+                    <th className="px-4 py-2 font-medium text-right">{t("printThemes.total", "Total")}</th>
+                    <th className="px-4 py-2 font-medium text-right">{t("reports.profit", "Profit")}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
@@ -688,14 +694,14 @@ export function BillWiseProfit({ onBack, onEditInvoice }: BillWiseProfitProps) {
                   className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors flex items-center gap-1.5 shadow-sm"
                 >
                   <Pencil className="w-4 h-4" />
-                  Edit Sale Transaction
+                  {t("reports.editTransaction", "Edit Sale Transaction")}
                 </button>
               )}
               <button 
                 onClick={() => setSelectedInvoiceForDetails(null)}
                 className="px-4 py-2 bg-gray-800 text-white rounded-lg text-sm font-medium hover:bg-gray-900 transition-colors"
               >
-                Close
+                {t("common.close", "Close")}
               </button>
             </div>
           </div>

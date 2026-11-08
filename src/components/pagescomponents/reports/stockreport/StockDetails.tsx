@@ -1,6 +1,7 @@
 import { useSettings } from "@/hooks/useSettings";
 import { useCallback, useEffect, useState, useMemo } from "react";
 import { Printer, ArrowLeft } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import * as XLSXStyle from "xlsx-js-style";
 
 interface StockDetailsProps {
@@ -32,6 +33,7 @@ const getItemStockValue = (item: Item): number => {
 };
 
 export function StockDetails({ onBack }: StockDetailsProps) {
+  const { t } = useTranslation();
   const [currency] = useSettings('settings.businessCurrency', { code: 'PKR', symbol: 'Rs' });
   const [currencyDisplay] = useSettings<'abbreviation' | 'icon'>('settings.currencyDisplay', 'abbreviation');
   const currencyStr = currencyDisplay === 'icon' ? currency.symbol : currency.code;
@@ -271,7 +273,7 @@ export function StockDetails({ onBack }: StockDetailsProps) {
             <ArrowLeft className="w-5 h-5" />
           </button>
           
-          <h1 className="text-xl font-semibold text-gray-800">Stock Details</h1>
+          <h1 className="text-xl font-semibold text-gray-800">{t("reports.names.stockDetails", "Stock Details")}</h1>
         </div>
 
         <div className="flex items-center gap-6 pr-4">
@@ -282,11 +284,11 @@ export function StockDetails({ onBack }: StockDetailsProps) {
             <span className="bg-[#1D6F42] text-white text-[10px] font-bold px-1 py-0.5 rounded-sm leading-none flex items-center justify-center h-5">
               xls
             </span>
-            <span className="text-[11px] font-medium leading-none">Excel Report</span>
+            <span className="text-[11px] font-medium leading-none">{t("reports.excelReport", "Excel Report")}</span>
           </button>
           <button className="flex flex-col items-center justify-center gap-1 text-gray-700 hover:text-gray-900" onClick={handlePrint}>
             <Printer className="w-5 h-5" />
-            <span className="text-[11px] font-medium leading-none">Print</span>
+            <span className="text-[11px] font-medium leading-none">{t("reports.print", "Print")}</span>
           </button>
         </div>
       </div>
@@ -304,19 +306,19 @@ export function StockDetails({ onBack }: StockDetailsProps) {
                     #
                   </th>
                   <th className="px-4 py-3 font-semibold text-gray-500 border-r border-gray-100 text-left">
-                    ITEM NAME
+                    {t("printThemes.itemName", "ITEM NAME").toUpperCase()}
                   </th>
                   <th className="px-4 py-3 font-semibold text-gray-500 border-r border-gray-100 text-left">
-                    CATEGORY
+                    {t("reports.category", "CATEGORY").toUpperCase()}
                   </th>
                   <th className="px-4 py-3 font-semibold text-gray-500 border-r border-gray-100 text-right">
-                    PURCHASE PRICE
+                    {t("reports.purchasePrice", "PURCHASE PRICE").toUpperCase()}
                   </th>
                   <th className="px-4 py-3 font-semibold text-gray-500 border-r border-gray-100 text-right">
-                    QUANTITY
+                    {t("printThemes.quantity", "QUANTITY").toUpperCase()}
                   </th>
                   <th className="px-4 py-3 font-semibold text-gray-500 border-r border-gray-100 text-right">
-                    STOCK VALUE
+                    {t("reports.stockValue", "STOCK VALUE").toUpperCase()}
                   </th>
                 </tr>
               </thead>
@@ -324,13 +326,13 @@ export function StockDetails({ onBack }: StockDetailsProps) {
                 {loading ? (
                   <tr>
                     <td colSpan={6} className="px-4 py-8 text-center text-gray-500">
-                      Loading data...
+                      {t("reports.loadingData", "Loading data...")}
                     </td>
                   </tr>
                 ) : displayData.length === 0 ? (
                   <tr>
                     <td colSpan={6} className="px-4 py-8 text-center text-gray-500">
-                      No stock items found.
+                      {t("reports.noStockItems", "No stock items found.")}
                     </td>
                   </tr>
                 ) : (
@@ -363,7 +365,7 @@ export function StockDetails({ onBack }: StockDetailsProps) {
           {/* Footer Totals */}
           <div className="bg-white border-t border-gray-200 p-4 px-6 flex justify-end items-center text-[15px] sticky bottom-0 shadow-[0_-2px_4px_rgba(0,0,0,0.05)]">
             <div className="text-gray-600 font-medium">
-              Total Stock Value: <span className="text-gray-900 ml-2">{currencyStr} {totalStockValue.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+              {t("reports.totalStockValue", "Total Stock Value")}: <span className="text-gray-900 ml-2">{currencyStr} {totalStockValue.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
             </div>
           </div>
 

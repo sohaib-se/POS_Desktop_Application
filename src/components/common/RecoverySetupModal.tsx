@@ -1,4 +1,5 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Dialog,
   DialogContent,
@@ -14,7 +15,7 @@ import { countries } from 'country-data-list';
 export interface RecoverySetupModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onNext: (email: string, phone: string) => void;
+  onNext: (email: string, phone: string) => Promise<string | void> | void;
 }
 
 export function RecoverySetupModal({
@@ -22,10 +23,21 @@ export function RecoverySetupModal({
   onOpenChange,
   onNext,
 }: RecoverySetupModalProps) {
+  const { t } = useTranslation();
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [countryCode, setCountryCode] = useState('+92');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (open) {
+      setEmail('');
+      setPhone('');
+      setError('');
+      setLoading(false);
+    }
+  }, [open]);
 
   // Extract unique dial codes with flags
   const dialCodes = useMemo(() => {
@@ -44,51 +56,70 @@ export function RecoverySetupModal({
       .sort((a, b) => parseInt(a.code.replace('+', '')) - parseInt(b.code.replace('+', '')));
   }, []);
 
-  const handleNext = () => {
+  const handleSave = async () => {
     setError('');
-    if (!email.trim() && !phone.trim()) {
-      setError('Please provide at least one recovery method (Email or Phone).');
+    const trimmedEmail = email.trim();
+    const trimmedPhone = phone.trim();
+
+    if (!trimmedEmail && !trimmedPhone) {
+      setError(t('passcode.provideAtLeastOneMethod', 'Please provide at least one recovery method (Email or Phone).'));
       return;
     }
 
-    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      setError('Please enter a valid email address.');
+    if (trimmedEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
+      setError(t('passcode.enterValidEmail', 'Please enter a valid email address.'));
       return;
     }
 
-    const fullPhone = phone.trim() ? `${countryCode}${phone.trim()}` : '';
-    onNext(email.trim(), fullPhone);
+    const fullPhone = trimmedPhone ? `${countryCode}${trimmedPhone}` : '';
+    setLoading(true);
+    try {
+      const err = await onNext(trimmedEmail, fullPhone);
+      if (err) {
+        setError(err);
+      }
+    } catch (e) {
+      setError(t('passcode.errorOccurred', 'An error occurred.'));
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={(val) => {
+      if (!loading) {
+        onOpenChange(val);
+      }
+    }}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Passcode Recovery</DialogTitle>
+          <DialogTitle>{t('passcode.recoveryTitle', 'Passcode Recovery')}</DialogTitle>
           <DialogDescription>
-            Set up an email or phone number (or both) to recover your passcode if you forget it.
+            {t('passcode.recoveryDesc', 'Set up an email or phone number (or both) to recover your passcode if you forget it.')}
           </DialogDescription>
         </DialogHeader>
         
         <div className="flex flex-col gap-4 py-4">
           <div className="flex flex-col gap-2">
-            <Label htmlFor="email">Recovery Email (Optional)</Label>
+            <Label htmlFor="email">{t('passcode.recoveryEmail', 'Recovery Email')}</Label>
             <Input
               id="email"
               type="email"
-              placeholder="e.g. yourname@example.com"
+              placeholder={t('passcode.emailPlaceholder', 'e.g. yourname@example.com')}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              disabled={loading}
             />
           </div>
 
           <div className="flex flex-col gap-2">
-            <Label htmlFor="phone">Recovery Phone (Optional)</Label>
+            <Label htmlFor="phone">{t('passcode.recoveryPhone', 'Recovery Phone')}</Label>
             <div className="flex gap-2">
               <select
                 className="w-24 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                 value={countryCode}
                 onChange={(e) => setCountryCode(e.target.value)}
+                disabled={loading}
               >
                 {dialCodes.map(({ code, flag }) => (
                   <option key={code} value={code}>
@@ -99,10 +130,11 @@ export function RecoverySetupModal({
               <Input
                 id="phone"
                 type="tel"
-                placeholder="Phone number"
+                placeholder={t('profile.phoneNumber', 'Phone number')}
                 className="flex-1"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
+                disabled={loading}
               />
             </div>
           </div>
@@ -111,10 +143,12 @@ export function RecoverySetupModal({
         </div>
 
         <div className="flex justify-end gap-2">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
+            {t('common.cancel', 'Cancel')}
           </Button>
-          <Button onClick={handleNext}>Next</Button>
+          <Button onClick={handleSave} disabled={loading}>
+            {loading ? t('common.saving', 'Saving...') : t('common.save', 'SAVE')}
+          </Button>
         </div>
       </DialogContent>
     </Dialog>

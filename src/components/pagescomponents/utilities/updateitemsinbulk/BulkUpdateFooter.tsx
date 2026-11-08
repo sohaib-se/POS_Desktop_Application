@@ -1,3 +1,5 @@
+import { useTranslation } from "react-i18next";
+
 interface BulkUpdateFooterProps {
   updatesCount: number;
   onUpdate: () => void;
@@ -5,10 +7,11 @@ interface BulkUpdateFooterProps {
 }
 
 export function BulkUpdateFooter({ updatesCount, onUpdate, isUpdating }: BulkUpdateFooterProps) {
+  const { t } = useTranslation();
   return (
     <div className="flex items-center justify-between">
       <div className="px-4 py-2 bg-[#F6EFE5] rounded-md text-sm text-gray-500">
-        <span className="font-semibold text-[#5B6376]">Total</span> - {updatesCount} items with pending updates
+        <span className="font-semibold text-[#5B6376]">{t("sales.total", "Total")}</span> - {t("utilities.pendingUpdatesCount", { count: updatesCount })}
       </div>
       <button 
         onClick={onUpdate}
@@ -19,7 +22,7 @@ export function BulkUpdateFooter({ updatesCount, onUpdate, isUpdating }: BulkUpd
             : 'bg-blue-600 hover:bg-blue-700'
         }`}
       >
-        {isUpdating ? 'Updating...' : 'Update'}
+        {isUpdating ? t("parties.updating") : t("utilities.updateBtn")}
       </button>
     </div>
   );

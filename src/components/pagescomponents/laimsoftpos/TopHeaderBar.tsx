@@ -1,4 +1,5 @@
 import { Plus, X } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import type { PosTab } from "./types";
 
 interface TopHeaderBarProps {
@@ -18,6 +19,7 @@ export function TopHeaderBar({
   handleNewBill,
   onClose,
 }: TopHeaderBarProps) {
+  const { t } = useTranslation();
   return (
     <div className="flex items-center justify-between border-b border-gray-300 bg-white px-2 h-11 shrink-0">
       <div className="flex items-center h-full overflow-x-auto no-scrollbar">
@@ -56,7 +58,7 @@ export function TopHeaderBar({
           className="ml-2 flex items-center gap-1.5 rounded border border-gray-200 px-3 py-1 text-sm text-gray-700 hover:bg-gray-50 shrink-0"
         >
           <Plus className="h-4 w-4" />
-          New Bill
+          {t("pos.newBill", "New Bill")}
           <span className="text-xs text-gray-400 font-medium ml-1">
             [Ctrl+T]
           </span>

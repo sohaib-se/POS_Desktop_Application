@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { SlidersHorizontal } from "lucide-react";
 import { useSettings } from "@/hooks/useSettings";
 import { Card } from "./ui";
@@ -14,6 +15,7 @@ export function ItemDetailCard({
   onStockDetails,
   onAdjustItem,
 }: ItemDetailCardProps) {
+  const { t } = useTranslation();
   const [currency] = useSettings('settings.businessCurrency', { code: 'PKR', symbol: 'Rs' });
   const [currencyDisplay] = useSettings<'abbreviation' | 'icon'>('settings.currencyDisplay', 'abbreviation');
   const currencyStr = currencyDisplay === 'icon' ? currency.symbol : currency.code;
@@ -47,13 +49,13 @@ export function ItemDetailCard({
           </div>
           <div className="flex flex-col gap-2">
             <span className="text-sm font-medium text-[#151B26]">
-              SALE PRICE:{" "}
+              {t("items.salePrice")}:{" "}
               <span className="text-[#43A047]">
                 {currencyStr} {selectedItem.salePrice.toFixed(2)}
               </span>
             </span>
             <span className="text-sm font-medium text-[#151B26]">
-              PURCHASE PRICE:{" "}
+              {t("items.purchasePrice")}:{" "}
               <span className="text-[#43A047]">
                 {currencyStr} {selectedItem.purchasePrice.toFixed(2)}
               </span>
@@ -67,7 +69,7 @@ export function ItemDetailCard({
               onClick={onStockDetails}
               className="bg-[#F0F4F8] hover:bg-[#E3EAF2] text-[#1976D2] px-4 py-2 rounded-lg text-sm font-bold flex items-center shadow-sm transition-all border border-[#1976D2]"
             >
-              Stock Details
+              {t("items.stockDetails")}
             </button>
             <button
               onClick={() => onAdjustItem(selectedItem)}
@@ -75,18 +77,18 @@ export function ItemDetailCard({
               style={{ minWidth: "140px" }}
             >
               <SlidersHorizontal className="w-5 h-5" />
-              ADJUST ITEM
+              {t("items.adjustStock")}
             </button>
           </div>
           <div className="flex flex-col gap-2 items-end">
             <span className="text-sm font-medium text-[#151B26] flex items-center gap-2">
-              STOCK QUANTITY:{" "}
+              {t("items.stockQuantity")}:{" "}
               <span className="text-[#43A047]">
                 {Math.floor(selectedItem.stockQuantity)}
               </span>
             </span>
             <span className="text-sm font-medium text-[#151B26]">
-              STOCK VALUE:{" "}
+              {t("items.stockValue")}:{" "}
               <span className="text-[#43A047]">
                 {currencyStr} {selectedItem.stockValue?.toLocaleString()}
               </span>

@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import type { ConversionRateRecord } from "@/components/pagescomponents/items/products/types";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui";
 
@@ -14,6 +15,8 @@ export function DeleteConversionModal({
   onCancel,
   onConfirm,
 }: Props) {
+  const { t } = useTranslation();
+
   return (
     <Dialog
       open={Boolean(conversionPendingDelete)}
@@ -23,11 +26,11 @@ export function DeleteConversionModal({
     >
       <DialogContent className="max-w-sm">
         <DialogHeader>
-          <DialogTitle>Delete Conversion</DialogTitle>
+          <DialogTitle>{t("items.deleteConversionTitle")}</DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
           <p className="text-sm text-gray-600">
-            Are you sure you want to delete this conversion rate?
+            {t("items.deleteConversionMsg")}
           </p>
           <div className="flex justify-end gap-2">
             <button
@@ -36,7 +39,7 @@ export function DeleteConversionModal({
               onClick={onCancel}
               className="px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50"
             >
-              Cancel
+              {t("common.cancel")}
             </button>
             <button
               type="button"
@@ -47,7 +50,7 @@ export function DeleteConversionModal({
               }}
               className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 disabled:opacity-60"
             >
-              {isDeletingConversion ? "Deleting..." : "Delete"}
+              {isDeletingConversion ? t("common.saving") : t("common.delete")}
             </button>
           </div>
         </div>

@@ -1,6 +1,7 @@
 import { useSettings } from "@/hooks/useSettings";
 import { useCallback, useEffect, useState, useMemo, useRef } from "react";
 import { ChevronDown, Printer, ArrowLeft, Search } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import * as XLSXStyle from "xlsx-js-style";
 import type { Party } from "@/types";
 
@@ -9,6 +10,7 @@ interface AllPartiesReportProps {
 }
 
 export function AllPartiesReport({ onBack }: AllPartiesReportProps) {
+  const { t } = useTranslation();
   const [currency] = useSettings('settings.businessCurrency', { code: 'PKR', symbol: 'Rs' });
   const [currencyDisplay] = useSettings<'abbreviation' | 'icon'>('settings.currencyDisplay', 'abbreviation');
   const currencyStr = currencyDisplay === 'icon' ? currency.symbol : currency.code;
@@ -26,7 +28,11 @@ export function AllPartiesReport({ onBack }: AllPartiesReportProps) {
   const [showSearchInput, setShowSearchInput] = useState(false);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const searchContainerRef = useRef<HTMLDivElement>(null);
-  const placeholders = ["Party Name", "Phone", "Email"];
+  const placeholders = [
+    t("reports.partyName", "Party Name"),
+    t("parties.phone", "Phone"),
+    t("parties.email", "Email"),
+  ];
   const [placeholderIndex, setPlaceholderIndex] = useState(0);
 
   useEffect(() => {
@@ -34,7 +40,7 @@ export function AllPartiesReport({ onBack }: AllPartiesReportProps) {
       setPlaceholderIndex((prev) => (prev + 1) % placeholders.length);
     }, 3000);
     return () => clearInterval(interval);
-  }, []);
+  }, [placeholders.length]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -320,7 +326,7 @@ export function AllPartiesReport({ onBack }: AllPartiesReportProps) {
             <ArrowLeft className="w-5 h-5" />
           </button>
           
-          <h2 className="text-xl font-semibold text-gray-800 -ml-2">All Parties</h2>
+          <h2 className="text-xl font-semibold text-gray-800 -ml-2">{t("reports.names.allParties", "All Parties")}</h2>
           
           <div className="relative">
             <button 
@@ -330,7 +336,13 @@ export function AllPartiesReport({ onBack }: AllPartiesReportProps) {
               }}
               className="flex items-center justify-between w-48 px-3 py-1.5 border border-gray-300 rounded bg-white text-sm hover:bg-gray-50"
             >
-              <span className="text-gray-700">{partyTypeFilter}</span>
+              <span className="text-gray-700">
+                {partyTypeFilter === "All parties" 
+                  ? t("reports.allPartiesOption", "All parties")
+                  : partyTypeFilter === "Receivable"
+                  ? t("reports.receivable", "Receivable")
+                  : t("reports.payable", "Payable")}
+              </span>
               <ChevronDown className="w-4 h-4 text-gray-500" />
             </button>
 
@@ -339,16 +351,20 @@ export function AllPartiesReport({ onBack }: AllPartiesReportProps) {
                 className="absolute left-0 top-full mt-1 z-20 w-48 rounded-lg border border-gray-200 bg-white shadow-lg overflow-hidden"
                 onClick={(e) => e.stopPropagation()}
               >
-                {["All parties", "Receivable", "Payable"].map((option) => (
+                {(["All parties", "Receivable", "Payable"] as const).map((option) => (
                   <button
                     key={option}
                     className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50"
                     onClick={() => {
-                      setPartyTypeFilter(option as any);
+                      setPartyTypeFilter(option);
                       setIsPartyTypeMenuOpen(false);
                     }}
                   >
-                    {option}
+                    {option === "All parties" 
+                      ? t("reports.allPartiesOption", "All parties")
+                      : option === "Receivable"
+                      ? t("reports.receivable", "Receivable")
+                      : t("reports.payable", "Payable")}
                   </button>
                 ))}
               </div>
@@ -388,7 +404,7 @@ export function AllPartiesReport({ onBack }: AllPartiesReportProps) {
                 />
                 {!searchQuery && (
                   <div className="absolute left-0 pointer-events-none flex items-center h-full w-full overflow-hidden text-gray-400 text-sm">
-                    <span className="whitespace-pre">Search </span>
+                    <span className="whitespace-pre">{t("reports.search", "Search")} </span>
                     <div className="relative h-full flex-1 overflow-hidden">
                       {placeholders.map((ph, idx) => (
                         <span
@@ -413,11 +429,11 @@ export function AllPartiesReport({ onBack }: AllPartiesReportProps) {
             <span className="bg-[#1D6F42] text-white text-[10px] font-bold px-1 py-0.5 rounded-sm leading-none flex items-center justify-center h-5">
               xls
             </span>
-            <span className="text-[11px] font-medium leading-none">Excel Report</span>
+            <span className="text-[11px] font-medium leading-none">{t("reports.excelReport", "Excel Report")}</span>
           </button>
           <button className="flex flex-col items-center justify-center gap-1 text-gray-700 hover:text-gray-900" onClick={handlePrint}>
             <Printer className="w-5 h-5" />
-            <span className="text-[11px] font-medium leading-none">Print</span>
+            <span className="text-[11px] font-medium leading-none">{t("reports.print", "Print")}</span>
           </button>
         </div>
       </div>
@@ -443,22 +459,22 @@ export function AllPartiesReport({ onBack }: AllPartiesReportProps) {
                     #
                   </th>
                   <th className="px-4 py-3 font-semibold text-gray-500 border-r border-gray-100">
-                    PARTY NAME
+                    {t("reports.partyName", "PARTY NAME").toUpperCase()}
                   </th>
                   <th className="px-4 py-3 font-semibold text-gray-500 border-r border-gray-100">
-                    EMAIL
+                    {t("parties.email", "EMAIL").toUpperCase()}
                   </th>
                   <th className="px-4 py-3 font-semibold text-gray-500 border-r border-gray-100">
-                    PHONE NO.
+                    {t("parties.phone", "PHONE NO.").toUpperCase()}
                   </th>
                   <th className="px-4 py-3 font-semibold text-gray-500 border-r border-gray-100">
-                    RECEIVABLE BALANCE
+                    {t("parties.toReceive", "RECEIVABLE BALANCE").toUpperCase()}
                   </th>
                   <th className="px-4 py-3 font-semibold text-gray-500 border-r border-gray-100">
-                    PAYABLE BALANCE
+                    {t("parties.toPay", "PAYABLE BALANCE").toUpperCase()}
                   </th>
                   <th className="px-4 py-3 font-semibold text-gray-500">
-                    CREDIT LIMIT
+                    {t("reports.creditLimit", "CREDIT LIMIT").toUpperCase()}
                   </th>
                 </tr>
               </thead>
@@ -466,13 +482,13 @@ export function AllPartiesReport({ onBack }: AllPartiesReportProps) {
                 {loading ? (
                   <tr>
                     <td colSpan={8} className="px-4 py-8 text-center text-gray-500">
-                      Loading parties...
+                      {t("reports.loadingParties", "Loading parties...")}
                     </td>
                   </tr>
                 ) : visibleParties.length === 0 ? (
                   <tr>
                     <td colSpan={8} className="px-4 py-8 text-center text-gray-500">
-                      No parties found.
+                      {t("reports.noPartiesFound", "No parties found.")}
                     </td>
                   </tr>
                 ) : (
@@ -526,10 +542,10 @@ export function AllPartiesReport({ onBack }: AllPartiesReportProps) {
           {/* Footer Totals */}
           <div className="bg-white border-t border-gray-200 p-4 px-6 flex justify-between items-center text-[15px] sticky bottom-0">
             <div className="text-gray-600">
-              Total Receivable: <span className="text-green-500 ml-1">{currencyStr} {totalReceivable.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+              {t("reports.totalReceivable", "Total Receivable")}: <span className="text-green-500 ml-1">{currencyStr} {totalReceivable.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
             </div>
             <div className="text-gray-600">
-              Total Payable: <span className="text-red-500 ml-1">{currencyStr} {totalPayable.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+              {t("reports.totalPayable", "Total Payable")}: <span className="text-red-500 ml-1">{currencyStr} {totalPayable.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
             </div>
           </div>
 

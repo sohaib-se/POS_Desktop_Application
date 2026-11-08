@@ -1,5 +1,6 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui";
 import type { Item } from "./types";
+import { useTranslation } from "react-i18next";
 
 type DeleteItemModalProps = {
   itemPendingDelete: Item | null;
@@ -14,6 +15,8 @@ export function DeleteItemModal({
   onCancel,
   onConfirm,
 }: DeleteItemModalProps) {
+  const { t } = useTranslation();
+
   return (
     <Dialog
       open={Boolean(itemPendingDelete)}
@@ -25,13 +28,13 @@ export function DeleteItemModal({
     >
       <DialogContent className="max-w-sm">
         <DialogHeader>
-          <DialogTitle>Delete Item</DialogTitle>
+          <DialogTitle>{t("items.deleteItem")}</DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
           <p className="text-sm text-gray-600">
             {itemPendingDelete
-              ? `Are you sure you want to delete ${itemPendingDelete.name}? This action cannot be undone.`
-              : "Are you sure you want to delete this item?"}
+              ? t("items.deleteItemConfirm", { name: itemPendingDelete.name })
+              : t("items.deleteItemGeneric")}
           </p>
           <div className="flex justify-end gap-2">
             <button
@@ -40,7 +43,7 @@ export function DeleteItemModal({
               onClick={onCancel}
               className="px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50"
             >
-              Cancel
+              {t("common.cancel")}
             </button>
             <button
               type="button"
@@ -51,7 +54,7 @@ export function DeleteItemModal({
               }}
               className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 disabled:opacity-60"
             >
-              {isDeletingItem ? "Deleting..." : "Delete"}
+              {isDeletingItem ? t("parties.deleting") : t("common.delete")}
             </button>
           </div>
         </div>

@@ -18,27 +18,28 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import * as XLSX from "xlsx-js-style";
 import { toast } from "@/components/ui/Toast";
 
-const FIELD_META = [
-  { label: "Item Name",                  icon: Package,        color: "text-violet-500" },
-  { label: "Category",                   icon: Tag,            color: "text-blue-500"   },
-  { label: "Item Code",                  icon: Hash,           color: "text-cyan-500"   },
-  { label: "Primary Unit",               icon: Layers,         color: "text-teal-500"   },
-  { label: "Secondary Unit",             icon: Layers,         color: "text-teal-400"   },
-  { label: "Conversion Rate",            icon: ArrowRightLeft, color: "text-indigo-500" },
-  { label: "Item Image",                 icon: Image,          color: "text-pink-500"   },
-  { label: "Sale Price",                 icon: DollarSign,     color: "text-green-500"  },
-  { label: "Wholesale Price",            icon: TrendingUp,     color: "text-emerald-500"},
-  { label: "Purchase Price",             icon: ShoppingCart,   color: "text-orange-500" },
-  { label: "Minimum Wholesale Quantity", icon: BarChart2,      color: "text-amber-500"  },
-  { label: "Low Stock Quantity",         icon: AlertTriangle,  color: "text-amber-600"  },
-  { label: "Opening Stock",              icon: Boxes,          color: "text-sky-500"    },
-  { label: "At Price",                   icon: DollarSign,     color: "text-lime-600"   },
-  { label: "As Of Date",                 icon: Calendar,       color: "text-rose-400"   },
-  { label: "Manufacturing Date",         icon: Calendar,       color: "text-purple-500" },
-  { label: "Expiry Date",                icon: Calendar,       color: "text-red-400"    },
+const FIELD_KEYS = [
+  { key: "itemName", fallback: "Item Name", icon: Package, color: "text-violet-500" },
+  { key: "category", fallback: "Category", icon: Tag, color: "text-blue-500" },
+  { key: "itemCode", fallback: "Item Code", icon: Hash, color: "text-cyan-500" },
+  { key: "primaryUnit", fallback: "Primary Unit", icon: Layers, color: "text-teal-500" },
+  { key: "secondaryUnit", fallback: "Secondary Unit", icon: Layers, color: "text-teal-400" },
+  { key: "conversionRate", fallback: "Conversion Rate", icon: ArrowRightLeft, color: "text-indigo-500" },
+  { key: "itemImage", fallback: "Item Image", icon: Image, color: "text-pink-500" },
+  { key: "salePrice", fallback: "Sale Price", icon: DollarSign, color: "text-green-500" },
+  { key: "wholesalePrice", fallback: "Wholesale Price", icon: TrendingUp, color: "text-emerald-500" },
+  { key: "purchasePrice", fallback: "Purchase Price", icon: ShoppingCart, color: "text-orange-500" },
+  { key: "minWholesaleQty", fallback: "Minimum Wholesale Quantity", icon: BarChart2, color: "text-amber-500" },
+  { key: "lowStockThreshold", fallback: "Low Stock Quantity", icon: AlertTriangle, color: "text-amber-600" },
+  { key: "openingStock", fallback: "Opening Stock", icon: Boxes, color: "text-sky-500" },
+  { key: "atPrice", fallback: "At Price", icon: DollarSign, color: "text-lime-600" },
+  { key: "asOfDate", fallback: "As Of Date", icon: Calendar, color: "text-rose-400" },
+  { key: "mfgDateOptional", fallback: "Manufacturing Date", icon: Calendar, color: "text-purple-500" },
+  { key: "expDateOptional", fallback: "Expiry Date", icon: Calendar, color: "text-red-400" },
 ];
 
 interface ItemRecord {
@@ -76,6 +77,7 @@ interface ItemRecord {
 }
 
 export function ExportItemsHeader() {
+  const { t } = useTranslation();
   const [isExporting, setIsExporting] = useState(false);
 
   const handleExport = async () => {
@@ -132,10 +134,10 @@ export function ExportItemsHeader() {
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, "Inventory");
       XLSX.writeFile(wb, "Inventory_Items.xlsx");
-      toast.success("Items exported successfully!");
+      toast.success(t("utilities.itemsExportedSuccess"));
     } catch (error) {
       console.error("Error exporting items:", error);
-      toast.error("Failed to export items.");
+      toast.error(t("utilities.itemsExportFailed"));
     } finally {
       setIsExporting(false);
     }
@@ -151,8 +153,8 @@ export function ExportItemsHeader() {
             <FileSpreadsheet className="w-5 h-5 text-[#E53935]" />
           </div>
           <div>
-            <h2 className="text-xl font-bold text-[#3B4256]">Export Items</h2>
-            <p className="text-xs text-gray-400 mt-0.5">Download your complete inventory as an Excel spreadsheet</p>
+            <h2 className="text-xl font-bold text-[#3B4256]">{t("utilities.exportItemsTitle")}</h2>
+            <p className="text-xs text-gray-400 mt-0.5">{t("utilities.exportItemsSubtitle")}</p>
           </div>
         </div>
 
@@ -164,12 +166,12 @@ export function ExportItemsHeader() {
           {isExporting ? (
             <>
               <Loader2 className="w-4 h-4 animate-spin shrink-0" />
-              <span>Exporting...</span>
+              <span>{t("utilities.exporting")}</span>
             </>
           ) : (
             <>
               <Download className="w-4 h-4 shrink-0" />
-              <span>Export Items</span>
+              <span>{t("utilities.exportItemsBtn")}</span>
             </>
           )}
         </button>
@@ -185,24 +187,24 @@ export function ExportItemsHeader() {
           <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-5">
             <h3 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
               <span className="w-1 h-4 rounded-full bg-[#E53935] inline-block" />
-              What you'll get
+              {t("utilities.whatYouGet")}
             </h3>
             <ul className="space-y-2.5 text-sm text-gray-600">
               <li className="flex items-start gap-2">
                 <CheckCircle2 className="w-4 h-4 text-[#E53935] mt-0.5 shrink-0" />
-                <span>All inventory items with full pricing details</span>
+                <span>{t("utilities.whatYouGet1")}</span>
               </li>
               <li className="flex items-start gap-2">
                 <CheckCircle2 className="w-4 h-4 text-[#E53935] mt-0.5 shrink-0" />
-                <span>Current stock levels &amp; opening stock data</span>
+                <span>{t("utilities.whatYouGet2")}</span>
               </li>
               <li className="flex items-start gap-2">
                 <CheckCircle2 className="w-4 h-4 text-[#E53935] mt-0.5 shrink-0" />
-                <span>Manufacturing &amp; expiry dates where available</span>
+                <span>{t("utilities.whatYouGet3")}</span>
               </li>
               <li className="flex items-start gap-2">
                 <CheckCircle2 className="w-4 h-4 text-[#E53935] mt-0.5 shrink-0" />
-                <span>Excel-formatted with styled headers, ready to use</span>
+                <span>{t("utilities.whatYouGet4")}</span>
               </li>
             </ul>
           </div>
@@ -211,24 +213,26 @@ export function ExportItemsHeader() {
           <div className="bg-[#F8FAFC] border border-gray-200 rounded-xl p-5">
             <h3 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
               <span className="w-1 h-4 rounded-full bg-blue-500 inline-block" />
-              File details
+              {t("utilities.fileDetails")}
             </h3>
             <div className="space-y-2 text-sm">
               <div className="flex justify-between items-center">
-                <span className="text-gray-500">Format</span>
+                <span className="text-gray-500">{t("utilities.format")}</span>
                 <span className="font-medium text-gray-700 bg-gray-100 px-2 py-0.5 rounded text-xs">.xlsx</span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-gray-500">Sheet name</span>
+                <span className="text-gray-500">{t("utilities.sheetName")}</span>
                 <span className="font-medium text-gray-700 bg-gray-100 px-2 py-0.5 rounded text-xs">Inventory</span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-gray-500">Filename</span>
+                <span className="text-gray-500">{t("utilities.filename")}</span>
                 <span className="font-medium text-gray-700 bg-gray-100 px-2 py-0.5 rounded text-xs">Inventory_Items.xlsx</span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-gray-500">Columns</span>
-                <span className="font-medium text-gray-700 bg-gray-100 px-2 py-0.5 rounded text-xs">{FIELD_META.length} fields</span>
+                <span className="text-gray-500">{t("utilities.columns")}</span>
+                <span className="font-medium text-gray-700 bg-gray-100 px-2 py-0.5 rounded text-xs">
+                  {t("utilities.fieldsCount", { count: FIELD_KEYS.length })}
+                </span>
               </div>
             </div>
           </div>
@@ -238,19 +242,21 @@ export function ExportItemsHeader() {
         <div className="col-span-2 bg-white border border-gray-200 rounded-xl shadow-sm p-5">
           <h3 className="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
             <span className="w-1 h-4 rounded-full bg-green-500 inline-block" />
-            Included fields
+            {t("utilities.includedFields")}
             <span className="ml-auto text-xs font-normal text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
-              {FIELD_META.length} columns
+              {t("utilities.columnsCount", { count: FIELD_KEYS.length })}
             </span>
           </h3>
           <div className="grid grid-cols-2 gap-2">
-            {FIELD_META.map(({ label, icon: Icon, color }, idx) => (
+            {FIELD_KEYS.map(({ key, fallback, icon: Icon, color }, idx) => (
               <div
                 key={idx}
                 className="flex items-center gap-2.5 bg-gray-50 hover:bg-gray-100 border border-gray-100 hover:border-gray-200 px-3 py-2.5 rounded-lg transition-colors duration-150 group"
               >
                 <Icon className={`w-3.5 h-3.5 ${color} shrink-0`} />
-                <span className="text-xs font-medium text-gray-600 group-hover:text-gray-800 transition-colors">{label}</span>
+                <span className="text-xs font-medium text-gray-600 group-hover:text-gray-800 transition-colors">
+                  {t(`items.${key}`, fallback)}
+                </span>
               </div>
             ))}
           </div>

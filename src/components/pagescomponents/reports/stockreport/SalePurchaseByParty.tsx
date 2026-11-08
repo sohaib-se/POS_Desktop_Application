@@ -1,6 +1,7 @@
 import { useSettings } from "@/hooks/useSettings";
 import { useCallback, useEffect, useState, useMemo, useRef } from "react";
 import { ChevronDown, Printer, ArrowLeft, Search } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import * as XLSXStyle from "xlsx-js-style";
 import { getMonthKeyFromDate, formatDateDisplay, formatMonthLabel } from "../../saleinvoices/utils";
 
@@ -16,6 +17,7 @@ interface AggregateData {
 }
 
 export function SalePurchaseByParty({ onBack }: SalePurchaseByPartyProps) {
+  const { t } = useTranslation();
   const [currency] = useSettings('settings.businessCurrency', { code: 'PKR', symbol: 'Rs' });
   const [currencyDisplay] = useSettings<'abbreviation' | 'icon'>('settings.currencyDisplay', 'abbreviation');
   const currencyStr = currencyDisplay === 'icon' ? currency.symbol : currency.code;
@@ -34,7 +36,11 @@ export function SalePurchaseByParty({ onBack }: SalePurchaseByPartyProps) {
   const [showSearchInput, setShowSearchInput] = useState(false);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const searchContainerRef = useRef<HTMLDivElement>(null);
-  const placeholders = ["Party Name", "Sale Amount", "Purchase Amount"];
+  const placeholders = [
+    t("reports.partyName", "Party Name"),
+    t("reports.saleAmount", "Sale Amount"),
+    t("reports.purchaseAmount", "Purchase Amount"),
+  ];
   const [placeholderIndex, setPlaceholderIndex] = useState(0);
 
   useEffect(() => {
@@ -42,7 +48,7 @@ export function SalePurchaseByParty({ onBack }: SalePurchaseByPartyProps) {
       setPlaceholderIndex((prev) => (prev + 1) % placeholders.length);
     }, 3000);
     return () => clearInterval(interval);
-  }, []);
+  }, [placeholders.length]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -372,7 +378,7 @@ export function SalePurchaseByParty({ onBack }: SalePurchaseByPartyProps) {
     }
   };
 
-  const partyButtonLabel = isAllParties ? "All Firms" : (rawParties.find(p => String(p.id) === selectedPartyFilter)?.name || selectedPartyFilter);
+  const partyButtonLabel = isAllParties ? t("reports.allFirms", "All Firms") : (rawParties.find(p => String(p.id) === selectedPartyFilter)?.name || selectedPartyFilter);
 
   return (
     <div className="h-full flex flex-col bg-[#F4F5F8] w-full">
@@ -385,7 +391,7 @@ export function SalePurchaseByParty({ onBack }: SalePurchaseByPartyProps) {
           
           <div className="flex items-center gap-4 ml-4 flex-wrap">
             <div className="flex items-center gap-2">
-              <span className="text-sm font-medium text-gray-700">Filter by Month:</span>
+              <span className="text-sm font-medium text-gray-700">{t("reports.filterByMonth", "Filter by Month:")}</span>
               <input 
                 type="month"
                 value={monthFilter}
@@ -419,7 +425,7 @@ export function SalePurchaseByParty({ onBack }: SalePurchaseByPartyProps) {
                             setIsPartyMenuOpen(false);
                         }}
                     >
-                        All Firms
+                        {t("reports.allFirms", "All Firms")}
                     </button>
                     {rawParties.sort((a,b) => a.name.localeCompare(b.name)).map((party) => (
                     <button
@@ -472,7 +478,7 @@ export function SalePurchaseByParty({ onBack }: SalePurchaseByPartyProps) {
                 />
                 {!searchQuery && (
                   <div className="absolute left-0 pointer-events-none flex items-center h-full w-full overflow-hidden text-gray-400 text-sm">
-                    <span className="whitespace-pre">Search </span>
+                    <span className="whitespace-pre">{t("reports.search", "Search")} </span>
                     <div className="relative h-full flex-1 overflow-hidden">
                       {placeholders.map((ph, idx) => (
                         <span
@@ -497,11 +503,11 @@ export function SalePurchaseByParty({ onBack }: SalePurchaseByPartyProps) {
             <span className="bg-[#1D6F42] text-white text-[10px] font-bold px-1 py-0.5 rounded-sm leading-none flex items-center justify-center h-5">
               xls
             </span>
-            <span className="text-[11px] font-medium leading-none">Excel Report</span>
+            <span className="text-[11px] font-medium leading-none">{t("reports.excelReport", "Excel Report")}</span>
           </button>
           <button className="flex flex-col items-center justify-center gap-1 text-gray-700 hover:text-gray-900" onClick={handlePrint}>
             <Printer className="w-5 h-5" />
-            <span className="text-[11px] font-medium leading-none">Print</span>
+            <span className="text-[11px] font-medium leading-none">{t("reports.print", "Print")}</span>
           </button>
         </div>
       </div>
@@ -519,13 +525,13 @@ export function SalePurchaseByParty({ onBack }: SalePurchaseByPartyProps) {
                     #
                   </th>
                   <th className="px-4 py-3 font-semibold text-gray-500 border-r border-gray-100 text-left">
-                    PARTY NAME
+                    {t("reports.partyName", "PARTY NAME").toUpperCase()}
                   </th>
                   <th className="px-4 py-3 font-semibold text-gray-500 border-r border-gray-100 text-right">
-                    SALE AMOUNT
+                    {t("reports.saleAmount", "SALE AMOUNT").toUpperCase()}
                   </th>
                   <th className="px-4 py-3 font-semibold text-gray-500 border-r border-gray-100 text-right">
-                    PURCHASE AMOUNT
+                    {t("reports.purchaseAmount", "PURCHASE AMOUNT").toUpperCase()}
                   </th>
                 </tr>
               </thead>
@@ -533,18 +539,18 @@ export function SalePurchaseByParty({ onBack }: SalePurchaseByPartyProps) {
                 {loading ? (
                   <tr>
                     <td colSpan={4} className="px-4 py-8 text-center text-gray-500">
-                      Loading data...
+                      {t("reports.loadingData", "Loading data...")}
                     </td>
                   </tr>
                 ) : displayData.length === 0 ? (
                   <tr>
                     <td colSpan={4} className="px-4 py-8 text-center text-gray-500">
-                      No records found.
+                      {t("reports.noDataFound", "No records found.")}
                     </td>
                   </tr>
                 ) : (
                   displayData.map((row, index) => {
-                      const isBlueBg = index === 0; // The screenshot highlights row 1 with light blue, but we'll stick to a normal hover effect unless requested, actually let's use standard even/odd or hover.
+                      const isBlueBg = index === 0;
                       return (
                         <tr key={row.partyId} className={`transition-colors hover:bg-gray-50/50 ${isBlueBg ? 'bg-[#DDEEF6]' : ''}`}>
                             <td className="px-4 py-3 text-gray-900 border-r border-white/50 text-center">{index + 1}</td>
@@ -574,10 +580,10 @@ export function SalePurchaseByParty({ onBack }: SalePurchaseByPartyProps) {
           {/* Footer Totals */}
           <div className="bg-white border-t border-gray-200 p-4 px-6 flex justify-between items-center text-[15px] sticky bottom-0 shadow-[0_-2px_4px_rgba(0,0,0,0.05)]">
             <div className="text-gray-600">
-              Total Sale Amount: <span className="text-green-500 ml-1">{currencyStr} {totalSale.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+              {t("reports.totalSaleAmount", "Total Sale Amount")}: <span className="text-green-500 ml-1">{currencyStr} {totalSale.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
             </div>
             <div className="text-gray-600">
-              Total Purchase Amount: <span className="text-red-500 ml-1">{currencyStr} {totalPurchase.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+              {t("reports.totalPurchaseAmount", "Total Purchase Amount")}: <span className="text-red-500 ml-1">{currencyStr} {totalPurchase.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
             </div>
           </div>
 

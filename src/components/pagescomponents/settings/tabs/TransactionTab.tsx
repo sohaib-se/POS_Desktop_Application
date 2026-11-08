@@ -1,8 +1,10 @@
 import { Card, SettingToggleRow } from "../shared/SharedComponents";
 import { selStyle, inputStyle, nudgeBtn } from "../shared/styles";
 import { useSettings } from "../../../../hooks/useSettings";
+import { useTranslation } from "react-i18next";
 
 export function TransactionTab() {
+  const { t } = useTranslation();
   const [isTransactionTaxEnabled, setIsTransactionTaxEnabled] = useSettings('settings.isTransactionTaxEnabled', true);
   const [isTransactionDiscountEnabled, setIsTransactionDiscountEnabled] = useSettings('settings.isTransactionDiscountEnabled', true);
   const [isRoundOffTotalEnabled, setIsRoundOffTotalEnabled] = useSettings('settings.isRoundOffTotalEnabled', true);
@@ -29,21 +31,20 @@ export function TransactionTab() {
       }}>
         
 
-
         {/* Taxes, Discount & Totals Card */}
-        <Card title="Taxes, Discount & Totals">
+        <Card title={t("settings.transactions.taxesDiscountTotals")}>
           <SettingToggleRow 
-            label="Transaction wise Tax" 
+            label={t("settings.transactions.transactionWiseTax")} 
             checked={isTransactionTaxEnabled} 
             onChange={setIsTransactionTaxEnabled} 
           />
           <SettingToggleRow 
-            label="Transaction wise Discount" 
+            label={t("settings.transactions.transactionWiseDiscount")} 
             checked={isTransactionDiscountEnabled} 
             onChange={setIsTransactionDiscountEnabled} 
           />
           <SettingToggleRow 
-            label="Round Off Total" 
+            label={t("settings.transactions.roundOffTotal")} 
             checked={isRoundOffTotalEnabled} 
             onChange={setIsRoundOffTotalEnabled} 
           />
@@ -60,12 +61,12 @@ export function TransactionTab() {
             }}
           >
             <select style={{ ...selStyle, padding: "6px 12px", border: "1px solid #cbd5e1", borderRadius: "8px", background: "#f8fafc", flex: 1, marginRight: "12px" }}>
-              <option>Nearest</option>
-              <option>Round Up</option>
-              <option>Round Down</option>
+              <option>{t("settings.transactions.nearest")}</option>
+              <option>{t("settings.transactions.roundUp")}</option>
+              <option>{t("settings.transactions.roundDown")}</option>
             </select>
             <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              <span style={{ fontSize: "13px", color: "#64748b", fontWeight: 500 }}>To</span>
+              <span style={{ fontSize: "13px", color: "#64748b", fontWeight: 500 }}>{t("settings.transactions.to")}</span>
               <div
                 style={{
                   display: "flex",
@@ -127,20 +128,20 @@ export function TransactionTab() {
         </Card>
 
         {/* More Transaction Features Card */}
-        <Card title="More Transaction Features">
+        <Card title={t("settings.transactions.moreTransactionFeatures")}>
           <SettingToggleRow 
-            label="Cash Sale by default" 
+            label={t("settings.transactions.cashSaleByDefault")} 
             checked={isCashSaleByDefault} 
             onChange={setIsCashSaleByDefault} 
           />
-          <SettingToggleRow label="Barcode Scan" hint={true} checked={isBarcodeScanEnabled} onChange={setIsBarcodeScanEnabled} />
+          <SettingToggleRow label={t("settings.transactions.barcodeScan")} hint={true} checked={isBarcodeScanEnabled} onChange={setIsBarcodeScanEnabled} />
           <SettingToggleRow 
-            label="Do not Show Invoice Preview" 
+            label={t("settings.transactions.doNotShowInvoicePreview")} 
             checked={isDoNotShowInvoicePreviewEnabled} 
             onChange={setIsDoNotShowInvoicePreviewEnabled} 
           />
           <SettingToggleRow 
-            label="Disable Print" 
+            label={t("settings.transactions.disablePrint")} 
             checked={isDisablePrintEnabled} 
             onChange={setIsDisablePrintEnabled} 
           />

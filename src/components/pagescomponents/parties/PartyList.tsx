@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { Search } from "lucide-react";
 import type { Party } from "@/types";
 
@@ -33,6 +34,7 @@ export function PartyList({
   onToggleStatus,
   isReportView,
 }: PartyListProps) {
+  const { t } = useTranslation();
   const [partyContextMenu, setPartyContextMenu] = useState<PartyContextMenuState | null>(null);
 
   useEffect(() => {
@@ -61,7 +63,7 @@ export function PartyList({
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
           <input
             type="text"
-            placeholder="Search Party Name"
+            placeholder={t("parties.searchPartyName")}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#E53935]"
@@ -81,11 +83,11 @@ export function PartyList({
               <tr>
                 <th className="px-4 py-2 text-left font-medium text-gray-600">
                   <div className="flex items-center gap-2">
-                    <span>Party Name</span>
+                    <span>{t("parties.partyName")}</span>
                   </div>
                 </th>
                 <th className="px-4 py-2 text-right font-medium text-gray-600">
-                  Amount
+                  {t("common.amount")}
                 </th>
               </tr>
             </thead>
@@ -147,7 +149,7 @@ export function PartyList({
             }}
             className="w-full rounded-sm px-2 py-1.5 text-left text-sm hover:bg-gray-100"
           >
-            View/Edit
+            {t("common.viewEdit")}
           </button>
           {onToggleStatus && (
             <button
@@ -157,7 +159,7 @@ export function PartyList({
               }}
               className="w-full rounded-sm px-2 py-1.5 text-left text-sm hover:bg-gray-100"
             >
-              {partyContextMenu.party.status === 'inactive' ? 'Activate' : 'Deactivate'}
+              {partyContextMenu.party.status === 'inactive' ? t("common.activate") : t("common.deactivate")}
             </button>
           )}
           <button
@@ -167,7 +169,7 @@ export function PartyList({
             }}
             className="w-full rounded-sm px-2 py-1.5 text-left text-sm text-red-600 hover:bg-red-50"
           >
-            Delete
+            {t("common.delete")}
           </button>
         </div>
       )}

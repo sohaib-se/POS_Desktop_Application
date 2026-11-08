@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import type { Item } from "@/components/pagescomponents/items/products/types";
 import { ItemGridCard } from "./ItemGridCard";
 import { ItemGridDetailsModal } from "./ItemGridDetailsModal";
@@ -8,6 +9,7 @@ interface GridContainerProps {
 }
 
 export function GridContainer({ selectedCategory }: GridContainerProps) {
+  const { t } = useTranslation();
   const [items, setItems] = useState<Item[]>([]);
   const [selectedItem, setSelectedItem] = useState<Item | null>(null);
 
@@ -73,7 +75,7 @@ export function GridContainer({ selectedCategory }: GridContainerProps) {
       
       {filteredItems.length === 0 && (
         <div className="flex flex-col items-center justify-center py-20 text-gray-400">
-          <p className="text-lg font-medium">No items found in this category.</p>
+          <p className="text-lg font-medium">{t("items.noItemsInCategory", "No items found in this category.")}</p>
         </div>
       )}
 

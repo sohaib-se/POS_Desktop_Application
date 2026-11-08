@@ -3,6 +3,7 @@ import { useState, useRef, useEffect } from "react";
 import type { UnitRecord, ConversionRateRecord } from "@/components/pagescomponents/items/products/types";
 import type { ConversionContextMenuState } from "./types";
 import { Card, CardContent } from "./ui";
+import { useTranslation } from "react-i18next";
 
 type Props = {
   selectedUnitInTab: UnitRecord | undefined;
@@ -21,6 +22,7 @@ export function UnitDetailsPanel({
   onOpenAddConversion,
   onSetConversionContextMenu,
 }: Props) {
+  const { t } = useTranslation();
   const [showSearchInput, setShowSearchInput] = useState(false);
   const searchContainerRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -62,13 +64,13 @@ export function UnitDetailsPanel({
         style={{ minHeight: "64px", marginBottom: "4px" }}
       >
         <h2 className="text-base font-bold text-[#151B26] tracking-wide uppercase">
-          {selectedUnitInTab?.fullName ?? "NO UNIT SELECTED"}
+          {selectedUnitInTab?.fullName ?? t("items.noUnitsFound").toUpperCase()}
         </h2>
         <button
           className="bg-[#1976D2] hover:bg-[#1251A3] text-white px-5 py-2 rounded-lg text-sm font-bold shadow transition-all"
           onClick={onOpenAddConversion}
         >
-          Add Conversion
+          {t("items.addConversion")}
         </button>
       </Card>
 
@@ -77,7 +79,7 @@ export function UnitDetailsPanel({
         <CardContent className="p-0">
           <div className="flex items-center justify-between px-6 pt-4 pb-2">
             <h3 className="text-base font-bold text-[#222B45] tracking-wide">
-              CONVERSIONS
+              {t("items.conversions")}
             </h3>
             <div className="flex gap-2 items-center h-10" ref={searchContainerRef}>
               <div 
@@ -167,7 +169,7 @@ export function UnitDetailsPanel({
                       colSpan={2}
                       className="px-4 py-6 text-center text-sm text-[#7B8A9A]"
                     >
-                      There are no conversions to show.
+                      {t("items.noItemsToShow")}
                     </td>
                   </tr>
                 )}

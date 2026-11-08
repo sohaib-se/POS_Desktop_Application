@@ -1,5 +1,6 @@
 import type { Dispatch, SetStateAction } from "react";
 import type { LucideIcon } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 export interface TabType {
   id: string;
@@ -14,6 +15,7 @@ interface SettingsSidebarProps {
 }
 
 export function SettingsSidebar({ tabs, activeTab, setActiveTab }: SettingsSidebarProps) {
+  const { t } = useTranslation();
   return (
     <aside
       style={{
@@ -32,7 +34,7 @@ export function SettingsSidebar({ tabs, activeTab, setActiveTab }: SettingsSideb
         }}
       >
         <span style={{ color: "#fff", fontSize: 18, fontWeight: 600 }}>
-          Settings
+          {t("sidebar.settings", "Settings")}
         </span>
       </div>
 

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { ImportItemsHeader } from "@/components/pagescomponents/utilities/importitems/ImportItemsHeader";
 import { ImportItemsSteps } from "@/components/pagescomponents/utilities/importitems/ImportItemsSteps";
 import { ImportItemsUpload, type ImportedItem } from "@/components/pagescomponents/utilities/importitems/ImportItemsUpload";
@@ -10,6 +11,7 @@ interface ImportItemsProps {
 }
 
 export function ImportItems({ onViewChange }: ImportItemsProps = {}) {
+  const { t } = useTranslation();
   const [importedItems, setImportedItems] = useState<ImportedItem[]>([]);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -131,14 +133,14 @@ export function ImportItems({ onViewChange }: ImportItemsProps = {}) {
           <div className="mt-8 border-t pt-8">
             <div className="flex items-center justify-between mb-4">
               <h4 className="text-lg font-semibold text-gray-800">
-                Imported Items Preview ({importedItems.length})
+                {t("utilities.importedItemsPreview", { count: importedItems.length })}
               </h4>
               <button 
                 onClick={handleSaveItems}
                 disabled={isSaving}
                 className="bg-[#1976D2] text-white px-6 py-2 rounded-lg text-sm font-medium hover:bg-blue-600 transition-colors disabled:opacity-50"
               >
-                {isSaving ? "Saving..." : "Save / Import Items"}
+                {isSaving ? t("common.saving") : t("utilities.saveImportItems")}
               </button>
             </div>
             
@@ -146,18 +148,18 @@ export function ImportItems({ onViewChange }: ImportItemsProps = {}) {
               <table className="w-full text-sm text-left">
                 <thead className="bg-gray-50 text-gray-700">
                   <tr>
-                    <th className="px-4 py-3 font-medium whitespace-nowrap">Item Name</th>
-                    <th className="px-4 py-3 font-medium whitespace-nowrap">Category</th>
-                    <th className="px-4 py-3 font-medium whitespace-nowrap">Code</th>
-                    <th className="px-4 py-3 font-medium whitespace-nowrap">Primary Unit</th>
-                    <th className="px-4 py-3 font-medium whitespace-nowrap">Secondary Unit</th>
-                    <th className="px-4 py-3 font-medium whitespace-nowrap">Conv. Rate</th>
-                    <th className="px-4 py-3 font-medium whitespace-nowrap">Sale Price</th>
-                    <th className="px-4 py-3 font-medium whitespace-nowrap">Wholesale Price</th>
-                    <th className="px-4 py-3 font-medium whitespace-nowrap">Purchase Price</th>
-                    <th className="px-4 py-3 font-medium whitespace-nowrap">Min Qty</th>
-                    <th className="px-4 py-3 font-medium whitespace-nowrap">Low Threshold</th>
-                    <th className="px-4 py-3 font-medium whitespace-nowrap">Opening Stock</th>
+                    <th className="px-4 py-3 font-medium whitespace-nowrap">{t("items.itemName")}</th>
+                    <th className="px-4 py-3 font-medium whitespace-nowrap">{t("items.category")}</th>
+                    <th className="px-4 py-3 font-medium whitespace-nowrap">{t("items.itemCode")}</th>
+                    <th className="px-4 py-3 font-medium whitespace-nowrap">{t("items.primaryUnit")}</th>
+                    <th className="px-4 py-3 font-medium whitespace-nowrap">{t("items.secondaryUnit")}</th>
+                    <th className="px-4 py-3 font-medium whitespace-nowrap">{t("items.conversionRate")}</th>
+                    <th className="px-4 py-3 font-medium whitespace-nowrap">{t("items.salePrice")}</th>
+                    <th className="px-4 py-3 font-medium whitespace-nowrap">{t("items.wholesalePrice")}</th>
+                    <th className="px-4 py-3 font-medium whitespace-nowrap">{t("items.purchasePrice")}</th>
+                    <th className="px-4 py-3 font-medium whitespace-nowrap">{t("items.minWholesaleQty")}</th>
+                    <th className="px-4 py-3 font-medium whitespace-nowrap">{t("items.lowStockThreshold")}</th>
+                    <th className="px-4 py-3 font-medium whitespace-nowrap">{t("items.openingStock")}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200 bg-white">

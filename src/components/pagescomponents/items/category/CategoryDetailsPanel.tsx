@@ -4,6 +4,7 @@ import { useSettings } from "@/hooks/useSettings";
 import type { CategoryRecord } from "@/components/pagescomponents/items/products/types";
 import type { ItemRecord } from "./types";
 import { Card, CardContent } from "./ui";
+import { useTranslation } from "react-i18next";
 
 type Props = {
   selectedCategory: CategoryRecord | undefined;
@@ -20,6 +21,7 @@ export function CategoryDetailsPanel({
   onSetCategoryItemSearchTerm,
   onOpenMoveItemsDialog,
 }: Props) {
+  const { t } = useTranslation();
   const [showSearchInput, setShowSearchInput] = useState(false);
   const searchContainerRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -65,7 +67,7 @@ export function CategoryDetailsPanel({
           <div className="flex flex-col justify-start pl-6 pt-5 pb-2 min-w-[220px]">
             <div className="flex items-center gap-2 mb-2">
               <h2 className="text-base font-bold text-[#151B26] tracking-wide uppercase">
-                {selectedCategory?.name ?? "ITEMS NOT IN ANY CATEGORY"}
+                {selectedCategory?.name ?? t("items.uncategorized").toUpperCase()}
               </h2>
             </div>
             <span className="text-sm font-medium text-[#151B26]">
@@ -78,7 +80,7 @@ export function CategoryDetailsPanel({
               className="bg-[#1976D2] hover:bg-[#1251A3] text-white px-5 py-2 rounded-lg text-sm font-bold flex items-center gap-2 shadow transition-all mb-2"
               style={{ minWidth: "140px" }}
             >
-              Move To This Category
+              {t("items.moveToThisCategory")}
             </button>
           </div>
         </div>
@@ -89,7 +91,7 @@ export function CategoryDetailsPanel({
         <CardContent className="p-0">
           <div className="flex items-center justify-between px-6 pt-4 pb-2">
             <h3 className="text-base font-bold text-[#222B45] tracking-wide">
-              ITEMS
+              {t("items.products")}
             </h3>
             <div className="flex gap-2 items-center h-10" ref={searchContainerRef}>
               <div 
@@ -145,13 +147,13 @@ export function CategoryDetailsPanel({
               <thead className="bg-[#F7F9FB] sticky top-0 z-10">
                 <tr>
                   <th className="px-4 py-2 text-left font-semibold text-[#7B8A9A] text-xs tracking-wide align-middle">
-                    NAME{" "}
+                    {t("common.name").toUpperCase()}{" "}
                   </th>
                   <th className="px-4 py-2 text-right font-semibold text-[#7B8A9A] text-xs tracking-wide align-middle">
-                    QUANTITY{" "}
+                    {t("items.quantity")}{" "}
                   </th>
                   <th className="px-4 py-2 text-right font-semibold text-[#7B8A9A] text-xs tracking-wide align-middle">
-                    STOCK VALUE{" "}
+                    {t("items.stockValue")}{" "}
                   </th>
                 </tr>
               </thead>
@@ -179,7 +181,7 @@ export function CategoryDetailsPanel({
                       colSpan={3}
                       className="px-4 py-6 text-center text-sm text-[#7B8A9A]"
                     >
-                      There are no items to show.
+                      {t("items.noItemsToShow")}
                     </td>
                   </tr>
                 )}

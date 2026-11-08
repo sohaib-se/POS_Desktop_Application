@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import { Modal, Input, ModalFooter, ImageUpload } from "./SharedComponents";
 import { toast } from "../../ui/Toast";
 import type { BankAccount } from "./types";
@@ -13,6 +14,7 @@ interface DepositWithdrawModalProps {
 }
 
 export function DepositWithdrawModal({ open, onClose, account, onSuccess, initialData }: DepositWithdrawModalProps) {
+  const { t } = useTranslation();
   const [currency] = useSettings('settings.businessCurrency', { code: 'PKR', symbol: 'Rs' });
   const [currencyDisplay] = useSettings<'abbreviation' | 'icon'>('settings.currencyDisplay', 'abbreviation');
   const currencyStr = currencyDisplay === 'icon' ? currency.symbol : currency.code;
@@ -106,7 +108,7 @@ export function DepositWithdrawModal({ open, onClose, account, onSuccess, initia
   if (!account) return null;
 
   return (
-    <Modal open={open} onClose={onClose} title="Deposit / Withdraw">
+    <Modal open={open} onClose={onClose} title={t("cashBank.depositWithdraw")}>
       <div className="space-y-4 max-w-md mx-auto py-2">
         <div className="flex items-center gap-6 mb-2">
           <label className="flex items-center gap-2 cursor-pointer">
@@ -117,7 +119,7 @@ export function DepositWithdrawModal({ open, onClose, account, onSuccess, initia
               onChange={() => setType("deposit")}
               className="w-4 h-4 text-[#E53935] border-gray-300 focus:ring-[#E53935]"
             />
-            <span className="text-gray-700">Deposit</span>
+            <span className="text-gray-700">{t("cashBank.deposit")}</span>
           </label>
           <label className="flex items-center gap-2 cursor-pointer">
             <input
@@ -127,12 +129,12 @@ export function DepositWithdrawModal({ open, onClose, account, onSuccess, initia
               onChange={() => setType("withdraw")}
               className="w-4 h-4 text-[#E53935] border-gray-300 focus:ring-[#E53935]"
             />
-            <span className="text-gray-700">Withdraw</span>
+            <span className="text-gray-700">{t("cashBank.withdraw")}</span>
           </label>
         </div>
 
         <Input
-          label="Enter Amount"
+          label={t("cashBank.enterAmount")}
           required
           placeholder={currencyStr}
           type="number"
@@ -146,22 +148,22 @@ export function DepositWithdrawModal({ open, onClose, account, onSuccess, initia
         />
 
         <div className="text-sm text-gray-700 py-1">
-          Updated Cash: <span className="font-semibold">{currencyStr} {updatedCash.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</span>
+          {t("cashBank.updatedCash")}: <span className="font-semibold">{currencyStr} {updatedCash.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</span>
         </div>
 
         <Input 
           type="date" 
-          label="Adjustment Date" 
+          label={t("cashBank.adjustmentDate")} 
           value={toYMD(date)} 
           onChange={(e) => setDate(toDMY(e.target.value))} 
         />
 
         <div>
           <label className="block text-sm text-gray-600 mb-1">
-            Description
+            {t("common.description")}
           </label>
           <textarea
-            placeholder="Enter Description"
+            placeholder={t("cashBank.enterDescription")}
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             rows={3}
@@ -177,7 +179,7 @@ export function DepositWithdrawModal({ open, onClose, account, onSuccess, initia
           />
         </div>
       </div>
-      <ModalFooter onCancel={onClose} onSave={handleSave} saveLabel={isSaving ? "Saving..." : "Save"} />
+      <ModalFooter onCancel={onClose} onSave={handleSave} saveLabel={isSaving ? t("common.saving") : t("common.save")} />
     </Modal>
   );
 }

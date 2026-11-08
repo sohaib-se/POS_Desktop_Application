@@ -1,4 +1,6 @@
 import { useSettings } from "@/hooks/useSettings";
+import { useTranslation } from "react-i18next";
+import { formatTransactionType } from "@/utils/transactionTranslations";
 import {
   Table,
   TableBody,
@@ -19,6 +21,7 @@ interface RecycleBinTableProps {
 }
 
 export function RecycleBinTable({ items, isLoading, selectedIds, setSelectedIds }: RecycleBinTableProps) {
+  const { t } = useTranslation();
   const [currency] = useSettings('settings.businessCurrency', { code: 'PKR', symbol: 'Rs' });
   const [currencyDisplay] = useSettings<'abbreviation' | 'icon'>('settings.currencyDisplay', 'abbreviation');
   const currencyStr = currencyDisplay === 'icon' ? currency.symbol : currency.code;
@@ -58,37 +61,37 @@ export function RecycleBinTable({ items, isLoading, selectedIds, setSelectedIds 
               </TableHead>
               <TableHead className="text-xs font-semibold text-gray-500">
                 <div className="flex items-center justify-between">
-                  TRANSACTION DATE
+                  {t("utilities.txnDate")}
                 </div>
               </TableHead>
               <TableHead className="text-xs font-semibold text-gray-500">
                 <div className="flex items-center justify-between">
-                  REF. NO.
+                  {t("sales.referenceNo", "REF. NO.")}
                 </div>
               </TableHead>
               <TableHead className="text-xs font-semibold text-gray-500">
                 <div className="flex items-center justify-between">
-                  PARTY NAME
+                  {t("parties.partyName")}
                 </div>
               </TableHead>
               <TableHead className="text-xs font-semibold text-gray-500">
                 <div className="flex items-center justify-between">
-                  TXN TYPE
+                  {t("sales.type", "TXN TYPE")}
                 </div>
               </TableHead>
               <TableHead className="text-xs font-semibold text-gray-500">
                 <div className="flex items-center justify-between">
-                  PAYMENT TYPE
+                  {t("sales.paymentType", "PAYMENT TYPE")}
                 </div>
               </TableHead>
               <TableHead className="text-xs font-semibold text-gray-500">
                 <div className="flex items-center justify-between">
-                  AMOUNT
+                  {t("sales.amount", "AMOUNT")}
                 </div>
               </TableHead>
               <TableHead className="text-xs font-semibold text-gray-500">
                 <div className="flex items-center justify-between">
-                  DELETED ON
+                  {t("utilities.deletedOn")}
                 </div>
               </TableHead>
             </TableRow>
@@ -97,13 +100,13 @@ export function RecycleBinTable({ items, isLoading, selectedIds, setSelectedIds 
             {isLoading ? (
               <TableRow>
                 <TableCell colSpan={8} className="text-center py-10 text-gray-500">
-                  Loading...
+                  {t("common.loading")}
                 </TableCell>
               </TableRow>
             ) : items.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={8} className="text-center py-10 text-gray-500">
-                  No deleted items found.
+                  {t("utilities.noDeletedItems")}
                 </TableCell>
               </TableRow>
             ) : (
@@ -119,7 +122,7 @@ export function RecycleBinTable({ items, isLoading, selectedIds, setSelectedIds 
                   <TableCell className="text-sm">{item.transaction_date || '-'}</TableCell>
                   <TableCell className="text-sm">{item.ref_no || '-'}</TableCell>
                   <TableCell className="text-sm">{item.party_name || '-'}</TableCell>
-                  <TableCell className="text-sm">{item.txn_type}</TableCell>
+                  <TableCell className="text-sm">{formatTransactionType(item.txn_type, t)}</TableCell>
                   <TableCell className="text-sm">{item.payment_type || '-'}</TableCell>
                   <TableCell className="text-sm">{item.amount > 0 ? `${currencyStr} ${item.amount}` : '-'}</TableCell>
                   <TableCell className="text-sm">{item.deleted_on}</TableCell>

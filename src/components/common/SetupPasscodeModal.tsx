@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Dialog,
   DialogContent,
@@ -21,7 +22,7 @@ export interface SetupPasscodeModalProps {
   recoveryPhone?: string;
   resetMethod?: 'email' | 'phone';
   resetValue?: string;
-  onSuccess?: () => void;
+  onSuccess?: (passcode?: string) => void;
 }
 
 export function SetupPasscodeModal({
@@ -35,6 +36,7 @@ export function SetupPasscodeModal({
   resetValue,
   onSuccess,
 }: SetupPasscodeModalProps) {
+  const { t } = useTranslation();
   const [oldPasscode, setOldPasscode] = useState('');
   const [newPasscode, setNewPasscode] = useState('');
   const [confirmPasscode, setConfirmPasscode] = useState('');
@@ -53,15 +55,23 @@ export function SetupPasscodeModal({
   const handleSave = async () => {
     setError('');
     if (isChangeMode && oldPasscode.length !== 4) {
-      setError('Please enter the complete old passcode.');
+      setError(t('passcode.enterCompleteOldPasscode', 'Please enter the complete old passcode.'));
       return;
     }
     if (newPasscode.length !== 4) {
-      setError('New passcode must be 4 digits.');
+      setError(t('passcode.newPasscode4Digits', 'New passcode must be 4 digits.'));
       return;
     }
     if (newPasscode !== confirmPasscode) {
-      setError('New passcodes do not match.');
+      setError(t('passcode.passcodesDoNotMatch', 'New passcodes do not match.'));
+      return;
+    }
+
+    // When creating a new passcode, do not create the passcode yet.
+    // Pass the new passcode to onSuccess so recovery setup can be completed.
+    if (!isChangeMode && !isResetMode) {
+      onSuccess?.(newPasscode);
+      onOpenChange(false);
       return;
     }
 
@@ -92,13 +102,13 @@ export function SetupPasscodeModal({
 
       const data = await response.json();
       if (data.success) {
-        onSuccess?.();
+        onSuccess?.(newPasscode);
         onOpenChange(false);
       } else {
-        setError(data.message || 'Failed to setup passcode.');
+        setError(data.message || t('passcode.failedToSetup', 'Failed to setup passcode.'));
       }
     } catch (err) {
-      setError('An error occurred.');
+      setError(t('passcode.errorOccurred', 'An error occurred.'));
     } finally {
       setLoading(false);
     }
@@ -108,13 +118,13 @@ export function SetupPasscodeModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>{isResetMode ? 'Reset Passcode' : isChangeMode ? 'Change Passcode' : 'Setup Passcode'}</DialogTitle>
+          <DialogTitle>{isResetMode ? t('passcode.resetPasscode', 'Reset Passcode') : isChangeMode ? t('passcode.changePasscode', 'Change Passcode') : t('passcode.setupPasscode', 'Setup Passcode')}</DialogTitle>
         </DialogHeader>
         
         <div className="flex flex-col gap-6 py-4 items-center">
           {isChangeMode && !isResetMode && (
             <div className="flex flex-col gap-2 items-center w-full">
-              <label className="text-sm font-medium">Old Passcode</label>
+              <label className="text-sm font-medium">{t('passcode.oldPasscode', 'Old Passcode')}</label>
               <InputOTP
                 maxLength={4}
                 value={oldPasscode}
@@ -131,7 +141,7 @@ export function SetupPasscodeModal({
           )}
 
           <div className="flex flex-col gap-2 items-center w-full">
-            <label className="text-sm font-medium">New Passcode</label>
+            <label className="text-sm font-medium">{t('passcode.newPasscode', 'New Passcode')}</label>
             <InputOTP
               maxLength={4}
               value={newPasscode}
@@ -147,7 +157,7 @@ export function SetupPasscodeModal({
           </div>
 
           <div className="flex flex-col gap-2 items-center w-full">
-            <label className="text-sm font-medium">Confirm Passcode</label>
+            <label className="text-sm font-medium">{t('passcode.confirmPasscode', 'Confirm Passcode')}</label>
             <InputOTP
               maxLength={4}
               value={confirmPasscode}
@@ -167,7 +177,7 @@ export function SetupPasscodeModal({
 
         <div className="flex justify-end">
           <Button onClick={handleSave} disabled={loading}>
-            SAVE
+            {loading ? t('common.saving', 'Saving...') : t('common.save', 'SAVE')}
           </Button>
         </div>
       </DialogContent>

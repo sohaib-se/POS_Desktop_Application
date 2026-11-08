@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { Trash2 } from "lucide-react";
 import { useSettings } from "@/hooks/useSettings";
 import type { PurchaseTab, ItemOption, PurchaseRow } from "./types";
@@ -26,6 +27,7 @@ function ItemCell({
   items: ItemOption[];
   updateRowItem: (rowId: number, itemId: string) => void;
 }) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
   const ref = useRef<HTMLDivElement>(null);
@@ -59,7 +61,7 @@ function ItemCell({
         onChange={(e) => { setSearch(e.target.value); setOpen(true); }}
         onFocus={() => { setSearch(selectedItem ? selectedItem.name : row.item); setOpen(true); }}
         onClick={() => { setOpen(true); setSearch(selectedItem ? selectedItem.name : row.item); }}
-        placeholder="Select Item"
+        placeholder={t("common.selectItem")}
         className="focus:ring-0 focus:outline-none"
         style={{ width: "100%", border: "none", outline: "none", boxShadow: "none", fontSize: 13, color: "#374151", background: "transparent" }}
       />
@@ -74,12 +76,12 @@ function ItemCell({
             display: "flex", padding: "8px 12px", borderBottom: "1px solid #e5e7eb",
             fontSize: 11, color: "#9ca3af", fontWeight: 600, background: "#fafafa"
           }}>
-            <div style={{ flex: 2 }}>ITEM</div>
-            <div style={{ flex: 1.5, textAlign: "right" }}>PURCHASE PRICE</div>
-            <div style={{ flex: 1, textAlign: "right" }}>STOCK</div>
+            <div style={{ flex: 2 }}>{t("items.item")}</div>
+            <div style={{ flex: 1.5, textAlign: "right" }}>{t("items.purchasePrice")}</div>
+            <div style={{ flex: 1, textAlign: "right" }}>{t("items.stock")}</div>
           </div>
           {filteredItems.length === 0 ? (
-            <div style={{ padding: "12px 16px", fontSize: 13, color: "#9ca3af" }}>No items found</div>
+            <div style={{ padding: "12px 16px", fontSize: 13, color: "#9ca3af" }}>{t("items.noItemsFound")}</div>
           ) : filteredItems.map(item => {
             const purchasePrice = item.purchase_price ?? 0;
             const stock = item.stock_quantity ?? item.stock ?? 0;
@@ -126,6 +128,7 @@ export function PurchaseTable({
   totalAmount,
   fmt,
 }: PurchaseTableProps) {
+  const { t } = useTranslation();
 
   const cellStyle: React.CSSProperties = {
     borderRight: "1px solid #e5e7eb",
@@ -168,19 +171,19 @@ export function PurchaseTable({
               #
             </th>
             <th style={{ position: "relative", padding: "8px 10px", textAlign: "left", fontSize: 12, fontWeight: 600, color: "#6b7280", ...cellStyle, letterSpacing: "0.04em" }}>
-              ITEM
+              {t("items.item")}
             </th>
             <th style={{ position: "relative", padding: "8px 10px", textAlign: "right", fontSize: 12, fontWeight: 600, color: "#6b7280", ...cellStyle, letterSpacing: "0.04em" }}>
-              QTY
+              {t("common.qty")}
             </th>
             <th style={{ position: "relative", padding: "8px 10px", textAlign: "left", fontSize: 12, fontWeight: 600, color: "#6b7280", ...cellStyle, letterSpacing: "0.04em" }}>
-              UNIT
+              {t("common.unit")}
             </th>
             <th style={{ position: "relative", padding: "8px 10px", textAlign: "right", fontSize: 12, fontWeight: 600, color: "#6b7280", ...cellStyle, letterSpacing: "0.04em" }}>
-              PRICE/UNIT
+              {t("common.priceUnit")}
             </th>
             <th style={{ position: "relative", padding: "8px 10px", textAlign: "right", fontSize: 12, fontWeight: 600, color: "#6b7280", ...cellStyle, letterSpacing: "0.04em" }}>
-              AMOUNT
+              {t("common.amount")}
             </th>
           </tr>
         </thead>
@@ -288,11 +291,11 @@ export function PurchaseTable({
                 onClick={addRow}
                 style={{ fontSize: 11, fontWeight: 700, color: "#3b82f6", border: "1px solid #93c5fd", borderRadius: 4, padding: "3px 10px", background: "#fff", cursor: "pointer", letterSpacing: "0.05em" }}
               >
-                ADD ROW
+                {t("common.addRow")}
               </button>
             </td>
             <td colSpan={2} style={{ padding: "8px 10px", fontSize: 12, fontWeight: 700, color: "#6b7280", borderRight: "1px solid #e5e7eb", letterSpacing: "0.04em" }}>
-              <span style={{ float: "left" }}>TOTAL</span>
+              <span style={{ float: "left" }}>{t("common.total")}</span>
               <span style={{ float: "right" }}>{totalQty > 0 ? totalQty : 0}</span>
             </td>
             <td style={{ borderRight: "1px solid #e5e7eb" }} />

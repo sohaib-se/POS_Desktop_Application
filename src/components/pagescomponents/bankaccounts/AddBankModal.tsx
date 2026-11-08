@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { Plus } from "lucide-react";
 import { Modal, Input, ModalFooter } from "./SharedComponents";
 import type { BankAccount } from "./types";
@@ -11,6 +12,7 @@ interface AddBankModalProps {
 }
 
 export function AddBankModal({ open, onClose, onSuccess, initialData }: AddBankModalProps) {
+  const { t } = useTranslation();
   const [showMore, setShowMore] = useState(false);
   const [name, setName] = useState("");
   const [balance, setBalance] = useState("");
@@ -77,20 +79,20 @@ export function AddBankModal({ open, onClose, onSuccess, initialData }: AddBankM
   };
 
   return (
-    <Modal open={open} onClose={onClose} title={initialData ? "Edit Bank Account" : "Add Bank Account"}>
+    <Modal open={open} onClose={onClose} title={initialData ? t("cashBank.editBankAccount") : t("cashBank.addBankAccount")}>
       <div className="space-y-4">
         {/* Row 1 */}
         <div className="grid grid-cols-3 gap-4">
           <Input
-            label="Account Display Name"
-            placeholder="Enter Account Display Name"
+            label={t("cashBank.accountDisplayName")}
+            placeholder={t("cashBank.enterAccountDisplayName")}
             value={name}
             onChange={(e) => setName(e.target.value)}
             required
           />
           <Input
-            label="Opening Balance"
-            placeholder="Enter Opening Balance"
+            label={t("cashBank.openingBalance")}
+            placeholder={t("cashBank.enterOpeningBalance")}
             type="number"
             value={balance}
             onChange={(e) => {
@@ -101,7 +103,7 @@ export function AddBankModal({ open, onClose, onSuccess, initialData }: AddBankM
             }}
             min="0"
           />
-          <Input label="As of Date" value={today} readOnly />
+          <Input label={t("cashBank.asOfDate")} value={today} readOnly />
         </div>
 
         {/* Expandable fields */}
@@ -111,25 +113,25 @@ export function AddBankModal({ open, onClose, onSuccess, initialData }: AddBankM
             className="text-blue-500 text-sm font-medium flex items-center gap-1 hover:text-blue-600"
           >
             <Plus className="w-4 h-4" />
-            Add more fields
+            {t("cashBank.addMoreFields")}
           </button>
         ) : (
           <div className="space-y-4">
             <div className="grid grid-cols-3 gap-4">
               <Input
-                label="Account Number"
-                placeholder="Enter Account Number"
+                label={t("cashBank.accountNumber")}
+                placeholder={t("cashBank.enterAccountNumber")}
                 value={accountNumber}
                 onChange={(e) => setAccountNumber(e.target.value)}
               />
-              <Input label="SWIFT Code" placeholder="Enter SWIFT" value={swiftCode} onChange={(e) => setSwiftCode(e.target.value)} />
-              <Input label="IBAN" placeholder="Enter IBAN" value={iban} onChange={(e) => setIban(e.target.value)} />
+              <Input label={t("cashBank.swiftCode")} placeholder={t("cashBank.enterSwift")} value={swiftCode} onChange={(e) => setSwiftCode(e.target.value)} />
+              <Input label={t("cashBank.iban")} placeholder={t("cashBank.enterIban")} value={iban} onChange={(e) => setIban(e.target.value)} />
             </div>
             <div className="grid grid-cols-2 gap-4">
-              <Input label="Bank Name" placeholder="Enter Bank Name" value={bankName} onChange={(e) => setBankName(e.target.value)} />
+              <Input label={t("cashBank.bankName")} placeholder={t("cashBank.enterBankName")} value={bankName} onChange={(e) => setBankName(e.target.value)} />
               <Input
-                label="Account Holder Name"
-                placeholder="Enter Account Holder Name"
+                label={t("cashBank.accountHolderName")}
+                placeholder={t("cashBank.enterAccountHolderName")}
                 value={accountHolderName}
                 onChange={(e) => setAccountHolderName(e.target.value)}
               />
@@ -139,7 +141,7 @@ export function AddBankModal({ open, onClose, onSuccess, initialData }: AddBankM
 
       </div>
 
-      <ModalFooter onCancel={onClose} onSave={handleSave} saveLabel={isSaving ? "Saving..." : "Save Details"} />
+      <ModalFooter onCancel={onClose} onSave={handleSave} saveLabel={isSaving ? t("common.saving") : t("common.save")} />
     </Modal>
   );
 }

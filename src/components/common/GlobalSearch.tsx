@@ -1,5 +1,6 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { Search, X, CornerDownLeft } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import type { ViewType } from "@/types";
 
 interface GlobalSearchProps {
@@ -8,40 +9,41 @@ interface GlobalSearchProps {
   onNavigate: (view: ViewType) => void;
 }
 
-const searchableItems: { label: string; view: ViewType }[] = [
-  { label: "Home / Dashboard", view: "home" },
-  { label: "Parties", view: "parties" },
-  { label: "Items", view: "items" },
-  { label: "Sale Invoices", view: "sale-invoices" },
-  { label: "Add Sale", view: "add-sale" },
-  { label: "Estimates / Quotation", view: "estimates" },
-  { label: "Payment In", view: "payment-in" },
-  { label: "Laimsoft POS", view: "pos" },
-  { label: "Purchase Bills", view: "purchase-bills" },
-  { label: "Add Purchase", view: "add-purchase" },
-  { label: "Payment Out", view: "payment-out" },
-  { label: "Expenses", view: "expenses" },
-  { label: "Add Expense", view: "add-expense" },
-  { label: "Bank Accounts", view: "bank-accounts" },
-  { label: "Cash In Hand", view: "cash-in-hand" },
-  { label: "Reports", view: "reports" },
-  { label: "Auto Backup", view: "sync-auto-backup" },
-  { label: "Backup to Computer", view: "sync-backup-computer" },
-  { label: "Restore Backup", view: "sync-restore-backup" },
-  { label: "Import Items", view: "utilities-import-items" },
-  { label: "Barcode Generator", view: "utilities-barcode" },
-  { label: "Update Items In Bulk", view: "utilities-bulk-update" },
-  { label: "Import Parties", view: "utilities-import-parties" },
-  { label: "Export Items", view: "utilities-export-items" },
-  { label: "Recycle Bin", view: "utilities-recycle-bin" },
-  { label: "Settings", view: "settings" },
-];
-
 export function GlobalSearch({ isOpen, onClose, onNavigate }: GlobalSearchProps) {
+  const { t } = useTranslation();
   const [query, setQuery] = useState("");
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [isFocused, setIsFocused] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const searchableItems: { label: string; view: ViewType }[] = useMemo(() => [
+    { label: t("sidebar.home"), view: "home" },
+    { label: t("sidebar.parties"), view: "parties" },
+    { label: t("sidebar.items"), view: "items" },
+    { label: t("sidebar.saleInvoices"), view: "sale-invoices" },
+    { label: t("header.addSale"), view: "add-sale" },
+    { label: t("sidebar.estimates"), view: "estimates" },
+    { label: t("sidebar.paymentIn"), view: "payment-in" },
+    { label: t("sidebar.pos"), view: "pos" },
+    { label: t("sidebar.purchaseBills"), view: "purchase-bills" },
+    { label: t("header.addPurchase"), view: "add-purchase" },
+    { label: t("sidebar.paymentOut"), view: "payment-out" },
+    { label: t("sidebar.expenses"), view: "expenses" },
+    { label: t("expenses.addExpense"), view: "add-expense" },
+    { label: t("sidebar.bankAccounts"), view: "bank-accounts" },
+    { label: t("sidebar.cashInHand"), view: "cash-in-hand" },
+    { label: t("sidebar.reports"), view: "reports" },
+    { label: t("sidebar.autoBackup"), view: "sync-auto-backup" },
+    { label: t("sidebar.backupToComputer"), view: "sync-backup-computer" },
+    { label: t("sidebar.restoreBackup"), view: "sync-restore-backup" },
+    { label: t("sidebar.importItems"), view: "utilities-import-items" },
+    { label: t("sidebar.barcodeGenerator"), view: "utilities-barcode" },
+    { label: t("sidebar.updateItemsInBulk"), view: "utilities-bulk-update" },
+    { label: t("sidebar.importParties"), view: "utilities-import-parties" },
+    { label: t("sidebar.exportItems"), view: "utilities-export-items" },
+    { label: t("sidebar.recycleBin"), view: "utilities-recycle-bin" },
+    { label: t("sidebar.settings"), view: "settings" },
+  ], [t]);
 
   useEffect(() => {
     if (isOpen) {
@@ -51,14 +53,18 @@ export function GlobalSearch({ isOpen, onClose, onNavigate }: GlobalSearchProps)
     }
   }, [isOpen]);
 
-  const filteredItems = query === "" 
-    ? [
-        { label: "Add Sale", view: "add-sale", isRecent: true },
+  const filteredItems = useMemo(() => {
+    if (query === "") {
+      const addSaleItem = searchableItems.find(i => i.view === "add-sale") || { label: t("header.addSale"), view: "add-sale" as ViewType };
+      return [
+        { ...addSaleItem, isRecent: true },
         ...searchableItems.filter(i => i.view !== "add-sale").map(i => ({ ...i, isRecent: false }))
-      ]
-    : searchableItems.filter((item) =>
-        item.label.toLowerCase().includes(query.toLowerCase())
-      );
+      ];
+    }
+    return searchableItems.filter((item) =>
+      item.label.toLowerCase().includes(query.toLowerCase())
+    );
+  }, [query, searchableItems, t]);
 
   useEffect(() => {
     setSelectedIndex(0);
@@ -108,7 +114,7 @@ export function GlobalSearch({ isOpen, onClose, onNavigate }: GlobalSearchProps)
               onKeyDown={handleKeyDown}
               onFocus={() => setIsFocused(true)}
               onBlur={() => setIsFocused(false)}
-              placeholder="Open anything like invoices, reports..."
+              placeholder={t("globalSearch.placeholder")}
               className="flex-1 text-sm outline-none bg-transparent text-gray-800 placeholder-gray-500 focus:ring-0 focus:outline-none border-none"
             />
           </div>
@@ -123,7 +129,7 @@ export function GlobalSearch({ isOpen, onClose, onNavigate }: GlobalSearchProps)
         
         <div className="max-h-[45vh] overflow-y-auto pb-2 scrollbar-thin">
           {filteredItems.length === 0 ? (
-            <div className="py-8 text-center text-gray-500">No results found for "{query}"</div>
+            <div className="py-8 text-center text-gray-500">{t("globalSearch.noResults", { query })}</div>
           ) : (
             filteredItems.map((item, index) => {
               const showRecentHeader = query === "" && index === 0;
@@ -132,10 +138,10 @@ export function GlobalSearch({ isOpen, onClose, onNavigate }: GlobalSearchProps)
               return (
                 <div key={item.label}>
                   {showRecentHeader && (
-                    <div className="px-5 py-2 text-xs font-semibold text-gray-500">Recent Pages</div>
+                    <div className="px-5 py-2 text-xs font-semibold text-gray-500">{t("globalSearch.recentPages")}</div>
                   )}
                   {showSuggestedHeader && (
-                    <div className="px-5 py-2 text-xs font-semibold text-gray-500 border-t border-gray-100 mt-1 pt-3">Suggested Pages</div>
+                    <div className="px-5 py-2 text-xs font-semibold text-gray-500 border-t border-gray-100 mt-1 pt-3">{t("globalSearch.suggestedPages")}</div>
                   )}
                   <button
                     onClick={() => onNavigate(item.view as ViewType)}

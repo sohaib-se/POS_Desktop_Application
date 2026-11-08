@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import type { UnitRecord } from "@/components/pagescomponents/items/products/types";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui";
 
@@ -14,6 +15,8 @@ export function DeleteUnitModal({
   onCancel,
   onConfirm,
 }: Props) {
+  const { t } = useTranslation();
+
   return (
     <Dialog
       open={Boolean(unitPendingDelete)}
@@ -23,13 +26,13 @@ export function DeleteUnitModal({
     >
       <DialogContent className="max-w-sm">
         <DialogHeader>
-          <DialogTitle>Delete Unit</DialogTitle>
+          <DialogTitle>{t("items.deleteUnitTitle")}</DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
           <p className="text-sm text-gray-600">
             {unitPendingDelete
-              ? `Are you sure you want to delete ${unitPendingDelete.fullName}? This action cannot be undone.`
-              : "Are you sure you want to delete this unit?"}
+              ? t("items.deleteUnitConfirm", { name: unitPendingDelete.fullName })
+              : t("items.deleteUnitGeneric")}
           </p>
           <div className="flex justify-end gap-2">
             <button
@@ -38,7 +41,7 @@ export function DeleteUnitModal({
               onClick={onCancel}
               className="px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50"
             >
-              Cancel
+              {t("common.cancel")}
             </button>
             <button
               type="button"
@@ -49,7 +52,7 @@ export function DeleteUnitModal({
               }}
               className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 disabled:opacity-60"
             >
-              {isDeletingUnit ? "Deleting..." : "Delete"}
+              {isDeletingUnit ? t("common.saving") : t("common.delete")}
             </button>
           </div>
         </div>

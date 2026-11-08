@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import type { MouseEvent } from "react";
+import { useTranslation } from "react-i18next";
 import type { ExpenseTab, ExpenseRow, ExpenseItem } from "./types";
 import { Trash2, Plus } from "lucide-react";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
@@ -12,6 +13,7 @@ interface ItemSearchCellProps {
 }
 
 function ItemSearchCell({ row, items, updateRow, handleItemSelect }: ItemSearchCellProps) {
+  const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState(row.category || "");
   const containerRef = useRef<HTMLDivElement>(null);
@@ -51,7 +53,7 @@ function ItemSearchCell({ row, items, updateRow, handleItemSelect }: ItemSearchC
           background: "transparent", padding: "0 4px",
           borderRadius: 4
         }}
-        placeholder="Select Item"
+        placeholder={t("common.selectItem")}
       />
       {isOpen && (
         <div style={{
@@ -96,12 +98,12 @@ function ItemSearchCell({ row, items, updateRow, handleItemSelect }: ItemSearchC
               justifyContent: "space-between", alignItems: "center", cursor: "pointer"
             }}
           >
-            <div style={{ display: "flex", alignItems: "center", gap: 6, fontWeight: 500, color: "#3b82f6", fontSize: 14 }}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 18, height: 18, borderRadius: "50%", border: "1.5px solid #3b82f6" }}>
-                <Plus size={12} strokeWidth={3} />
+              <div style={{ display: "flex", alignItems: "center", gap: 6, fontWeight: 500, color: "#3b82f6", fontSize: 14 }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 18, height: 18, borderRadius: "50%", border: "1.5px solid #3b82f6" }}>
+                  <Plus size={12} strokeWidth={3} />
+                </div>
+                {t("expenses.addItem", "Add Expense Item")}
               </div>
-              Add Expense Item
-            </div>
           </div>
         </div>
       )}
@@ -177,6 +179,7 @@ export function ExpenseTable({
   addRow,
   totalAmount,
 }: ExpenseTableProps) {
+  const { t } = useTranslation();
   const { widths, startResize } = useColumnResize([42, 340, 150, 150, 150]);
   const [rowToRemove, setRowToRemove] = useState<number | null>(null);
 
@@ -240,16 +243,16 @@ export function ExpenseTable({
               #<ResizeHandle col={0} startResize={startResize} />
             </th>
             <th style={{ position: "relative", padding: "8px 10px", textAlign: "left", fontSize: 12, fontWeight: 600, color: "#6b7280", borderRight: "1px solid #e5e7eb", letterSpacing: "0.04em" }}>
-              EXPENSE ITEM<ResizeHandle col={1} startResize={startResize} />
+              {t("expenses.item")}<ResizeHandle col={1} startResize={startResize} />
             </th>
             <th style={{ position: "relative", padding: "8px 10px", textAlign: "right", fontSize: 12, fontWeight: 600, color: "#6b7280", borderRight: "1px solid #e5e7eb", letterSpacing: "0.04em" }}>
-              QTY<ResizeHandle col={2} startResize={startResize} />
+              {t("common.qty")}<ResizeHandle col={2} startResize={startResize} />
             </th>
             <th style={{ position: "relative", padding: "8px 10px", textAlign: "right", fontSize: 12, fontWeight: 600, color: "#6b7280", borderRight: "1px solid #e5e7eb", letterSpacing: "0.04em" }}>
-              PRICE<ResizeHandle col={3} startResize={startResize} />
+              {t("expenses.price")}<ResizeHandle col={3} startResize={startResize} />
             </th>
             <th style={{ position: "relative", padding: "8px 10px", textAlign: "right", fontSize: 12, fontWeight: 600, color: "#6b7280", borderRight: "1px solid #e5e7eb", letterSpacing: "0.04em" }}>
-              AMOUNT<ResizeHandle col={4} startResize={startResize} />
+              {t("common.amount").toUpperCase()}<ResizeHandle col={4} startResize={startResize} />
             </th>
           </tr>
         </thead>
@@ -289,7 +292,7 @@ export function ExpenseTable({
                         updateRow(row.id, { note: newQty, amount: String((Number(newQty) || 0) * price) });
                       }
                     }}
-                    placeholder="Qty"
+                    placeholder={t("common.qty")}
                   />
                 </td>
                 <td style={{ borderRight: "1px solid #e5e7eb", padding: "4px 8px" }}>
@@ -305,7 +308,7 @@ export function ExpenseTable({
                         updateRow(row.id, { paymentType: newPrice, amount: String(qty * (Number(newPrice) || 0)) });
                       }
                     }}
-                    placeholder="Price"
+                    placeholder={t("expenses.price")}
                   />
                 </td>
                 <td style={{ borderRight: "1px solid #e5e7eb", padding: "4px 8px" }}>
@@ -340,11 +343,11 @@ export function ExpenseTable({
                 onClick={addRow}
                 style={{ fontSize: 11, fontWeight: 700, color: "#3b82f6", border: "1px solid #93c5fd", borderRadius: 4, padding: "3px 10px", background: "#fff", cursor: "pointer", letterSpacing: "0.05em" }}
               >
-                ADD ROW
+                {t("common.addRow")}
               </button>
             </td>
             <td colSpan={2} style={{ padding: "8px 10px", fontSize: 12, fontWeight: 700, color: "#6b7280", borderRight: "1px solid #e5e7eb", letterSpacing: "0.04em" }}>
-              <span style={{ float: "left" }}>TOTAL</span>
+              <span style={{ float: "left" }}>{t("common.total").toUpperCase()}</span>
             </td>
             <td style={{ padding: "8px 10px", textAlign: "right", fontSize: 13, fontWeight: 600, color: "#374151", borderRight: "1px solid #e5e7eb" }}>
               {totalAmount > 0 ? totalAmount.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0"}
@@ -355,10 +358,10 @@ export function ExpenseTable({
 
       <ConfirmDialog
         open={rowToRemove !== null}
-        title="Delete Expense Item"
-        message="Are you sure you want to delete this expense item? This action cannot be undone."
-        confirmLabel="Delete"
-        cancelLabel="Cancel"
+        title={t("expenses.deleteItem")}
+        message={t("expenses.confirmDeleteItem")}
+        confirmLabel={t("common.delete")}
+        cancelLabel={t("common.cancel")}
         onConfirm={() => {
           if (rowToRemove !== null) {
             removeRow(rowToRemove);

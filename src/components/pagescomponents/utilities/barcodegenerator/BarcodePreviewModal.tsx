@@ -1,4 +1,5 @@
 import { X } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { BarcodeLabel } from "./BarcodeLabel";
 import type { BarcodeItem } from "./BarcodeGeneratorItemList";
@@ -22,6 +23,7 @@ export function BarcodePreviewModal({
   companyName = "",
   labelSize,
 }: BarcodePreviewModalProps) {
+  const { t } = useTranslation();
   const size: LabelSize = labelSize ?? {
     id: "2x50x25",
     name: "2 Labels (50x25mm)",
@@ -60,7 +62,7 @@ export function BarcodePreviewModal({
           {/* ── Header ───────────────────────────────────────── */}
           <div className="flex justify-between items-center p-4 border-b border-gray-100 bg-[#F8FAFC]">
             <div className="flex items-center gap-3">
-              <h3 className="text-lg font-semibold text-gray-700">Labels Preview</h3>
+              <h3 className="text-lg font-semibold text-gray-700">{t("utilities.labelsPreview")}</h3>
               <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
                 {totalLabels} label{totalLabels !== 1 ? "s" : ""}
               </span>
@@ -83,7 +85,7 @@ export function BarcodePreviewModal({
                 {/* Page indicator */}
                 <div className="text-center py-2">
                   <span className="text-xs text-gray-400 bg-white px-3 py-1 rounded-full border border-gray-200">
-                    Page {pageIndex + 1}
+                    {t("utilities.pageCount", { page: pageIndex + 1 })}
                   </span>
                 </div>
 
@@ -112,7 +114,7 @@ export function BarcodePreviewModal({
 
             {items.length === 0 && (
               <div className="flex items-center justify-center h-48 text-gray-400 text-sm">
-                No items selected for preview
+                {t("utilities.noItemsSelectedBarcode")}
               </div>
             )}
           </div>

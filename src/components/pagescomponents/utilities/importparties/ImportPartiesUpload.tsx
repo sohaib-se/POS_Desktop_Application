@@ -1,5 +1,6 @@
 import { Upload } from "lucide-react";
 import { useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import * as xlsx from "xlsx-js-style";
 
 import { toast } from "@/components/ui/Toast";
@@ -19,6 +20,7 @@ interface ImportPartiesUploadProps {
 }
 
 export function ImportPartiesUpload({ onPartiesImported }: ImportPartiesUploadProps) {
+  const { t } = useTranslation();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
 
@@ -98,7 +100,7 @@ export function ImportPartiesUpload({ onPartiesImported }: ImportPartiesUploadPr
   return (
     <div className="flex flex-col w-full min-w-0">
       <p className="text-sm text-gray-500 mb-2">
-        Upload your .xls/ .xlsx (excel sheet)
+        {t("utilities.uploadExcelSheet")}
       </p>
       <div 
         className={`bg-[#F8FBFF] p-8 rounded-xl border border-dashed transition-colors flex flex-col items-center justify-center text-center h-64 w-full
@@ -112,9 +114,9 @@ export function ImportPartiesUpload({ onPartiesImported }: ImportPartiesUploadPr
         </div>
         
         <p className="text-sm text-gray-600 mb-2">
-          Drag & Drop files here
+          {t("utilities.dragDropExcel")}
         </p>
-        <p className="text-xs text-gray-400 mb-4">or</p>
+        <p className="text-xs text-gray-400 mb-4">{t("utilities.or")}</p>
 
         <input
           type="file"
@@ -129,7 +131,7 @@ export function ImportPartiesUpload({ onPartiesImported }: ImportPartiesUploadPr
           className="bg-[#E53935] text-white px-6 py-2 rounded-md flex items-center gap-2 hover:bg-red-700 transition-colors"
         >
           <Upload className="w-4 h-4" />
-          Upload File
+          {t("utilities.uploadFileBtn")}
         </button>
       </div>
     </div>

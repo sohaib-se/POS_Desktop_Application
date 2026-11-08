@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import type { SaleRow, SaleTab } from "../components/pagescomponents/addestimate/types";
 import { TabBar } from "../components/pagescomponents/addestimate/TabBar";
 import { TopBar } from "../components/pagescomponents/addestimate/TopBar";
@@ -50,7 +51,7 @@ function createDefaultTab(id: number): SaleTab {
     ],
     discountPercent: "",
     discountRs: "",
-    tax: "NONE",
+    tax: "",
     roundOff: true,
     description: "",
     showDescriptionInput: false,
@@ -59,7 +60,17 @@ function createDefaultTab(id: number): SaleTab {
   };
 }
 
+function parseTaxRate(tax: string) {
+  if (!tax || tax === "NONE") {
+    return 0;
+  }
+
+  const parsed = parseFloat(tax.replace(/[^0-9.]/g, ""));
+  return isNaN(parsed) ? 0 : parsed / 100;
+}
+
 export function AddEstimate({ onSave, onShare, onClose, initialEstimate }: AddEstimateProps) {
+  const { t } = useTranslation();
   const [tabs, setTabs] = useState<SaleTab[]>([createDefaultTab(1)]);
   const [activeTabId, setActiveTabId] = useState(1);
   const [isOpenAnimated, setIsOpenAnimated] = useState(false);
@@ -187,7 +198,7 @@ export function AddEstimate({ onSave, onShare, onClose, initialEstimate }: AddEs
           ],
         discountPercent: String(initialEstimate.discountPercent ?? ""),
         discountRs: String(initialEstimate.discountAmount ?? ""),
-        tax: initialEstimate.taxLabel ?? "NONE",
+        tax: initialEstimate.taxLabel ? (initialEstimate.taxLabel === "NONE" ? "" : initialEstimate.taxLabel.replace(/[^0-9.]/g, "")) : "",
         roundOff: Boolean(initialEstimate.roundOff),
         description: initialEstimate.description ?? "",
         showDescriptionInput: Boolean(initialEstimate.description),
@@ -266,7 +277,7 @@ export function AddEstimate({ onSave, onShare, onClose, initialEstimate }: AddEs
   const totalAmount = activeTab.rows.reduce(
     (s, r) => s + (parseFloat(r.qty) || 0) * (parseFloat(r.pricePerUnit) || 0), 0
   );
-  const calculatedTaxRate = activeTab.tax === "NONE" ? 0 : parseFloat(activeTab.tax.replace(/[^0-9.]/g, "")) / 100;
+  const calculatedTaxRate = parseTaxRate(activeTab.tax);
   const discountAmount = activeTab.discountRs ? parseFloat(activeTab.discountRs) : 0;
   const taxAmount = (totalAmount - discountAmount) * calculatedTaxRate;
   const finalAmount = totalAmount - discountAmount + taxAmount;
@@ -333,7 +344,7 @@ export function AddEstimate({ onSave, onShare, onClose, initialEstimate }: AddEs
         subtotal: totalAmount,
         discountPercent,
         discountAmount,
-        taxLabel: tab.tax !== "NONE" ? tab.tax : null,
+        taxLabel: tab.tax && Number(tab.tax) > 0 ? (tab.tax.includes("%") ? tab.tax : `${tab.tax}%`) : null,
         taxRate,
         taxAmount,
         roundOff: tab.roundOff,
@@ -694,10 +705,10 @@ export function AddEstimate({ onSave, onShare, onClose, initialEstimate }: AddEs
 
       <ConfirmDialog
         open={showDiscardDialog}
-        title="Discard Changes?"
-        message="You have unsaved changes. Are you sure you want to discard them? All unsaved changes will be lost."
-        confirmLabel="Discard"
-        cancelLabel="Cancel"
+        title={t("common.discardChangesTitle")}
+        message={t("common.discardChangesMsg")}
+        confirmLabel={t("common.discard")}
+        cancelLabel={t("common.cancel")}
         confirmColor="#e53935"
         icon="warning"
         onConfirm={() => { setShowDiscardDialog(false); if (onClose) onClose(); }}
@@ -706,10 +717,10 @@ export function AddEstimate({ onSave, onShare, onClose, initialEstimate }: AddEs
 
       <ConfirmDialog
         open={tabClosePendingId !== null}
-        title="Discard Changes?"
-        message="This tab has unsaved changes. Are you sure you want to close it?"
-        confirmLabel="Discard"
-        cancelLabel="Cancel"
+        title={t("common.discardChangesTitle")}
+        message={t("common.discardTabMsg")}
+        confirmLabel={t("common.discard")}
+        cancelLabel={t("common.cancel")}
         confirmColor="#e53935"
         icon="warning"
         onConfirm={() => { const id = tabClosePendingId!; setTabClosePendingId(null); doCloseTab(id); }}

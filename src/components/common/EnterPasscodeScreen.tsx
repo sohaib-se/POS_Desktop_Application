@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -11,6 +12,7 @@ export interface EnterPasscodeScreenProps {
 }
 
 export function EnterPasscodeScreen({ onSuccess, onCancel }: EnterPasscodeScreenProps) {
+  const { t } = useTranslation();
   const [passcode, setPasscode] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -36,11 +38,11 @@ export function EnterPasscodeScreen({ onSuccess, onCancel }: EnterPasscodeScreen
         if (data.success) {
           onSuccess();
         } else {
-          setError('Incorrect passcode');
+          setError(t('passcode.incorrectPasscode', 'Incorrect passcode'));
           setPasscode(''); // Reset on error
         }
       } catch (err) {
-        setError('An error occurred.');
+        setError(t('passcode.errorOccurred', 'An error occurred.'));
       } finally {
         setLoading(false);
       }
@@ -51,8 +53,8 @@ export function EnterPasscodeScreen({ onSuccess, onCancel }: EnterPasscodeScreen
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-background/80 backdrop-blur-sm">
       <Card className="w-full max-w-sm shadow-xl">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl text-primary">Enter your passcode</CardTitle>
-          <CardDescription>Please enter your 4-digit passcode to access the system.</CardDescription>
+          <CardTitle className="text-2xl text-primary">{t('passcode.enterPasscodeTitle', 'Enter your passcode')}</CardTitle>
+          <CardDescription>{t('passcode.enterPasscodeDesc', 'Please enter your 4-digit passcode to access the system.')}</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col items-center gap-6">
           <InputOTP
@@ -75,11 +77,11 @@ export function EnterPasscodeScreen({ onSuccess, onCancel }: EnterPasscodeScreen
           <div className="flex gap-4 mt-2">
             {onCancel && (
               <Button variant="outline" className="text-muted-foreground" onClick={onCancel}>
-                Cancel
+                {t('common.cancel', 'Cancel')}
               </Button>
             )}
             <Button variant="link" className="text-muted-foreground" onClick={() => setShowForgotModal(true)}>
-              forgot passcode?
+              {t('passcode.forgotPasscodeLink', 'forgot passcode?')}
             </Button>
           </div>
         </CardContent>

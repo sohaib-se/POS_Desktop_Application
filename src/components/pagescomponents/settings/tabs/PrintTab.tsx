@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import { getPrintTotalsSettings } from "@/hooks/usePrintSettings";
 import { SaleInvoicePrintReport, TallyThemePreview } from "./printTab/Print documents/Tallytheme";
 import { Theme1InvoicePrintReport, Theme1Preview } from "./printTab/Print documents/Theme1";
@@ -13,6 +14,7 @@ import { ThermalSaleInvoiceRetail, ThermalTheme4Preview } from "./printTab/Print
 import { LeftPanel, type PrinterType } from "./printTab/print tab panels/LeftPanel";
 import { RightPanel } from "./printTab/print tab panels/RightPanel";
 import { PrintPreviewRightPanel } from "./printTab/print tab panels/PrintPreviewRightPanel";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { userProfile } from "@/data/mockData";
 
 export interface SaleInvoiceLineItem {
@@ -55,15 +57,25 @@ export interface PrintTabProps {
   autoPrint?: boolean;
 }
 
-export function useCompanyInfo() {
-  const [info, setInfo] = useState({
-    business_name: userProfile.businessName,
+export interface CompanyInfo {
+  business_name: string;
+  phone?: string;
+  logo_url?: string;
+  address?: string;
+  email?: string;
+  signature?: string;
+  terms_conditions?: string;
+}
+
+export function useCompanyInfo(): CompanyInfo {
+  const [info, setInfo] = useState<CompanyInfo>({
+    business_name: userProfile.businessName || "Laimsoft",
     phone: userProfile.phone,
-    logo_url: userProfile.logo as string | undefined,
-    address: (userProfile as any).address as string | undefined,
-    email: (userProfile as any).email as string | undefined,
-    signature: (userProfile as any).signature as string | undefined,
-    terms_conditions: (userProfile as any).terms_conditions as string | undefined,
+    logo_url: userProfile.logo || undefined,
+    address: userProfile.address || undefined,
+    email: userProfile.email || undefined,
+    signature: userProfile.signature || undefined,
+    terms_conditions: undefined,
   });
 
   useEffect(() => {
@@ -72,13 +84,13 @@ export function useCompanyInfo() {
       .then((d) => {
         if (d) {
           setInfo({
-            business_name: d.business_name || userProfile.businessName,
-            phone: d.phone || userProfile.phone,
-            logo_url: d.logo_url || d.logo || userProfile.logo,
-            address: d.address || (userProfile as any).address,
-            email: d.email || (userProfile as any).email,
+            business_name: d.business_name || userProfile.businessName || "Laimsoft",
+            phone: d.phone || "",
+            logo_url: d.logo_url || d.logo || undefined,
+            address: d.address || undefined,
+            email: d.email || undefined,
             signature: d.signature_url || d.signature || undefined,
-            terms_conditions: d.terms_conditions || (userProfile as any).terms_conditions,
+            terms_conditions: d.terms_conditions || undefined,
           });
         }
       })
@@ -108,7 +120,7 @@ export function InvoiceThemeContent({
   activePrinter: PrinterType;
   selectedThemeId: string | null;
   selectedColor: string;
-  companyInfo: any;
+  companyInfo: CompanyInfo;
 }) {
   if (activePrinter === "regular") {
     if (selectedThemeId === "theme1") {
@@ -266,6 +278,7 @@ export function InvoiceThemeContent({
           received={saleData.received || 0}
           discount={saleData.discount || 0}
           discountPercent={saleData.discountPercent}
+          taxPercent={saleData.taxPercent}
           paymentMode={saleData.paymentMode}
           previousBalance={saleData.previousBalance}
           documentTitle={saleData.documentTitle}
@@ -284,6 +297,7 @@ export function InvoiceThemeContent({
           received={saleData.received || 0}
           discount={saleData.discount || 0}
           discountPercent={saleData.discountPercent}
+          taxPercent={saleData.taxPercent}
           paymentMode={saleData.paymentMode}
           previousBalance={saleData.previousBalance}
           documentTitle={saleData.documentTitle}
@@ -301,6 +315,7 @@ export function InvoiceThemeContent({
         received={saleData.received || 0}
         discount={saleData.discount || 0}
         discountPercent={saleData.discountPercent}
+        taxPercent={saleData.taxPercent}
         paymentMode={saleData.paymentMode}
         previousBalance={saleData.previousBalance}
         documentTitle={saleData.documentTitle}
@@ -351,6 +366,7 @@ export function PrintTab({
   onCancel,
   autoPrint = false,
 }: PrintTabProps) {
+  const { t } = useTranslation();
   const companyInfo = useCompanyInfo();
 
   const [activePrinter, setActivePrinter] = useState<PrinterType>(getDefaultPrinter);
@@ -365,6 +381,7 @@ export function PrintTab({
     () => localStorage.getItem("print_selectedColor") || "#a78bfa"
   );
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [showCloseConfirmDialog, setShowCloseConfirmDialog] = useState(false);
 
   // Store initial values to revert on cancel
   const initialPrinterRef = useRef<PrinterType>(activePrinter);
@@ -375,9 +392,19 @@ export function PrintTab({
 
   const handleClose = () => {
     if (hasUnsavedChanges) {
-      const confirm = window.confirm("You have unsaved changes. Are you sure you want to close?");
-      if (!confirm) return;
+      setShowCloseConfirmDialog(true);
+      return;
     }
+    if (onClose) {
+      onClose();
+    } else {
+      window.dispatchEvent(new CustomEvent("close-print-tab"));
+    }
+  };
+
+  const handleConfirmClose = () => {
+    setShowCloseConfirmDialog(false);
+    handleRevertThemes();
     if (onClose) {
       onClose();
     } else {
@@ -739,7 +766,7 @@ export function PrintTab({
           flexShrink: 0,
         }}>
           <span style={{ fontSize: 15, fontWeight: 600, color: "#111827" }}>
-            {isPreviewMode ? "Print Preview" : "Print Settings"}
+            {isPreviewMode ? t("settings.print.titlePreview") : t("settings.print.titleSettings")}
           </span>
           <button
             className="close-btn"
@@ -794,6 +821,17 @@ export function PrintTab({
           </div>
         </div>
       </div>
+      <ConfirmDialog
+        open={showCloseConfirmDialog}
+        title={t("settings.unsavedChangesTitle", "Unsaved Changes")}
+        message={t("settings.print.unsavedChangesCloseMsg", "You have unsaved changes. Are you sure you want to close?")}
+        confirmLabel={t("common.close", "Close")}
+        cancelLabel={t("common.cancel", "Cancel")}
+        confirmColor="#e53935"
+        icon="warning"
+        onConfirm={handleConfirmClose}
+        onCancel={() => setShowCloseConfirmDialog(false)}
+      />
     </>
   );
 }

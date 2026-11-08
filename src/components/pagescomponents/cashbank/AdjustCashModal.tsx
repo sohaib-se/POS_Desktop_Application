@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { useSettings } from "@/hooks/useSettings";
 import { SharedModal } from "./SharedModal";
 import { Calendar, AlertCircle } from "lucide-react";
@@ -12,6 +13,7 @@ interface AdjustCashModalProps {
 }
 
 export function AdjustCashModal({ open, onClose, currentCash, onSuccess, editingTransaction }: AdjustCashModalProps) {
+  const { t } = useTranslation();
   const [currency] = useSettings('settings.businessCurrency', { code: 'PKR', symbol: 'Rs' });
   const [currencyDisplay] = useSettings<'abbreviation' | 'icon'>('settings.currencyDisplay', 'abbreviation');
   const currencyStr = currencyDisplay === 'icon' ? currency.symbol : currency.code;
@@ -106,7 +108,7 @@ export function AdjustCashModal({ open, onClose, currentCash, onSuccess, editing
   };
 
   return (
-    <SharedModal open={open} onClose={onClose} title={editingTransaction ? "Edit Cash Adjustment" : "Adjust Cash"}>
+    <SharedModal open={open} onClose={onClose} title={editingTransaction ? t("cashBank.editCashAdjustment") : t("cashBank.adjustCash")}>
       <div className="space-y-5">
         <div className="flex items-center gap-6">
           {(!editingTransaction || editingTransaction.type === 'Increase Cash') && (
@@ -117,7 +119,7 @@ export function AdjustCashModal({ open, onClose, currentCash, onSuccess, editing
                 onChange={() => setMode("add")}
                 className="accent-[#E53935] w-4 h-4"
               />
-              <span className="text-sm text-gray-800">Add Cash</span>
+              <span className="text-sm text-gray-800">{t("cashBank.addCash")}</span>
             </label>
           )}
           {(!editingTransaction || editingTransaction.type === 'Decrease Cash') && (
@@ -128,14 +130,14 @@ export function AdjustCashModal({ open, onClose, currentCash, onSuccess, editing
                 onChange={() => setMode("reduce")}
                 className="accent-[#E53935] w-4 h-4"
               />
-              <span className="text-sm text-gray-800">Reduce Cash</span>
+              <span className="text-sm text-gray-800">{t("cashBank.reduceCash")}</span>
             </label>
           )}
         </div>
 
         <div>
           <label className="block text-sm text-gray-700 mb-1">
-            Enter Amount<span className="text-red-500">*</span>
+            {t("cashBank.enterAmount")}<span className="text-red-500">*</span>
           </label>
           <div className="relative">
             <input
@@ -152,7 +154,7 @@ export function AdjustCashModal({ open, onClose, currentCash, onSuccess, editing
             />
           </div>
           <p className="text-sm text-gray-500 mt-1.5">
-            Updated Cash:{" "}
+            {t("cashBank.updatedCash")}:{" "}
             <span className="text-gray-800 font-medium">
               {currencyStr} {updatedCash.toLocaleString()}
             </span>
@@ -161,7 +163,7 @@ export function AdjustCashModal({ open, onClose, currentCash, onSuccess, editing
 
         <div>
           <label className="block text-sm text-gray-700 mb-1">
-            Adjustment Date
+            {t("cashBank.adjustmentDate")}
           </label>
           <div className="relative cursor-pointer" onClick={() => dateInputRef.current?.showPicker()}>
             <input
@@ -180,13 +182,13 @@ export function AdjustCashModal({ open, onClose, currentCash, onSuccess, editing
 
         <div>
           <label className="block text-sm text-gray-700 mb-1">
-            Description
+            {t("common.description")}
           </label>
           <input
             type="text"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            placeholder="Enter Description"
+            placeholder={t("cashBank.enterDescription")}
             className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-100"
           />
         </div>
@@ -204,14 +206,14 @@ export function AdjustCashModal({ open, onClose, currentCash, onSuccess, editing
           onClick={onClose}
           className="px-5 py-2 border border-gray-300 rounded-full text-sm text-gray-700 hover:bg-gray-50"
         >
-          Cancel
+          {t("common.cancel")}
         </button>
         <button
           onClick={handleSave}
           disabled={isSaving}
           className="px-6 py-2 bg-[#E53935] text-white rounded-full text-sm font-medium hover:bg-red-600 disabled:opacity-50"
         >
-          {isSaving ? "Saving..." : "Save"}
+          {isSaving ? t("common.saving") : t("common.save")}
         </button>
       </div>
     </SharedModal>

@@ -1,6 +1,9 @@
 import * as xlsx from "xlsx-js-style";
+import { useTranslation } from "react-i18next";
 
 export function ImportItemsSteps() {
+  const { t } = useTranslation();
+
   const downloadSample = () => {
     const headers = [
       "Item Name",
@@ -100,31 +103,29 @@ export function ImportItemsSteps() {
   return (
     <div>
       <div className="mb-6">
-        <h4 className="text-sm font-medium text-[#E53935] mb-2">STEP 1</h4>
+        <h4 className="text-sm font-medium text-[#E53935] mb-2">{t("utilities.step1")}</h4>
         <p className="text-sm text-gray-600 mb-3">
-          Create an Excel file with the following format.
+          {t("utilities.createExcelFormat")}
         </p>
         <button
           onClick={downloadSample}
           className="px-4 py-2 border border-blue-300 text-blue-600 rounded-lg text-sm hover:bg-blue-50 transition-colors"
         >
-          Download Sample
+          {t("utilities.downloadSample")}
         </button>
       </div>
 
       <div className="mb-6">
-        <h4 className="text-sm font-medium text-[#E53935] mb-2">STEP 2</h4>
+        <h4 className="text-sm font-medium text-[#E53935] mb-2">{t("utilities.step2")}</h4>
         <p className="text-sm text-gray-600 mb-3">
-          Upload the file{" "}
-          <span className="font-medium">(.xlsx or .xls)</span> by clicking
-          on the Upload File button below.
+          {t("utilities.uploadExcelPrompt")}
         </p>
       </div>
 
       <div>
-        <h4 className="text-sm font-medium text-[#E53935] mb-2">STEP 3</h4>
+        <h4 className="text-sm font-medium text-[#E53935] mb-2">{t("utilities.step3")}</h4>
         <p className="text-sm text-gray-600">
-          Verify the items from the file & complete the import.
+          {t("utilities.verifyAndComplete")}
         </p>
       </div>
 
@@ -133,10 +134,10 @@ export function ImportItemsSteps() {
         <table className="w-full text-xs">
           <thead className="bg-blue-500 text-white">
             <tr>
-              <th className="px-2 py-1">Item Name</th>
-              <th className="px-2 py-1">Item Code</th>
-              <th className="px-2 py-1">Sale Price</th>
-              <th className="px-2 py-1">Purchase Price</th>
+              <th className="px-2 py-1">{t("items.itemName")}</th>
+              <th className="px-2 py-1">{t("items.itemCode")}</th>
+              <th className="px-2 py-1">{t("items.salePrice")}</th>
+              <th className="px-2 py-1">{t("items.purchasePrice")}</th>
             </tr>
           </thead>
           <tbody>

@@ -1,9 +1,11 @@
 import { useState, useRef, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { useSettings } from "@/hooks/useSettings";
 import { Search, MoreVertical, Calendar } from "lucide-react";
 import { Card, CardContent } from "./ui";
 import type { ItemTransactionRow } from "./types";
 import { ItemTransactionContextMenu } from "./ItemTransactionContextMenu";
+import { formatTransactionType, formatTransactionStatus } from "@/utils/transactionTranslations";
 
 
 /**
@@ -48,9 +50,10 @@ export function TransactionsCard({
   onEditTransaction,
   onDeleteTransaction,
 }: TransactionsCardProps) {
+  const { t } = useTranslation();
   const searchContainerRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
-  const placeholders = ["Customer Name", "Invoice No.", "Amount"];
+  const placeholders = [t("sales.customerName"), t("sales.invoiceNo"), t("common.amount")];
   const [placeholderIndex, setPlaceholderIndex] = useState(0);
 
   useEffect(() => {
@@ -58,7 +61,7 @@ export function TransactionsCard({
       setPlaceholderIndex((prev) => (prev + 1) % placeholders.length);
     }, 3000);
     return () => clearInterval(interval);
-  }, []);
+  }, [placeholders.length]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -96,8 +99,8 @@ export function TransactionsCard({
     <Card className="bg-white rounded-md flex flex-col flex-1 overflow-hidden shadow-sm p-0">
       <CardContent className="p-0 flex flex-col flex-1 min-h-0">
         <div className="flex items-center justify-between px-6 pt-4 pb-2 shrink-0">
-          <h3 className="text-base font-bold text-[#222B45] tracking-wide">
-            TRANSACTIONS
+          <h3 className="text-base font-bold text-[#222B45] tracking-wide uppercase">
+            {t("parties.transactions")}
           </h3>
           <div className="flex gap-2 items-center h-10">
             {/* Search bar */}
@@ -131,7 +134,7 @@ export function TransactionsCard({
                   />
                   {!transactionSearchTerm && (
                     <div className="absolute left-0 pointer-events-none flex items-center h-full w-full overflow-hidden text-gray-400 text-sm">
-                      <span className="whitespace-pre">Search </span>
+                      <span className="whitespace-pre">{t("common.search")} </span>
                       <div className="relative h-full flex-1 overflow-hidden">
                         {placeholders.map((ph, idx) => (
                           <span
@@ -181,25 +184,25 @@ export function TransactionsCard({
             <thead className="bg-[#F7F9FB] sticky top-0 z-10">
               <tr>
                 <th className="px-4 py-2 text-left font-semibold text-[#7B8A9A] text-xs tracking-wide align-middle">
-                  TYPE{" "}
+                  {t("common.type")}
                 </th>
                 <th className="px-4 py-2 text-left font-semibold text-[#7B8A9A] text-xs tracking-wide align-middle">
-                  INVOICE/#{" "}
+                  {t("sales.invoiceNo")}
                 </th>
                 <th className="px-4 py-2 text-left font-semibold text-[#7B8A9A] text-xs tracking-wide align-middle">
-                  NAME{" "}
+                  {t("common.name")}
                 </th>
                 <th className="px-4 py-2 text-left font-semibold text-[#7B8A9A] text-xs tracking-wide align-middle">
-                  DATE{" "}
+                  {t("common.date")}
                 </th>
                 <th className="px-4 py-2 text-right font-semibold text-[#7B8A9A] text-xs tracking-wide align-middle">
-                  QUANTITY{" "}
+                  {t("items.quantity")}
                 </th>
                 <th className="px-4 py-2 text-right font-semibold text-[#7B8A9A] text-xs tracking-wide align-middle">
-                  PRICE/U...{" "}
+                  {t("pos.priceUnit")}
                 </th>
                 <th className="px-4 py-2 text-left font-semibold text-[#7B8A9A] text-xs tracking-wide align-middle">
-                  STATUS{" "}
+                  {t("common.status")}
                 </th>
                 <th className="px-4 py-2 text-center font-semibold text-[#7B8A9A] text-xs tracking-wide align-middle w-12">
                   {" "}
@@ -232,7 +235,7 @@ export function TransactionsCard({
                               : "bg-[#E53935]"
                           }`}
                         ></span>
-                        {transaction.type}
+                        {formatTransactionType(transaction.type, t)}
                       </span>
                     </td>
                     <td className="px-4 py-2">{transaction.invoiceNo}</td>
@@ -260,14 +263,14 @@ export function TransactionsCard({
                       {transaction.status ? (
                         <span
                           className={`text-xs px-2 py-1 rounded-full font-semibold ${
-                            transaction.status === "Paid"
+                            String(transaction.status).toLowerCase() === "paid"
                               ? "bg-[#E6F4EA] text-[#43A047]"
-                              : transaction.status === "Unpaid"
+                              : String(transaction.status).toLowerCase() === "unpaid"
                                 ? "bg-[#FDEAEA] text-[#E53935]"
                                 : "bg-[#F7F9FB] text-[#7B8A9A]"
                           }`}
                         >
-                          {transaction.status}
+                          {formatTransactionStatus(transaction.status, t)}
                         </span>
                       ) : null}
                     </td>
@@ -308,7 +311,7 @@ export function TransactionsCard({
                     colSpan={7}
                     className="px-4 py-8 text-center text-gray-500"
                   >
-                    No transactions found for this item
+                    {t("parties.noTransactions")}
                   </td>
                 </tr>
               )}

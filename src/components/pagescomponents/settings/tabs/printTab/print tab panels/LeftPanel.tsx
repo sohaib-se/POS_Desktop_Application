@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 
 /* ─────────────────────────────── Types ─────────────────────────────── */
 
@@ -38,16 +39,18 @@ function ThemeList({
   themes,
   activeId,
   onSelect,
+  emptyText,
 }: {
   themes: Theme[];
   activeId: string | null;
   onSelect: (id: string) => void;
+  emptyText: string;
 }) {
   return (
     <div>
       {themes.length === 0 ? (
         <div style={{ padding: "16px 12px", fontSize: 12, color: "#9ca3af", fontStyle: "italic" }}>
-          No themes available yet.
+          {emptyText}
         </div>
       ) : (
         themes.map((t) => (
@@ -103,6 +106,7 @@ export function LeftPanel({
   onThemeSelect,
   onColorChange,
 }: LeftPanelProps) {
+  const { t } = useTranslation();
   const [hoveredColor, setHoveredColor] = useState<string | null>(null);
 
   const currentThemes = activePrinter === "regular" ? REGULAR_THEMES : THERMAL_THEMES;
@@ -110,7 +114,7 @@ export function LeftPanel({
   return (
     <div className="print-tab-left">
       <div style={{ padding: "14px 14px 8px", fontSize: 13, fontWeight: 700, color: "#111827", letterSpacing: 0.1 }}>
-        Select Theme
+        {t("settings.print.selectTheme")}
       </div>
 
       {/* Printer type tabs */}
@@ -121,7 +125,7 @@ export function LeftPanel({
             className={`printer-tab-btn${activePrinter === p ? " active" : ""}`}
             onClick={() => onPrinterChange(p)}
           >
-            {p === "regular" ? "Regular" : "Thermal"}
+            {p === "regular" ? t("settings.print.regular") : t("settings.print.thermal")}
           </button>
         ))}
       </div>
@@ -131,6 +135,7 @@ export function LeftPanel({
         themes={currentThemes}
         activeId={selectedThemeId}
         onSelect={onThemeSelect}
+        emptyText={t("settings.print.noThemes")}
       />
 
       {/* Color Picker — Regular printer only */}
@@ -139,7 +144,7 @@ export function LeftPanel({
           <div style={{ borderTop: "1px solid #e5e7eb", margin: "8px 0 0" }} />
           <div style={{ padding: "12px 14px 14px" }}>
             <div style={{ fontSize: 13, fontWeight: 700, color: "#111827", marginBottom: 10, letterSpacing: 0.1 }}>
-              Select Color
+              {t("settings.print.selectColor")}
             </div>
 
             {/* Selected preview */}
@@ -154,7 +159,7 @@ export function LeftPanel({
                   flexShrink: 0,
                 }}
               />
-              <span style={{ fontSize: 13, fontWeight: 600, color: "#374151" }}>Selected</span>
+              <span style={{ fontSize: 13, fontWeight: 600, color: "#374151" }}>{t("settings.print.selected")}</span>
             </div>
 
             {/* Swatch grid */}

@@ -1,4 +1,4 @@
-import { ChevronDown, Clock, Search } from "lucide-react";
+import { ChevronDown, Search, Check } from "lucide-react";
 import { Hint } from "../shared/SharedComponents";
 import { selStyle } from "../shared/styles";
 import { useState, useMemo, useEffect } from "react";
@@ -7,6 +7,8 @@ import { useSettings } from "../../../../hooks/useSettings";
 import { SetupPasscodeModal } from "../../../common/SetupPasscodeModal";
 import { RecoverySetupModal } from "../../../common/RecoverySetupModal";
 import { Button } from "@/components/ui/button";
+import { useTranslation } from "react-i18next";
+import { SUPPORTED_LANGUAGES, setAppLanguage } from "../../../../i18n";
 
 // Modern Card Wrapper
 
@@ -135,6 +137,8 @@ const ALL_CURRENCIES = Object.values(currencies)
 const DEFAULT_CURRENCY = ALL_CURRENCIES.find(c => c.code === "PKR") || ALL_CURRENCIES[0];
 
 export function GeneralTab() {
+  const { t, i18n } = useTranslation();
+  const [currentLanguage, setCurrentLanguage] = useSettings<string>('settings.language', i18n.language || 'en');
   const [currencyHovered, setCurrencyHovered] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [selectedCurrency, setSelectedCurrency] = useSettings('settings.businessCurrency', DEFAULT_CURRENCY);
@@ -149,6 +153,7 @@ export function GeneralTab() {
   const [showSetupModal, setShowSetupModal] = useState(false);
   const [showRecoveryModal, setShowRecoveryModal] = useState(false);
   const [isChangePasscodeMode, setIsChangePasscodeMode] = useState(false);
+  const [pendingPasscode, setPendingPasscode] = useState<string | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -179,6 +184,7 @@ export function GeneralTab() {
           setIsPasscodeEnabled(true);
         } else {
           setIsChangePasscodeMode(false);
+          setPendingPasscode(null);
           setShowSetupModal(true);
         }
       } catch (e) {
@@ -222,68 +228,93 @@ export function GeneralTab() {
       }}>
 
         {/* General Card */}
-        <Card title="General">
+        <Card title={t("settings.general.title", "General")}>
           <SettingToggleRow 
-            label="Shipping Address" 
+            label={t("settings.general.shippingAddress", "Shipping Address")} 
             hint={true} 
             checked={isShippingAddressEnabled} 
             onChange={setIsShippingAddressEnabled} 
           />
           
           <SettingToggleRow
-            label="Exp Date"
+            label={t("settings.general.expDate", "Exp Date")}
             checked={enableExpDate}
             onChange={setEnableExpDate}
           />
           <SettingToggleRow
-            label="Mfg Date"
+            label={t("settings.general.mfgDate", "Mfg Date")}
             checked={enableMfgDate}
             onChange={setEnableMfgDate}
           />
         </Card>
 
         {/* Application Card */}
-        <Card title="Application">
+        <Card title={t("settings.general.application", "Application")}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <div style={{ flex: 1 }}>
               <SettingToggleRow
-                label="Enable Passcode"
+                label={t("settings.general.enablePasscode", "Enable Passcode")}
                 checked={isPasscodeEnabled}
                 onChange={handlePasscodeToggle}
               />
             </div>
             {isPasscodeEnabled && (
               <Button variant="link" onClick={handleChangePasscode} className="text-sm px-0 h-auto">
-                Change Passcode
+                {t("settings.general.changePasscode", "Change Passcode")}
               </Button>
             )}
           </div>
 
           <RecoverySetupModal
             open={showRecoveryModal}
-            onOpenChange={setShowRecoveryModal}
+            onOpenChange={(open) => {
+              setShowRecoveryModal(open);
+              if (!open) {
+                setPendingPasscode(null);
+                setIsPasscodeEnabled(false);
+              }
+            }}
             onNext={async (email, phone) => {
+              if (!pendingPasscode) return;
               try {
-                await fetch('/api/passcode/recovery/update', {
+                const res = await fetch('/api/passcode/setup', {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ email, phone })
+                  body: JSON.stringify({
+                    newPasscode: pendingPasscode,
+                    email: email || undefined,
+                    phone: phone || undefined,
+                  })
                 });
+                const data = await res.json();
+                if (data.success) {
+                  setShowRecoveryModal(false);
+                  setPendingPasscode(null);
+                  setIsPasscodeEnabled(true);
+                } else {
+                  return data.message || t('passcode.failedToSetup', 'Failed to setup passcode.');
+                }
               } catch (e) {
                 console.error('Failed to update recovery options', e);
+                return t('passcode.errorOccurred', 'An error occurred.');
               }
-              setShowRecoveryModal(false);
-              setIsPasscodeEnabled(true);
             }}
           />
 
           <SetupPasscodeModal
             open={showSetupModal}
-            onOpenChange={setShowSetupModal}
+            onOpenChange={(open) => {
+              setShowSetupModal(open);
+              if (!open && !isChangePasscodeMode && !pendingPasscode) {
+                setIsPasscodeEnabled(false);
+              }
+            }}
             isChangeMode={isChangePasscodeMode}
-            onSuccess={() => {
-              setIsPasscodeEnabled(true);
-              if (!isChangePasscodeMode) {
+            onSuccess={(code) => {
+              if (isChangePasscodeMode) {
+                setIsPasscodeEnabled(true);
+              } else if (code) {
+                setPendingPasscode(code);
                 setShowRecoveryModal(true);
               }
             }}
@@ -309,7 +340,9 @@ export function GeneralTab() {
             onClick={() => setDropdownOpen(!dropdownOpen)}
           >
             <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              <span style={{ fontSize: "14px", color: "#334155", fontWeight: 500 }}>Business Currency</span>
+              <span style={{ fontSize: "14px", color: "#334155", fontWeight: 500 }}>
+                {t("settings.general.currencyTitle", "Business Currency")}
+              </span>
               <Hint />
             </div>
             <div style={{
@@ -362,7 +395,7 @@ export function GeneralTab() {
                     <input
                       autoFocus
                       type="text"
-                      placeholder="Search currency..."
+                      placeholder={t("settings.general.searchCurrency", "Search currency...")}
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                       style={{
@@ -415,7 +448,7 @@ export function GeneralTab() {
                       ))
                     ) : (
                       <div style={{ padding: "16px", textAlign: "center", color: "#94a3b8", fontSize: "13px" }}>
-                        No currencies found
+                        {t("common.noData", "No currencies found")}
                       </div>
                     )}
                   </div>
@@ -437,7 +470,9 @@ export function GeneralTab() {
             }}
           >
             <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              <span style={{ fontSize: "14px", color: "#334155", fontWeight: 500 }}>Currency Display</span>
+              <span style={{ fontSize: "14px", color: "#334155", fontWeight: 500 }}>
+                {t("settings.general.currencyDisplay", "Currency Display")}
+              </span>
               <Hint />
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
@@ -446,40 +481,99 @@ export function GeneralTab() {
                 onChange={(e) => setCurrencyDisplay(e.target.value as 'abbreviation' | 'icon')}
                 style={{ ...selStyle, padding: "6px 8px", border: "1px solid #cbd5e1", borderRadius: "6px", background: "#f8fafc", fontSize: "13px" }}
               >
-                <option value="abbreviation">Abbreviation (e.g. PKR)</option>
-                <option value="icon">Icon (e.g. ₨)</option>
+                <option value="abbreviation">{t("settings.general.abbreviation", "Abbreviation (e.g. PKR)")}</option>
+                <option value="icon">{t("settings.general.icon", "Icon (e.g. ₨)")}</option>
               </select>
             </div>
           </div>
 
         </Card>
 
-        {/* Backup & History Card */}
-        <Card title="Backup & History">
-          <SettingToggleRow label="Auto Backup" />
+        {/* Language & Translation Card */}
+        <Card title={t("settings.language.title", "Language & Translation")}>
+          <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+            <div style={{ fontSize: "13px", color: "#64748b" }}>
+              {t("settings.language.subtitle", "Choose the display language for the POS interface")}
+            </div>
 
-          <div style={{
-            marginTop: "6px",
-            padding: "12px 16px",
-            background: "#fefce8",
-            border: "1px solid #fef08a",
-            borderRadius: "10px",
-            display: "flex",
-            alignItems: "center",
-            gap: "10px",
-            color: "#a16207",
-            fontSize: "13px",
-            fontWeight: 500
-          }}>
-            <Clock size={16} className="text-amber-600" />
-            <span>Last Backup: 23/04/2026 | 10:04 PM</span>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+              {SUPPORTED_LANGUAGES.map((lang) => {
+                const isSelected = currentLanguage === lang.code;
+                return (
+                  <div
+                    key={lang.code}
+                    onClick={() => {
+                      setCurrentLanguage(lang.code);
+                      setAppLanguage(lang.code);
+                    }}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      padding: "12px 14px",
+                      borderRadius: "10px",
+                      border: isSelected ? "2px solid #3b82f6" : "1px solid #e2e8f0",
+                      background: isSelected ? "#eff6ff" : "#ffffff",
+                      cursor: "pointer",
+                      transition: "all 0.15s ease",
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!isSelected) e.currentTarget.style.borderColor = "#cbd5e1";
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!isSelected) e.currentTarget.style.borderColor = "#e2e8f0";
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                      <span style={{ fontSize: "20px", lineHeight: 1 }}>{lang.flag}</span>
+                      <div style={{ display: "flex", flexDirection: "column" }}>
+                        <span style={{ fontSize: "14px", fontWeight: isSelected ? 600 : 500, color: "#1e293b" }}>
+                          {lang.name}
+                        </span>
+                        <span style={{ fontSize: "12px", color: isSelected ? "#2563eb" : "#64748b" }}>
+                          {lang.nativeName}
+                        </span>
+                      </div>
+                    </div>
+                    {isSelected && (
+                      <div style={{
+                        width: "22px",
+                        height: "22px",
+                        borderRadius: "50%",
+                        background: "#3b82f6",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        color: "#fff",
+                      }}>
+                        <Check size={14} strokeWidth={3} />
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            <div style={{
+              marginTop: "6px",
+              padding: "10px 14px",
+              background: "#f8fafc",
+              border: "1px solid #e2e8f0",
+              borderRadius: "10px",
+              fontSize: "12px",
+              color: "#475569",
+              lineHeight: "1.45"
+            }}>
+              💡 <strong>{t("common.note", "Note")}:</strong> {t("settings.language.note", "Offline translation is applied instantly across menus, tables, buttons, and reports. Product names in your inventory remain untouched.")}
+            </div>
           </div>
         </Card>
 
+
         {/* More Transactions Card */}
-        <Card title="More Transactions">
+        <Card title={t("settings.general.moreTransactions", "More Transactions")}>
           <SettingToggleRow
-            label="Estimate/Quotation"
+            label={t("sidebar.estimates", "Estimate/Quotation")}
             checked={isEstimationEnabled}
             onChange={setIsEstimationEnabled}
           />

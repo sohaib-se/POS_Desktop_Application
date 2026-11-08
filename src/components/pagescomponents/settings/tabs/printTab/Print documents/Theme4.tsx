@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { useSettings } from "@/hooks/useSettings";
 import { userProfile } from "@/data/mockData";
 import { usePrintTotalsSettings } from "@/hooks/usePrintSettings";
@@ -90,7 +91,7 @@ function InvoiceLogo({ logoUrl, businessName, size = 72 }: { logoUrl?: string; b
         flexShrink: 0,
       }}
     >
-      {(businessName || "M").charAt(0).toUpperCase()}
+      {(businessName || "Laimsoft").charAt(0).toUpperCase()}
     </div>
   );
 }
@@ -112,6 +113,7 @@ export function Theme4InvoicePrintReport({
   description,
   documentTitle = "Invoice",
 }: Theme4InvoicePrintReportProps) {
+  const { t } = useTranslation();
   const [currency] = useSettings('settings.businessCurrency', { code: 'PKR', symbol: 'Rs' });
   const [currencyDisplay] = useSettings<'abbreviation' | 'icon'>('settings.currencyDisplay', 'abbreviation');
   const currencyStr = currencyDisplay === 'icon' ? currency.symbol : currency.code;
@@ -153,33 +155,33 @@ export function Theme4InvoicePrintReport({
         {/* Business Header */}
         <div className="flex items-start justify-between mb-2">
           <div>
-            <h1 className="text-xl font-bold">{businessProfile?.business_name || "My Company"}</h1>
-            <p className="text-xs text-gray-800 mt-0.5">{businessProfile?.address || "Jhagra peshawar"}</p>
-            <p className="text-xs text-gray-800 mt-0.5">Phone no. : {businessProfile?.phone || ""}</p>
-            <p className="text-xs text-gray-800 mt-0.5">Email : {businessProfile?.email || "msoh@gmail.com"}</p>
+            <h1 className="text-xl font-bold">{businessProfile?.business_name || "Laimsoft"}</h1>
+            <p className="text-xs text-gray-800 mt-0.5">{businessProfile?.address || ""}</p>
+            <p className="text-xs text-gray-800 mt-0.5">{businessProfile?.phone ? `${t("printThemes.phoneNo", "Phone no.")} : ${businessProfile.phone}` : ""}</p>
+            <p className="text-xs text-gray-800 mt-0.5">{businessProfile?.email ? `${t("printThemes.email", "Email")} : ${businessProfile.email}` : ""}</p>
           </div>
           <InvoiceLogo logoUrl={businessProfile?.logo_url} businessName={businessProfile?.business_name} size={64} />
         </div>
 
         {/* Invoice title */}
         <div className="border-t-2 border-black pt-2 mb-4">
-          <h2 className="text-center text-lg font-bold" style={{ color: ACCENT }}>{documentTitle}</h2>
+          <h2 className="text-center text-lg font-bold" style={{ color: ACCENT }}>{documentTitle === "Invoice" ? t("printThemes.invoice", "Invoice") : (documentTitle === "Tax Invoice" ? t("printThemes.taxInvoice", "Tax Invoice") : documentTitle)}</h2>
         </div>
 
         {/* Bill To / Invoice Details */}
         <div className="flex justify-between mb-1">
-          <p className="text-sm font-bold">Bill To</p>
-          <p className="text-sm font-bold">Invoice Details</p>
+          <p className="text-sm font-bold">{t("printThemes.billTo", "Bill To")}</p>
+          <p className="text-sm font-bold">{t("printThemes.invoiceDetails", "Invoice Details")}</p>
         </div>
         <div className="flex justify-between mb-1">
-          <p className="text-sm font-bold">{customerName}</p>
+          <p className="text-sm font-bold">{customerName || ""}</p>
           <div className="text-right text-sm">
-            <p>Invoice No. : {invoiceNo}</p>
-            <p>Date : {formatDate(invoiceDate)}</p>
+            <p>{t("printThemes.invoiceNo", "Invoice No.")} : {invoiceNo}</p>
+            <p>{t("printThemes.date", "Date")} : {formatDate(invoiceDate)}</p>
           </div>
         </div>
         <div className="flex justify-between mb-4">
-          <p className="text-sm">Contact No. : {customerContact || "03129955494"}</p>
+          <p className="text-sm">{customerContact ? `${t("printThemes.contactNo", "Contact No.")} : ${customerContact}` : ""}</p>
         </div>
       </div>
 
@@ -188,11 +190,11 @@ export function Theme4InvoicePrintReport({
         <thead style={{ backgroundColor: ACCENT, WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact', display: 'table-header-group' }}>
           <tr className="text-white text-left" style={{ breakInside: "avoid", pageBreakInside: "avoid" }}>
             {ps.showSno && <th className="py-1.5 px-2 font-bold w-8">#</th>}
-            <th className="py-1.5 px-2 font-bold">Item name</th>
-            {ps.showQuantity && <th className="py-1.5 px-2 font-bold text-right">Quantity</th>}
-            {ps.showUnit && <th className="py-1.5 px-2 font-bold text-right">Unit</th>}
-            {ps.showPricePerUnit && <th className="py-1.5 px-2 font-bold text-right">Price/ Unit</th>}
-            <th className="py-1.5 px-2 font-bold text-right">Amount</th>
+            <th className="py-1.5 px-2 font-bold">{t("printThemes.itemName", "Item name")}</th>
+            {ps.showQuantity && <th className="py-1.5 px-2 font-bold text-right">{t("printThemes.quantity", "Quantity")}</th>}
+            {ps.showUnit && <th className="py-1.5 px-2 font-bold text-right">{t("printThemes.unit", "Unit")}</th>}
+            {ps.showPricePerUnit && <th className="py-1.5 px-2 font-bold text-right">{t("printThemes.priceUnit", "Price/ Unit")}</th>}
+            <th className="py-1.5 px-2 font-bold text-right">{t("printThemes.amount", "Amount")}</th>
           </tr>
         </thead>
         <tbody>
@@ -227,7 +229,7 @@ export function Theme4InvoicePrintReport({
 
       {/* Total row */}
       <div className="flex justify-between items-center border-t border-b border-gray-400 py-1.5 mb-4" style={{ breakInside: "avoid", pageBreakInside: "avoid" }}>
-        <span className="text-sm font-bold pl-2">Total</span>
+        <span className="text-sm font-bold pl-2">{t("printThemes.total", "Total")}</span>
         {ps.totalItemQuantity && <span className="text-sm font-bold">{totalQuantity}</span>}
         <span className="text-sm font-bold pr-2 whitespace-nowrap">{fmt(total)}</span>
       </div>
@@ -238,76 +240,76 @@ export function Theme4InvoicePrintReport({
           <div className="flex-[55] pt-1.5">
             {ps.amountInWords && (
               <p className="text-xs">
-                <span className="font-bold">Invoice Amount in Words:</span> {numberToWords(total)} {currency.code === 'PKR' ? 'Rupees' : ''} only
+                <span className="font-bold">{t("printThemes.invoiceAmountInWords", "Invoice Amount in Words")}:</span> {numberToWords(total)} {currency.code === 'PKR' ? t("printThemes.rupees", "Rupees") : ''} {t("printThemes.only", "only")}
               </p>
             )}
 
             {ps.printDescription && (
               <p className="text-xs mt-2">
-                <span className="font-bold">Description:</span> {description || "No description provided."}
+                <span className="font-bold">{t("printThemes.description", "Description")}:</span> {description || t("printThemes.noDescription", "No description provided.")}
               </p>
             )}
 
             {ps.paymentMode && (
               <p className="text-xs mt-2">
-                <span className="font-bold">Payment mode:</span> {paymentMode || "Credit"}
+                <span className="font-bold">{t("printThemes.paymentMode", "Payment mode")}:</span> {paymentMode || t("printThemes.credit", "Credit")}
               </p>
             )}
 
             {ps.printTermsAndConditions && (
               <p className="text-xs mt-2">
-                <span className="font-bold">Terms &amp; Conditions:</span> <span className="whitespace-pre-wrap">{businessProfile?.terms_conditions}</span>
+                <span className="font-bold">{t("printThemes.termsAndConditions", "Terms & Conditions")}:</span> <span className="whitespace-pre-wrap">{businessProfile?.terms_conditions}</span>
               </p>
             )}
           </div>
           <div className="flex-[45] border-t border-gray-400">
             <div className="flex justify-between text-xs px-0 py-1 border-b border-gray-300">
-              <span>Sub Total</span>
+              <span>{t("printThemes.subTotal", "Sub Total")}</span>
               <span className="whitespace-nowrap">{fmt(subTotal)}</span>
             </div>
             {ps.discount && discountAmount > 0 && (
               <div className="flex justify-between text-xs px-0 py-1 border-b border-gray-300 text-green-700">
-                <span>Discount {discountPercent > 0 ? `(${discountPercent}%)` : ""}</span>
+                <span>{t("printThemes.discount", "Discount")} {discountPercent > 0 ? `(${discountPercent}%)` : ""}</span>
                 <span className="whitespace-nowrap">- {fmt(discountAmount)}</span>
               </div>
             )}
             {ps.taxDetails && taxAmount > 0 && (
               <div className="flex justify-between text-xs px-0 py-1 border-b border-gray-300">
-                <span>Tax ({taxPercent}%)</span>
+                <span>{t("printThemes.tax", "Tax")} ({taxPercent}%)</span>
                 <span className="whitespace-nowrap">{fmt(taxAmount)}</span>
               </div>
             )}
             {ps.youSaved && discountAmount > 0 && (
               <div className="flex justify-between text-xs px-0 py-1 border-b border-gray-300 text-green-700 font-semibold">
-                <span>You Saved</span>
+                <span>{t("printThemes.youSaved", "You Saved")}</span>
                 <span className="whitespace-nowrap">{fmt(discountAmount)}</span>
               </div>
             )}
             <div className="flex justify-between text-xs px-0 py-1 border-b border-gray-300 font-bold">
-              <span>Total</span>
+              <span>{t("printThemes.total", "Total")}</span>
               <span className="whitespace-nowrap">{fmt(total)}</span>
             </div>
             {ps.receivedAmount && documentTitle !== "Estimate" && (
               <div className="flex justify-between text-xs px-0 py-1 border-b border-gray-300">
-                <span>Received</span>
+                <span>{t("printThemes.received", "Received")}</span>
                 <span className="whitespace-nowrap">{fmt(Number(received || 0))}</span>
               </div>
             )}
             {ps.balanceAmount && documentTitle !== "Estimate" && (
               <div className="flex justify-between text-xs px-0 py-1 border-b border-gray-300">
-                <span>Balance</span>
+                <span>{t("printThemes.balance", "Balance")}</span>
                 <span className="whitespace-nowrap">{fmt(balance)}</span>
               </div>
             )}
             {ps.previousBalance && documentTitle !== "Estimate" && (
               <div className="flex justify-between text-xs px-0 py-1 mt-2">
-                <span>Previous Balance</span>
+                <span>{t("printThemes.previousBalance", "Previous Balance")}</span>
                 <span className="whitespace-nowrap">{fmt(prevBalance)}</span>
               </div>
             )}
             {ps.currentBalanceOfParty && documentTitle !== "Estimate" && (
               <div className="flex justify-between text-xs px-0 py-1 font-bold">
-                <span>Current Balance</span>
+                <span>{t("printThemes.currentBalance", "Current Balance")}</span>
                 <span className="whitespace-nowrap">{fmt(currentBalance)}</span>
               </div>
             )}
@@ -317,12 +319,12 @@ export function Theme4InvoicePrintReport({
         {/* Signatory */}
         <div className="flex justify-end mt-8" style={{ breakInside: "avoid", pageBreakInside: "avoid" }}>
           <div className="text-center">
-            <p className="text-sm">For : {businessProfile?.business_name || "My Company"}</p>
+            <p className="text-sm">{t("printThemes.for", "For")} : {businessProfile?.business_name || "Laimsoft"}</p>
             {businessProfile?.signature && (
               <img src={businessProfile.signature} alt="Signature" style={{ maxHeight: 60, objectFit: "contain", margin: "10px auto" }} />
             )}
             <p className={`text-sm font-bold ${businessProfile?.signature ? 'mt-2' : 'mt-16'}`}>
-              {ps.printSignatureText || "Authorized Signatory"}
+              {ps.printSignatureText || t("printThemes.authorizedSignatory", "Authorized Signatory")}
             </p>
           </div>
         </div>
@@ -339,7 +341,7 @@ const DUMMY_RECORDS = [
 
 function useCompanyInfo() {
   const [info, setInfo] = useState({
-    business_name: userProfile.businessName,
+    business_name: userProfile.businessName || "Laimsoft",
     phone: userProfile.phone,
     logo_url: userProfile.logo as string | undefined,
     address: (userProfile as any).address,
@@ -353,8 +355,8 @@ function useCompanyInfo() {
       .then((d) => {
         if (d) {
           setInfo({
-            business_name: d.business_name || userProfile.businessName,
-            phone: d.phone || userProfile.phone,
+            business_name: d.business_name || userProfile.businessName || "Laimsoft",
+            phone: d.phone || "",
             logo_url: d.logo_url || d.logo || userProfile.logo,
             address: d.address || (userProfile as any).address,
             email: d.email || (userProfile as any).email,
@@ -387,8 +389,8 @@ export function Theme4Preview({ accentColor }: { accentColor?: string } = {}) {
           records={DUMMY_RECORDS}
           invoiceNo={3}
           invoiceDate="2026-09-03"
-          customerName="zeeshan"
-          customerContact="03129955494"
+          customerName=""
+          customerContact=""
           businessProfile={company}
           received={0}
           accentColor={accentColor}

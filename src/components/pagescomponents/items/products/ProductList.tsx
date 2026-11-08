@@ -1,4 +1,5 @@
 import React from "react";
+import { useTranslation } from "react-i18next";
 import { Search, Plus } from "lucide-react";
 import { Card, CardHeader, CardContent } from "./ui";
 import type { Item, ItemContextMenuState } from "./types";
@@ -28,6 +29,7 @@ export function ProductList({
   onSetProductSearchTerm,
   onAddItem,
 }: ProductListProps) {
+  const { t } = useTranslation();
   return (
     <Card
       className="w-80 bg-white rounded-md flex flex-col shrink-0 overflow-hidden shadow-sm"
@@ -52,7 +54,7 @@ export function ProductList({
                     onSetIsProductSearchActive(false);
                   }
                 }}
-                placeholder="Search items"
+                placeholder={t("items.searchItems")}
                 className="w-full border border-[#D1D5DB] rounded-lg px-3 py-2 text-sm"
               />
             </div>
@@ -61,7 +63,7 @@ export function ProductList({
               type="button"
               onClick={() => onSetIsProductSearchActive(true)}
               className="w-10 h-10 rounded-full bg-[#E5E7EB] flex items-center justify-center text-[#4B5563] hover:bg-[#D1D5DB] transition-colors mr-3"
-              aria-label="Search products"
+              aria-label={t("items.searchItems")}
             >
               <Search className="w-5 h-5" />
             </button>
@@ -71,7 +73,7 @@ export function ProductList({
             className="flex items-center gap-2 bg-[#FFA726] hover:bg-[#FB8C00] text-white font-semibold rounded-lg px-5 py-2 shadow transition-all text-base relative"
           >
             <Plus className="w-5 h-5" />
-            Add Item
+            {t("items.addItem")}
           </button>
         </div>
       </CardHeader>
@@ -80,10 +82,10 @@ export function ProductList({
           <thead className="bg-[#F7F9FB] sticky top-0 z-10">
             <tr>
               <th className="px-4 py-2 text-left font-semibold text-[#7B8A9A] text-xs tracking-wide align-middle">
-                ITEM
+                {t("items.item")}
               </th>
               <th className="px-4 py-2 text-right font-semibold text-[#7B8A9A] text-xs tracking-wide align-middle">
-                QUANTITY
+                {t("items.quantity")}
               </th>
             </tr>
           </thead>

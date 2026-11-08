@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Maximize2, ScanBarcode, Trash2, Printer } from "lucide-react";
 import {
   Table,
@@ -42,6 +43,7 @@ export function BarcodeGeneratorItemList({
   onDelete,
   labelSize,
 }: BarcodeGeneratorItemListProps) {
+  const { t } = useTranslation();
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [isGenerateOpen, setIsGenerateOpen] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -56,7 +58,7 @@ export function BarcodeGeneratorItemList({
     <>
       <div className="flex flex-col border border-gray-200 bg-white rounded-md overflow-hidden">
         <div className="flex justify-between items-center p-3 border-b border-gray-200">
-          <h4 className="font-semibold text-gray-700">Item List</h4>
+          <h4 className="font-semibold text-gray-700">{t("items.title")}</h4>
           <Maximize2 className="w-4 h-4 text-gray-400 cursor-pointer hover:text-gray-600" />
         </div>
 
@@ -75,9 +77,9 @@ export function BarcodeGeneratorItemList({
                     className="border-gray-300 data-[state=checked]:bg-blue-500 data-[state=checked]:border-blue-500"
                   />
                 </TableHead>
-                <TableHead className="font-semibold text-gray-600">Item Name</TableHead>
-                <TableHead className="font-semibold text-gray-600">Barcode</TableHead>
-                <TableHead className="font-semibold text-gray-600">No of Labels</TableHead>
+                <TableHead className="font-semibold text-gray-600">{t("items.itemName")}</TableHead>
+                <TableHead className="font-semibold text-gray-600">{t("utilities.barcodeGeneratorTitle")}</TableHead>
+                <TableHead className="font-semibold text-gray-600">{t("utilities.noOfLabels")}</TableHead>
                 <TableHead className="font-semibold text-gray-600">Header</TableHead>
                 <TableHead className="font-semibold text-gray-600">Line 1</TableHead>
                 <TableHead className="font-semibold text-gray-600">Line 2</TableHead>
@@ -92,7 +94,7 @@ export function BarcodeGeneratorItemList({
                   <TableCell colSpan={10} className="h-[200px] text-center">
                     <div className="flex flex-col items-center justify-center text-gray-400">
                       <ScanBarcode className="w-16 h-16 mb-2 opacity-50" />
-                      <p className="text-sm">No items added yet</p>
+                      <p className="text-sm">{t("items.noItemsFound")}</p>
                     </div>
                   </TableCell>
                 </TableRow>
@@ -155,8 +157,8 @@ export function BarcodeGeneratorItemList({
         <div className="p-4 border-t border-gray-200 flex items-center justify-between bg-white">
           <span className="text-sm text-gray-400">
             {selectedIds.length > 0
-              ? `${selectedIds.length} item${selectedIds.length !== 1 ? "s" : ""} selected`
-              : "Select items to preview or generate"}
+              ? t("utilities.itemsSelected", { count: selectedIds.length })
+              : t("utilities.noItemsSelectedBarcode")}
           </span>
           <div className="flex gap-3">
             <Button
@@ -165,7 +167,7 @@ export function BarcodeGeneratorItemList({
               className="px-8 rounded-full border-gray-300 text-gray-600 font-semibold"
               onClick={() => setIsPreviewOpen(true)}
             >
-              Preview Selected
+              {t("utilities.labelsPreview")}
             </Button>
             <Button
               disabled={selectedItemsToProcess.length === 0}
@@ -179,7 +181,7 @@ export function BarcodeGeneratorItemList({
                 setIsGenerateOpen(true);
               }}
             >
-              Generate Selected
+              {t("utilities.generateBarcodes")}
             </Button>
           </div>
         </div>

@@ -1,10 +1,13 @@
 import { Landmark, Printer, CreditCard, Wallet, Plus } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 interface BankAccountsViewProps {
   setShowAddBank: (show: boolean) => void;
 }
 
 export function BankAccountsView({ setShowAddBank }: BankAccountsViewProps) {
+  const { t } = useTranslation();
+
   return (
     <div className="h-full flex flex-col bg-[#D0DCE7] gap-1 p-1">
       <div
@@ -25,11 +28,10 @@ export function BankAccountsView({ setShowAddBank }: BankAccountsViewProps) {
             </div>
           </div>
           <h2 className="text-2xl font-semibold text-gray-900 mb-2">
-            Manage Multiple Bank Accounts
+            {t("cashBank.manageBankAccounts")}
           </h2>
           <p className="text-gray-500 mb-8 max-w-md mx-auto">
-            With Vyapar, you can organize multiple bank accounts and track all
-            your financial transactions in one place.
+            {t("cashBank.manageBankAccountsDesc")}
           </p>
 
           <div className="grid grid-cols-3 gap-6 max-w-3xl mx-auto mb-8">
@@ -38,11 +40,10 @@ export function BankAccountsView({ setShowAddBank }: BankAccountsViewProps) {
                 <Printer className="w-5 h-5 text-blue-600" />
               </div>
               <h3 className="font-medium text-gray-900 mb-1">
-                Print Bank Details on Invoices
+                {t("cashBank.printBankDetails")}
               </h3>
               <p className="text-xs text-gray-500">
-                Share your bank account information on invoices so customers
-                can pay you easily.
+                {t("cashBank.printBankDetailsDesc")}
               </p>
             </div>
             <div className="bg-purple-50 rounded-xl p-4 text-left">
@@ -50,11 +51,10 @@ export function BankAccountsView({ setShowAddBank }: BankAccountsViewProps) {
                 <CreditCard className="w-5 h-5 text-purple-600" />
               </div>
               <h3 className="font-medium text-gray-900 mb-1">
-                Unlimited Payment Types
+                {t("cashBank.unlimitedPayments")}
               </h3>
               <p className="text-xs text-gray-500">
-                Record payments received through banks, cards, or any method
-                you prefer.
+                {t("cashBank.unlimitedPaymentsDesc")}
               </p>
             </div>
             <div className="bg-green-50 rounded-xl p-4 text-left">
@@ -62,11 +62,10 @@ export function BankAccountsView({ setShowAddBank }: BankAccountsViewProps) {
                 <Wallet className="w-5 h-5 text-green-600" />
               </div>
               <h3 className="font-medium text-gray-900 mb-1">
-                Maintain Accurate Records
+                {t("cashBank.accurateRecords")}
               </h3>
               <p className="text-xs text-gray-500">
-                Keep your financial entries organised for better clarity and
-                reporting.
+                {t("cashBank.accurateRecordsDesc")}
               </p>
             </div>
           </div>
@@ -76,7 +75,7 @@ export function BankAccountsView({ setShowAddBank }: BankAccountsViewProps) {
             className="bg-[#E53935] hover:bg-red-600 text-white px-6 py-3 rounded-lg text-sm font-medium flex items-center gap-2 mx-auto"
           >
             <Plus className="w-4 h-4" />
-            Add Bank Account
+            {t("cashBank.addBankAccount")}
           </button>
         </div>
       </div>

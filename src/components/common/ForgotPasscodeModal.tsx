@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Dialog,
   DialogContent,
@@ -21,6 +22,7 @@ export function ForgotPasscodeModal({
   onOpenChange,
   onVerified,
 }: ForgotPasscodeModalProps) {
+  const { t } = useTranslation();
   const [step, setStep] = useState<'select' | 'verify'>('select');
   const [hasEmail, setHasEmail] = useState(false);
   const [hasPhone, setHasPhone] = useState(false);
@@ -48,17 +50,21 @@ export function ForgotPasscodeModal({
               setStep('verify');
             }
           } else {
-            setError('No recovery methods configured.');
+            setError(t('passcode.noRecoveryConfigured', 'No recovery methods configured.'));
           }
         })
-        .catch(() => setError('Failed to load status'));
+        .catch(() => setError(t('passcode.errorOccurred', 'An error occurred.')));
     }
-  }, [open]);
+  }, [open, t]);
 
   const handleVerify = async () => {
     setError('');
     if (!value.trim()) {
-      setError(`Please enter your ${method}.`);
+      setError(
+        t('passcode.enterRecoveryMethod', 'Please enter your {{method}}.', {
+          method: method === 'email' ? t('common.email', 'Email') : t('common.phone', 'Phone'),
+        })
+      );
       return;
     }
 
@@ -74,10 +80,10 @@ export function ForgotPasscodeModal({
         onVerified(method, value.trim());
         onOpenChange(false);
       } else {
-        setError('Incorrect recovery details.');
+        setError(t('passcode.incorrectRecoveryDetails', 'Incorrect recovery details.'));
       }
     } catch (err) {
-      setError('An error occurred.');
+      setError(t('passcode.errorOccurred', 'An error occurred.'));
     } finally {
       setLoading(false);
     }
@@ -87,11 +93,13 @@ export function ForgotPasscodeModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Forgot Passcode</DialogTitle>
+          <DialogTitle>{t('passcode.forgotTitle', 'Forgot Passcode')}</DialogTitle>
           <DialogDescription>
             {step === 'select' 
-              ? 'Select how you would like to recover your passcode.'
-              : `Enter your recovery ${method} to verify your identity.`}
+              ? t('passcode.forgotSelectDesc', 'Select how you would like to recover your passcode.')
+              : t('passcode.forgotVerifyDesc', 'Enter your recovery {{method}} to verify your identity.', {
+                  method: method === 'email' ? t('common.email', 'Email') : t('common.phone', 'Phone'),
+                })}
           </DialogDescription>
         </DialogHeader>
         
@@ -105,7 +113,7 @@ export function ForgotPasscodeModal({
                   variant={method === 'email' ? 'default' : 'outline'}
                   onClick={() => setMethod('email')}
                 >
-                  Recover via Email
+                  {t('passcode.recoverViaEmail', 'Recover via Email')}
                 </Button>
               )}
               {hasPhone && (
@@ -113,7 +121,7 @@ export function ForgotPasscodeModal({
                   variant={method === 'phone' ? 'default' : 'outline'}
                   onClick={() => setMethod('phone')}
                 >
-                  Recover via Phone Number
+                  {t('passcode.recoverViaPhone', 'Recover via Phone Number')}
                 </Button>
               )}
             </div>
@@ -122,7 +130,9 @@ export function ForgotPasscodeModal({
           {step === 'verify' && (
             <div className="flex flex-col gap-2">
               <Label htmlFor="recovery-value">
-                {method === 'email' ? 'Email Address' : 'Phone Number (with country code)'}
+                {method === 'email'
+                  ? t('parties.email', 'Email Address')
+                  : t('passcode.phoneWithCountryCode', 'Phone Number (with country code)')}
               </Label>
               <Input
                 id="recovery-value"
@@ -138,16 +148,16 @@ export function ForgotPasscodeModal({
         <div className="flex justify-end gap-2">
           {step === 'verify' && hasEmail && hasPhone && (
             <Button variant="outline" onClick={() => setStep('select')}>
-              Back
+              {t('common.back', 'Back')}
             </Button>
           )}
           {step === 'select' ? (
             <Button onClick={() => setStep('verify')} disabled={!hasEmail && !hasPhone}>
-              Continue
+              {t('common.continue', 'Continue')}
             </Button>
           ) : (
             <Button onClick={handleVerify} disabled={loading || (!hasEmail && !hasPhone)}>
-              Verify
+              {t('passcode.verify', 'Verify')}
             </Button>
           )}
         </div>

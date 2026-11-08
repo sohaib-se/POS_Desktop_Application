@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import type { ItemOption, SaleRow } from "@/pages/AddSale";
 
 interface ScannedEntry {
@@ -18,6 +19,7 @@ interface BarcodeScanModalProps {
 let tempIdCounter = 1;
 
 export function BarcodeScanModal({ items, onSave, onClose }: BarcodeScanModalProps) {
+  const { t } = useTranslation();
   const [inputVal, setInputVal] = useState("");
   const [entries, setEntries] = useState<ScannedEntry[]>([]);
   const [errorMsg, setErrorMsg] = useState("");
@@ -153,7 +155,7 @@ export function BarcodeScanModal({ items, onSave, onClose }: BarcodeScanModalPro
           }}
         >
           <span style={{ fontSize: 16, fontWeight: 600, color: "#111827" }}>
-            Scan code/serial
+            {t("sales.scanCodeSerial")}
           </span>
           <button
             onClick={onClose}
@@ -167,7 +169,7 @@ export function BarcodeScanModal({ items, onSave, onClose }: BarcodeScanModalPro
               padding: "2px 4px",
               borderRadius: 4,
             }}
-            title="Close"
+            title={t("common.close")}
           >
             ✕
           </button>
@@ -185,10 +187,10 @@ export function BarcodeScanModal({ items, onSave, onClose }: BarcodeScanModalPro
             }}
           >
             <label style={{ fontSize: 13, color: "#374151", fontWeight: 500 }}>
-              Enter code/serial:
+              {t("sales.enterCodeSerial")}
             </label>
             <span style={{ fontSize: 12, color: "#6b7280" }}>
-              {entries.length} Entered
+              {t("sales.enteredCount", { count: entries.length })}
             </span>
           </div>
 
@@ -199,7 +201,7 @@ export function BarcodeScanModal({ items, onSave, onClose }: BarcodeScanModalPro
               value={inputVal}
               onChange={(e) => setInputVal(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Enter/Scan"
+              placeholder={t("sales.enterScanPlaceholder")}
               style={{
                 flex: 1,
                 border: "1.5px solid #d1d5db",
@@ -247,7 +249,7 @@ export function BarcodeScanModal({ items, onSave, onClose }: BarcodeScanModalPro
           <div style={{ maxHeight: 260, overflowY: "auto" }}>
             {entries.length === 0 && (
               <p style={{ fontSize: 13, color: "#9ca3af", textAlign: "center", padding: "24px 0" }}>
-                No items scanned yet. Enter a code or item name above.
+                {t("sales.noScannedItems")}
               </p>
             )}
             {entries.map((entry) => (
@@ -293,7 +295,7 @@ export function BarcodeScanModal({ items, onSave, onClose }: BarcodeScanModalPro
                       padding: "0 2px",
                     }}
                   >
-                    Quantity
+                    {t("common.quantity")}
                   </span>
                   <input
                     type="number"
@@ -325,7 +327,7 @@ export function BarcodeScanModal({ items, onSave, onClose }: BarcodeScanModalPro
                     display: "flex",
                     alignItems: "center",
                   }}
-                  title="Remove"
+                  title={t("common.delete")}
                 >
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                     <line x1="18" y1="6" x2="6" y2="18" />
@@ -361,7 +363,7 @@ export function BarcodeScanModal({ items, onSave, onClose }: BarcodeScanModalPro
               cursor: "pointer",
             }}
           >
-            Close
+            {t("common.close")}
           </button>
           <button
             onClick={handleSave}
@@ -377,7 +379,7 @@ export function BarcodeScanModal({ items, onSave, onClose }: BarcodeScanModalPro
               cursor: entries.length > 0 ? "pointer" : "not-allowed",
             }}
           >
-            Save
+            {t("common.save")}
           </button>
         </div>
       </div>

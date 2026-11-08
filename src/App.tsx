@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import "./App.css";
 import { Toaster } from "@/components/ui/Toast";
 import { Sidebar } from "@/components/common/Sidebar";
@@ -40,6 +41,7 @@ import type { SaleInvoiceEditData, ViewType } from "@/types";
 import { RefreshCw } from "lucide-react";
 
 function App() {
+  const { t } = useTranslation();
   const [isAppLocked, setIsAppLocked] = useState(true);
   const [isInitializing, setIsInitializing] = useState(true);
   const [headerSearchQuery, setHeaderSearchQuery] = useState("");
@@ -417,10 +419,10 @@ function App() {
         isOpen={showUnsavedModal}
         onClose={cancelViewChange}
         onConfirm={confirmDiscardChanges}
-        title="Unsaved Changes"
-        message="You have unsaved changes. Are you sure you want to discard them and leave this page?"
-        confirmText="Discard Changes"
-        cancelText="Stay on Page"
+        title={t("common.discardChangesTitle")}
+        message={t("common.discardChangesMsg")}
+        confirmText={t("common.discard")}
+        cancelText={t("common.cancel")}
       />
 
       {isAutoBackingUpOnClose && (
@@ -430,10 +432,10 @@ function App() {
               <RefreshCw className="w-8 h-8 animate-spin" />
             </div>
             <h3 className="text-lg font-bold text-slate-900 mb-1">
-              Saving Automatic Backup...
+              {t("backup.savingAutoBackup")}
             </h3>
             <p className="text-xs text-slate-500 mb-5 leading-relaxed">
-              Securing your database before closing. Please do not turn off your computer.
+              {t("backup.securingDatabaseMsg")}
             </p>
             <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
               <div className="bg-[#1976D2] h-full w-2/3 animate-pulse rounded-full" />

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Search, Plus } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { useSettings } from "@/hooks/useSettings";
 import type { ExpenseCategory } from "@/types";
 import type {
@@ -41,6 +42,7 @@ export function ExpensesSidebar({
   openEditItemDialog,
   setItemPendingDelete,
 }: ExpensesSidebarProps) {
+  const { t } = useTranslation();
   const [currency] = useSettings('settings.businessCurrency', { code: 'PKR', symbol: 'Rs' });
   const [currencyDisplay] = useSettings<'abbreviation' | 'icon'>('settings.currencyDisplay', 'abbreviation');
   const currencyStr = currencyDisplay === 'icon' ? currency.symbol : currency.code;
@@ -139,7 +141,7 @@ export function ExpensesSidebar({
       <div className="bg-white rounded-md shadow-sm px-5 h-[72px] flex items-center justify-between shrink-0">
         <div>
           <h2 className="text-base font-semibold text-gray-900 tracking-wide">
-            TOTAL EXPENSE
+            {t("expenses.totalExpenses")}
           </h2>
         </div>
         <div className="text-right">
@@ -158,7 +160,7 @@ export function ExpensesSidebar({
             <input
               autoFocus
               type="text"
-              placeholder="Search..."
+              placeholder={`${t("common.search")}...`}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onBlur={() => {
@@ -184,7 +186,7 @@ export function ExpensesSidebar({
           className="bg-[#E53935] hover:bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 shrink-0"
         >
           <Plus className="w-4 h-4" />
-          Add Expense
+          {t("expenses.addExpense")}
         </button>
       </div>
 
@@ -194,10 +196,10 @@ export function ExpensesSidebar({
           <thead className="bg-gray-50 sticky top-0 z-10">
             <tr>
               <th className="px-4 py-2 text-left font-medium text-gray-600 text-xs">
-                {activeTab === "category" ? "CATEGORY" : "ITEM"} ↑
+                {activeTab === "category" ? t("expenses.category") : t("expenses.item")} ↑
               </th>
               <th className="px-4 py-2 text-right font-medium text-gray-600 text-xs">
-                PRICE
+                {t("expenses.price")}
               </th>
             </tr>
           </thead>
@@ -232,12 +234,12 @@ export function ExpensesSidebar({
                   <td colSpan={2}>
                     <div className="flex flex-col items-center justify-center py-10 px-6 text-center select-none">
                       <p className="text-sm font-semibold text-gray-500">
-                        {searchQuery ? "No categories found" : "No expense categories"}
+                        {searchQuery ? t("expenses.noCategoriesFound") : t("expenses.noExpenseCategories")}
                       </p>
                       <p className="mt-1 text-xs text-gray-400">
                         {searchQuery
-                          ? "Try a different search term."
-                          : "Add a category using the menu above."}
+                          ? t("expenses.tryDifferentSearch")
+                          : t("expenses.addCategoryMenu")}
                       </p>
                     </div>
                   </td>
@@ -273,12 +275,12 @@ export function ExpensesSidebar({
                   <td colSpan={2}>
                     <div className="flex flex-col items-center justify-center py-10 px-6 text-center select-none">
                       <p className="text-sm font-semibold text-gray-500">
-                        {searchQuery ? "No items found" : "No expense items"}
+                        {searchQuery ? t("expenses.noItemsFound") : t("expenses.noExpenseItems")}
                       </p>
                       <p className="mt-1 text-xs text-gray-400">
                         {searchQuery
-                          ? "Try a different search term."
-                          : "Add an item using the menu above."}
+                          ? t("expenses.tryDifferentSearch")
+                          : t("expenses.addItemMenu")}
                       </p>
                     </div>
                   </td>
@@ -307,7 +309,7 @@ export function ExpensesSidebar({
             }}
             className="w-full rounded-sm px-2 py-1.5 text-left text-sm hover:bg-gray-100"
           >
-            View/Edit
+            {t("common.viewEdit")}
           </button>
           <button
             onClick={() => {
@@ -317,7 +319,7 @@ export function ExpensesSidebar({
             }}
             className="w-full rounded-sm px-2 py-1.5 text-left text-sm text-red-600 hover:bg-red-50"
           >
-            Delete
+            {t("common.delete")}
           </button>
         </div>
       )}
@@ -339,7 +341,7 @@ export function ExpensesSidebar({
             }}
             className="w-full rounded-sm px-2 py-1.5 text-left text-sm hover:bg-gray-100"
           >
-            View/Edit
+            {t("common.viewEdit")}
           </button>
           <button
             onClick={() => {
@@ -349,7 +351,7 @@ export function ExpensesSidebar({
             }}
             className="w-full rounded-sm px-2 py-1.5 text-left text-sm text-red-600 hover:bg-red-50"
           >
-            Delete
+            {t("common.delete")}
           </button>
         </div>
       )}

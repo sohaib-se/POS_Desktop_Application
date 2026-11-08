@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
 import { ArrowDown, ArrowUp } from "lucide-react";
 import { useSettings } from "@/hooks/useSettings";
+import { useTranslation } from "react-i18next";
 
 export function StatsCards() {
+  const { t } = useTranslation();
   const [totalReceivable, setTotalReceivable] = useState(0);
   const [receivableParties, setReceivableParties] = useState(0);
   const [totalPayable, setTotalPayable] = useState(0);
@@ -124,9 +126,9 @@ export function StatsCards() {
       <div className="stat-card">
         <div className="flex items-start justify-between">
           <div>
-            <p className="text-sm text-gray-500 mb-1">Today's Sales</p>
+            <p className="text-sm text-gray-500 mb-1">{t("dashboard.todaySales", "Today's Sales")}</p>
             <p className="text-2xl font-bold text-gray-900">{currencyStr} {todaySales.toLocaleString(undefined, {minimumFractionDigits: 2})}</p>
-            <p className="text-xs text-gray-500 mt-1">For Today</p>
+            <p className="text-xs text-gray-500 mt-1">{t("dashboard.forToday", "For Today")}</p>
           </div>
           <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
             <ArrowUp className="w-5 h-5 text-blue-600" />
@@ -140,9 +142,9 @@ export function StatsCards() {
       <div className="stat-card">
         <div className="flex items-start justify-between">
           <div>
-            <p className="text-sm text-gray-500 mb-1">Today's Profit</p>
+            <p className="text-sm text-gray-500 mb-1">{t("dashboard.todayProfit", "Today's Profit")}</p>
             <p className="text-2xl font-bold text-gray-900">{currencyStr} {todayProfit.toLocaleString(undefined, {minimumFractionDigits: 2})}</p>
-            <p className="text-xs text-gray-500 mt-1">For Today</p>
+            <p className="text-xs text-gray-500 mt-1">{t("dashboard.forToday", "For Today")}</p>
           </div>
           <div className="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center">
             <ArrowUp className="w-5 h-5 text-indigo-600" />
@@ -156,9 +158,11 @@ export function StatsCards() {
       <div className="stat-card">
         <div className="flex items-start justify-between">
           <div>
-            <p className="text-sm text-gray-500 mb-1">Total Receivable</p>
+            <p className="text-sm text-gray-500 mb-1">{t("dashboard.totalReceivable", "Total Receivable")}</p>
             <p className="text-2xl font-bold text-gray-900">{currencyStr} {totalReceivable.toLocaleString()}</p>
-            <p className="text-xs text-gray-500 mt-1">From {receivableParties} Part{receivableParties === 1 ? 'y' : 'ies'}</p>
+            <p className="text-xs text-gray-500 mt-1">
+              {receivableParties === 1 ? t("dashboard.fromParty", "From 1 Party") : t("dashboard.fromParties", { count: receivableParties, defaultValue: `From ${receivableParties} Parties` })}
+            </p>
           </div>
           <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
             <ArrowDown className="w-5 h-5 text-green-600" />
@@ -172,9 +176,11 @@ export function StatsCards() {
       <div className="stat-card">
         <div className="flex items-start justify-between">
           <div>
-            <p className="text-sm text-gray-500 mb-1">Total Payable</p>
+            <p className="text-sm text-gray-500 mb-1">{t("dashboard.totalPayable", "Total Payable")}</p>
             <p className="text-2xl font-bold text-gray-900">{currencyStr} {totalPayable.toLocaleString()}</p>
-            <p className="text-xs text-gray-500 mt-1">From {payableParties} Part{payableParties === 1 ? 'y' : 'ies'}</p>
+            <p className="text-xs text-gray-500 mt-1">
+              {payableParties === 1 ? t("dashboard.fromParty", "From 1 Party") : t("dashboard.fromParties", { count: payableParties, defaultValue: `From ${payableParties} Parties` })}
+            </p>
           </div>
           <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
             <ArrowUp className="w-5 h-5 text-red-600" />

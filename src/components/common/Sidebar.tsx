@@ -113,10 +113,67 @@ const menuItems: MenuItem[] = [
 ];
 
 import { useSettings } from "@/hooks/useSettings";
+import { useTranslation } from "react-i18next";
 
 export function Sidebar({ currentView, onViewChange, businessName = "Laimsoft", logo }: SidebarProps) {
+  const { t } = useTranslation();
   const [expandedMenus, setExpandedMenus] = useState<string[]>(["sale-invoices"]);
   const [isEstimationEnabled] = useSettings('settings.isEstimationEnabled', true);
+
+  const getTranslatedLabel = (id: string, defaultLabel: string) => {
+    const keyMap: Record<string, string> = {
+      home: "sidebar.home",
+      parties: "sidebar.parties",
+      items: "sidebar.items",
+      "sale-invoices": "sidebar.sale",
+      estimates: "sidebar.estimates",
+      "payment-in": "sidebar.paymentIn",
+      pos: "sidebar.pos",
+      "purchase-bills": "sidebar.purchaseExpense",
+      "payment-out": "sidebar.paymentOut",
+      expenses: "sidebar.expenses",
+      "bank-accounts": "sidebar.cashBank",
+      "cash-in-hand": "sidebar.cashInHand",
+      reports: "sidebar.reports",
+      backup: "sidebar.backup",
+      "sync-auto-backup": "sidebar.autoBackup",
+      "sync-backup-computer": "sidebar.backupToComputer",
+      "sync-restore-backup": "sidebar.restoreBackup",
+      utilities: "sidebar.utilities",
+      "utilities-import-items": "sidebar.importItems",
+      "utilities-barcode": "sidebar.barcodeGenerator",
+      "utilities-bulk-update": "sidebar.updateItemsInBulk",
+      "utilities-import-parties": "sidebar.importParties",
+      "utilities-export-items": "sidebar.exportItems",
+      "utilities-recycle-bin": "sidebar.recycleBin",
+      settings: "sidebar.settings",
+    };
+    return keyMap[id] ? t(keyMap[id], defaultLabel) : defaultLabel;
+  };
+
+  const getTranslatedChildLabel = (id: string, defaultLabel: string) => {
+    const childKeyMap: Record<string, string> = {
+      "sale-invoices": "sidebar.saleInvoices",
+      estimates: "sidebar.estimates",
+      "payment-in": "sidebar.paymentIn",
+      pos: "sidebar.pos",
+      "purchase-bills": "sidebar.purchaseBills",
+      "payment-out": "sidebar.paymentOut",
+      expenses: "sidebar.expenses",
+      "bank-accounts": "sidebar.bankAccounts",
+      "cash-in-hand": "sidebar.cashInHand",
+      "sync-auto-backup": "sidebar.autoBackup",
+      "sync-backup-computer": "sidebar.backupToComputer",
+      "sync-restore-backup": "sidebar.restoreBackup",
+      "utilities-import-items": "sidebar.importItems",
+      "utilities-barcode": "sidebar.barcodeGenerator",
+      "utilities-bulk-update": "sidebar.updateItemsInBulk",
+      "utilities-import-parties": "sidebar.importParties",
+      "utilities-export-items": "sidebar.exportItems",
+      "utilities-recycle-bin": "sidebar.recycleBin",
+    };
+    return childKeyMap[id] ? t(childKeyMap[id], defaultLabel) : defaultLabel;
+  };
 
   // Dynamically filter menu items based on settings
   const filteredMenuItems = menuItems.map(item => {
@@ -153,7 +210,7 @@ export function Sidebar({ currentView, onViewChange, businessName = "Laimsoft", 
             type="text"
             readOnly
             onClick={() => window.dispatchEvent(new Event("open-global-search"))}
-            placeholder="Open Anything (Ctrl+F)"
+            placeholder={t("sidebar.openAnything", "Open Anything (Ctrl+F)")}
             className="w-full bg-[#2a3142] text-gray-300 text-sm px-3 py-2 rounded-lg border border-gray-700 focus:outline-none focus:border-gray-500 cursor-pointer"
           />
           <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 text-xs">
@@ -194,7 +251,7 @@ export function Sidebar({ currentView, onViewChange, businessName = "Laimsoft", 
               >
                 <div className="flex items-center gap-3">
                   <Icon className="w-5 h-5" />
-                  <span>{item.label}</span>
+                  <span>{getTranslatedLabel(item.id, item.label)}</span>
                 </div>
                 <div className="flex items-center gap-1">
                   {!hasChildren && (
@@ -226,7 +283,7 @@ export function Sidebar({ currentView, onViewChange, businessName = "Laimsoft", 
                         }
                       `}
                     >
-                      Add Sale
+                      {t("header.addSale", "Add Sale")}
                     </div>
                   )}
                   {item.children?.map((child) => (
@@ -242,7 +299,7 @@ export function Sidebar({ currentView, onViewChange, businessName = "Laimsoft", 
                         }
                       `}
                     >
-                      <span>{child.label}</span>
+                      <span>{getTranslatedChildLabel(child.id, child.label)}</span>
                     </div>
                   ))}
                 </div>

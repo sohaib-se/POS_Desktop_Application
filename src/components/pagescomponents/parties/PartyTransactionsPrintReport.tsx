@@ -1,4 +1,6 @@
 import { useSettings } from "@/hooks/useSettings";
+import { useTranslation } from "react-i18next";
+import { formatTransactionType } from "@/utils/transactionTranslations";
 import type { PartyTransactionRow } from "./PartyDetails";
 
 interface PartyTransactionsPrintReportProps {
@@ -30,16 +32,18 @@ export function PartyTransactionsPrintReport({
   selectedMonth,
   businessProfile,
 }: PartyTransactionsPrintReportProps) {
+  const { t, i18n } = useTranslation();
   const [currency] = useSettings("settings.businessCurrency", { code: "PKR", symbol: "Rs" });
   const [currencyDisplay] = useSettings<"abbreviation" | "icon">("settings.currencyDisplay", "abbreviation");
   const currencyStr = currencyDisplay === "icon" ? currency.symbol : currency.code;
 
-  let monthDisplay = "All Time";
+  let monthDisplay = t("common.allTime", "All Time");
   if (selectedMonth) {
     const [year, month] = selectedMonth.split("-");
     if (year && month) {
       const date = new Date(parseInt(year), parseInt(month) - 1);
-      monthDisplay = date.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+      const currentLang = i18n.language || "en";
+      monthDisplay = date.toLocaleDateString(currentLang === "de" ? "de-DE" : "en-US", { month: "long", year: "numeric" });
     }
   }
 
@@ -51,37 +55,37 @@ export function PartyTransactionsPrintReport({
       {/* Business Header */}
       <div className="text-center mb-4">
         <h1 className="text-base font-bold">{businessProfile?.business_name || "Laimsoft"}</h1>
-        <p className="text-xs text-gray-600">Phone no.: {businessProfile?.phone || ""}</p>
+        <p className="text-xs text-gray-600">{t("common.phone", "Phone")}: {businessProfile?.phone || ""}</p>
       </div>
 
       {/* Report Title */}
       <div className="text-center mb-5">
-        <h2 className="text-lg font-bold underline inline-block">Party Transactions Report</h2>
+        <h2 className="text-lg font-bold underline inline-block">{t("parties.transactionsReport", "Party Transactions Report")}</h2>
       </div>
 
       {/* Meta Info */}
       <div className="mb-4 space-y-1.5">
-        <p className="text-sm font-bold">Party name: {partyName}</p>
-        <p className="text-sm font-bold">Month: {monthDisplay}</p>
-        <p className="text-sm font-bold">Total transactions: {records.length}</p>
+        <p className="text-sm font-bold">{t("parties.partyName", "Party Name")}: {partyName}</p>
+        <p className="text-sm font-bold">{t("common.month", "Month")}: {monthDisplay}</p>
+        <p className="text-sm font-bold">{t("parties.totalTransactions", "Total transactions")}: {records.length}</p>
       </div>
 
       {/* Table */}
       <table className="w-full text-xs mb-4 border-collapse">
         <thead style={{ backgroundColor: "#D3D3D3", WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }}>
           <tr className="border border-gray-500 text-left">
-            <th className="py-1.5 px-2 font-bold border-r border-gray-500 whitespace-nowrap">DATE</th>
-            <th className="py-1.5 px-2 font-bold border-r border-gray-500 whitespace-nowrap">TYPE</th>
-            <th className="py-1.5 px-2 font-bold border-r border-gray-500">INVOICE #</th>
-            <th className="py-1.5 px-2 font-bold border-r border-gray-500 text-right">TOTAL</th>
-            <th className="py-1.5 px-2 font-bold text-right">BALANCE</th>
+            <th className="py-1.5 px-2 font-bold border-r border-gray-500 whitespace-nowrap">{t("common.date").toUpperCase()}</th>
+            <th className="py-1.5 px-2 font-bold border-r border-gray-500 whitespace-nowrap">{t("common.type").toUpperCase()}</th>
+            <th className="py-1.5 px-2 font-bold border-r border-gray-500">{t("sales.invoiceNo", "Invoice No.").toUpperCase()}</th>
+            <th className="py-1.5 px-2 font-bold border-r border-gray-500 text-right">{t("common.total").toUpperCase()}</th>
+            <th className="py-1.5 px-2 font-bold text-right">{t("common.balance").toUpperCase()}</th>
           </tr>
         </thead>
         <tbody>
           {records.map((record, idx) => (
             <tr key={record.id || idx} className="border-b border-gray-300 text-xs">
               <td className="py-1 px-2 whitespace-nowrap border-r border-gray-300">{formatDate(record.date)}</td>
-              <td className="py-1 px-2 border-r border-gray-300">{record.type}</td>
+              <td className="py-1 px-2 border-r border-gray-300">{formatTransactionType(record.type, t)}</td>
               <td className="py-1 px-2 border-r border-gray-300">{record.invoiceNo || ""}</td>
               <td className="py-1 px-2 text-right whitespace-nowrap border-r border-gray-300">
                 {currencyStr} {Number(record.amount || 0).toFixed(2)}
@@ -96,8 +100,8 @@ export function PartyTransactionsPrintReport({
 
       {/* Totals */}
       <div className="flex justify-end gap-8">
-        <p className="text-sm font-bold">Total: {currencyStr} {totalAmount.toFixed(2)}</p>
-        <p className="text-sm font-bold">Balance: {currencyStr} {totalBalance.toFixed(2)}</p>
+        <p className="text-sm font-bold">{t("common.total", "Total")}: {currencyStr} {totalAmount.toFixed(2)}</p>
+        <p className="text-sm font-bold">{t("common.balance", "Balance")}: {currencyStr} {totalBalance.toFixed(2)}</p>
       </div>
     </div>
   );

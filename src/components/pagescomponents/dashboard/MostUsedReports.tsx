@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { ChevronRight, MinusCircle, X } from "lucide-react";
 import { useSettings } from "../../../hooks/useSettings";
+import { useTranslation } from "react-i18next";
 
 const AVAILABLE_REPORTS = [
   "Sale",
@@ -37,12 +38,31 @@ export function MostUsedReports({
   onViewChange?: (view: any) => void;
   onOpenReport?: (category: string, name: string) => void;
 }) {
+  const { t } = useTranslation();
   const [selectedReports, setSelectedReports] = useSettings<string[]>("dashboard_most_used_reports", [
     "Sale",
     "Purchase",
     "Day book",
     "All Transactions",
   ]);
+
+  const getReportTitle = (report: string) => {
+    switch (report) {
+      case "Sale": return t("reports.names.sale", "Sale");
+      case "Purchase": return t("reports.names.purchase", "Purchase");
+      case "Day book": return t("reports.names.daybook", "Day book");
+      case "All Transactions": return t("reports.names.allTransactions", "All Transactions");
+      case "Profit And Loss": return t("reports.names.profitAndLoss", "Profit And Loss");
+      case "Bill Wise Profit": return t("reports.names.billWiseProfit", "Bill Wise Profit");
+      case "Party Reports":
+      case "Party report": return t("reports.names.partyReport", "Party report");
+      case "All parties": return t("reports.names.allParties", "All parties");
+      case "Sale Purchase By Party": return t("reports.names.salePurchaseByParty", "Sale Purchase By Party");
+      case "Low stock details": return t("reports.names.lowStockDetails", "Low stock details");
+      case "Stock details": return t("reports.names.stockDetails", "Stock details");
+      default: return report;
+    }
+  };
   const [isPopupOpen, setIsPopupOpen] = useState(false);
   const [tempSelected, setTempSelected] = useState<string[]>([]);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -67,7 +87,7 @@ export function MostUsedReports({
         setTempSelected([...tempSelected, report]);
         setErrorMsg(null);
       } else {
-        setErrorMsg("You can only select up to 5 reports.");
+        setErrorMsg(t("dashboard.maxReportsError", "You can only select up to 5 reports."));
       }
     }
   };
@@ -86,13 +106,13 @@ export function MostUsedReports({
       <div className="stat-card relative">
         <div className="flex items-center justify-between mb-4">
           <p className="text-sm font-medium text-gray-900">
-            Most Used Reports
+            {t("dashboard.mostUsedReports", "Most Used Reports")}
           </p>
           <button 
             className="text-sm text-blue-600 hover:text-blue-700"
             onClick={() => onViewChange?.("reports")}
           >
-            View All
+            {t("dashboard.viewAll", "View All")}
           </button>
         </div>
         <div className="space-y-3">
@@ -110,7 +130,7 @@ export function MostUsedReports({
               }}
             >
               <div className="flex items-center gap-2 flex-1">
-                <span className="text-sm text-gray-700">{report}</span>
+                <span className="text-sm text-gray-700">{getReportTitle(report)}</span>
               </div>
               <div className="flex items-center gap-3">
                 <button
@@ -119,7 +139,7 @@ export function MostUsedReports({
                     removeReport(report);
                   }}
                   className="text-red-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity"
-                  title="Remove report"
+                  title={t("dashboard.removeReport", "Remove report")}
                 >
                   <MinusCircle className="w-4 h-4" />
                 </button>
@@ -129,7 +149,7 @@ export function MostUsedReports({
           ))}
           {selectedReports.length === 0 && (
             <div className="text-sm text-gray-500 text-center py-4">
-              No reports selected. Add some below.
+              {t("dashboard.noReportsSelected", "No reports selected. Add some below.")}
             </div>
           )}
         </div>
@@ -139,7 +159,7 @@ export function MostUsedReports({
             className="w-full mt-4 p-3 border border-dashed border-gray-300 rounded-lg text-sm text-gray-500 hover:border-gray-400 hover:text-gray-600 transition-colors flex items-center justify-center gap-2"
           >
             <span className="text-lg">+</span>
-            Add Widget of Your Choice
+            {t("dashboard.addWidgetOfChoice", "Add Widget of Your Choice")}
           </button>
         )}
       </div>
@@ -149,7 +169,7 @@ export function MostUsedReports({
           <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6 max-h-[80vh] flex flex-col">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-gray-900">
-                select 5 reports page to add to this most recent widget
+                {t("dashboard.selectReportsModalTitle", "Select up to 5 reports to add to this widget")}
               </h3>
               <button
                 onClick={closePopup}
@@ -180,7 +200,7 @@ export function MostUsedReports({
                     checked={tempSelected.includes(report)}
                     onChange={() => handleToggleReport(report)}
                   />
-                  <span className="text-sm text-gray-700">{report}</span>
+                  <span className="text-sm text-gray-700">{getReportTitle(report)}</span>
                 </label>
               ))}
             </div>
@@ -190,13 +210,13 @@ export function MostUsedReports({
                 onClick={closePopup}
                 className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
               >
-                Cancel
+                {t("common.cancel", "Cancel")}
               </button>
               <button
                 onClick={saveReports}
                 className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700"
               >
-                Add Reports
+                {t("dashboard.addReports", "Add Reports")}
               </button>
             </div>
           </div>

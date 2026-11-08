@@ -1,4 +1,5 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Settings,
   Printer,
@@ -13,18 +14,17 @@ import { PrintTab } from "../components/pagescomponents/settings/tabs/PrintTab";
 import { AppearanceTab } from "../components/pagescomponents/settings/tabs/AppearanceTab";
 import { SettingsSidebar } from "../components/pagescomponents/settings/SettingsSidebar";
 import { ConfirmDialog } from "../components/ui/ConfirmDialog";
-import { toast } from "../components/ui/Toast";
 
 interface SettingsPageProps {
   onClose?: () => void;
   initialTab?: string;
 }
 
-const tabs = [
-  { id: "general", label: "GENERAL", icon: Settings },
-  { id: "transaction", label: "TRANSACTION", icon: ArrowLeftRight },
-  { id: "print", label: "PRINT", icon: Printer },
-  { id: "appearance", label: "APPEARANCE", icon: Palette },
+const baseTabs = [
+  { id: "general", labelKey: "settings.tabs.general", defaultLabel: "GENERAL", icon: Settings },
+  { id: "transaction", labelKey: "settings.tabs.transaction", defaultLabel: "TRANSACTION", icon: ArrowLeftRight },
+  { id: "print", labelKey: "settings.tabs.print", defaultLabel: "PRINT", icon: Printer },
+  { id: "appearance", labelKey: "settings.tabs.appearance", defaultLabel: "APPEARANCE", icon: Palette },
 ];
 
 const takeSnapshot = (): Record<string, string | null> => {
@@ -39,10 +39,21 @@ const takeSnapshot = (): Record<string, string | null> => {
 };
 
 export function SettingsPage({ onClose, initialTab }: SettingsPageProps = {}) {
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState(initialTab || "general");
   const [isOpenAnimated, setIsOpenAnimated] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [showWarningDialog, setShowWarningDialog] = useState(false);
+
+  const localizedTabs = useMemo(
+    () =>
+      baseTabs.map((tab) => ({
+        id: tab.id,
+        label: t(tab.labelKey, tab.defaultLabel),
+        icon: tab.icon,
+      })),
+    [t]
+  );
 
   const initialSnapshotRef = useRef<Record<string, string | null>>({});
   const isRevertingRef = useRef(false);
@@ -122,7 +133,6 @@ export function SettingsPage({ onClose, initialTab }: SettingsPageProps = {}) {
   const handleSaveChanges = () => {
     initialSnapshotRef.current = takeSnapshot();
     setHasUnsavedChanges(false);
-    toast.success("Saved changes");
   };
 
   const handleAttemptClose = () => {
@@ -205,7 +215,7 @@ export function SettingsPage({ onClose, initialTab }: SettingsPageProps = {}) {
       {/* ── Left Sidebar: Full height, hidden on print tab to give full width ── */}
       {activeTab !== "print" && (
         <SettingsSidebar 
-          tabs={tabs} 
+          tabs={localizedTabs} 
           activeTab={activeTab} 
           setActiveTab={setActiveTab} 
         />
@@ -281,7 +291,7 @@ export function SettingsPage({ onClose, initialTab }: SettingsPageProps = {}) {
                     display: "inline-block",
                   }}
                 />
-                You have unsaved changes
+                {t("settings.unsavedChanges", "You have unsaved changes")}
               </div>
             ) : (
               <div
@@ -308,7 +318,7 @@ export function SettingsPage({ onClose, initialTab }: SettingsPageProps = {}) {
                     display: "inline-block",
                   }}
                 />
-                All changes saved
+                {t("settings.allChangesSaved", "All changes saved")}
               </div>
             )}
           </div>
@@ -347,7 +357,7 @@ export function SettingsPage({ onClose, initialTab }: SettingsPageProps = {}) {
                 e.currentTarget.style.boxShadow = "0 1px 2px rgba(0, 0, 0, 0.05)";
               }}
             >
-              Cancel
+              {t("common.cancel", "Cancel")}
             </button>
 
             {/* Save Changes Button */}
@@ -381,7 +391,7 @@ export function SettingsPage({ onClose, initialTab }: SettingsPageProps = {}) {
                 e.currentTarget.style.boxShadow = "0 2px 5px rgba(229, 57, 53, 0.3)";
               }}
             >
-              Save Changes
+              {t("common.save", "Save Changes")}
             </button>
           </div>
         </footer>
@@ -416,10 +426,10 @@ export function SettingsPage({ onClose, initialTab }: SettingsPageProps = {}) {
       {/* Confirmation Dialog on Attempting to Leave Without Saving */}
       <ConfirmDialog
         open={showWarningDialog}
-        title="Unsaved Changes"
-        message="You have unsaved changes. Don't leave without saving!"
-        confirmLabel="Leave without Saving"
-        cancelLabel="Stay on Page"
+        title={t("settings.unsavedChangesTitle", "Unsaved Changes")}
+        message={t("settings.unsavedChangesMsg", "You have unsaved changes. Don't leave without saving!")}
+        confirmLabel={t("settings.leaveWithoutSaving", "Leave without Saving")}
+        cancelLabel={t("settings.stayOnPage", "Stay on Page")}
         confirmColor="#e53935"
         icon="warning"
         onConfirm={handleConfirmDiscard}

@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { Search } from "lucide-react";
 
 interface BulkUpdateTableProps {
@@ -20,6 +21,7 @@ export function BulkUpdateTable({
   onSelectAll,
   onItemEdit
 }: BulkUpdateTableProps) {
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<"pricing" | "stock" | "info">("pricing");
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -58,14 +60,14 @@ export function BulkUpdateTable({
     <div>
       <div className="flex items-center justify-between mb-6">
         <h3 className="text-xl font-semibold text-gray-800">
-          Bulk Update Items
+          {t("utilities.bulkUpdateTitle")}
         </h3>
         
         <div className="relative w-80 mr-auto ml-16">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
           <input
             type="text"
-            placeholder="Search by item name"
+            placeholder={t("utilities.searchByItemName")}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-full text-sm outline-none focus:border-blue-500"
@@ -84,7 +86,7 @@ export function BulkUpdateTable({
                 <div className="w-2 h-2 rounded-full bg-blue-500" />
               )}
             </div>
-            Pricing
+            {t("items.pricing")}
           </button>
           <button
             onClick={() => setActiveTab("stock")}
@@ -97,7 +99,7 @@ export function BulkUpdateTable({
                 <div className="w-2 h-2 rounded-full bg-blue-500" />
               )}
             </div>
-            Stock
+            {t("items.stock")}
           </button>
           <button
             onClick={() => setActiveTab("info")}
@@ -110,14 +112,16 @@ export function BulkUpdateTable({
                 <div className="w-2 h-2 rounded-full bg-blue-500" />
               )}
             </div>
-            Item Information
+            {t("utilities.itemInformation")}
           </button>
         </div>
       </div>
 
       <div className="border border-gray-200 rounded-lg overflow-hidden">
         <div className="flex items-center justify-between px-4 py-3 bg-[#EAF2FE] border-b border-gray-200">
-          <span className="text-sm text-gray-600 font-medium">{selectedItemIds.size} items selected</span>
+          <span className="text-sm text-gray-600 font-medium">
+            {t("utilities.itemsSelected", { count: selectedItemIds.size })}
+          </span>
         </div>
         <table className="w-full text-sm">
           <thead className="bg-gray-50 border-b border-gray-200">
@@ -134,44 +138,44 @@ export function BulkUpdateTable({
                 #
               </th>
               <th className="px-4 py-2 text-left font-medium text-gray-600">
-                ITEM NAME *
+                {t("items.itemName")} *
               </th>
               {activeTab === "pricing" && (
                 <>
                   <th className="px-4 py-2 text-left font-medium text-gray-600">
-                    CATEGORY
+                    {t("items.category")}
                   </th>
                   <th className="px-4 py-2 text-left font-medium text-gray-600">
-                    PURCHASE PRICE
+                    {t("items.purchasePrice")}
                   </th>
                   <th className="px-4 py-2 text-left font-medium text-gray-600">
-                    SALE PRICE
+                    {t("items.salePrice")}
                   </th>
                 </>
               )}
               {activeTab === "stock" && (
                 <>
                   <th className="px-4 py-2 text-left font-medium text-gray-600 min-w-[120px]">
-                    OPENING QUANT...
+                    {t("items.openingStock")}
                   </th>
                   <th className="px-4 py-2 text-left font-medium text-gray-600 min-w-[100px]">
-                    AT PRICE
+                    {t("items.atPrice")}
                   </th>
                   <th className="px-4 py-2 text-left font-medium text-gray-600 min-w-[110px]">
-                    AS OF DATE
+                    {t("items.asOfDate")}
                   </th>
                   <th className="px-4 py-2 text-left font-medium text-gray-600 min-w-[110px]">
-                    LOW STOCK
+                    {t("items.lowStockAlert")}
                   </th>
                 </>
               )}
               {activeTab === "info" && (
                 <>
                   <th className="px-4 py-2 text-left font-medium text-gray-600 min-w-[150px]">
-                    CATEGORY
+                    {t("items.category")}
                   </th>
                   <th className="px-4 py-2 text-left font-medium text-gray-600 min-w-[150px]">
-                    ITEM CODE
+                    {t("items.itemCode")}
                   </th>
                 </>
               )}

@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { X } from "lucide-react";
 import type { UnitRecord } from "@/components/pagescomponents/items/products/types";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui";
@@ -25,6 +26,8 @@ export function AddUnitModal({
   onClose,
   onSave,
 }: Props) {
+  const { t } = useTranslation();
+
   return (
     <Dialog
       open={open}
@@ -35,7 +38,7 @@ export function AddUnitModal({
       <DialogContent className="max-w-sm">
         <DialogHeader>
           <DialogTitle className="flex items-center justify-between">
-            <span>{unitBeingEdited ? "Edit Unit" : "Add Unit"}</span>
+            <span>{unitBeingEdited ? t("items.editUnit") : t("items.addUnit")}</span>
             <button
               type="button"
               onClick={onClose}
@@ -49,7 +52,7 @@ export function AddUnitModal({
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Full Name <span className="text-red-500">*</span>
+              {t("items.fullName")} <span className="text-red-500">*</span>
             </label>
             <input
               type="text"
@@ -62,7 +65,7 @@ export function AddUnitModal({
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Short Name <span className="text-red-500">*</span>
+              {t("items.shortName")} <span className="text-red-500">*</span>
             </label>
             <input
               type="text"
@@ -78,7 +81,7 @@ export function AddUnitModal({
               onClick={onClose}
               className="px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50"
             >
-              Cancel
+              {t("common.cancel")}
             </button>
             <button
               type="button"
@@ -91,10 +94,10 @@ export function AddUnitModal({
               className="px-4 py-2 bg-[#1976D2] text-white rounded-lg text-sm font-medium hover:bg-blue-600 disabled:opacity-60"
             >
               {isSavingUnit
-                ? "Saving..."
+                ? t("common.saving")
                 : unitBeingEdited
-                  ? "Update"
-                  : "Save"}
+                  ? t("common.update")
+                  : t("common.save")}
             </button>
           </div>
         </div>

@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { getCountries, getCountryCallingCode } from "react-phone-number-input";
 import type { Country } from "react-phone-number-input";
 import flags from "react-phone-number-input/flags";
@@ -48,6 +49,7 @@ interface CountryDropdownProps {
 }
 
 function CountryDropdown({ selected, onChange }: CountryDropdownProps) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const ref = useRef<HTMLDivElement>(null);
@@ -112,7 +114,7 @@ function CountryDropdown({ selected, onChange }: CountryDropdownProps) {
                 type="text"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search country or code…"
+                placeholder={t("common.searchPlaceholder", "Search country or code…")}
                 className="flex-1 text-sm bg-transparent outline-none border-none focus:ring-0 p-0 placeholder-gray-400 text-gray-700"
               />
             </div>
@@ -122,7 +124,7 @@ function CountryDropdown({ selected, onChange }: CountryDropdownProps) {
           <ul className="max-h-52 overflow-y-auto">
             {filtered.length === 0 && (
               <li className="px-4 py-3 text-sm text-gray-400 text-center">
-                No results
+                {t("common.noResults", "No results")}
               </li>
             )}
             {filtered.map((c) => {
@@ -182,9 +184,11 @@ export interface PhoneInputProps {
 export function PhoneInput({
   value,
   onChange,
-  placeholder = "Enter phone number",
+  placeholder,
   className = "",
 }: PhoneInputProps) {
+  const { t } = useTranslation();
+  const effectivePlaceholder = placeholder ?? t("profile.enterPhone", "Enter phone number");
   const parsed = parseStored(value);
   const [selectedCountry, setSelectedCountry] = useState<Country>(parsed.country);
   const [localNumber, setLocalNumber] = useState(parsed.number);
@@ -215,7 +219,7 @@ export function PhoneInput({
       <CountryDropdown selected={selectedCountry} onChange={handleCountryChange} />
       <input
         type="tel"
-        placeholder={placeholder}
+        placeholder={effectivePlaceholder}
         value={localNumber}
         onChange={(e) => handleNumberChange(e.target.value)}
         className="flex-1 px-3 py-2 text-sm text-gray-900 placeholder-gray-400 outline-none border-none focus:ring-0 bg-transparent min-w-0 rounded-r-lg"

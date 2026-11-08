@@ -1,4 +1,6 @@
 import { Info, Package } from "lucide-react";
+import { useTranslation } from "react-i18next";
+import { useSettings } from "@/hooks/useSettings";
 import type { Item } from "@/components/pagescomponents/items/products/types";
 
 interface ItemGridCardProps {
@@ -7,6 +9,11 @@ interface ItemGridCardProps {
 }
 
 export function ItemGridCard({ item, onDetailClick }: ItemGridCardProps) {
+  const { t } = useTranslation();
+  const [currency] = useSettings('settings.businessCurrency', { code: 'PKR', symbol: 'Rs' });
+  const [currencyDisplay] = useSettings<'abbreviation' | 'icon'>('settings.currencyDisplay', 'abbreviation');
+  const currencyStr = currencyDisplay === 'icon' ? currency.symbol : currency.code;
+
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden flex flex-col group hover:shadow-md transition-all h-[300px] relative">
       
@@ -17,7 +24,7 @@ export function ItemGridCard({ item, onDetailClick }: ItemGridCardProps) {
           onDetailClick();
         }}
         className="absolute top-2 right-2 bg-white/90 backdrop-blur-sm text-gray-700 hover:text-blue-600 w-8 h-8 rounded-full flex items-center justify-center shadow-sm z-10 transition-colors"
-        title="View Details"
+        title={t("common.viewDetails", "View Details")}
       >
         <Info size={18} />
       </button>
@@ -33,7 +40,7 @@ export function ItemGridCard({ item, onDetailClick }: ItemGridCardProps) {
         ) : (
           <div className="flex flex-col items-center justify-center text-gray-400">
             <Package size={40} className="mb-1 opacity-40" />
-            <span className="text-xs font-medium">No Image</span>
+            <span className="text-xs font-medium">{t("items.noImage", "No Image")}</span>
           </div>
         )}
       </div>
@@ -46,11 +53,11 @@ export function ItemGridCard({ item, onDetailClick }: ItemGridCardProps) {
         
         <div className="flex items-center justify-between mt-1 pt-1 border-t border-gray-50">
           <div className="flex flex-col">
-            <span className="text-[10px] text-gray-500 font-medium uppercase tracking-wider">Price</span>
-            <span className="text-sm font-bold text-gray-900">Rs {item.salePrice?.toLocaleString() ?? 0}</span>
+            <span className="text-[10px] text-gray-500 font-medium uppercase tracking-wider">{t("items.price", "Price")}</span>
+            <span className="text-sm font-bold text-gray-900">{currencyStr} {item.salePrice?.toLocaleString() ?? 0}</span>
           </div>
           <div className="flex flex-col items-end">
-            <span className="text-[10px] text-gray-500 font-medium uppercase tracking-wider">Qty</span>
+            <span className="text-[10px] text-gray-500 font-medium uppercase tracking-wider">{t("items.qty", "Qty")}</span>
             <span className={`text-sm font-bold ${item.stockQuantity <= (item.lowStock || 0) ? 'text-red-600' : 'text-blue-600'}`}>
               {item.stockQuantity}
             </span>

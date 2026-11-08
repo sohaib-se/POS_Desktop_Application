@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import { useSettings } from "@/hooks/useSettings";
 import { Search, Printer, MoreVertical } from "lucide-react";
+import { formatPaymentType } from "@/utils/transactionTranslations";
 
 interface PaymentInTableProps {
   records: any[];
@@ -29,12 +31,13 @@ export function PaymentInTable({
   onPrintClick,
   onExcelClick,
 }: PaymentInTableProps) {
+  const { t } = useTranslation();
   const [currency] = useSettings('settings.businessCurrency', { code: 'PKR', symbol: 'Rs' });
   const [currencyDisplay] = useSettings<'abbreviation' | 'icon'>('settings.currencyDisplay', 'abbreviation');
   const currencyStr = currencyDisplay === 'icon' ? currency.symbol : currency.code;
 
   const searchContainerRef = useRef<HTMLDivElement>(null);
-  const placeholders = ["Party Name", "Receipt No.", "Date", "Amount"];
+  const placeholders = [t("purchases.partyName"), t("paymentIn.receiptNo"), t("common.date"), t("common.amount")];
   const [placeholderIndex, setPlaceholderIndex] = useState(0);
 
   useEffect(() => {
@@ -42,7 +45,7 @@ export function PaymentInTable({
       setPlaceholderIndex((prev) => (prev + 1) % placeholders.length);
     }, 3000);
     return () => clearInterval(interval);
-  }, []);
+  }, [placeholders.length]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -67,8 +70,8 @@ export function PaymentInTable({
       style={{ marginLeft: "4px", marginRight: "4px", height: "100%", flexShrink: 0 }}
     >
       <div className="flex items-center justify-between px-6 pt-4 pb-2 border-b border-gray-200">
-        <h3 className="text-base font-bold text-[#222B45] tracking-wide">
-          TRANSACTIONS
+        <h3 className="text-base font-bold text-[#222B45] tracking-wide uppercase">
+          {t("parties.transactions")}
         </h3>
         <div className="flex gap-2 items-center h-10" ref={searchContainerRef}>
           <div 
@@ -100,7 +103,7 @@ export function PaymentInTable({
               />
               {!searchQuery && (
                 <div className="absolute left-0 pointer-events-none flex items-center h-full w-full overflow-hidden text-gray-400 text-sm">
-                  <span className="whitespace-pre">Search </span>
+                  <span className="whitespace-pre">{t("common.search")} </span>
                   <div className="relative h-full flex-1 overflow-hidden">
                     {placeholders.map((ph, idx) => (
                       <span
@@ -123,14 +126,14 @@ export function PaymentInTable({
               else window.print();
             }}
             className="p-1.5 hover:bg-[#F7F9FB] rounded"
-            title="Print"
+            title={t("common.print")}
           >
             <Printer className="w-4 h-4 text-[#7B8A9A]" />
           </button>
           <button
             onClick={() => { if (onExcelClick) onExcelClick(); }}
             className="p-1.5 hover:bg-[#F7F9FB] rounded relative"
-            title="Download Excel"
+            title={t("sales.downloadExcel")}
           >
             <span className="bg-green-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
               xls
@@ -143,20 +146,20 @@ export function PaymentInTable({
         <table className="w-full text-sm">
           <thead className="bg-gray-50 sticky top-0 z-10">
             <tr>
-              <th className="px-4 py-3 text-left font-medium text-gray-600">Date</th>
-              <th className="px-4 py-3 text-left font-medium text-gray-600">Receipt No.</th>
-              <th className="px-4 py-3 text-left font-medium text-gray-600">Party Name</th>
-              <th className="px-4 py-3 text-right font-medium text-gray-600">Total Amount</th>
-              <th className="px-4 py-3 text-right font-medium text-gray-600">Received</th>
-              <th className="px-4 py-3 text-left font-medium text-gray-600">Payment Type</th>
-              <th className="px-4 py-3 text-center font-medium text-gray-600">Actions</th>
+              <th className="px-4 py-3 text-left font-medium text-gray-600">{t("common.date")}</th>
+              <th className="px-4 py-3 text-left font-medium text-gray-600">{t("paymentIn.receiptNo")}</th>
+              <th className="px-4 py-3 text-left font-medium text-gray-600">{t("purchases.partyName")}</th>
+              <th className="px-4 py-3 text-right font-medium text-gray-600">{t("paymentIn.totalAmount")}</th>
+              <th className="px-4 py-3 text-right font-medium text-gray-600">{t("paymentIn.received")}</th>
+              <th className="px-4 py-3 text-left font-medium text-gray-600">{t("sales.paymentType")}</th>
+              <th className="px-4 py-3 text-center font-medium text-gray-600">{t("common.actions")}</th>
             </tr>
           </thead>
           <tbody>
             {records.length === 0 ? (
               <tr>
                 <td colSpan={7} className="px-4 py-8 text-center text-gray-500">
-                  No transactions found for the selected month.
+                  {t("paymentIn.noTransactions")}
                 </td>
               </tr>
             ) : (
@@ -167,7 +170,7 @@ export function PaymentInTable({
                   <td className="px-4 py-3">{payment.partyName}</td>
                   <td className="px-4 py-3 text-right">{currencyStr} {payment.amount.toFixed(2)}</td>
                   <td className="px-4 py-3 text-right">{currencyStr} {payment.amount.toFixed(2)}</td>
-                  <td className="px-4 py-3">{payment.paymentType}</td>
+                  <td className="px-4 py-3">{formatPaymentType(payment.paymentType, t)}</td>
                   <td className="px-4 py-3 relative">
                     <div className="flex items-center justify-center gap-2">
 

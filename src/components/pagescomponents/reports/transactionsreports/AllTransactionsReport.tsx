@@ -1,6 +1,7 @@
 import { useSettings } from "@/hooks/useSettings";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft, ChevronDown, Search, MoreVertical, Pencil, Trash2 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import * as XLSXStyle from "xlsx-js-style";
 import { getMonthKeyFromDate, formatDateDisplay, monthLabelForFilter, formatMonthLabel } from "../../saleinvoices/utils";
 import type { SaleInvoiceEditData, PurchaseBillEditData } from "@/types";
@@ -9,6 +10,7 @@ import { PurchaseBillDialog } from "../../purchasebills/PurchaseBillDialog";
 import { AddPurchase } from "../../../../pages/AddPurchase";
 
 import { ConfirmDeleteModal } from "@/components/common/ConfirmDeleteModal";
+import { formatTransactionType } from "@/utils/transactionTranslations";
 
 interface AllTransactionsReportProps {
   onBack: () => void;
@@ -30,6 +32,7 @@ interface TransactionRow {
 }
 
 export function AllTransactionsReport({ onBack, onEditInvoice }: AllTransactionsReportProps) {
+  const { t } = useTranslation();
   const [currency] = useSettings('settings.businessCurrency', { code: 'PKR', symbol: 'Rs' });
   const [currencyDisplay] = useSettings<'abbreviation' | 'icon'>('settings.currencyDisplay', 'abbreviation');
   const currencyStr = currencyDisplay === 'icon' ? currency.symbol : currency.code;
@@ -44,7 +47,11 @@ export function AllTransactionsReport({ onBack, onEditInvoice }: AllTransactions
   const [isMonthMenuOpen, setIsMonthMenuOpen] = useState(false);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const searchContainerRef = useRef<HTMLDivElement>(null);
-  const placeholders = ["Party Name", "Invoice No.", "Amount"];
+  const placeholders = [
+    t("reports.partyName", "Party Name"),
+    t("printThemes.invoiceNo", "Invoice No."),
+    t("reports.amount", "Amount"),
+  ];
   const [placeholderIndex, setPlaceholderIndex] = useState(0);
 
   useEffect(() => {
@@ -52,7 +59,7 @@ export function AllTransactionsReport({ onBack, onEditInvoice }: AllTransactions
       setPlaceholderIndex((prev) => (prev + 1) % placeholders.length);
     }, 3000);
     return () => clearInterval(interval);
-  }, []);
+  }, [placeholders.length]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -256,7 +263,7 @@ export function AllTransactionsReport({ onBack, onEditInvoice }: AllTransactions
   const totalPurchases = selectedMonthRows.filter(r => r.type === 'Purchase' && !r.rawInvoice.transaction?.includes("Returned")).reduce((sum, invoice) => sum + invoice.amount, 0);
 
   const currentMonthKey = getMonthKeyFromDate(formatDateDisplay(new Date()));
-  const monthButtonLabel = selectedMonthKey === currentMonthKey ? "This Month" : monthLabelForFilter(selectedMonthKey);
+  const monthButtonLabel = selectedMonthKey === currentMonthKey ? t("reports.thisMonth", "This Month") : monthLabelForFilter(selectedMonthKey);
 
   const handleDownloadExcel = () => {
     const HEADER_BG = "4382FF";
@@ -431,7 +438,7 @@ export function AllTransactionsReport({ onBack, onEditInvoice }: AllTransactions
           <button onClick={onBack} className="p-1 hover:bg-gray-100 rounded-full mr-1 transition-colors">
             <ArrowLeft className="w-5 h-5 text-gray-600" />
           </button>
-          <h2 className="text-lg font-semibold text-gray-900">All Transactions</h2>
+          <h2 className="text-lg font-semibold text-gray-900">{t("reports.names.allTransactions", "All Transactions")}</h2>
         </div>
       </div>
 
@@ -441,7 +448,7 @@ export function AllTransactionsReport({ onBack, onEditInvoice }: AllTransactions
         style={{ marginLeft: "4px", marginRight: "4px" }}
       >
         <div className="relative flex items-center gap-2">
-          <span className="text-sm text-gray-500">Filter by :</span>
+          <span className="text-sm text-gray-500">{t("reports.filterByMonth", "Filter by :")}</span>
           <button
             onClick={(event) => {
               event.stopPropagation();
@@ -465,7 +472,7 @@ export function AllTransactionsReport({ onBack, onEditInvoice }: AllTransactions
                   setIsMonthMenuOpen(false);
                 }}
               >
-                All Months
+                {t("reports.allMonths", "All Months")}
               </button>
               {monthOptions.map((monthKey) => (
                 <button
@@ -484,7 +491,7 @@ export function AllTransactionsReport({ onBack, onEditInvoice }: AllTransactions
         </div>
 
         <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-500">Selected month:</span>
+          <span className="text-sm text-gray-500">{t("reports.selectedMonth", "Selected month:")}</span>
           <input
             type="month"
             value={selectedMonthKey}
@@ -503,7 +510,7 @@ export function AllTransactionsReport({ onBack, onEditInvoice }: AllTransactions
       >
         <div className="flex-1 max-w-sm bg-[#F6F0FB] rounded-xl p-4 border border-[#E8D7F6]">
           <div className="flex items-center justify-between mb-1">
-            <span className="text-sm text-[#6B6B83]">Total Sales</span>
+            <span className="text-sm text-[#6B6B83]">{t("reports.totalSales", "Total Sales")}</span>
           </div>
           <p className="text-xl font-bold text-[#1C1F2A]">
             {currencyStr} {totalSales.toLocaleString()}
@@ -512,7 +519,7 @@ export function AllTransactionsReport({ onBack, onEditInvoice }: AllTransactions
         
         <div className="flex-1 max-w-sm bg-[#E6F4EA] rounded-xl p-4 border border-[#CEEAD6]">
           <div className="flex items-center justify-between mb-1">
-            <span className="text-sm text-[#3D7D50]">Total Purchase Bill</span>
+            <span className="text-sm text-[#3D7D50]">{t("reports.totalPurchases", "Total Purchase Bill")}</span>
           </div>
           <p className="text-xl font-bold text-[#134D25]">
             {currencyStr} {totalPurchases.toLocaleString()}
@@ -527,7 +534,7 @@ export function AllTransactionsReport({ onBack, onEditInvoice }: AllTransactions
       >
         <div className="flex items-center justify-between px-6 pt-4 pb-2 border-b border-gray-200">
           <h3 className="text-base font-bold text-[#222B45] tracking-wide">
-            TRANSACTIONS
+            {t("reports.categories.transaction", "TRANSACTIONS").toUpperCase()}
           </h3>
           <div className="flex gap-2 items-center h-10" ref={searchContainerRef}>
             <div 
@@ -560,7 +567,7 @@ export function AllTransactionsReport({ onBack, onEditInvoice }: AllTransactions
                 />
                 {!searchQuery && (
                   <div className="absolute left-0 pointer-events-none flex items-center h-full w-full overflow-hidden text-gray-400 text-sm">
-                    <span className="whitespace-pre">Search </span>
+                    <span className="whitespace-pre">{t("reports.search", "Search")} </span>
                     <div className="relative h-full flex-1 overflow-hidden">
                       {placeholders.map((ph, idx) => (
                         <span
@@ -596,27 +603,27 @@ export function AllTransactionsReport({ onBack, onEditInvoice }: AllTransactions
           <table className="w-full text-sm">
             <thead className="bg-gray-50 sticky top-0 z-10">
               <tr>
-                <th className="px-4 py-3 text-left font-medium text-gray-600">Date</th>
-                <th className="px-4 py-3 text-left font-medium text-gray-600">Type</th>
-                <th className="px-4 py-3 text-left font-medium text-gray-600">Invoice no</th>
-                <th className="px-4 py-3 text-left font-medium text-gray-600">Party Name</th>
-                <th className="px-4 py-3 text-left font-medium text-gray-600">Payment Type</th>
-                <th className="px-4 py-3 text-right font-medium text-gray-600">Amount</th>
-                <th className="px-4 py-3 text-right font-medium text-gray-600">Balance</th>
-                <th className="px-4 py-3 text-center font-medium text-gray-600">Actions</th>
+                <th className="px-4 py-3 text-left font-medium text-gray-600">{t("printThemes.date", "Date")}</th>
+                <th className="px-4 py-3 text-left font-medium text-gray-600">{t("reports.type", "Type")}</th>
+                <th className="px-4 py-3 text-left font-medium text-gray-600">{t("sales.invoiceNo", "Invoice no")}</th>
+                <th className="px-4 py-3 text-left font-medium text-gray-600">{t("reports.partyName", "Party Name")}</th>
+                <th className="px-4 py-3 text-left font-medium text-gray-600">{t("sales.paymentType", "Payment Type")}</th>
+                <th className="px-4 py-3 text-right font-medium text-gray-600">{t("reports.amount", "Amount")}</th>
+                <th className="px-4 py-3 text-right font-medium text-gray-600">{t("printThemes.balance", "Balance")}</th>
+                <th className="px-4 py-3 text-center font-medium text-gray-600">{t("sales.actions", "Actions")}</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <tr>
                   <td colSpan={8} className="px-4 py-10 text-center text-sm text-gray-500">
-                    Loading transactions...
+                    {t("reports.loadingTransactions", "Loading transactions...")}
                   </td>
                 </tr>
               ) : visibleRows.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="px-4 py-10 text-center text-sm text-gray-500">
-                    No transactions found for the selected month.
+                    {t("reports.noTransactionsFound", "No transactions found for the selected month.")}
                   </td>
                 </tr>
               ) : (
@@ -629,7 +636,7 @@ export function AllTransactionsReport({ onBack, onEditInvoice }: AllTransactions
                     <td className="px-4 py-3">
                       <span className={`inline-flex items-center gap-1.5 ${invoice.type.includes('Returned') ? 'text-amber-600 font-medium' : invoice.type.includes('Sale') ? 'text-green-600' : 'text-blue-600'}`}>
                         <span className={`w-2 h-2 rounded-full ${invoice.type.includes('Returned') ? 'bg-amber-500' : invoice.type.includes('Sale') ? 'bg-green-500' : 'bg-blue-500'}`}></span>
-                        {invoice.type}
+                        {formatTransactionType(invoice.type, t)}
                       </span>
                     </td>
                     <td className="px-4 py-3">{invoice.invoiceNo}</td>
@@ -694,7 +701,7 @@ export function AllTransactionsReport({ onBack, onEditInvoice }: AllTransactions
                   }}
                 >
                   <Search className="w-4 h-4 text-gray-500" />
-                  View
+                  {t("common.view", "View")}
                 </button>
                 <button
                   className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-gray-50"
@@ -704,7 +711,7 @@ export function AllTransactionsReport({ onBack, onEditInvoice }: AllTransactions
                   }}
                 >
                   <Pencil className="w-4 h-4 text-gray-500" />
-                  Edit
+                  {t("common.edit", "Edit")}
                 </button>
                 <button
                   className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50"
@@ -714,7 +721,7 @@ export function AllTransactionsReport({ onBack, onEditInvoice }: AllTransactions
                   }}
                 >
                   <Trash2 className="w-4 h-4" />
-                  Delete
+                  {t("common.delete", "Delete")}
                 </button>
               </>
             );
@@ -747,8 +754,8 @@ export function AllTransactionsReport({ onBack, onEditInvoice }: AllTransactions
         isOpen={deleteModalState.isOpen}
         onClose={() => setDeleteModalState({isOpen: false, tx: null})}
         onConfirm={confirmDelete}
-        title={`Delete ${deleteModalState.tx?.type} Invoice`}
-        message={`Are you sure you want to delete ${deleteModalState.tx?.type.toLowerCase()} invoice ${deleteModalState.tx?.invoiceNo} for ${deleteModalState.tx?.partyName}? This action cannot be undone.`}
+        title={t("common.deleteTransactionTitle")}
+        message={t("common.deleteTransactionMsg")}
         isDeleting={isDeleting}
       />
 
@@ -770,7 +777,7 @@ export function AllTransactionsReport({ onBack, onEditInvoice }: AllTransactions
                 </div>
                 <div>
                   <h3 className="text-[17px] font-semibold text-gray-900 leading-tight">
-                    Cannot Edit This Purchase Bill
+                    {t("common.cannotEditPurchaseTitle")}
                   </h3>
                   <p className="mt-1 text-sm text-gray-500">
                     Invoice #{blockedEditModal.invoiceNo} -{" "}
@@ -780,8 +787,7 @@ export function AllTransactionsReport({ onBack, onEditInvoice }: AllTransactions
               </div>
 
               <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 text-sm text-amber-800 leading-relaxed">
-                Sales have already been made from this purchase bill (the remaining stock and the stock quantity are not equal).
-                To edit this purchase bill, you must first delete or edit the sales that consumed stock from this batch.
+                {t("common.cannotEditPurchaseMsg")}
               </div>
 
               <div className="flex justify-end mt-5">
@@ -789,7 +795,7 @@ export function AllTransactionsReport({ onBack, onEditInvoice }: AllTransactions
                   onClick={() => setBlockedEditModal(null)}
                   className="px-6 py-2 bg-[#1A73E8] hover:bg-[#1557B0] text-white text-sm font-semibold rounded-lg transition-colors"
                 >
-                  Got it
+                  {t("common.okay")}
                 </button>
               </div>
             </div>

@@ -1,9 +1,11 @@
 import type { ExpenseCategory } from "@/types";
+import { useTranslation } from "react-i18next";
 import { useSettings } from "@/hooks/useSettings";
 import type { ExpenseItem, ExpenseRecord } from "./types";
 import { useState, useEffect, useRef } from "react";
 import { Search, FolderOpen, Tag } from "lucide-react";
 import { ExpenseRowActions } from "./ExpenseRecordContextMenu";
+import { formatPaymentType } from "@/utils/transactionTranslations";
 
 interface ExpensesDetailsProps {
   activeTab: "category" | "items";
@@ -32,6 +34,7 @@ export function ExpensesDetails({
   onEditRecord,
   onDeleteRecord,
 }: ExpensesDetailsProps) {
+  const { t } = useTranslation();
   const [currency] = useSettings('settings.businessCurrency', { code: 'PKR', symbol: 'Rs' });
   const [currencyDisplay] = useSettings<'abbreviation' | 'icon'>('settings.currencyDisplay', 'abbreviation');
   const currencyStr = currencyDisplay === 'icon' ? currency.symbol : currency.code;
@@ -44,7 +47,7 @@ export function ExpensesDetails({
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const searchContainerRef = useRef<HTMLDivElement>(null);
 
-  const placeholders = ["Exp No.", "Payment Type", "Amount"];
+  const placeholders = [t("expenses.expNo"), t("common.paymentType"), t("common.amount")];
   const [placeholderIndex, setPlaceholderIndex] = useState(0);
 
   useEffect(() => {
@@ -165,7 +168,7 @@ export function ExpensesDetails({
             <div className="flex-1 bg-white rounded-md shadow-sm overflow-hidden flex flex-col">
               <div className="flex items-center justify-between px-6 pt-4 pb-2 border-b border-gray-200">
                 <h3 className="text-base font-bold text-[#222B45] tracking-wide">
-                  TRANSACTIONS
+                  {t("parties.transactions")}
                 </h3>
                 <div className="flex gap-2 items-center h-10" ref={searchContainerRef}>
                   <div
@@ -195,7 +198,7 @@ export function ExpensesDetails({
                       />
                       {!searchQuery && (
                         <div className="absolute left-0 pointer-events-none flex items-center h-full w-full overflow-hidden text-gray-400 text-sm">
-                          <span className="whitespace-pre">Search </span>
+                          <span className="whitespace-pre">{t("common.search")} </span>
                           <div className="relative h-full flex-1 overflow-hidden">
                             {placeholders.map((ph, idx) => (
                               <span
@@ -218,19 +221,19 @@ export function ExpensesDetails({
                 <thead className="bg-gray-50 sticky top-0">
                   <tr>
                     <th className="px-4 py-3 text-left font-medium text-gray-600 text-xs">
-                      DATE
+                      {t("common.date").toUpperCase()}
                     </th>
                     <th className="px-4 py-3 text-left font-medium text-gray-600 text-xs">
-                      EXP NO.
+                      {t("expenses.expNo")}
                     </th>
                     <th className="px-4 py-3 text-left font-medium text-gray-600 text-xs">
-                      PAYMENT TYPE
+                      {t("common.paymentType").toUpperCase()}
                     </th>
                     <th className="px-4 py-3 text-right font-medium text-gray-600 text-xs">
-                      AMOUNT
+                      {t("common.amount").toUpperCase()}
                     </th>
                     <th className="px-4 py-3 text-center font-medium text-gray-600 text-xs w-12">
-                      ACTION
+                      {t("common.action").toUpperCase()}
                     </th>
                   </tr>
                 </thead>
@@ -245,7 +248,7 @@ export function ExpensesDetails({
                           {formatDate(record.created_at)}
                         </td>
                         <td className="px-4 py-3">{record.expense_no ?? "-"}</td>
-                        <td className="px-4 py-3">{record.payment_type}</td>
+                        <td className="px-4 py-3">{formatPaymentType(record.payment_type, t)}</td>
                         <td className="px-4 py-3 text-right">
                           {Number(record.amount).toFixed(2)}
                         </td>
@@ -264,7 +267,7 @@ export function ExpensesDetails({
                         colSpan={5}
                         className="px-4 py-10 text-center text-gray-400 text-sm"
                       >
-                        No transactions found for this category.
+                        {t("expenses.noTransactions")}
                       </td>
                     </tr>
                   )}
@@ -278,21 +281,21 @@ export function ExpensesDetails({
             {/* Empty Category Info Card */}
             <div className="bg-white rounded-md shadow-sm px-6 pt-6 pb-4">
               <div className="flex items-center h-10">
-                <p className="text-sm text-gray-400">No expense category selected. Add a category from the left panel.</p>
+                <p className="text-sm text-gray-400">{t("expenses.noCategorySelectedBanner")}</p>
               </div>
             </div>
 
             {/* Empty Transactions Card */}
             <div className="flex-1 bg-white rounded-md shadow-sm overflow-hidden flex flex-col">
               <div className="px-6 pt-4 pb-2 border-b border-gray-200">
-                <h3 className="text-base font-bold text-[#222B45] tracking-wide">TRANSACTIONS</h3>
+                <h3 className="text-base font-bold text-[#222B45] tracking-wide">{t("parties.transactions")}</h3>
               </div>
               <div className="flex-1 flex flex-col items-center justify-center py-16 select-none">
                 <div className="mb-3 flex items-center justify-center w-14 h-14 rounded-full bg-gray-100">
                   <FolderOpen className="w-7 h-7 text-gray-400" />
                 </div>
-                <p className="text-sm font-semibold text-gray-500">No expense category selected</p>
-                <p className="mt-1 text-xs text-gray-400">Add a category from the left panel to get started.</p>
+                <p className="text-sm font-semibold text-gray-500">{t("expenses.noCategorySelected")}</p>
+                <p className="mt-1 text-xs text-gray-400">{t("expenses.noCategorySelectedDesc")}</p>
               </div>
             </div>
           </>
@@ -307,7 +310,7 @@ export function ExpensesDetails({
                   {selectedExpenseItem.name.toUpperCase()}
                 </h2>
                 <p className="text-xs text-gray-500 mt-0.5">
-                  Price : {currencyStr} {selectedExpenseItem.price.toFixed(2)}
+                  {t("expenses.price")} : {currencyStr} {selectedExpenseItem.price.toFixed(2)}
                 </p>
               </div>
               <div className="text-right">
@@ -321,7 +324,7 @@ export function ExpensesDetails({
             <div className="flex-1 bg-white rounded-md shadow-sm overflow-hidden flex flex-col">
               <div className="flex items-center justify-between px-6 pt-4 pb-2 border-b border-gray-200">
                 <h3 className="text-base font-bold text-[#222B45] tracking-wide">
-                  TRANSACTIONS
+                  {t("parties.transactions")}
                 </h3>
                 <div className="flex gap-2 items-center h-10" ref={searchContainerRef}>
                   <div
@@ -351,7 +354,7 @@ export function ExpensesDetails({
                       />
                       {!searchQuery && (
                         <div className="absolute left-0 pointer-events-none flex items-center h-full w-full overflow-hidden text-gray-400 text-sm">
-                          <span className="whitespace-pre">Search </span>
+                          <span className="whitespace-pre">{t("common.search")} </span>
                           <div className="relative h-full flex-1 overflow-hidden">
                             {placeholders.map((ph, idx) => (
                               <span
@@ -374,19 +377,19 @@ export function ExpensesDetails({
                   <thead className="bg-gray-50 sticky top-0">
                   <tr>
                     <th className="px-4 py-3 text-left font-medium text-gray-600 text-xs">
-                      DATE
+                      {t("common.date").toUpperCase()}
                     </th>
                     <th className="px-4 py-3 text-left font-medium text-gray-600 text-xs">
-                      EXP NO.
+                      {t("expenses.expNo")}
                     </th>
                     <th className="px-4 py-3 text-left font-medium text-gray-600 text-xs">
-                      PAYMENT TYPE
+                      {t("common.paymentType").toUpperCase()}
                     </th>
                     <th className="px-4 py-3 text-right font-medium text-gray-600 text-xs">
-                      AMOUNT
+                      {t("common.amount").toUpperCase()}
                     </th>
                     <th className="px-4 py-3 text-center font-medium text-gray-600 text-xs w-12">
-                      ACTION
+                      {t("common.action").toUpperCase()}
                     </th>
                   </tr>
                 </thead>
@@ -423,7 +426,7 @@ export function ExpensesDetails({
                           <td className="px-4 py-3">
                             {record.expense_no ?? "-"}
                           </td>
-                          <td className="px-4 py-3">{record.payment_type}</td>
+                          <td className="px-4 py-3">{formatPaymentType(record.payment_type, t)}</td>
                           <td className="px-4 py-3 text-right">
                             {itemAmt.toFixed(2)}
                           </td>
@@ -443,7 +446,7 @@ export function ExpensesDetails({
                         colSpan={5}
                         className="px-4 py-10 text-center text-gray-400 text-sm"
                       >
-                        No transactions found for this item.
+                        {t("expenses.noItemTransactions")}
                       </td>
                     </tr>
                   )}
@@ -457,21 +460,21 @@ export function ExpensesDetails({
             {/* Empty Item Info Card */}
             <div className="bg-white rounded-md shadow-sm px-6 pt-6 pb-4">
               <div className="flex items-center h-10">
-                <p className="text-sm text-gray-400">No expense item selected. Add an item from the left panel.</p>
+                <p className="text-sm text-gray-400">{t("expenses.noItemSelectedBanner")}</p>
               </div>
             </div>
 
             {/* Empty Transactions Card */}
             <div className="flex-1 bg-white rounded-md shadow-sm overflow-hidden flex flex-col">
               <div className="px-6 pt-4 pb-2 border-b border-gray-200">
-                <h3 className="text-base font-bold text-[#222B45] tracking-wide">TRANSACTIONS</h3>
+                <h3 className="text-base font-bold text-[#222B45] tracking-wide">{t("parties.transactions")}</h3>
               </div>
               <div className="flex-1 flex flex-col items-center justify-center py-16 select-none">
                 <div className="mb-3 flex items-center justify-center w-14 h-14 rounded-full bg-gray-100">
                   <Tag className="w-7 h-7 text-gray-400" />
                 </div>
-                <p className="text-sm font-semibold text-gray-500">No expense item selected</p>
-                <p className="mt-1 text-xs text-gray-400">Add an item from the left panel to get started.</p>
+                <p className="text-sm font-semibold text-gray-500">{t("expenses.noItemSelected")}</p>
+                <p className="mt-1 text-xs text-gray-400">{t("expenses.noItemSelectedDesc")}</p>
               </div>
             </div>
           </>

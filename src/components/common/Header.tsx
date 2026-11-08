@@ -1,5 +1,6 @@
 import { Search, Plus, Settings } from "lucide-react";
 import type { ViewType } from "@/types";
+import { useTranslation } from "react-i18next";
 
 interface HeaderProps {
   onViewChange: (view: ViewType) => void;
@@ -8,6 +9,7 @@ interface HeaderProps {
 }
 
 export function Header({ onViewChange, searchQuery = "", onSearchQueryChange }: HeaderProps) {
+  const { t } = useTranslation();
 
   return (
     <>
@@ -22,7 +24,7 @@ export function Header({ onViewChange, searchQuery = "", onSearchQueryChange }: 
               value={searchQuery}
               onChange={(e) => onSearchQueryChange?.(e.target.value)}
               onClick={() => onViewChange("all-transactions")}
-              placeholder="Search Transactions"
+              placeholder={t("header.searchTransactions", "Search Transactions")}
               className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#E53935] focus:border-transparent"
             />
           </div>
@@ -35,14 +37,14 @@ export function Header({ onViewChange, searchQuery = "", onSearchQueryChange }: 
             className="bg-[#E53935] hover:bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors"
           >
             <Plus className="w-4 h-4" />
-            Add Sale
+            {t("header.addSale", "Add Sale")}
           </button>
           <button
             onClick={() => onViewChange("add-purchase")}
             className="bg-[#1976D2] hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors"
           >
             <Plus className="w-4 h-4" />
-            Add Purchase
+            {t("header.addPurchase", "Add Purchase")}
           </button>
           <button
             onClick={() => onViewChange("settings")}
